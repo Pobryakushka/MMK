@@ -1,0 +1,12 @@
+<RCC>
+    <qresource prefix="/">
+        <file>qml/Main.qml</file>
+        <file>qml/MapComponent.qml</file>
+        <file>qml/MarkerStation.qml</file>
+        <file>qml/ToolTip.qml</file>
+        <file>qml/ZoneRectangle.qml</file>
+        <file>dat/images/map/coldHalfYearMap.png</file>
+        <file>dat/images/map/warmHalfYearMap.png</file>
+        <file>dat/images/marker.png</file>
+    </qresource>
+</RCC>
