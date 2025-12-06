@@ -219,7 +219,7 @@ void MainWindow::pollMeteoStation()
     QList<quint16> params = getRequestParameters();
 
     // Создаём запрос через GroundMeteoParams (там правильный CRC)
-    QByteArray request = meteoParams->createRequest(params);
+    QByteArray request = meteoParams->createUmbReadRequest(params);
 
     if (request.isEmpty()) {
         qDebug() << "Failed to create request";
