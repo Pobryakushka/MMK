@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1200</width>
-    <height>1064</height>
+    <height>1487</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -458,233 +458,23 @@
         </widget>
        </item>
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_4"/>
-       </item>
-       <item>
-        <widget class="QComboBox" name="comboBox_mapTypes"/>
-       </item>
-       <item>
-        <widget class="QGroupBox" name="rs485SettingsGroup">
-         <property name="title">
-          <string>Настройки RS485</string>
+        <widget class="QPushButton" name="btnSensorSettings">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>35</height>
+          </size>
          </property>
-         <layout class="QGridLayout" name="gridLayout_rs485">
-          <property name="spacing">
-           <number>5</number>
-          </property>
-          <item row="0" column="0">
-           <widget class="QLabel" name="lblComPort">
-            <property name="text">
-             <string>COM-порт:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QComboBox" name="comboBoxComPort">
-            <property name="toolTip">
-             <string>Выберите COM-порт для подключения метеостанции</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="lblBaudRate">
-            <property name="text">
-             <string>Скорость:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QComboBox" name="comboBoxBaudRate">
-            <property name="toolTip">
-             <string>Скорость передачи данных (бод)</string>
-            </property>
-            <item>
-             <property name="text">
-              <string>9600</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>19200</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>38400</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>57600</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>115200</string>
-             </property>
-            </item>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="lblProtocol">
-            <property name="text">
-             <string>Протокол:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QComboBox" name="comboBoxProtocol">
-            <property name="toolTip">
-             <string>Протокол связи с метеостанцией</string>
-            </property>
-            <item>
-             <property name="text">
-              <string>UMB</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>MODBUS RTU</string>
-             </property>
-            </item>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="lblDeviceAddress">
-            <property name="text">
-             <string>Адрес устр-ва:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="1">
-           <widget class="QSpinBox" name="spinBoxDeviceAddress">
-            <property name="toolTip">
-             <string>Адрес устройства на шине RS485</string>
-            </property>
-            <property name="minimum">
-             <number>1</number>
-            </property>
-            <property name="maximum">
-             <number>247</number>
-            </property>
-            <property name="value">
-             <number>112</number>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="0">
-           <widget class="QLabel" name="lblPollInterval">
-            <property name="text">
-             <string>Интервал опроса:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="1">
-           <layout class="QHBoxLayout" name="horizontalLayout_pollInterval">
-            <item>
-             <widget class="QSpinBox" name="spinBoxPollInterval">
-              <property name="toolTip">
-               <string>Интервал опроса метеостанции (секунды)</string>
-              </property>
-              <property name="suffix">
-               <string> сек</string>
-              </property>
-              <property name="minimum">
-               <number>1</number>
-              </property>
-              <property name="maximum">
-               <number>3600</number>
-              </property>
-              <property name="value">
-               <number>5</number>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item row="5" column="0" colspan="2">
-           <layout class="QHBoxLayout" name="horizontalLayout_rs485Buttons">
-            <item>
-             <widget class="QPushButton" name="btnConnectRS485">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>30</height>
-               </size>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">background-color: #2196F3; color: white;</string>
-              </property>
-              <property name="text">
-               <string>Подключить</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="btnDisconnectRS485">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>30</height>
-               </size>
-              </property>
-              <property name="enabled">
-               <bool>false</bool>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">background-color: #757575; color: white;</string>
-              </property>
-              <property name="text">
-               <string>Отключить</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item row="6" column="0" colspan="2">
-           <widget class="QLabel" name="lblRS485Status">
-            <property name="styleSheet">
-             <string notr="true">color: #666; font-size: 9pt; padding: 3px;</string>
-            </property>
-            <property name="text">
-             <string>Статус: не подключено</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item row="7" column="0" colspan="2">
-           <widget class="QPushButton" name="btnShowMeteoParams">
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>30</height>
-             </size>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">background-color: #FF9800; color: white;</string>
-            </property>
-            <property name="text">
-             <string>Метеопараметры</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
+         <property name="styleSheet">
+          <string notr="true">background-color: #FF9800; color: white; font-weight: bold;</string>
+         </property>
+         <property name="text">
+          <string>⚙ Настройки датчиков</string>
+         </property>
         </widget>
        </item>
        <item>
-        <spacer name="verticalSpacer">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
+        <widget class="QComboBox" name="comboBox_mapTypes"/>
        </item>
       </layout>
      </widget>

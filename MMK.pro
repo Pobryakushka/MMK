@@ -19,6 +19,7 @@ SOURCES += \
     SourceData.cpp \
     main.cpp \
     mainwindow.cpp \
+    sensorsettings.cpp \
 
 HEADERS += \
     AlgorithmsCalc.h \
@@ -31,6 +32,7 @@ HEADERS += \
     SourceData.h \
     mainwindow.h \
     qmlcoordinateproxy.h \
+    sensorsettings.h \
 
 
 # Default rules for deployment.
@@ -46,7 +48,8 @@ FORMS += \
     MeasurementResults.ui \
     Meteo11.ui \
     SourceData.ui \
-    mainwindow.ui
+    mainwindow.ui \
+    sensorsettings.ui
 
 RESOURCES += \
     Resources.qrc

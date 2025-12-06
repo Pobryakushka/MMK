@@ -23,13 +23,17 @@ public:
 
     void deleteDataFromTable();
 
+    // Статический метод для получения экземпляра (синглтон паттерн)
+    static GroundMeteoParams* instance();
+
     // RS485 функционал
-    void setSerialPort(QSerialPort* port);
     void setProtocol(RS485Protocol protocol);
     void setDeviceAddress(quint8 address);
 
-    // Отправка запроса данных
-    void requestData(const QList<quint16>& parameters);
+    // Создание запросов (публичные методы)
+    QByteArray createModbusReadRequest(const QList<quint16>& parameters);
+    QByteArray createUmbReadRequest(const QList<quint16>& parameters);
+    QByteArray createRequest(const QList<quint16>& parameters);
 
 public slots:
     // Обработка входящих данных
@@ -40,16 +44,14 @@ private slots:
 
 private:
     Ui::GroundMeteoParams *ui;
-    QSerialPort* m_serialPort;
     RS485Protocol m_protocol;
     quint8 m_deviceAddress;
     QByteArray m_receiveBuffer;
 
-    // Создание запросов
-    QByteArray createModbusReadRequest(const QList<quint16>& parameters);
-    QByteArray createUmbReadRequest(const QList<quint16>& parameters);
+    // Статическая переменная для синглтона
+    static GroundMeteoParams* s_instance;
 
-    // Парсинг ответов
+    // Парсинг ответов (приватные методы)
     bool parseModbusResponse(const QByteArray& response, QMap<QString, double>& values);
     bool parseUmbResponse(const QByteArray& response, QMap<QString, double>& values);
 
