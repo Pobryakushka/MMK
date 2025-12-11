@@ -28,12 +28,12 @@ private slots:
     void updateDisplay();
     void loadAvailableMeasurements();
 
-//    void onUpdatedButtonClicked();
-//    void onApproximateButtonClicked();
-//    void onFromMeteoStateButtonClicked();
+    void onUpdatedButtonClicked();
+    void onApproximateButtonClicked();
+    void onFromMeteoStatButtonClicked();
 
-//    void onStringFormatClicked();
-//    void onTableFormatClicked();
+    void onStringFormatClicked();
+    void onTableFormatClicked();
 
 private:
     Ui::MeasurementResults *ui;
