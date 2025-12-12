@@ -10,7 +10,6 @@
 #include <QQmlEngine>
 #include <QQmlContext>
 #include <QMessageBox>
-#include "sensorsettings.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -18,6 +17,7 @@ MainWindow::MainWindow(QWidget *parent)
     , pollTimer(nullptr)
     , serialPort(nullptr)
     , sensorSettingsDialog(nullptr)
+    , sourceDataInstance(nullptr)
 {
     ui->setupUi(this);
 
@@ -68,6 +68,11 @@ MainWindow::MainWindow(QWidget *parent)
     sensorSettingsDialog = new SensorSettings(this);
     connect(sensorSettingsDialog, &SensorSettings::connectRequested, this, &MainWindow::onConnectRequested);
     connect(sensorSettingsDialog, &SensorSettings::disconnectRequested, this, &MainWindow::onDisconnectRequested);
+
+    // Создаём постоянный экземпляр SourceData (внутри создастся GroundMeteoParams)
+    // Не показываем его, просто держим в памяти для доступа к данным
+    sourceDataInstance = new SourceData(this);
+    qDebug() << "SourceData instance created (with GroundMeteoParams inside)";
 }
 
 MainWindow::~MainWindow()
@@ -123,13 +128,9 @@ void MainWindow::onConnectRequested()
         sensorSettingsDialog->setConnectionStatus("Подключено", true);
         sensorSettingsDialog->setConnectionEnabled(false);
 
-        // Настраиваем протокол в GroundMeteoParams
+        // Настраиваем протокол в GroundMeteoParams (если он уже создан)
         GroundMeteoParams* meteoParams = GroundMeteoParams::instance();
-        if (!meteoParams) {
-            qDebug() << "WARNING: GroundMeteoParams not created yet. Please open 'Initial Data' window first!";
-            QMessageBox::information(this, "Информация",
-                "Откройте окно 'Исходные данные' для просмотра получаемых данных с метеостанции.");
-        } else {
+        if (meteoParams) {
             GroundMeteoParams::RS485Protocol protocol =
                 (sensorSettingsDialog->getProtocolIndex() == 0) ?
                 GroundMeteoParams::UMB_PROTOCOL :
@@ -137,6 +138,8 @@ void MainWindow::onConnectRequested()
             meteoParams->setProtocol(protocol);
             meteoParams->setDeviceAddress(sensorSettingsDialog->getDeviceAddress());
             qDebug() << "Protocol configured in GroundMeteoParams";
+        } else {
+            qDebug() << "GroundMeteoParams not created yet. Will be configured when 'Initial Data' is opened.";
         }
 
         // Запускаем таймер опроса
@@ -209,17 +212,22 @@ void MainWindow::pollMeteoStation()
 
     GroundMeteoParams* meteoParams = GroundMeteoParams::instance();
     if (!meteoParams) {
-        qDebug() << "GroundMeteoParams instance not found, creating request manually";
-        // Если окно не открыто, всё равно нужно настроить протокол
-        // Но это неоптимально - лучше открыть окно
+        qDebug() << "GroundMeteoParams instance not found";
         return;
     }
 
     // Получаем параметры для запроса
     QList<quint16> params = getRequestParameters();
 
-    // Создаём запрос через GroundMeteoParams (там правильный CRC)
-    QByteArray request = meteoParams->createUmbReadRequest(params);
+    // Создаём запрос через GroundMeteoParams
+    QByteArray request;
+    int protocolIndex = sensorSettingsDialog->getProtocolIndex();
+
+    if (protocolIndex == 0) { // UMB
+        request = meteoParams->createUmbReadRequest(params);
+    } else { // MODBUS
+        request = meteoParams->createModbusReadRequest(params);
+    }
 
     if (request.isEmpty()) {
         qDebug() << "Failed to create request";
@@ -298,8 +306,12 @@ void MainWindow::onManualInputClicked()
 
 void MainWindow::onInitialDataClicked()
 {
-    SourceData dialog(this);
-    dialog.exec();
+    // Показываем уже созданный экземпляр SourceData
+    if (sourceDataInstance) {
+        sourceDataInstance->show();
+        sourceDataInstance->raise();
+        sourceDataInstance->activateWindow();
+    }
 }
 
 void MainWindow::onCalculationsClicked()

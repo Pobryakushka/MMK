@@ -4,6 +4,9 @@
 #include <QDialog>
 #include <QButtonGroup>
 
+// Forward declaration
+class GroundMeteoParams;
+
 namespace Ui {
 class SourceData;
 }
@@ -17,8 +20,7 @@ public:
 
 private:
     Ui::SourceData *ui;
-
-
+    GroundMeteoParams *groundMeteoParams; // Постоянный экземпляр
 };
 
 #endif // SOURCEDATA_H
