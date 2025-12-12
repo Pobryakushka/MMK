@@ -14,6 +14,9 @@
 #include "Map/FormMapView.h"
 #include "sensorsettings.h"
 
+// Forward declaration
+class SourceData;
+
 namespace Ui {
 class MainWindow;
 }
@@ -55,6 +58,7 @@ private:
     QTimer *pollTimer;
     QSerialPort *serialPort;
     SensorSettings *sensorSettingsDialog;
+    SourceData *sourceDataInstance;
 
     QmlCoordinateProxy qcp;
 

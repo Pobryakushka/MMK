@@ -28,14 +28,14 @@ MeasurementResults::MeasurementResults(QWidget *parent)
     connect(ui->btnSelectDate, &QPushButton::clicked, this, &MeasurementResults::onSelectDateClicked);
     connect(ui->timeSlider, &QSlider::valueChanged, this, &MeasurementResults::onTimeSliderChanged);
 
-//    connect(ui->pushButton_updated, &QPushButton::clicked, this, &MeasurementResults::onUpdatedButtonClicked);
-//    connect(ui->pushButton_approximate, &QPushButton::clicked, this, &MeasurementResults::onApproximateButtonClicked);
-//    connect(ui->pushButton_fromMeteoStat, &QPushButton::clicked, this, &MeasurementResults::onFromMeteoStateButtonClicked);
+    connect(ui->pushButton_updated, &QPushButton::clicked, this, &MeasurementResults::onUpdatedButtonClicked);
+    connect(ui->pushButton_approximate, &QPushButton::clicked, this, &MeasurementResults::onApproximateButtonClicked);
+    connect(ui->pushButton_fromMeteoStat, &QPushButton::clicked, this, &MeasurementResults::onFromMeteoStatButtonClicked);
 
-//    connect(ui->pushButton_string, &QPushButton::clicked, this, &MeasurementResults::onStringFormatClicked);
-//    connect(ui->pushButton_table, &QPushButton::clicked, this, &MeasurementResults::onTableFormatClicked);
+    connect(ui->pushButton_string, &QPushButton::clicked, this, &MeasurementResults::onStringFormatClicked);
+    connect(ui->pushButton_table, &QPushButton::clicked, this, &MeasurementResults::onTableFormatClicked);
 
-//    switchMeteo11Display();
+    switchMeteo11Display();
 }
 
 MeasurementResults::~MeasurementResults()
@@ -43,10 +43,58 @@ MeasurementResults::~MeasurementResults()
     delete ui;
 }
 
-//void MeasurementResults::switchMeteo11Display()
-//{
-//    QStackedWidget *stackedWidget = ui->meteo11StackedWidget;
-//}
+void MeasurementResults::switchMeteo11Display()
+{
+    QStackedWidget *stackedWidget = ui->meteo11StackedWidget;
+    if (!stackedWidget) return;
+
+    if (currentButtelinType == Approximate){
+        stackedWidget->setCurrentIndex(2);
+        ui->pushButton_string->setEnabled(false);
+        ui->pushButton_table->setEnabled(true);
+    } else {
+        ui->pushButton_string->setEnabled(true);
+        ui->pushButton_table->setEnabled(true);
+
+        if (currentOutputFormat == String){
+            stackedWidget->setCurrentIndex(0);
+        } else {
+            stackedWidget->setCurrentIndex(1);
+        }
+    }
+}
+
+void MeasurementResults::onUpdatedButtonClicked()
+{
+    currentButtelinType = Updated;
+    switchMeteo11Display();
+}
+
+void MeasurementResults::onApproximateButtonClicked()
+{
+    currentButtelinType = Approximate;
+    switchMeteo11Display();
+}
+
+void MeasurementResults::onFromMeteoStatButtonClicked()
+{
+    currentButtelinType = FromMeteoStat;
+    switchMeteo11Display();
+}
+
+void MeasurementResults::onStringFormatClicked()
+{
+    if (currentButtelinType != Approximate){
+        currentOutputFormat = String;
+        switchMeteo11Display();
+    }
+}
+
+void MeasurementResults::onTableFormatClicked()
+{
+    currentOutputFormat = Table;
+    switchMeteo11Display();
+}
 
 void MeasurementResults::setupMockData()
 {
