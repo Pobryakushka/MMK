@@ -10,6 +10,7 @@ MeasurementResults::MeasurementResults(QWidget *parent)
     , ui(new Ui::MeasurementResults)
     , currentButtelinType(Updated)
     , currentOutputFormat(String)
+    , m_mapCoordinatesMode(false)
 {
     ui->setupUi(this);
 
@@ -41,6 +42,34 @@ MeasurementResults::MeasurementResults(QWidget *parent)
 MeasurementResults::~MeasurementResults()
 {
     delete ui;
+}
+
+void MeasurementResults::updateCoordinatesFromMainwindow(double latitude, double longitude)
+{
+    if (m_mapCoordinatesMode){
+        if (ui->editLatitude){
+            ui->editLatitude->setText(QString::number(latitude, 'f', 6));
+        }
+        if (ui->editLongitude){
+            ui->editLongitude->setText(QString::number(longitude, 'f', 6));
+        }
+    }
+}
+
+void MeasurementResults::setMapCoordinatesMode(bool enabled)
+{
+    m_mapCoordinatesMode = enabled;
+
+    if (ui->editLatitude && ui->editLongitude) {
+        QString style = enabled ? "background-color: #E8F5E9; border: 2px solid #4CAF50;" :
+                                  "";
+
+        ui->editLatitude->setStyleSheet(style);
+        ui->editLongitude->setStyleSheet(style);
+
+        ui->editLatitude->setReadOnly(enabled);
+        ui->editLongitude->setReadOnly(enabled);
+    }
 }
 
 void MeasurementResults::switchMeteo11Display()

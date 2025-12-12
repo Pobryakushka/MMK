@@ -10,6 +10,10 @@
 #include <QQmlEngine>
 #include <QQmlContext>
 #include <QMessageBox>
+#include <QtPositioning/QGeoCoordinate>
+#include <QPushButton>
+#include <QIcon>
+#include <QStatusBar>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -18,10 +22,15 @@ MainWindow::MainWindow(QWidget *parent)
     , serialPort(nullptr)
     , sensorSettingsDialog(nullptr)
     , sourceDataInstance(nullptr)
+    , m_mapCoordinatesEnabled(false)
 {
     ui->setupUi(this);
 
     fMapView = new FormMapView(this);
+
+    setupMapCoordinatesButton();
+
+    updateMapCoordinatesButtonStyle();
 
     // Подключение сигналов к слотам
     connect(ui->btnFunctionalControl, &QPushButton::clicked, this, &MainWindow::onFunctionalControlClicked);
@@ -57,6 +66,12 @@ MainWindow::MainWindow(QWidget *parent)
         ui->comboBox_mapTypes->addItems(list);
     });
 
+    connect(&qcp, &QmlCoordinateProxy::coordinateFromChanged, [=](const QGeoCoordinate &c){
+        if (m_mapCoordinatesEnabled){
+            updateCoordinatesFromMap(c.latitude(), c.longitude());
+        }
+    });
+
     connect(ui->comboBox_mapTypes, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
             &qcp, &QmlCoordinateProxy::setCurrentMapType);
 
@@ -84,6 +99,99 @@ MainWindow::~MainWindow()
         pollTimer->stop();
     }
     delete ui;
+}
+
+void MainWindow::setupMapCoordinatesButton()
+{
+    m_btnMapCoordinates = new QPushButton(this);
+    m_btnMapCoordinates->setFixedSize(40, 40);
+    m_btnMapCoordinates->setCheckable(true);
+    m_btnMapCoordinates->setToolTip("Использовать координат с карты");
+
+    QIcon markerIcon(":/dat/images/marker.png");
+    m_btnMapCoordinates->setIcon(markerIcon);
+    m_btnMapCoordinates->setIconSize(QSize(32, 32));
+
+    m_btnMapCoordinates->setStyleSheet(
+                "QPushButton {"
+                "   background-color: white;"
+                "   border: 2px solid gray;"
+                "   border-radius: 20px;"
+                "}"
+                "QPushButton:hover {"
+                "   background-color: #f0f0f0;"
+                "}"
+    );
+
+    m_btnMapCoordinates->move(width() - 60, 20);
+    m_btnMapCoordinates->raise();
+
+    connect(m_btnMapCoordinates, &QPushButton::clicked, this, &MainWindow::onMapCoordinatesToggled);
+}
+
+void MainWindow::updateMapCoordinatesButtonStyle()
+{
+    QIcon markerIcon(":/dat/images/marker.png");
+    m_btnMapCoordinates->setIcon(markerIcon);
+    m_btnMapCoordinates->setIconSize(QSize(32, 32));
+
+    if (m_mapCoordinatesEnabled) {
+        m_btnMapCoordinates->setStyleSheet(
+            "QPushButton {"
+            "   background-color: #4CAF50;"
+            "   border: 3px solid #2E7D32;"
+            "   border-radius: 20px;"
+            "}"
+            "QPushButton:hover {"
+            "   background-color: #45a049;"
+            "   border: 3px solid #1B5E20;"
+            "}"
+        );
+        m_btnMapCoordinates->setToolTip("Режим координат с карты активен (нажмите для отключения)");
+    } else {
+        m_btnMapCoordinates->setStyleSheet(
+            "QPushButton {"
+            "   background-color: white;"
+            "   border: 2px solid gray;"
+            "   border-radius: 20px;"
+            "}"
+            "QPushButton:hover {"
+            "   background-color: #f0f0f0;"
+            "}"
+        );
+        m_btnMapCoordinates->setToolTip("Использовать координаты с карты (нажмите для включения)");
+    }
+}
+
+void MainWindow::onMapCoordinatesToggled()
+{
+    m_mapCoordinatesEnabled = !m_mapCoordinatesEnabled;
+    updateMapCoordinatesButtonStyle();
+    emit mapCoordinatesModeChanged(m_mapCoordinatesEnabled);
+
+    // Выводим сообщение о смене режима
+    QString status = m_mapCoordinatesEnabled ?
+        "Режим координат с карты ВКЛЮЧЕН" :
+        "Режим координат с карты ВЫКЛЮЧЕН";
+    statusBar()->showMessage(status, 3000);
+}
+
+void MainWindow::updateCoordinatesFromMap(double latitude, double longitude)
+{
+    ui->editLatitude->setText(QString::number(latitude, 'f', 6));
+    ui->editLongitude->setText(QString::number(longitude, 'f', 6));
+
+    // Передаем сигнал другим окнам
+    emit coordinatesUpdatedFromMap(latitude, longitude);
+}
+
+void MainWindow::resizeEvent(QResizeEvent *event)
+{
+    QMainWindow::resizeEvent(event);
+
+    if (m_btnMapCoordinates){
+        m_btnMapCoordinates->move(width() - 60, 20);
+    }
 }
 
 void MainWindow::onSensorSettingsClicked()
@@ -267,8 +375,17 @@ void MainWindow::createMapComponent(const QString &pluginName)
 {
     QQuickItem* main = ui->quickWidget->rootObject();
     if (main) {
+        qcp.setMapTypes(QStringList());
         QMetaObject::invokeMethod(main, "createMapComponent", Qt::DirectConnection,
                                   Q_ARG(QVariant, pluginName));
+        setupMapItems(main);
+    }
+}
+
+void MainWindow::setupMapItems(QQuickItem *item)
+{
+    if (item) {
+        item->update();
     }
 }
 

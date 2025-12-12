@@ -29,6 +29,13 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+    bool isMapCoordinatsEnabled() const { return m_mapCoordinatesEnabled; }
+    void updateCoordinatesFromMap(double latitude, double longitude);
+
+signals:
+    void mapCoordinatesModeChanged(bool enabled);
+    void coordinatesUpdatedFromMap(double latitude, double longitude);
+
 private slots:
     void onFunctionalControlClicked();
     void onWorkRegulationClicked();
@@ -41,6 +48,8 @@ private slots:
     void onWorkModeChanged(int state);
     void onStandbyModeChanged(int state);
     void updateDateTime();
+
+    void onMapCoordinatesToggled();
 
     // Настройки датчиков
     void onSensorSettingsClicked();
@@ -65,7 +74,14 @@ private:
     FormMapView *fMapView;
     QQuickWidget *m_quickWidget;
 
+    bool m_mapCoordinatesEnabled;
+    QPushButton *m_btnMapCoordinates;
+
     void createMapComponent(const QString &pluginName);
+    void setupMapItems(QQuickItem *item);
+    void setupMapCoordinatesButton();
+    void updateMapCoordinatesButtonStyle();
+    void resizeEvent(QResizeEvent *event);
     QList<quint16> getRequestParameters();
 };
 
