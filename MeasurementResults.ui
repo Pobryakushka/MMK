@@ -51,125 +51,180 @@
        <property name="title">
         <string>Параметры</string>
        </property>
-       <layout class="QGridLayout" name="gridLayout">
-        <property name="spacing">
-         <number>8</number>
+       <widget class="QLineEdit" name="editLatitude">
+        <property name="geometry">
+         <rect>
+          <x>127</x>
+          <y>59</y>
+          <width>101</width>
+          <height>30</height>
+         </rect>
         </property>
-        <item row="0" column="1">
-         <widget class="QLineEdit" name="editLatitude">
-          <property name="inputMask">
-           <string/>
-          </property>
-          <property name="readOnly">
-           <bool>true</bool>
-          </property>
-          <property name="placeholderText">
-           <string>55.7558</string>
-          </property>
-         </widget>
+        <property name="inputMask">
+         <string/>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+        <property name="placeholderText">
+         <string>55.7558</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="lblLongitude">
+        <property name="geometry">
+         <rect>
+          <x>14</x>
+          <y>117</y>
+          <width>78</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Долгота:</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="lblDirectionAngle">
+        <property name="geometry">
+         <rect>
+          <x>14</x>
+          <y>233</y>
+          <width>120</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Дирекц. угол:</string>
+        </property>
+       </widget>
+       <widget class="QLineEdit" name="editLongitude">
+        <property name="geometry">
+         <rect>
+          <x>127</x>
+          <y>117</y>
+          <width>101</width>
+          <height>30</height>
+         </rect>
+        </property>
+        <property name="inputMask">
+         <string/>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+        <property name="placeholderText">
+         <string>37.6173</string>
+        </property>
+       </widget>
+       <widget class="QLineEdit" name="editDirectionAngle">
+        <property name="geometry">
+         <rect>
+          <x>158</x>
+          <y>233</y>
+          <width>159</width>
+          <height>30</height>
+         </rect>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+        <property name="placeholderText">
+         <string>0.0 град.</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="lblAltitude">
+        <property name="geometry">
+         <rect>
+          <x>14</x>
+          <y>175</y>
+          <width>136</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Высота над УМ:</string>
+        </property>
+       </widget>
+       <widget class="QComboBox" name="cmbLongitudeType">
+        <property name="geometry">
+         <rect>
+          <x>236</x>
+          <y>117</y>
+          <width>100</width>
+          <height>30</height>
+         </rect>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>100</width>
+          <height>0</height>
+         </size>
+        </property>
+        <item>
+         <property name="text">
+          <string>Восточная</string>
+         </property>
         </item>
-        <item row="1" column="0">
-         <widget class="QLabel" name="lblLongitude">
-          <property name="text">
-           <string>Долгота:</string>
-          </property>
-         </widget>
+        <item>
+         <property name="text">
+          <string>Западная</string>
+         </property>
         </item>
-        <item row="3" column="0">
-         <widget class="QLabel" name="lblDirectionAngle">
-          <property name="text">
-           <string>Дирекц. угол:</string>
-          </property>
-         </widget>
+       </widget>
+       <widget class="QLineEdit" name="editAltitude">
+        <property name="geometry">
+         <rect>
+          <x>158</x>
+          <y>175</y>
+          <width>159</width>
+          <height>30</height>
+         </rect>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+        <property name="placeholderText">
+         <string>156 м</string>
+        </property>
+       </widget>
+       <widget class="QComboBox" name="cmbLatitudeType">
+        <property name="geometry">
+         <rect>
+          <x>236</x>
+          <y>59</y>
+          <width>100</width>
+          <height>30</height>
+         </rect>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>100</width>
+          <height>0</height>
+         </size>
+        </property>
+        <item>
+         <property name="text">
+          <string>Северная</string>
+         </property>
         </item>
-        <item row="1" column="1">
-         <widget class="QLineEdit" name="editLongitude">
-          <property name="inputMask">
-           <string/>
-          </property>
-          <property name="readOnly">
-           <bool>true</bool>
-          </property>
-          <property name="placeholderText">
-           <string>37.6173</string>
-          </property>
-         </widget>
+        <item>
+         <property name="text">
+          <string>Южная</string>
+         </property>
         </item>
-        <item row="3" column="1" colspan="2">
-         <widget class="QLineEdit" name="editDirectionAngle">
-          <property name="readOnly">
-           <bool>true</bool>
-          </property>
-          <property name="placeholderText">
-           <string>0.0 град.</string>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="0">
-         <widget class="QLabel" name="lblAltitude">
-          <property name="text">
-           <string>Высота над УМ:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="2">
-         <widget class="QComboBox" name="cmbLongitudeType">
-          <property name="minimumSize">
-           <size>
-            <width>100</width>
-            <height>0</height>
-           </size>
-          </property>
-          <item>
-           <property name="text">
-            <string>Восточная</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Западная</string>
-           </property>
-          </item>
-         </widget>
-        </item>
-        <item row="2" column="1" colspan="2">
-         <widget class="QLineEdit" name="editAltitude">
-          <property name="readOnly">
-           <bool>true</bool>
-          </property>
-          <property name="placeholderText">
-           <string>156 м</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="2">
-         <widget class="QComboBox" name="cmbLatitudeType">
-          <property name="minimumSize">
-           <size>
-            <width>100</width>
-            <height>0</height>
-           </size>
-          </property>
-          <item>
-           <property name="text">
-            <string>Северная</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Южная</string>
-           </property>
-          </item>
-         </widget>
-        </item>
-        <item row="0" column="0">
-         <widget class="QLabel" name="lblLatitude">
-          <property name="text">
-           <string>Широта:</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
+       </widget>
+       <widget class="QLabel" name="lblLatitude">
+        <property name="geometry">
+         <rect>
+          <x>14</x>
+          <y>59</y>
+          <width>74</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Широта:</string>
+        </property>
+       </widget>
       </widget>
      </item>
      <item>

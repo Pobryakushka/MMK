@@ -20,6 +20,8 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     sensorsettings.cpp \
+    zedf9preceiver.cpp \
+    customprotocol.cpp \
 
 HEADERS += \
     AlgorithmsCalc.h \
@@ -33,6 +35,8 @@ HEADERS += \
     mainwindow.h \
     qmlcoordinateproxy.h \
     sensorsettings.h \
+    zedf9preceiver.h \
+    customprotocol.h \
 
 
 # Default rules for deployment.

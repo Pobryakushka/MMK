@@ -9,6 +9,7 @@
 #include <QSerialPort>
 #include <QSerialPortInfo>
 #include "qmlcoordinateproxy.h"
+#include "zedf9preceiver.h"
 
 #include "Map/InitialParameters.h"
 #include "Map/FormMapView.h"
@@ -35,6 +36,7 @@ public:
 signals:
     void mapCoordinatesModeChanged(bool enabled);
     void coordinatesUpdatedFromMap(double latitude, double longitude);
+    void gnssDataSourceChanged(bool enabled);
 
 private slots:
     void onFunctionalControlClicked();
@@ -50,6 +52,14 @@ private slots:
     void updateDateTime();
 
     void onMapCoordinatesToggled();
+
+    void onGnssCheckboxToggled(bool checked);
+
+    // GNSS слоты
+    void onGnssDataReceived(const GNSSData &data);
+    void onGnssConnected();
+    void onGnssDisconnected();
+    void onGnssError(const QString &error);
 
     // Настройки датчиков
     void onSensorSettingsClicked();
@@ -75,12 +85,23 @@ private:
     QQuickWidget *m_quickWidget;
 
     bool m_mapCoordinatesEnabled;
+    bool m_gnssEnabled;
+    bool m_manualInputEnabled;
+
     QPushButton *m_btnMapCoordinates;
+    QCheckBox *m_checkboxGnss;
+
+    ZedF9PReceiver *m_gnssReceiver;
 
     void createMapComponent(const QString &pluginName);
     void setupMapItems(QQuickItem *item);
     void setupMapCoordinatesButton();
     void updateMapCoordinatesButtonStyle();
+    void setupGnssCheckbox();
+    void updateCoordinateSource(const QString &source);
+    void checkAndDisableConflictingSources(const QString &activeSource);
+    void updateFieldsEditability();
+
     void resizeEvent(QResizeEvent *event);
     QList<quint16> getRequestParameters();
 };

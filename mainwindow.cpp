@@ -12,6 +12,7 @@
 #include <QMessageBox>
 #include <QtPositioning/QGeoCoordinate>
 #include <QPushButton>
+#include <QCheckBox>
 #include <QIcon>
 #include <QStatusBar>
 
@@ -23,12 +24,17 @@ MainWindow::MainWindow(QWidget *parent)
     , sensorSettingsDialog(nullptr)
     , sourceDataInstance(nullptr)
     , m_mapCoordinatesEnabled(false)
+    , m_gnssEnabled(false)
+    , m_manualInputEnabled(false)
+    , m_gnssReceiver(new ZedF9PReceiver(this))
 {
     ui->setupUi(this);
 
     fMapView = new FormMapView(this);
 
     setupMapCoordinatesButton();
+
+    setupGnssCheckbox();
 
     updateMapCoordinatesButtonStyle();
 
@@ -44,6 +50,12 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->cbWorkMode, &QCheckBox::stateChanged, this, &MainWindow::onWorkModeChanged);
     connect(ui->cbStandbyMode, &QCheckBox::stateChanged, this, &MainWindow::onStandbyModeChanged);
     connect(ui->btnSensorSettings, &QPushButton::clicked, this, &MainWindow::onSensorSettingsClicked);
+
+    // GNSS сигналы
+    connect(m_gnssReceiver, &ZedF9PReceiver::dataReceived, this, &MainWindow::onGnssDataReceived);
+    connect(m_gnssReceiver, &ZedF9PReceiver::connected, this, &MainWindow::onGnssConnected);
+    connect(m_gnssReceiver, &ZedF9PReceiver::disconnected, this, &MainWindow::onGnssDisconnected);
+    connect(m_gnssReceiver, &ZedF9PReceiver::errorOccurred, this, &MainWindow::onGnssError);
 
     ui->editAltitude->setEnabled(false);
     ui->editDirectionAngle->setEnabled(false);
@@ -98,6 +110,9 @@ MainWindow::~MainWindow()
     if (pollTimer) {
         pollTimer->stop();
     }
+    if (m_gnssReceiver->isConnected()){
+        m_gnssReceiver->disconnectFromReceiver();
+    }
     delete ui;
 }
 
@@ -106,7 +121,7 @@ void MainWindow::setupMapCoordinatesButton()
     m_btnMapCoordinates = new QPushButton(this);
     m_btnMapCoordinates->setFixedSize(40, 40);
     m_btnMapCoordinates->setCheckable(true);
-    m_btnMapCoordinates->setToolTip("Использовать координат с карты");
+    m_btnMapCoordinates->setToolTip("Использовать координаты с карты");
 
     QIcon markerIcon(":/dat/images/marker.png");
     m_btnMapCoordinates->setIcon(markerIcon);
@@ -127,6 +142,27 @@ void MainWindow::setupMapCoordinatesButton()
     m_btnMapCoordinates->raise();
 
     connect(m_btnMapCoordinates, &QPushButton::clicked, this, &MainWindow::onMapCoordinatesToggled);
+}
+
+void MainWindow::setupGnssCheckbox()
+{
+    m_checkboxGnss = new QCheckBox("GNSS", this);
+    m_checkboxGnss->setStyleSheet(
+        "QCheckBox {"
+        "   background-color: white;"
+        "   padding: 5px;"
+        "   border: 2px solid gray;"
+        "   border-radius: 5px;"
+        "}"
+        "   width: 18px;"
+        "   height: 18px;"
+        "}"
+    );
+
+    m_checkboxGnss->move(width() - 160, 20);
+    m_checkboxGnss->raise();
+
+    connect(m_checkboxGnss, &QCheckBox::toggled, this, &MainWindow::onGnssCheckboxToggled);
 }
 
 void MainWindow::updateMapCoordinatesButtonStyle()
@@ -176,6 +212,142 @@ void MainWindow::onMapCoordinatesToggled()
     statusBar()->showMessage(status, 3000);
 }
 
+void MainWindow::onGnssCheckboxToggled(bool checked)
+{
+    m_gnssEnabled = checked;
+
+    if (m_gnssEnabled){
+        checkAndDisableConflictingSources("gnss");
+
+        QStringList ports = ZedF9PReceiver::getAvailablePorts();
+        if (!ports.isEmpty()){
+               if (m_gnssReceiver->connectToReceiver(ports.first(), 9600)){
+                   updateCoordinateSource("GNSS");
+                   statusBar()->showMessage("GNSS приемник подключен", 3000);
+               } else {
+                   m_gnssEnabled = false;
+                   m_checkboxGnss->setChecked(false);
+                   QMessageBox::warning(this, "Ошибка", "Не удалось подключиться к GNSS приемнику");
+               }
+        } else {
+            m_gnssEnabled = false;
+            m_checkboxGnss->setChecked(false);
+            QMessageBox::warning(this, "Ошибка", "Не найдены доступные COM-порты для GNSS");
+        }
+    } else {
+        if (m_gnssReceiver->isConnected()){
+            m_gnssReceiver->disconnectFromReceiver();
+        }
+        updateCoordinateSource("Нет");
+        statusBar()->showMessage("GNSS приемник отключен", 3000);
+    }
+
+    updateFieldsEditability();
+    emit gnssDataSourceChanged(m_gnssEnabled);
+}
+
+void MainWindow::onGnssDataReceived(const GNSSData &data)
+{
+    if (!m_gnssEnabled) {
+        return; // Игнорируем данные, если GNSS выключен
+    }
+
+    // Обновляем поля координат
+    ui->editLatitude->setText(QString::number(data.latitude, 'f', 6));
+    ui->editLongitude->setText(QString::number(data.longitude, 'f', 6));
+    ui->editAltitude->setText(QString::number(data.altitude, 'f', 2));
+
+    // Передаем сигнал другим окнам
+    emit coordinatesUpdatedFromMap(data.latitude, data.longitude);
+
+    qDebug() << "GNSS данные получены:" << data.latitude << data.longitude << data.altitude;
+}
+
+void MainWindow::onGnssConnected()
+{
+    qDebug() << "GNSS приемник подключен";
+    m_checkboxGnss->setStyleSheet(
+        "QCheckBox {"
+        "   background-color: #E8F5E9;"
+        "   padding: 5px;"
+        "   border: 2px solid #4CAF50;"
+        "   border-radius: 5px;"
+        "}"
+    );
+}
+
+void MainWindow::onGnssDisconnected()
+{
+    qDebug() << "GNSS приемник отключен";
+    m_gnssEnabled = false;
+    m_checkboxGnss->setChecked(false);
+    m_checkboxGnss->setStyleSheet(
+        "QCheckBox {"
+        "   background-color: white;"
+        "   padding: 5px;"
+        "   border: 2px solid gray;"
+        "   border-radius: 5px;"
+        "}"
+    );
+    updateFieldsEditability();
+}
+
+void MainWindow::onGnssError(const QString &error)
+{
+    qDebug() << "Ошибка GNSS:" << error;
+    statusBar()->showMessage("Ошибка GNSS: " + error, 5000);
+}
+
+void MainWindow::checkAndDisableConflictingSources(const QString &activeSource)
+{
+    if (activeSource == "map") {
+        // Отключаем GNSS и ручной ввод
+        if (m_gnssEnabled) {
+            m_checkboxGnss->setChecked(false);
+        }
+        m_manualInputEnabled = false;
+    } else if (activeSource == "gnss") {
+        // Отключаем карту и ручной ввод
+        if (m_mapCoordinatesEnabled) {
+            m_btnMapCoordinates->setChecked(false);
+            onMapCoordinatesToggled();
+        }
+        m_manualInputEnabled = false;
+    } else if (activeSource == "manual") {
+        // Отключаем карту и GNSS
+        if (m_mapCoordinatesEnabled) {
+            m_btnMapCoordinates->setChecked(false);
+            onMapCoordinatesToggled();
+        }
+        if (m_gnssEnabled) {
+            m_checkboxGnss->setChecked(false);
+        }
+    }
+}
+
+void MainWindow::updateCoordinateSource(const QString &source)
+{
+    QString message = "Источник координат: " + source;
+    statusBar()->showMessage(message, 3000);
+    qDebug() << message;
+}
+
+void MainWindow::updateFieldsEditability()
+{
+    // Поля редактируемы только если все источники выключены (ручной ввод)
+    bool fieldsEditable = !m_mapCoordinatesEnabled && !m_gnssEnabled;
+
+    ui->editLatitude->setReadOnly(!fieldsEditable);
+    ui->editLongitude->setReadOnly(!fieldsEditable);
+    ui->editAltitude->setReadOnly(!fieldsEditable);
+
+    // Визуальная индикация
+    QString style = fieldsEditable ? "" : "background-color: #F5F5F5;";
+    ui->editLatitude->setStyleSheet(style);
+    ui->editLongitude->setStyleSheet(style);
+    ui->editAltitude->setStyleSheet(style);
+}
+
 void MainWindow::updateCoordinatesFromMap(double latitude, double longitude)
 {
     ui->editLatitude->setText(QString::number(latitude, 'f', 6));
@@ -191,6 +363,9 @@ void MainWindow::resizeEvent(QResizeEvent *event)
 
     if (m_btnMapCoordinates){
         m_btnMapCoordinates->move(width() - 60, 20);
+    }
+    if (m_checkboxGnss){
+        m_checkboxGnss->move(width() - 160, 20);
     }
 }
 
@@ -419,6 +594,13 @@ void MainWindow::onManualInputClicked()
     ui->editLongitude->setEnabled(!enabled);
     ui->editPitchAngle->setEnabled(!enabled);
     ui->editRollAngle->setEnabled(!enabled);
+
+    m_manualInputEnabled = !enabled;
+
+    if (m_manualInputEnabled) {
+        checkAndDisableConflictingSources("manual");
+        updateCoordinateSource("Ручной ввод");
+    }
 }
 
 void MainWindow::onInitialDataClicked()
@@ -439,8 +621,10 @@ void MainWindow::onCalculationsClicked()
 
 void MainWindow::onMeasurementResultsClicked()
 {
-    MeasurementResults dialog(this);
-    dialog.exec();
+    MeasurementResults *dialog = new MeasurementResults(this);
+
+    dialog->exec();
+    delete dialog;
 }
 
 void MainWindow::onStartClicked()

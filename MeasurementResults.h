@@ -20,10 +20,6 @@ public:
     explicit MeasurementResults(QWidget *parent = nullptr);
     ~MeasurementResults();
 
-public slots:
-    void updateCoordinatesFromMainwindow(double latitude, double longitude);
-    void setMapCoordinatesMode(bool enabled);
-
 private slots:
     void onPrevDateClicked();
     void onNextDateClicked();
@@ -50,8 +46,6 @@ private:
 
     BulletinType currentButtelinType;
     OutputFormat currentOutputFormat;
-
-    bool m_mapCoordinatesMode;
 
     void updateDateTimeDisplay();
     void updateSliderRange();
