@@ -35,6 +35,10 @@ private slots:
     void onStringFormatClicked();
     void onTableFormatClicked();
 
+public slots:
+    void updateCoordinatesFromMainWindow(double latitude, double longitude);
+    void setMapCoordinatesMode(bool enabled);
+
 private:
     Ui::MeasurementResults *ui;
     QDateTime currentDateTime;
@@ -46,6 +50,8 @@ private:
 
     BulletinType currentButtelinType;
     OutputFormat currentOutputFormat;
+
+    bool m_mapCoordinatesMode;
 
     void updateDateTimeDisplay();
     void updateSliderRange();

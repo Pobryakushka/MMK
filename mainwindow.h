@@ -33,6 +33,9 @@ public:
     bool isMapCoordinatsEnabled() const { return m_mapCoordinatesEnabled; }
     void updateCoordinatesFromMap(double latitude, double longitude);
 
+    ZedF9PReceiver* getGnssReceiver() { return m_gnssReceiver; }
+    bool isGnssEnabled() const { return m_gnssEnabled; }
+
 signals:
     void mapCoordinatesModeChanged(bool enabled);
     void coordinatesUpdatedFromMap(double latitude, double longitude);
@@ -55,11 +58,14 @@ private slots:
 
     void onGnssCheckboxToggled(bool checked);
 
+    void onGnssSettingsClicked();
+
     // GNSS слоты
     void onGnssDataReceived(const GNSSData &data);
     void onGnssConnected();
     void onGnssDisconnected();
     void onGnssError(const QString &error);
+    void onNmeaReceived(const QString &nmea);
 
     // Настройки датчиков
     void onSensorSettingsClicked();
@@ -90,17 +96,24 @@ private:
 
     QPushButton *m_btnMapCoordinates;
     QCheckBox *m_checkboxGnss;
+    QPushButton *m_btnGnssSettings;
 
     ZedF9PReceiver *m_gnssReceiver;
+
+    QString m_gnssComPort;
+    int m_gnssBaudRate;
 
     void createMapComponent(const QString &pluginName);
     void setupMapItems(QQuickItem *item);
     void setupMapCoordinatesButton();
     void updateMapCoordinatesButtonStyle();
     void setupGnssCheckbox();
+    void setupGnssSettingsButton();
     void updateCoordinateSource(const QString &source);
     void checkAndDisableConflictingSources(const QString &activeSource);
     void updateFieldsEditability();
+    void connectToGnss();
+    void disconnectFromGnss();
 
     void resizeEvent(QResizeEvent *event);
     QList<quint16> getRequestParameters();

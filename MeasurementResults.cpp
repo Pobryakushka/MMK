@@ -10,6 +10,7 @@ MeasurementResults::MeasurementResults(QWidget *parent)
     , ui(new Ui::MeasurementResults)
     , currentButtelinType(Updated)
     , currentOutputFormat(String)
+    , m_mapCoordinatesMode(false)
 {
     ui->setupUi(this);
 
@@ -41,6 +42,49 @@ MeasurementResults::MeasurementResults(QWidget *parent)
 MeasurementResults::~MeasurementResults()
 {
     delete ui;
+}
+
+void MeasurementResults::updateCoordinatesFromMainWindow(double latitude, double longitude)
+{
+    if (!m_mapCoordinatesMode){
+        return;
+    }
+
+    QLineEdit *latEdit = ui->editLatitude;
+    QLineEdit *lonEdit = ui->editLongitude;
+
+    if (latEdit){
+        latEdit->setText(QString::number(latitude, 'f', 6));
+        qDebug() << "MeasurementResults: Широта обновлена: " << latitude;
+    } else {
+        qDebug() << "MeasurementResults: editLatitude не найден";
+    }
+
+    if (lonEdit) {
+        lonEdit->setText(QString::number(longitude, 'f', 6));
+        qDebug() << "MeasurementResults: Долгота обновлена: " << longitude;
+    } else {
+        qDebug() << "MeasurementResults: editLongitude не найден";
+    }
+}
+
+void MeasurementResults::setMapCoordinatesMode(bool enabled)
+{
+    m_mapCoordinatesMode = enabled;
+
+    QLineEdit *latEdit = ui->editLatitude;
+    QLineEdit *lonEdit = ui->editLongitude;
+
+    if (latEdit && lonEdit){
+        QString style = enabled ?
+                    "background-color: #E8F5E9; border: 2px solid #4CAF50;" :
+                    "";
+        latEdit->setStyleSheet(style);
+        lonEdit->setStyleSheet(style);
+
+        latEdit->setReadOnly(enabled);
+        lonEdit->setReadOnly(enabled);
+    }
 }
 
 void MeasurementResults::switchMeteo11Display()

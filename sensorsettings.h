@@ -41,10 +41,15 @@ private slots:
     void onDisconnectClicked();
     void onCloseClicked();
 
+    void onRefreshGnssPortsClicked();
+    void onConnectGnssClicked();
+    void onDisconnectGnssClicked();
+
 private:
     Ui::SensorSettings *ui;
 
     void populateComPorts();
+    void populateGnssPorts();
     void setupConnections();
 };
 
