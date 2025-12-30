@@ -204,7 +204,6 @@ Map {
         id: markerCurrentStation
         color: "black"
     }
-
     function createStationsMarkers(coordinate, tooltipText) {
         var component = Qt.createComponent("MarkerStation.qml");
         var item = component.createObject(map, {"coordinate": coordinate, "tooltipText": tooltipText, "tooltipZ": map.z + 1});

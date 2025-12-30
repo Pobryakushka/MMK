@@ -42,6 +42,7 @@ public slots:
 private:
     Ui::MeasurementResults *ui;
     QDateTime currentDateTime;
+    QDateTime m_lockedDateTime;
 
     QMap<QDate, QSet<QTime>> availableMeasurements;
 

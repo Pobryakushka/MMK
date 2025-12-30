@@ -89,6 +89,7 @@ private:
 
     FormMapView *fMapView;
     QQuickWidget *m_quickWidget;
+    QQuickItem *m_gnssMarker;
 
     bool m_mapCoordinatesEnabled;
     bool m_gnssEnabled;
@@ -114,6 +115,7 @@ private:
     void updateFieldsEditability();
     void connectToGnss();
     void disconnectFromGnss();
+    void updateGnssMarkerOnMap(double latitude, double longitude);
 
     void resizeEvent(QResizeEvent *event);
     QList<quint16> getRequestParameters();

@@ -228,6 +228,17 @@ void MainWindow::onGnssSettingsClicked()
     dialog.exec();
 }
 
+void MainWindow::updateGnssMarkerOnMap(double latitude, double longitude)
+{
+    QQuickItem* main = ui->quickWidget->rootObject();
+    if (main) {
+        QMetaObject::invokeMethod(main, "updateGnssMarker", Qt::DirectConnection,
+                                  Q_ARG(QVariant, latitude),
+                                  Q_ARG(QVariant, longitude),
+                                  Q_ARG(QVariant, m_gnssEnabled));
+    }
+}
+
 void MainWindow::updateMapCoordinatesButtonStyle()
 {
     QIcon markerIcon(":/dat/images/marker.png");
@@ -332,6 +343,8 @@ void MainWindow::disconnectFromGnss()
     statusBar()->showMessage("GNSS приемник отключен", 3000);
     updateFieldsEditability();
     emit gnssDataSourceChanged(m_gnssEnabled);
+
+    updateGnssMarkerOnMap(0, 0);
 }
 
 void MainWindow::onGnssDataReceived(const GNSSData &data)
@@ -368,6 +381,8 @@ void MainWindow::onGnssDataReceived(const GNSSData &data)
 
     // Передаем сигнал другим окнам
     emit coordinatesUpdatedFromMap(data.latitude, data.longitude);
+
+    updateGnssMarkerOnMap(data.latitude, data.longitude);
 
     // Обновляем строку состояния
     statusBar()->showMessage(QString("GNSS: %1 | Спутники: %2 | HDOP: %3")
@@ -692,7 +707,23 @@ void MainWindow::setupMapItems(QQuickItem *item)
 
 void MainWindow::updateDateTime()
 {
-    ui->lblDateTime->setText(QDateTime::currentDateTime().toString("dd.MM.yyyy hh:mm:ss"));
+    QString timeString;
+
+    if (m_gnssEnabled && m_gnssReceiver->isConnected()) {
+        // Используем время из GNSS
+        GNSSData data = m_gnssReceiver->getCurrentData();
+        if (data.timestamp.isValid()){
+            timeString = data.timestamp.toString("dd.MM.yyyy hh:mm:ss");
+        } else {
+            // Если время из GNSS не валидно, то используем системное
+            timeString = QDateTime::currentDateTime().toString("dd.MM.yyyy hh:mm:ss");
+        }
+    } else {
+        // Используем системное время
+        timeString = QDateTime::currentDateTime().toString("dd.MM.yyyy hh:mm:ss");
+    }
+
+    ui->lblDateTime->setText(timeString);
 }
 
 void MainWindow::onFunctionalControlClicked()

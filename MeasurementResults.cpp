@@ -72,6 +72,10 @@ void MeasurementResults::setMapCoordinatesMode(bool enabled)
 {
     m_mapCoordinatesMode = enabled;
 
+    if (enabled) {
+        m_lockedDateTime = currentDateTime;
+    }
+
     QLineEdit *latEdit = ui->editLatitude;
     QLineEdit *lonEdit = ui->editLongitude;
 
@@ -81,9 +85,25 @@ void MeasurementResults::setMapCoordinatesMode(bool enabled)
                     "";
         latEdit->setStyleSheet(style);
         lonEdit->setStyleSheet(style);
-
         latEdit->setReadOnly(enabled);
         lonEdit->setReadOnly(enabled);
+
+        if (ui->editAltitude) {
+            ui->editAltitude->setStyleSheet(style);
+            ui->editAltitude->setReadOnly(enabled);
+        }
+    }
+
+    if (enabled) {
+        ui->btnPrevDate->setEnabled(false);
+        ui->btnNextDate->setEnabled(false);
+        ui->btnSelectDate->setEnabled(false);
+        ui->timeSlider->setEnabled(false);
+    } else {
+        ui->btnPrevDate->setEnabled(true);
+        ui->btnNextDate->setEnabled(true);
+        ui->btnSelectDate->setEnabled(true);
+        ui->timeSlider->setEnabled(true);
     }
 }
 
