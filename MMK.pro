@@ -1,6 +1,6 @@
 PATH_TO_REFERENCES = ../../references
 
-QT       += core gui quick quickwidgets qml positioning serialport
+QT       += core gui quick quickwidgets qml positioning serialport sql
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 CONFIG += c++17
@@ -22,6 +22,8 @@ SOURCES += \
     sensorsettings.cpp \
     zedf9preceiver.cpp \
     customprotocol.cpp \
+    amshandler.cpp \
+    amsprotocol.cpp \
 
 HEADERS += \
     AlgorithmsCalc.h \
@@ -37,6 +39,8 @@ HEADERS += \
     sensorsettings.h \
     zedf9preceiver.h \
     customprotocol.h \
+    amshandler.h \
+    amsprotocol.h \
 
 
 # Default rules for deployment.
