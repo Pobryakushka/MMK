@@ -9,13 +9,12 @@ Map {
     objectName: "map"
     anchors.fill: parent
     plugin: pluginOsm
-    center: coord.coordinateFrom
+//    center: coord.coordinateFrom
 //        center: QtPositioning.coordinate(54.19609, 37.61822) // Tula
 //        center: QtPositioning.coordinate(coord.latitudeFrom, coord.longitudeFrom)
     property var coordinateFrom: coord.coordinateFrom
     onCoordinateFromChanged: {
         marker.coordinate = coordinateFrom;
-        map.center = coordinateFrom;
     }
     property var coordinateTo: coord.coordinateTo
 //  onCoordinateToChanged: polyline.updateDistance()
@@ -31,6 +30,10 @@ Map {
     }
 
     zoomLevel: 14
+
+    Component.onCompleted: {
+        map.center = coord.coordinateFrom;
+    }
 
     Behavior on center {
         CoordinateAnimation {duration: 1000; easing.type:  Easing.OutCubic}
