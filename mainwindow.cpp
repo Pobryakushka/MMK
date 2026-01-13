@@ -39,7 +39,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     setupGnssCheckbox();
 
-    setupGnssSettingsButton();
+//    setupGnssSettingsButton();
 
     updateMapCoordinatesButtonStyle();
 
@@ -101,6 +101,9 @@ MainWindow::MainWindow(QWidget *parent)
     sensorSettingsDialog = new SensorSettings(this);
     connect(sensorSettingsDialog, &SensorSettings::connectRequested, this, &MainWindow::onConnectRequested);
     connect(sensorSettingsDialog, &SensorSettings::disconnectRequested, this, &MainWindow::onDisconnectRequested);
+
+    connect(sensorSettingsDialog, &SensorSettings::gnssConnectRequested, this, &MainWindow::onGnssConnectFromSettings);
+    connect(sensorSettingsDialog, &SensorSettings::gnssDisconnectRequested, this, &MainWindow::onGnssDisconnectFromSettings);
 
     // Создаём постоянный экземпляр SourceData (внутри создастся GroundMeteoParams)
     // Не показываем его, просто держим в памяти для доступа к данным
@@ -171,61 +174,102 @@ void MainWindow::setupGnssCheckbox()
     connect(m_checkboxGnss, &QCheckBox::toggled, this, &MainWindow::onGnssCheckboxToggled);
 }
 
-void MainWindow::setupGnssSettingsButton()
+//void MainWindow::setupGnssSettingsButton()
+//{
+//    m_btnGnssSettings = new QPushButton("⚙", this);
+//    m_btnGnssSettings->setFixedSize(30, 30);
+//    m_btnGnssSettings->setToolTip("Настройки GNSS");
+//    m_btnGnssSettings->setStyleSheet(
+//                "QPushButton {"
+//                "   background-color: white;"
+//                "   border: 2px solid gray;"
+//                "   border-radius: 15px;"
+//                "   font-size: 16px;"
+//                "}"
+//                "QPushButton:hover {"
+//                "   background-color: #f0f0f0;"
+//                "}");
+
+//    m_btnGnssSettings->move(width() - 210, 23);
+//    m_btnGnssSettings->raise();
+
+//    connect(m_btnGnssSettings, &QPushButton::clicked, this,
+//            &MainWindow::onGnssSettingsClicked);
+//}
+
+//void MainWindow::onGnssSettingsClicked()
+//{
+//    if (!sensorSettingsDialog) return;
+
+//    sensorSettingsDialog->findChild<QTabWidget*>("tabWidget")->setCurrentIndex(1);
+
+//    if (m_gnssReceiver->isConnected()) {
+//        sensorSettingsDialog->setConnectionStatus("Подключено", true);
+//        sensorSettingsDialog->setConnectionEnabled(false);
+//    } else {
+//        sensorSettingsDialog->setConnectionStatus("Отключено", false);
+//        sensorSettingsDialog->setConnectionEnabled(true);
+//    }
+
+//    sensorSettingsDialog->show();
+//    sensorSettingsDialog->raise();
+//    sensorSettingsDialog->activateWindow();
+////    SensorSettings dialog(this);
+
+////    connect(&dialog, &SensorSettings::connectRequested, this, [this, &dialog]() {
+////        qDebug() << "MainWindow: Запрос на подключение GNSS из настроек";
+////        m_gnssComPort = dialog.getComPort();
+////        m_gnssBaudRate = dialog.getBaudRate();
+
+////        if (m_gnssReceiver->connectToReceiver(m_gnssComPort, m_gnssBaudRate)) {
+////                dialog.setConnectionStatus("Подключено", true);
+////                dialog.setConnectionEnabled(false);
+////                m_gnssEnabled = true;
+////                m_checkboxGnss->setChecked(true);
+////            } else {
+////                dialog.setConnectionStatus("Ошибка подключения", false);
+////            }
+////    });
+
+////    connect(&dialog, &SensorSettings::disconnectRequested, this, [this, &dialog]() {
+////         qDebug() << "MainWindow: Запрос на отключение GNSS из настроек";
+////         disconnectFromGnss();
+////         dialog.setConnectionStatus("Отключено", false);
+////         dialog.setConnectionEnabled(true);
+////    });
+
+////    if (m_gnssReceiver->isConnected()) {
+////        dialog.setConnectionStatus("Подключено", true);
+////        dialog.setConnectionEnabled(false);
+////    }
+
+////    dialog.exec();
+//}
+
+void MainWindow::onGnssConnectFromSettings()
 {
-    m_btnGnssSettings = new QPushButton("⚙", this);
-    m_btnGnssSettings->setFixedSize(30, 30);
-    m_btnGnssSettings->setToolTip("Настройки GNSS");
-    m_btnGnssSettings->setStyleSheet(
-                "QPushButton {"
-                "   background-color: white;"
-                "   border: 2px solid gray;"
-                "   border-radius: 15px;"
-                "   font-size: 16px;"
-                "}"
-                "QPushButton:hover {"
-                "   background-color: #f0f0f0;"
-                "}");
+    if (!sensorSettingsDialog) return;
 
-    m_btnGnssSettings->move(width() - 210, 23);
-    m_btnGnssSettings->raise();
+    m_gnssComPort = sensorSettingsDialog->getComPort();
+    m_gnssBaudRate = sensorSettingsDialog->getBaudRate();
 
-    connect(m_btnGnssSettings, &QPushButton::clicked, this,
-            &MainWindow::onGnssSettingsClicked);
+    if (m_gnssReceiver->connectToReceiver(m_gnssComPort, m_gnssBaudRate)){
+        sensorSettingsDialog->setConnectionStatus("Подключено", true);
+        sensorSettingsDialog->setConnectionEnabled(false);
+        m_gnssEnabled = true;
+        m_checkboxGnss->setChecked(true);
+    } else {
+        sensorSettingsDialog->setConnectionStatus("Ошибка подключения", false);
+    }
 }
 
-void MainWindow::onGnssSettingsClicked()
+void MainWindow::onGnssDisconnectFromSettings()
 {
-    SensorSettings dialog(this);
-
-    connect(&dialog, &SensorSettings::connectRequested, this, [this, &dialog]() {
-        qDebug() << "MainWindow: Запрос на подключение GNSS из настроек";
-        m_gnssComPort = dialog.getComPort();
-        m_gnssBaudRate = dialog.getBaudRate();
-
-        if (m_gnssReceiver->connectToReceiver(m_gnssComPort, m_gnssBaudRate)) {
-                dialog.setConnectionStatus("Подключено", true);
-                dialog.setConnectionEnabled(false);
-                m_gnssEnabled = true;
-                m_checkboxGnss->setChecked(true);
-            } else {
-                dialog.setConnectionStatus("Ошибка подключения", false);
-            }
-    });
-
-    connect(&dialog, &SensorSettings::disconnectRequested, this, [this, &dialog]() {
-         qDebug() << "MainWindow: Запрос на отключение GNSS из настроек";
-         disconnectFromGnss();
-         dialog.setConnectionStatus("Отключено", false);
-         dialog.setConnectionEnabled(true);
-    });
-
-    if (m_gnssReceiver->isConnected()) {
-        dialog.setConnectionStatus("Подключено", true);
-        dialog.setConnectionEnabled(false);
+    disconnectFromGnss();
+    if (sensorSettingsDialog){
+        sensorSettingsDialog->setConnectionStatus("Отключено", false);
+        sensorSettingsDialog->setConnectionEnabled(true);
     }
-
-    dialog.exec();
 }
 
 void MainWindow::updateGnssMarkerOnMap(double latitude, double longitude)
@@ -339,12 +383,15 @@ void MainWindow::disconnectFromGnss()
         m_gnssReceiver->disconnectFromReceiver();
     }
     m_gnssEnabled = false;
+    m_checkboxGnss->setChecked(false);
+
     updateCoordinateSource("Нет");
-    statusBar()->showMessage("GNSS приемник отключен", 3000);
     updateFieldsEditability();
+    updateGnssMarkerOnMap(0, 0);
+
+    statusBar()->showMessage("GNSS приемник отключен", 3000);
     emit gnssDataSourceChanged(m_gnssEnabled);
 
-    updateGnssMarkerOnMap(0, 0);
 }
 
 void MainWindow::onGnssDataReceived(const GNSSData &data)
@@ -415,8 +462,13 @@ void MainWindow::onGnssConnected()
 void MainWindow::onGnssDisconnected()
 {
     qDebug() << "GNSS приемник отключен";
+
     m_gnssEnabled = false;
-    m_checkboxGnss->setChecked(false);
+
+    if (m_checkboxGnss->isChecked()) {
+        m_checkboxGnss->setChecked(false);
+    }
+
     m_checkboxGnss->setStyleSheet(
         "QCheckBox {"
         "   background-color: white;"
@@ -431,7 +483,10 @@ void MainWindow::onGnssDisconnected()
 void MainWindow::onGnssError(const QString &error)
 {
     qDebug() << "Ошибка GNSS:" << error;
-    statusBar()->showMessage("Ошибка GNSS: " + error, 5000);
+
+    if (m_gnssReceiver->isConnected()) {
+        statusBar()->showMessage("Ошибка GNSS: " + error, 5000);
+    }
 }
 
 void MainWindow::checkAndDisableConflictingSources(const QString &activeSource)
@@ -505,9 +560,9 @@ void MainWindow::resizeEvent(QResizeEvent *event)
     if (m_checkboxGnss){
         m_checkboxGnss->move(width() - 160, 20);
     }
-    if (m_btnGnssSettings) {
-        m_btnGnssSettings->move(width() - 210, 23);
-    }
+//    if (m_btnGnssSettings) {
+//        m_btnGnssSettings->move(width() - 210, 23);
+//    }
 }
 
 void MainWindow::onSensorSettingsClicked()

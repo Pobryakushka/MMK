@@ -107,12 +107,12 @@ void SensorSettings::onDisconnectClicked()
 
 void SensorSettings::onConnectGnssClicked()
 {
-    emit connectRequested();
+    emit gnssConnectRequested();
 }
 
 void SensorSettings::onDisconnectGnssClicked()
 {
-    emit disconnectRequested();
+    emit gnssDisconnectRequested();
 }
 
 void SensorSettings::onCloseClicked()

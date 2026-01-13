@@ -35,6 +35,9 @@ signals:
     void connectRequested();
     void disconnectRequested();
 
+    void gnssConnectRequested();
+    void gnssDisconnectRequested();
+
 private slots:
     void onRefreshPortsClicked();
     void onConnectClicked();

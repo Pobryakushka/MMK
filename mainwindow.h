@@ -58,7 +58,7 @@ private slots:
 
     void onGnssCheckboxToggled(bool checked);
 
-    void onGnssSettingsClicked();
+//    void onGnssSettingsClicked();
 
     // GNSS слоты
     void onGnssDataReceived(const GNSSData &data);
@@ -66,6 +66,8 @@ private slots:
     void onGnssDisconnected();
     void onGnssError(const QString &error);
     void onNmeaReceived(const QString &nmea);
+    void onGnssConnectFromSettings();
+    void onGnssDisconnectFromSettings();
 
     // Настройки датчиков
     void onSensorSettingsClicked();
@@ -97,7 +99,7 @@ private:
 
     QPushButton *m_btnMapCoordinates;
     QCheckBox *m_checkboxGnss;
-    QPushButton *m_btnGnssSettings;
+//    QPushButton *m_btnGnssSettings;
 
     ZedF9PReceiver *m_gnssReceiver;
 

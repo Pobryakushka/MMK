@@ -62,6 +62,10 @@ bool ZedF9PReceiver::connectToReceiver(const QString &portName, qint32 baudRate)
         disconnectFromReceiver();
     }
 
+    m_buffer.clear();
+    m_ubxBuffer.clear();
+    m_rtcmBuffer.clear();
+
     m_serialPort->setPortName(portName);
     m_serialPort->setBaudRate(baudRate);
     m_serialPort->setDataBits(QSerialPort::Data8);
@@ -73,6 +77,12 @@ bool ZedF9PReceiver::connectToReceiver(const QString &portName, qint32 baudRate)
         emit errorOccurred("Не удалось открыть порт: " + m_serialPort->errorString());
         return false;
     }
+
+    m_serialPort->clear(QSerialPort::AllDirections);
+
+    disconnect(m_serialPort, nullptr, this, nullptr);
+    connect(m_serialPort, &QSerialPort::readyRead, this, &ZedF9PReceiver::onReadyRead);
+    connect(m_serialPort, &QSerialPort::errorOccurred, this, &ZedF9PReceiver::onErrorOccurred);
 
     // Конфигурируем приёмник
     QTimer::singleShot(500, this, [this]() {
@@ -88,9 +98,18 @@ bool ZedF9PReceiver::connectToReceiver(const QString &portName, qint32 baudRate)
 void ZedF9PReceiver::disconnectFromReceiver()
 {
     if (m_serialPort->isOpen()) {
+        disconnect(m_serialPort, &QSerialPort::readyRead, this, &ZedF9PReceiver::onReadyRead);
+        disconnect(m_serialPort, &QSerialPort::errorOccurred, this, &ZedF9PReceiver::onErrorOccurred);
+
+        m_serialPort->clear(QSerialPort::AllDirections);
+
         m_serialPort->close();
+
+        QThread::msleep(100);
+
         emit disconnected();
     }
+
     m_buffer.clear();
     m_ubxBuffer.clear();
     m_rtcmBuffer.clear();
@@ -680,8 +699,22 @@ double ZedF9PReceiver::nmeaToDecimal(const QString &coord, const QString &direct
 
 void ZedF9PReceiver::onErrorOccurred(QSerialPort::SerialPortError error)
 {
-    if (error != QSerialPort::NoError && error != QSerialPort::TimeoutError) {
-        emit errorOccurred("Ошибка порта: " + m_serialPort->errorString());
+    if (error == QSerialPort::NoError || error == QSerialPort::TimeoutError) {
+        return;
+    }
+
+    if (!m_serialPort->isOpen()) {
+        return;
+    }
+
+    QString errorString = m_serialPort->errorString();
+
+    if (error == QSerialPort::ResourceError ||
+            error == QSerialPort::PermissionError ||
+            error == QSerialPort::DeviceNotFoundError) {
+        emit errorOccurred("Ошибка порта: " + errorString);
+
+        disconnectFromReceiver();
     }
 }
 
