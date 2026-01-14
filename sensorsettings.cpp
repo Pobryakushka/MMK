@@ -10,19 +10,27 @@ SensorSettings::SensorSettings(QWidget *parent)
 
     populateComPorts();
     populateGnssPorts();
+    populateAmsPorts();
     setupConnections();
 
-    // Устанавливаем значения по умолчанию
+    // Устанавливаем значения по умолчанию для ИВС
     ui->comboBoxBaudRate->setCurrentText("19200");
     ui->comboBoxDataBits->setCurrentText("8");
     ui->comboBoxParity->setCurrentIndex(0); // Нет
     ui->comboBoxStopBits->setCurrentIndex(0); // 1
     ui->comboBoxProtocol->setCurrentIndex(0); // UMB
 
+    // Устанавливаем значения по умолчанию для GNSS
     ui->comboBoxGnssBaudRate->setCurrentText("19200");
     ui->comboBoxGnssDataBits->setCurrentText("8");
     ui->comboBoxGnssParity->setCurrentIndex(0); // Нет
     ui->comboBoxGnssStopBits->setCurrentIndex(0); // 1
+
+    // Устанавливаем значения по умолчанию для АМС (RS-422C)
+    ui->comboBoxAmsBaudRate->setCurrentText("9600");
+    ui->comboBoxAmsDataBits->setCurrentText("8");
+    ui->comboBoxAmsParity->setCurrentIndex(0); // Нет
+    ui->comboBoxAmsStopBits->setCurrentIndex(0); // 1
 }
 
 SensorSettings::~SensorSettings()
@@ -41,6 +49,11 @@ void SensorSettings::setupConnections()
     connect(ui->btnRefreshGnssPorts, &QPushButton::clicked, this, &SensorSettings::onRefreshGnssPortsClicked);
     connect(ui->btnConnectGnss, &QPushButton::clicked, this, &SensorSettings::onConnectGnssClicked);
     connect(ui->btnDisconnectGnss, &QPushButton::clicked, this, &SensorSettings::onDisconnectGnssClicked);
+
+    // АМС
+    connect(ui->btnRefreshAmsPorts, &QPushButton::clicked, this, &SensorSettings::onRefreshAmsPortsClicked);
+    connect(ui->btnConnectAms, &QPushButton::clicked, this, &SensorSettings::onConnectAmsClicked);
+    connect(ui->btnDisconnectAms, &QPushButton::clicked, this, &SensorSettings::onDisconnectAmsClicked);
 
     connect(ui->btnClose, &QPushButton::clicked, this, &SensorSettings::onCloseClicked);
 }
@@ -85,6 +98,27 @@ void SensorSettings::populateGnssPorts()
     }
 }
 
+void SensorSettings::populateAmsPorts()
+{
+    ui->comboBoxAmsPort->clear();
+
+    QList<QSerialPortInfo> ports = QSerialPortInfo::availablePorts();
+    for (const QSerialPortInfo &info : ports) {
+        QString portInfo = QString("%1 (%2)").arg(info.portName()).arg(info.description());
+        ui->comboBoxAmsPort->addItem(portInfo, info.systemLocation());
+        qDebug() << "SensorSettings: Найден порт АМС:" << portInfo << "->" << info.systemLocation();
+    }
+
+    if (ui->comboBoxAmsPort->count() == 0) {
+        ui->comboBoxAmsPort->addItem("Нет доступных портов");
+        ui->btnConnectAms->setEnabled(false);
+        qDebug() << "SensorSettings: Порты АМС не найдены";
+    } else {
+        ui->btnConnectAms->setEnabled(true);
+        qDebug() << "SensorSettings: Найдено портов АМС:" << ui->comboBoxAmsPort->count();
+    }
+}
+
 void SensorSettings::onRefreshPortsClicked()
 {
     populateComPorts();
@@ -93,6 +127,11 @@ void SensorSettings::onRefreshPortsClicked()
 void SensorSettings::onRefreshGnssPortsClicked()
 {
     populateGnssPorts();
+}
+
+void SensorSettings::onRefreshAmsPortsClicked()
+{
+    populateAmsPorts();
 }
 
 void SensorSettings::onConnectClicked()
@@ -115,6 +154,16 @@ void SensorSettings::onDisconnectGnssClicked()
     emit gnssDisconnectRequested();
 }
 
+void SensorSettings::onConnectAmsClicked()
+{
+    emit amsConnectRequested();
+}
+
+void SensorSettings::onDisconnectAmsClicked()
+{
+    emit amsDisconnectRequested();
+}
+
 void SensorSettings::onCloseClicked()
 {
     close();
@@ -123,8 +172,8 @@ void SensorSettings::onCloseClicked()
 QString SensorSettings::getComPort() const
 {
     if (ui->tabWidget->currentIndex() == 1) {
-    QString port = ui->comboBoxGnssPort->currentData().toString();
-    return port;
+        QString port = ui->comboBoxGnssPort->currentData().toString();
+        return port;
     }
 
     QString port = ui->comboBoxComPort->currentData().toString();
@@ -134,8 +183,8 @@ QString SensorSettings::getComPort() const
 int SensorSettings::getBaudRate() const
 {
     if (ui->tabWidget->currentIndex() == 1) {
-    int baudRate = ui->comboBoxGnssBaudRate->currentText().toInt();
-    return baudRate;
+        int baudRate = ui->comboBoxGnssBaudRate->currentText().toInt();
+        return baudRate;
     }
     int baudRate = ui->comboBoxBaudRate->currentText().toInt();
     return baudRate;
@@ -194,6 +243,73 @@ int SensorSettings::getPollInterval() const
     return ui->spinBoxPollInterval->value();
 }
 
+// ===== МЕТОДЫ ДЛЯ АМС =====
+
+QString SensorSettings::getAmsComPort() const
+{
+    QString port = ui->comboBoxAmsPort->currentData().toString();
+    return port;
+}
+
+int SensorSettings::getAmsBaudRate() const
+{
+    int baudRate = ui->comboBoxAmsBaudRate->currentText().toInt();
+    return baudRate;
+}
+
+QSerialPort::DataBits SensorSettings::getAmsDataBits() const
+{
+    int bits = ui->comboBoxAmsDataBits->currentText().toInt();
+    return (bits == 8) ? QSerialPort::Data8 : QSerialPort::Data7;
+}
+
+QSerialPort::Parity SensorSettings::getAmsParity() const
+{
+    int index = ui->comboBoxAmsParity->currentIndex();
+    switch (index) {
+        case 1: return QSerialPort::EvenParity;
+        case 2: return QSerialPort::OddParity;
+        default: return QSerialPort::NoParity;
+    }
+}
+
+QSerialPort::StopBits SensorSettings::getAmsStopBits() const
+{
+    int index = ui->comboBoxAmsStopBits->currentIndex();
+    return (index == 0) ? QSerialPort::OneStop : QSerialPort::TwoStop;
+}
+
+void SensorSettings::setAmsConnectionStatus(const QString& status, bool connected)
+{
+    ui->lblAmsStatus->setText(QString("Статус: %1").arg(status));
+
+    if (connected) {
+        ui->lblAmsStatus->setStyleSheet("color: green; font-size: 10pt; padding: 5px; font-weight: bold;");
+        ui->btnConnectAms->setEnabled(false);
+        ui->btnDisconnectAms->setEnabled(true);
+        ui->btnDisconnectAms->setStyleSheet("background-color: #F44336; color: white; font-weight: bold;");
+    } else {
+        ui->lblAmsStatus->setStyleSheet("color: #666; font-size: 10pt; padding: 5px;");
+        ui->btnConnectAms->setEnabled(true);
+        ui->btnDisconnectAms->setEnabled(false);
+        ui->btnDisconnectAms->setStyleSheet("background-color: #757575; color: white; font-weight: bold;");
+    }
+
+    qDebug() << "SensorSettings: Статус АМС установлен:" << status << "Connected:" << connected;
+}
+
+void SensorSettings::setAmsConnectionEnabled(bool enabled)
+{
+    ui->comboBoxAmsPort->setEnabled(enabled);
+    ui->comboBoxAmsBaudRate->setEnabled(enabled);
+    ui->comboBoxAmsDataBits->setEnabled(enabled);
+    ui->comboBoxAmsParity->setEnabled(enabled);
+    ui->comboBoxAmsStopBits->setEnabled(enabled);
+    ui->btnRefreshAmsPorts->setEnabled(enabled);
+}
+
+// ===== СУЩЕСТВУЮЩИЕ МЕТОДЫ =====
+
 void SensorSettings::setConnectionStatus(const QString& status, bool connected)
 {
     // Определяем активную вкладку
@@ -230,7 +346,6 @@ void SensorSettings::setConnectionStatus(const QString& status, bool connected)
     }
 
     qDebug() << "SensorSettings: Статус подключения установлен:" << status << "Connected:" << connected;
-
 }
 
 void SensorSettings::setConnectionEnabled(bool enabled)

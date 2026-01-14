@@ -10,6 +10,7 @@
 #include <QSerialPortInfo>
 #include "qmlcoordinateproxy.h"
 #include "zedf9preceiver.h"
+#include "amshandler.h"
 
 #include "Map/InitialParameters.h"
 #include "Map/FormMapView.h"
@@ -36,6 +37,10 @@ public:
     ZedF9PReceiver* getGnssReceiver() { return m_gnssReceiver; }
     bool isGnssEnabled() const { return m_gnssEnabled; }
 
+    // Геттер для АМС
+    AMSHandler* getAmsHandler() { return m_amsHandler; }
+    bool isAmsConnected() const { return m_amsHandler && m_amsHandler->isConnected(); }
+
 signals:
     void mapCoordinatesModeChanged(bool enabled);
     void coordinatesUpdatedFromMap(double latitude, double longitude);
@@ -58,8 +63,6 @@ private slots:
 
     void onGnssCheckboxToggled(bool checked);
 
-//    void onGnssSettingsClicked();
-
     // GNSS слоты
     void onGnssDataReceived(const GNSSData &data);
     void onGnssConnected();
@@ -78,6 +81,17 @@ private slots:
     void onSerialDataReceived();
     void onSerialError(QSerialPort::SerialPortError error);
     void pollMeteoStation();
+
+    // АМС слоты
+    void onAmsConnectFromSettings();
+    void onAmsDisconnectFromSettings();
+    void onAmsConnected();
+    void onAmsDisconnected();
+    void onAmsError(const QString &error);
+    void onAmsStatusMessage(const QString &message);
+    void onAmsMeasurementProgress(int percent, float angle);
+    void onAmsDataWritten(int recordId);
+    void onAmsDatabaseError(const QString &error);
 
 private:
     Ui::MainWindow *ui;
@@ -99,12 +113,16 @@ private:
 
     QPushButton *m_btnMapCoordinates;
     QCheckBox *m_checkboxGnss;
-//    QPushButton *m_btnGnssSettings;
 
     ZedF9PReceiver *m_gnssReceiver;
 
     QString m_gnssComPort;
     int m_gnssBaudRate;
+
+    // АМС
+    AMSHandler *m_amsHandler;
+    QString m_amsComPort;
+    int m_amsBaudRate;
 
     void createMapComponent(const QString &pluginName);
     void setupMapItems(QQuickItem *item);
@@ -118,6 +136,10 @@ private:
     void connectToGnss();
     void disconnectFromGnss();
     void updateGnssMarkerOnMap(double latitude, double longitude);
+
+    // АМС методы
+    void setupAmsHandler();
+    void configureAmsDatabase();
 
     void resizeEvent(QResizeEvent *event);
     QList<quint16> getRequestParameters();

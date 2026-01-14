@@ -4,6 +4,7 @@
 #include "AlgorithmsCalc.h"
 #include "MeasurementResults.h"
 #include "GroundMeteoParams.h"
+#include "amshandler.h"
 #include <QDateTime>
 #include <QTimer>
 #include <QQuickItem>
@@ -30,13 +31,21 @@ MainWindow::MainWindow(QWidget *parent)
     , m_gnssReceiver(new ZedF9PReceiver(this))
     , m_gnssComPort("")
     , m_gnssBaudRate(19200)
+
 {
+
+    m_amsHandler = new AMSHandler(this);
+    m_amsComPort = "";
+    m_amsBaudRate = 9600;
+
+    setupAmsHandler();
+    configureAmsDatabase();
+
     ui->setupUi(this);
 
     fMapView = new FormMapView(this);
 
     setupMapCoordinatesButton();
-
     setupGnssCheckbox();
 
 //    setupGnssSettingsButton();
@@ -105,6 +114,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(sensorSettingsDialog, &SensorSettings::gnssConnectRequested, this, &MainWindow::onGnssConnectFromSettings);
     connect(sensorSettingsDialog, &SensorSettings::gnssDisconnectRequested, this, &MainWindow::onGnssDisconnectFromSettings);
 
+    connect(sensorSettingsDialog, &SensorSettings::amsConnectRequested, this, &MainWindow::onAmsConnectFromSettings);
+    connect(sensorSettingsDialog, &SensorSettings::amsDisconnectRequested, this, &MainWindow::onAmsDisconnectFromSettings);
+
     // Создаём постоянный экземпляр SourceData (внутри создастся GroundMeteoParams)
     // Не показываем его, просто держим в памяти для доступа к данным
     sourceDataInstance = new SourceData(this);
@@ -121,6 +133,9 @@ MainWindow::~MainWindow()
     }
     if (m_gnssReceiver->isConnected()){
         m_gnssReceiver->disconnectFromReceiver();
+    }
+    if (m_amsHandler && m_amsHandler->isConnected()) {
+        m_amsHandler->disconnectFromAMS();
     }
     delete ui;
 }
@@ -518,6 +533,198 @@ void MainWindow::checkAndDisableConflictingSources(const QString &activeSource)
     }
 }
 
+void MainWindow::setupAmsHandler()
+{
+    if (!m_amsHandler) return;
+
+    // Подключаем сигналы АМС
+    connect(m_amsHandler, &AMSHandler::connected,
+            this, &MainWindow::onAmsConnected);
+    connect(m_amsHandler, &AMSHandler::disconnected,
+            this, &MainWindow::onAmsDisconnected);
+    connect(m_amsHandler, &AMSHandler::errorOccurred,
+            this, &MainWindow::onAmsError);
+    connect(m_amsHandler, &AMSHandler::statusMessage,
+            this, &MainWindow::onAmsStatusMessage);
+    connect(m_amsHandler, &AMSHandler::measurementProgressUpdated,
+            this, &MainWindow::onAmsMeasurementProgress);
+    connect(m_amsHandler, &AMSHandler::dataWrittenToDatabase,
+            this, &MainWindow::onAmsDataWritten);
+    connect(m_amsHandler, &AMSHandler::databaseError,
+            this, &MainWindow::onAmsDatabaseError);
+
+    qDebug() << "MainWindow: АМС обработчик настроен";
+}
+
+void MainWindow::configureAmsDatabase()
+{
+    if (!m_amsHandler) return;
+
+    // Настройка подключения к БД
+    // TODO: Загрузить параметры из конфигурационного файла или настроек
+    QString dbHost = "localhost";
+    int dbPort = 5432;
+    QString dbName = "MMK";
+    QString dbUser = "postgres";
+    QString dbPassword = "123"; // ВАЖНО: Заменить на реальный пароль
+
+    m_amsHandler->setDatabase(dbHost, dbPort, dbName, dbUser, dbPassword);
+
+    qDebug() << "MainWindow: Настроена БД для АМС:" << dbName << "на" << dbHost;
+}
+
+// ===== СЛОТЫ ДЛЯ АМС =====
+
+void MainWindow::onAmsConnectFromSettings()
+{
+    if (!sensorSettingsDialog || !m_amsHandler) return;
+
+    m_amsComPort = sensorSettingsDialog->getAmsComPort();
+    m_amsBaudRate = sensorSettingsDialog->getAmsBaudRate();
+
+    qDebug() << "MainWindow: Попытка подключения к АМС на" << m_amsComPort
+             << "со скоростью" << m_amsBaudRate;
+
+    if (m_amsHandler->connectToAMS(
+            m_amsComPort,
+            m_amsBaudRate,
+            sensorSettingsDialog->getAmsDataBits(),
+            sensorSettingsDialog->getAmsParity(),
+            sensorSettingsDialog->getAmsStopBits())) {
+
+        qDebug() << "MainWindow: АМС подключение инициировано";
+        sensorSettingsDialog->setAmsConnectionStatus("Подключение...", false);
+    } else {
+        qDebug() << "MainWindow: Ошибка подключения к АМС";
+        sensorSettingsDialog->setAmsConnectionStatus("Ошибка подключения", false);
+        QMessageBox::warning(this, "Ошибка",
+            "Не удалось подключиться к АМС. Проверьте порт и настройки.");
+    }
+}
+
+void MainWindow::onAmsDisconnectFromSettings()
+{
+    if (!m_amsHandler) return;
+
+    qDebug() << "MainWindow: Отключение от АМС";
+    m_amsHandler->disconnectFromAMS();
+
+    if (sensorSettingsDialog) {
+        sensorSettingsDialog->setAmsConnectionStatus("Отключено", false);
+        sensorSettingsDialog->setAmsConnectionEnabled(true);
+    }
+}
+
+void MainWindow::onAmsConnected()
+{
+    qDebug() << "MainWindow: АМС подключена успешно";
+
+    if (sensorSettingsDialog) {
+        sensorSettingsDialog->setAmsConnectionStatus("Подключено", true);
+        sensorSettingsDialog->setAmsConnectionEnabled(false);
+    }
+
+    statusBar()->showMessage("АМС подключена успешно", 5000);
+
+    // Можно сразу запросить функциональный контроль
+    QTimer::singleShot(1000, this, [this]() {
+        if (m_amsHandler && m_amsHandler->isConnected()) {
+            m_amsHandler->requestFunctionalControl();
+        }
+    });
+}
+
+void MainWindow::onAmsDisconnected()
+{
+    qDebug() << "MainWindow: АМС отключена";
+
+    if (sensorSettingsDialog) {
+        sensorSettingsDialog->setAmsConnectionStatus("Отключено", false);
+        sensorSettingsDialog->setAmsConnectionEnabled(true);
+    }
+
+    statusBar()->showMessage("АМС отключена", 3000);
+}
+
+void MainWindow::onAmsError(const QString &error)
+{
+    qWarning() << "MainWindow: Ошибка АМС:" << error;
+    statusBar()->showMessage("Ошибка АМС: " + error, 10000);
+
+    // Можно показать диалог с ошибкой
+    if (error.contains("Таймаут") || error.contains("контрольной суммы")) {
+        // Это обычные ошибки связи, просто логируем
+        qDebug() << "MainWindow: Ошибка связи с АМС, будет повторная попытка";
+    } else {
+        // Серьезная ошибка
+        QMessageBox::warning(this, "Ошибка АМС", error);
+    }
+}
+
+void MainWindow::onAmsStatusMessage(const QString &message)
+{
+    qDebug() << "MainWindow: Статус АМС:" << message;
+    statusBar()->showMessage("АМС: " + message, 3000);
+}
+
+void MainWindow::onAmsMeasurementProgress(int percent, float angle)
+{
+    if (percent >= 0 && percent <= 100) {
+        qDebug() << "MainWindow: Прогресс измерений АМС:" << percent << "%, угол:" << angle << "°";
+        statusBar()->showMessage(
+            QString("АМС: Измерения %1% (угол: %2°)").arg(percent).arg(angle, 0, 'f', 1),
+            2000);
+    } else if (percent == -1) {
+        qDebug() << "MainWindow: Измерения АМС завершены успешно";
+        statusBar()->showMessage("АМС: Измерения завершены успешно", 5000);
+
+        // Можно запросить данные
+        QTimer::singleShot(500, this, [this]() {
+            if (m_amsHandler && m_amsHandler->isConnected()) {
+                m_amsHandler->requestAvgWind();
+                m_amsHandler->requestActualWind();
+                m_amsHandler->requestMeasuredWind();
+            }
+        });
+    } else if (percent == -2) {
+        qWarning() << "MainWindow: Ошибка при измерениях АМС";
+        statusBar()->showMessage("АМС: Ошибка при измерениях", 5000);
+        QMessageBox::warning(this, "АМС", "Ошибка при выполнении измерений");
+    }
+}
+
+void MainWindow::onAmsDataWritten(int recordId)
+{
+    qDebug() << "MainWindow: Данные АМС записаны в архив, record_id:" << recordId;
+    statusBar()->showMessage(
+        QString("АМС: Данные записаны в архив (ID: %1)").arg(recordId),
+        3000);
+}
+
+void MainWindow::onAmsDatabaseError(const QString &error)
+{
+    qCritical() << "MainWindow: Ошибка БД АМС:" << error;
+    statusBar()->showMessage("Ошибка БД АМС: " + error, 10000);
+    QMessageBox::critical(this, "Ошибка базы данных АМС",
+        "Не удалось записать данные в базу данных:\n" + error);
+}
+
+// ===== ДОПОЛНИТЕЛЬНО: Можно добавить кнопки управления АМС в интерфейс =====
+// Например, в onFunctionalControlClicked() можно добавить:
+
+void MainWindow::onFunctionalControlClicked()
+{
+    // Проверяем подключение к АМС
+    if (m_amsHandler && m_amsHandler->isConnected()) {
+        // Запрашиваем функциональный контроль
+        m_amsHandler->requestFunctionalControl();
+        statusBar()->showMessage("АМС: Запрос функционального контроля...", 3000);
+    } else {
+        QMessageBox::information(this, "АМС",
+            "АМС не подключена. Подключитесь через настройки датчиков.");
+    }
+}
+
 void MainWindow::updateCoordinateSource(const QString &source)
 {
     QString message = "Источник координат: " + source;
@@ -781,10 +988,10 @@ void MainWindow::updateDateTime()
     ui->lblDateTime->setText(timeString);
 }
 
-void MainWindow::onFunctionalControlClicked()
-{
-    // Здесь будет логика функционального контроля
-}
+//void MainWindow::onFunctionalControlClicked()
+//{
+//    // Здесь будет логика функционального контроля
+//}
 
 void MainWindow::onWorkRegulationClicked()
 {

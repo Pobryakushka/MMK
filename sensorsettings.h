@@ -17,7 +17,7 @@ public:
     explicit SensorSettings(QWidget *parent = nullptr);
     ~SensorSettings();
 
-    // Получение настроек
+    // Получение настроек для ИВС/GNSS
     QString getComPort() const;
     int getBaudRate() const;
     QSerialPort::DataBits getDataBits() const;
@@ -27,9 +27,20 @@ public:
     quint8 getDeviceAddress() const;
     int getPollInterval() const;
 
+    // Получение настроек для АМС
+    QString getAmsComPort() const;
+    int getAmsBaudRate() const;
+    QSerialPort::DataBits getAmsDataBits() const;
+    QSerialPort::Parity getAmsParity() const;
+    QSerialPort::StopBits getAmsStopBits() const;
+
     // Установка статуса
     void setConnectionStatus(const QString& status, bool connected);
     void setConnectionEnabled(bool enabled);
+
+    // Установка статуса АМС
+    void setAmsConnectionStatus(const QString& status, bool connected);
+    void setAmsConnectionEnabled(bool enabled);
 
 signals:
     void connectRequested();
@@ -37,6 +48,9 @@ signals:
 
     void gnssConnectRequested();
     void gnssDisconnectRequested();
+
+    void amsConnectRequested();
+    void amsDisconnectRequested();
 
 private slots:
     void onRefreshPortsClicked();
@@ -48,11 +62,16 @@ private slots:
     void onConnectGnssClicked();
     void onDisconnectGnssClicked();
 
+    void onRefreshAmsPortsClicked();
+    void onConnectAmsClicked();
+    void onDisconnectAmsClicked();
+
 private:
     Ui::SensorSettings *ui;
 
     void populateComPorts();
     void populateGnssPorts();
+    void populateAmsPorts();
     void setupConnections();
 };
 
