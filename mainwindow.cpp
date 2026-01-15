@@ -31,16 +31,11 @@ MainWindow::MainWindow(QWidget *parent)
     , m_gnssReceiver(new ZedF9PReceiver(this))
     , m_gnssComPort("")
     , m_gnssBaudRate(19200)
+    , m_amsHandler(nullptr)
+    , m_amsComPort("")
+    , m_amsBaudRate(9600)
 
 {
-
-    m_amsHandler = new AMSHandler(this);
-    m_amsComPort = "";
-    m_amsBaudRate = 9600;
-
-    setupAmsHandler();
-    configureAmsDatabase();
-
     ui->setupUi(this);
 
     fMapView = new FormMapView(this);
@@ -121,6 +116,10 @@ MainWindow::MainWindow(QWidget *parent)
     // Не показываем его, просто держим в памяти для доступа к данным
     sourceDataInstance = new SourceData(this);
     qDebug() << "SourceData instance created (with GroundMeteoParams inside)";
+
+    m_amsHandler = new AMSHandler(this);
+    setupAmsHandler();
+    configureAmsDatabase();
 }
 
 MainWindow::~MainWindow()
@@ -571,6 +570,23 @@ void MainWindow::configureAmsDatabase()
     m_amsHandler->setDatabase(dbHost, dbPort, dbName, dbUser, dbPassword);
 
     qDebug() << "MainWindow: Настроена БД для АМС:" << dbName << "на" << dbHost;
+
+    QSqlDatabase testDb = QSqlDatabase::addDatabase("QPSQL", "TestAmsConnection");
+    testDb.setHostName(dbHost);
+    testDb.setPort(dbPort);
+    testDb.setDatabaseName(dbName);
+    testDb.setUserName(dbUser);
+    testDb.setPassword(dbPassword);
+
+    if(testDb.open()) {
+        qInfo() << "MainWindow: Тестовое подключение к БД успешно";
+        testDb.close();
+    } else {
+        qCritical() << " MainWindow: Ошибка подключения к БД АМС: " << testDb.lastError().text();
+        QMessageBox::warning(this, "Ошибка БД", "Не удалось подключиться к базе данных АМС:\n" + testDb.lastError().text() +
+                             "\n\nПроверьте параметры подключения");
+    }
+    QSqlDatabase::removeDatabase("TestAmsConnection");
 }
 
 // ===== СЛОТЫ ДЛЯ АМС =====

@@ -1,6 +1,7 @@
 #include "sensorsettings.h"
 #include "ui_sensorsettings.h"
 #include <QDebug>
+#include <QFile>
 
 SensorSettings::SensorSettings(QWidget *parent)
     : QDialog(parent)
@@ -116,6 +117,12 @@ void SensorSettings::populateAmsPorts()
     } else {
         ui->btnConnectAms->setEnabled(true);
         qDebug() << "SensorSettings: Найдено портов АМС:" << ui->comboBoxAmsPort->count();
+    }
+    if (QFile::exists("/dev/pts/1")){
+        ui->comboBoxAmsPort->addItem("Virtual pts/1", "/dev/pts/1");
+    }
+    if (QFile::exists("/dev/pts/2")){
+        ui->comboBoxAmsPort->addItem("Virtual pts/2", "/dev/pts/2");
     }
 }
 
