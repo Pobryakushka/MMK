@@ -17,6 +17,7 @@ SOURCES += \
     MeasurementResults.cpp \
     Meteo11.cpp \
     SourceData.cpp \
+    databasemanager.cpp \
     main.cpp \
     mainwindow.cpp \
     sensorsettings.cpp \
@@ -34,6 +35,7 @@ HEADERS += \
     MeasurementResults.h \
     Meteo11.h \
     SourceData.h \
+    databasemanager.h \
     mainwindow.h \
     qmlcoordinateproxy.h \
     sensorsettings.h \

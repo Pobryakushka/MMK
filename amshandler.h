@@ -88,15 +88,6 @@ private:
     QTimer *m_responseTimer;
     QByteArray m_receiveBuffer;
     
-    // База данных
-    QSqlDatabase m_database;
-    QString m_dbHost;
-    int m_dbPort;
-    QString m_dbName;
-    QString m_dbUser;
-    QString m_dbPassword;
-    bool m_dbConfigured;
-    
     // Состояние
     bool m_waitingForResponse;
     AMSCommand m_lastCommand;
@@ -105,8 +96,6 @@ private:
     // Внутренние методы
     bool sendPacket(const QByteArray &packet, AMSCommand command);
     void processReceivedPacket(const QByteArray &packet);
-    bool connectDatabase();
-    void disconnectDatabase();
     
     // Методы записи в БД
     int createMainArchiveRecord(const QString &notes = QString());

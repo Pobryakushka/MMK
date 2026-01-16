@@ -5,6 +5,7 @@
 #include "MeasurementResults.h"
 #include "GroundMeteoParams.h"
 #include "amshandler.h"
+#include "databasemanager.h"
 #include <QDateTime>
 #include <QTimer>
 #include <QQuickItem>
@@ -557,36 +558,29 @@ void MainWindow::setupAmsHandler()
 
 void MainWindow::configureAmsDatabase()
 {
-    if (!m_amsHandler) return;
-
     // Настройка подключения к БД
     // TODO: Загрузить параметры из конфигурационного файла или настроек
     QString dbHost = "localhost";
     int dbPort = 5432;
     QString dbName = "MMK";
     QString dbUser = "postgres";
-    QString dbPassword = "123"; // ВАЖНО: Заменить на реальный пароль
+    QString dbPassword = "123";
 
-    m_amsHandler->setDatabase(dbHost, dbPort, dbName, dbUser, dbPassword);
+    DatabaseManager::instance()->configure(dbHost, dbPort, dbName, dbUser, dbPassword);
 
-    qDebug() << "MainWindow: Настроена БД для АМС:" << dbName << "на" << dbHost;
+    qDebug() << "MainWindow: Настроена БД:" << dbName << "на" << dbHost;
 
-    QSqlDatabase testDb = QSqlDatabase::addDatabase("QPSQL", "TestAmsConnection");
-    testDb.setHostName(dbHost);
-    testDb.setPort(dbPort);
-    testDb.setDatabaseName(dbName);
-    testDb.setUserName(dbUser);
-    testDb.setPassword(dbPassword);
-
-    if(testDb.open()) {
-        qInfo() << "MainWindow: Тестовое подключение к БД успешно";
-        testDb.close();
+    if(DatabaseManager::instance()->connect()) {
+        qInfo() << "MainWindow: Успешное подключение к БД";
     } else {
-        qCritical() << " MainWindow: Ошибка подключения к БД АМС: " << testDb.lastError().text();
-        QMessageBox::warning(this, "Ошибка БД", "Не удалось подключиться к базе данных АМС:\n" + testDb.lastError().text() +
-                             "\n\nПроверьте параметры подключения");
+        qCritical() << "MainWindow: Ошибка подключения к БД";
+        QMessageBox::warning(this, "Ошибка БД",
+        "Не удалось подключиться к базе данных. \nПроверьте параметры подключения.");
     }
-    QSqlDatabase::removeDatabase("TestAmsConnection");
+
+    if (m_amsHandler){
+        m_amsHandler->setDatabase(dbHost, dbPort, dbName, dbUser, dbPassword);
+    }
 }
 
 // ===== СЛОТЫ ДЛЯ АМС =====

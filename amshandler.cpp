@@ -1,4 +1,5 @@
 #include "amshandler.h"
+#include "databasemanager.h"
 #include <QDebug>
 
 AMSHandler::AMSHandler(QObject *parent)
@@ -6,8 +7,6 @@ AMSHandler::AMSHandler(QObject *parent)
     , m_serialPort(new QSerialPort(this))
     , m_protocol(new AMSProtocol(this))
     , m_responseTimer(new QTimer(this))
-    , m_dbPort(5432)
-    , m_dbConfigured(false)
     , m_waitingForResponse(false)
     , m_lastCommand(static_cast<AMSCommand>(0x00))
     , m_currentRecordId(-1)
@@ -23,7 +22,6 @@ AMSHandler::AMSHandler(QObject *parent)
 AMSHandler::~AMSHandler()
 {
     disconnectFromAMS();
-    disconnectDatabase();
 }
 
 // ===== УПРАВЛЕНИЕ ПОДКЛЮЧЕНИЕМ =====
@@ -91,52 +89,8 @@ bool AMSHandler::isConnected() const
 void AMSHandler::setDatabase(const QString &host, int port, const QString &dbName,
                              const QString &user, const QString &password)
 {
-    m_dbHost = host;
-    m_dbPort = port;
-    m_dbName = dbName;
-    m_dbUser = user;
-    m_dbPassword = password;
-    m_dbConfigured = true;
-    
-    qInfo() << "AMSHandler: Настроена БД" << dbName << "на" << host << ":" << port;
-}
-
-bool AMSHandler::connectDatabase()
-{
-    if (!m_dbConfigured) {
-        qWarning() << "AMSHandler: БД не настроена";
-        return false;
-    }
-    
-    if (m_database.isOpen()) {
-        return true;
-    }
-    
-    m_database = QSqlDatabase::addDatabase("QPSQL", "AMS_Connection");
-    m_database.setHostName(m_dbHost);
-    m_database.setPort(m_dbPort);
-    m_database.setDatabaseName(m_dbName);
-    m_database.setUserName(m_dbUser);
-    m_database.setPassword(m_dbPassword);
-    
-    if (!m_database.open()) {
-        QString error = QString("Ошибка подключения к БД: %1").arg(m_database.lastError().text());
-        qCritical() << "AMSHandler:" << error;
-        emit databaseError(error);
-        return false;
-    }
-    
-    qInfo() << "AMSHandler: Подключено к БД";
-    return true;
-}
-
-void AMSHandler::disconnectDatabase()
-{
-    if (m_database.isOpen()) {
-        m_database.close();
-        qInfo() << "AMSHandler: Отключено от БД";
-    }
-    QSqlDatabase::removeDatabase("AMS_Connection");
+    DatabaseManager::instance()->configure(host, port, dbName, user, password);
+    DatabaseManager::instance()->connect();
 }
 
 // ===== ОТПРАВКА ПАКЕТОВ =====
@@ -542,9 +496,10 @@ bool AMSHandler::stopAntennaRotation()
 
 int AMSHandler::createMainArchiveRecord(const QString &notes)
 {
-    if (!connectDatabase()) return -1;
+    if (!DatabaseManager::instance()->connect()) return -1;
     
-    QSqlQuery query(m_database);
+    QSqlDatabase db = DatabaseManager::instance()->database();
+    QSqlQuery query(db);
     query.prepare("INSERT INTO main_archive (completion_time, notes) VALUES (NOW(), :notes) RETURNING record_id");
     query.bindValue(":notes", notes.isEmpty() ? QVariant(QVariant::String) : notes);
     
@@ -564,13 +519,14 @@ int AMSHandler::createMainArchiveRecord(const QString &notes)
 
 bool AMSHandler::saveAvgWindProfile(int recordId, const QVector<WindProfileData> &data)
 {
-    if (!connectDatabase()) return false;
+    if (!DatabaseManager::instance()->connect()) return false;
     
-    QSqlQuery query(m_database);
+    QSqlDatabase db = DatabaseManager::instance()->database();
+    QSqlQuery query(db);
     query.prepare("INSERT INTO avg_wind_profile (height, wind_speed, wind_direction, measurement_time) "
                  "VALUES (:height, :speed, :direction, NOW()) RETURNING profile_id");
     
-    m_database.transaction();
+    db.transaction();
     
     for (const WindProfileData &point : data) {
         query.bindValue(":height", point.height);
@@ -578,7 +534,7 @@ bool AMSHandler::saveAvgWindProfile(int recordId, const QVector<WindProfileData>
         query.bindValue(":direction", point.windDirection);
         
         if (!query.exec()) {
-            m_database.rollback();
+            db.rollback();
             QString error = QString("Ошибка записи среднего ветра: %1").arg(query.lastError().text());
             qCritical() << "AMSHandler:" << error;
             emit databaseError(error);
@@ -586,7 +542,7 @@ bool AMSHandler::saveAvgWindProfile(int recordId, const QVector<WindProfileData>
         }
     }
     
-    m_database.commit();
+    db.commit();
     qInfo() << "AMSHandler: Сохранён профиль среднего ветра," << data.size() << "точек";
     
     return true;
@@ -594,13 +550,14 @@ bool AMSHandler::saveAvgWindProfile(int recordId, const QVector<WindProfileData>
 
 bool AMSHandler::saveActualWindProfile(int recordId, const QVector<WindProfileData> &data)
 {
-    if (!connectDatabase()) return false;
+    if (!DatabaseManager::instance()->connect()) return false;
     
-    QSqlQuery query(m_database);
+    QSqlDatabase db = DatabaseManager::instance()->database();
+    QSqlQuery query(db);
     query.prepare("INSERT INTO actual_wind_profile (height, wind_speed, wind_direction, measurement_time) "
                  "VALUES (:height, :speed, :direction, NOW()) RETURNING profile_id");
     
-    m_database.transaction();
+    db.transaction();
     
     for (const WindProfileData &point : data) {
         query.bindValue(":height", point.height);
@@ -608,7 +565,7 @@ bool AMSHandler::saveActualWindProfile(int recordId, const QVector<WindProfileDa
         query.bindValue(":direction", point.windDirection);
         
         if (!query.exec()) {
-            m_database.rollback();
+            db.rollback();
             QString error = QString("Ошибка записи действительного ветра: %1").arg(query.lastError().text());
             qCritical() << "AMSHandler:" << error;
             emit databaseError(error);
@@ -616,7 +573,7 @@ bool AMSHandler::saveActualWindProfile(int recordId, const QVector<WindProfileDa
         }
     }
     
-    m_database.commit();
+    db.commit();
     qInfo() << "AMSHandler: Сохранён профиль действительного ветра," << data.size() << "точек";
     
     return true;
@@ -624,13 +581,14 @@ bool AMSHandler::saveActualWindProfile(int recordId, const QVector<WindProfileDa
 
 bool AMSHandler::saveMeasuredWindProfile(int recordId, const QVector<MeasuredWindData> &data)
 {
-    if (!connectDatabase()) return false;
-    
-    QSqlQuery query(m_database);
+    if (!DatabaseManager::instance()->connect()) return false;
+
+    QSqlDatabase db = DatabaseManager::instance()->database();
+    QSqlQuery query(db);
     query.prepare("INSERT INTO measured_wind_profile (height, wind_speed, wind_direction, measurement_time) "
                  "VALUES (:height, :speed, :direction, NOW()) RETURNING profile_id");
     
-    m_database.transaction();
+    db.transaction();
     
     for (const MeasuredWindData &point : data) {
         // Записываем только достоверные данные (reliability == 2)
@@ -641,7 +599,7 @@ bool AMSHandler::saveMeasuredWindProfile(int recordId, const QVector<MeasuredWin
         query.bindValue(":direction", point.windDirection);
         
         if (!query.exec()) {
-            m_database.rollback();
+            db.rollback();
             QString error = QString("Ошибка записи измеренного ветра: %1").arg(query.lastError().text());
             qCritical() << "AMSHandler:" << error;
             emit databaseError(error);
@@ -649,7 +607,7 @@ bool AMSHandler::saveMeasuredWindProfile(int recordId, const QVector<MeasuredWin
         }
     }
     
-    m_database.commit();
+    db.commit();
     qInfo() << "AMSHandler: Сохранён профиль измеренного ветра";
     
     return true;
@@ -657,9 +615,10 @@ bool AMSHandler::saveMeasuredWindProfile(int recordId, const QVector<MeasuredWin
 
 bool AMSHandler::saveStationCoordinates(int recordId, const StationCoordinates &coords)
 {
-    if (!connectDatabase()) return false;
-    
-    QSqlQuery query(m_database);
+    if (!DatabaseManager::instance()->connect()) return false;
+
+    QSqlDatabase db = DatabaseManager::instance()->database();
+    QSqlQuery query(db);
     query.prepare("INSERT INTO station_coordinates (record_id, latitude, longitude, altitude) "
                  "VALUES (:record_id, :lat, :lon, :alt)");
     
@@ -685,9 +644,10 @@ bool AMSHandler::saveStationCoordinates(int recordId, const StationCoordinates &
 
 bool AMSHandler::saveCriticalMessage(int recordId, const QString &message, const QString &severity)
 {
-    if (!connectDatabase()) return false;
+    if (!DatabaseManager::instance()->connect()) return false;
     
-    QSqlQuery query(m_database);
+    QSqlDatabase db = DatabaseManager::instance()->database();
+    QSqlQuery query(db);
     query.prepare("INSERT INTO critical_messages (record_id, message_text, message_time, severity_level) "
                  "VALUES (:record_id, :message, NOW(), :severity)");
     

@@ -1,9 +1,11 @@
 #include "MeasurementResults.h"
 #include "ui_MeasurementResults.h"
+#include "databasemanager.h"
 #include <QCalendarWidget>
 #include <QMessageBox>
 #include <QVBoxLayout>
 #include <QStackedWidget>
+#include <QDebug>
 
 MeasurementResults::MeasurementResults(QWidget *parent)
     : QDialog(parent)
@@ -11,6 +13,8 @@ MeasurementResults::MeasurementResults(QWidget *parent)
     , currentButtelinType(Updated)
     , currentOutputFormat(String)
     , m_mapCoordinatesMode(false)
+    , m_dbPort(5432)
+    , m_dbConfigured(false)
 {
     ui->setupUi(this);
 
@@ -19,15 +23,12 @@ MeasurementResults::MeasurementResults(QWidget *parent)
     minutes = (minutes / 10) * 10;
     currentDateTime.setTime(QTime(currentDateTime.time().hour(), minutes, 0));
 
-    setupMockData();
-    loadAvailableMeasurements();
     updateDateTimeDisplay();
     updateSliderRange();
 
     connect(ui->btnPrevDate, &QPushButton::clicked, this, &MeasurementResults::onPrevDateClicked);
     connect(ui->btnNextDate, &QPushButton::clicked, this, &MeasurementResults::onNextDateClicked);
     connect(ui->btnSelectDate, &QPushButton::clicked, this, &MeasurementResults::onSelectDateClicked);
-    connect(ui->timeSlider, &QSlider::valueChanged, this, &MeasurementResults::onTimeSliderChanged);
 
     connect(ui->pushButton_updated, &QPushButton::clicked, this, &MeasurementResults::onUpdatedButtonClicked);
     connect(ui->pushButton_approximate, &QPushButton::clicked, this, &MeasurementResults::onApproximateButtonClicked);
@@ -41,8 +42,284 @@ MeasurementResults::MeasurementResults(QWidget *parent)
 
 MeasurementResults::~MeasurementResults()
 {
+    disconnectDatabase();
     delete ui;
 }
+
+// ===== НАСТРОЙКА БД =====
+
+void MeasurementResults::setDatabase(const QString &host, int port, const QString &dbName,
+                                     const QString &user, const QString &password)
+{
+    DatabaseManager::instance()->configure(host, port, dbName, user, password);
+    DatabaseManager::instance()->connect();
+
+    qInfo() << "MeasurementResults: Использую подключение к БД";
+
+    // Загружаем доступные измерения
+    loadAvailableMeasurements();
+}
+
+bool MeasurementResults::connectDatabase()
+{
+    return DatabaseManager::instance()->connect();
+}
+
+void MeasurementResults::disconnectDatabase()
+{
+
+}
+
+// ===== ЗАГРУЗКА ДАННЫХ ИЗ БД =====
+
+void MeasurementResults::loadMeasurementsFromDatabase()
+{
+    if (!connectDatabase()) {
+        qWarning() << "MeasurementResults: Не удалось подключиться к БД";
+        return;
+    }
+
+    availableMeasurements.clear();
+
+    QSqlDatabase db = DatabaseManager::instance()->database();
+    QSqlQuery query(db);
+
+    // Загружаем измерения с профилями ветра за последние 30 дней
+    query.prepare(
+        "SELECT DISTINCT "
+        "   DATE(awp.measurement_time) as meas_date, "
+        "   EXTRACT(HOUR FROM awp.measurement_time) as meas_hour, "
+        "   awp.measurement_time, "
+        "   awp.profile_id, "
+        "   true as has_avg "
+        "FROM avg_wind_profile awp "
+        "WHERE awp.measurement_time >= NOW() - INTERVAL '30 days' "
+        "UNION "
+        "SELECT DISTINCT "
+        "   DATE(awp.measurement_time) as meas_date, "
+        "   EXTRACT(HOUR FROM awp.measurement_time) as meas_hour, "
+        "   awp.measurement_time, "
+        "   awp.profile_id, "
+        "   true as has_actual "
+        "FROM actual_wind_profile awp "
+        "WHERE awp.measurement_time >= NOW() - INTERVAL '30 days' "
+        "UNION "
+        "SELECT DISTINCT "
+        "   DATE(mwp.measurement_time) as meas_date, "
+        "   EXTRACT(HOUR FROM mwp.measurement_time) as meas_hour, "
+        "   mwp.measurement_time, "
+        "   mwp.profile_id, "
+        "   true as has_measured "
+        "FROM measured_wind_profile mwp "
+        "WHERE mwp.measurement_time >= NOW() - INTERVAL '30 days' "
+        "ORDER BY meas_date DESC, meas_hour DESC"
+    );
+
+    if (!query.exec()) {
+        qCritical() << "MeasurementResults: Ошибка загрузки:" << query.lastError().text();
+        return;
+    }
+
+    QMap<QString, MeasurementRecord> recordsByDateTime;
+
+    while (query.next()) {
+        QDate date = query.value(0).toDate();
+        int hour = query.value(1).toInt();
+        QDateTime measurementTime = query.value(2).toDateTime();
+        int profileId = query.value(3).toInt();
+
+        QString key = measurementTime.toString("yyyy-MM-dd hh");
+
+        if (!recordsByDateTime.contains(key)) {
+            MeasurementRecord record;
+            record.recordId = profileId;
+            record.measurementTime = measurementTime;
+            record.hasAvgWind = false;
+            record.hasActualWind = false;
+            record.hasMeasuredWind = false;
+            recordsByDateTime[key] = record;
+        }
+
+        // Определяем тип данных (из какой таблицы)
+        // Это упрощенная версия, нужно доработать запрос для точного определения
+        recordsByDateTime[key].hasAvgWind = true;
+
+        availableMeasurements[date][hour].append(recordsByDateTime[key]);
+    }
+
+    qInfo() << "MeasurementResults: Загружено измерений для" << availableMeasurements.size() << "дат";
+}
+
+QVector<WindProfileData> MeasurementResults::loadAvgWindProfile(const QDateTime &time)
+{
+    QVector<WindProfileData> profile;
+
+    if (!connectDatabase()) return profile;
+
+    QSqlDatabase db = DatabaseManager::instance()->database();
+    QSqlQuery query(db);
+    query.prepare(
+        "SELECT height, wind_speed, wind_direction "
+        "FROM avg_wind_profile "
+        "WHERE measurement_time >= :time_from AND measurement_time <= :time_to "
+        "ORDER BY height ASC"
+    );
+
+    query.bindValue(":time_from", time.addSecs(-1800)); // -30 минут
+    query.bindValue(":time_to", time.addSecs(1800));    // +30 минут
+
+    if (!query.exec()) {
+        qCritical() << "MeasurementResults: Ошибка загрузки среднего ветра:" << query.lastError().text();
+        return profile;
+    }
+
+    while (query.next()) {
+        WindProfileData point;
+        point.height = query.value(0).toFloat();
+        point.windSpeed = query.value(1).toFloat();
+        point.windDirection = query.value(2).toInt();
+        point.isValid = true;
+        profile.append(point);
+    }
+
+    qDebug() << "MeasurementResults: Загружен профиль среднего ветра," << profile.size() << "точек";
+    return profile;
+}
+
+QVector<WindProfileData> MeasurementResults::loadActualWindProfile(const QDateTime &time)
+{
+    QVector<WindProfileData> profile;
+
+    if (!connectDatabase()) return profile;
+
+    QSqlDatabase db = DatabaseManager::instance()->database();
+    QSqlQuery query(db);
+    query.prepare(
+        "SELECT height, wind_speed, wind_direction "
+        "FROM actual_wind_profile "
+        "WHERE measurement_time >= :time_from AND measurement_time <= :time_to "
+        "ORDER BY height ASC"
+    );
+
+    query.bindValue(":time_from", time.addSecs(-1800));
+    query.bindValue(":time_to", time.addSecs(1800));
+
+    if (!query.exec()) {
+        qCritical() << "MeasurementResults: Ошибка загрузки действительного ветра:" << query.lastError().text();
+        return profile;
+    }
+
+    while (query.next()) {
+        WindProfileData point;
+        point.height = query.value(0).toFloat();
+        point.windSpeed = query.value(1).toFloat();
+        point.windDirection = query.value(2).toInt();
+        point.isValid = true;
+        profile.append(point);
+    }
+
+    qDebug() << "MeasurementResults: Загружен профиль действительного ветра," << profile.size() << "точек";
+    return profile;
+}
+
+QVector<MeasuredWindData> MeasurementResults::loadMeasuredWindProfile(const QDateTime &time)
+{
+    QVector<MeasuredWindData> profile;
+
+    if (!connectDatabase()) return profile;
+
+    QSqlDatabase db = DatabaseManager::instance()->database();
+    QSqlQuery query(db);
+    query.prepare(
+        "SELECT height, wind_speed, wind_direction "
+        "FROM measured_wind_profile "
+        "WHERE measurement_time >= :time_from AND measurement_time <= :time_to "
+        "ORDER BY height ASC"
+    );
+
+    query.bindValue(":time_from", time.addSecs(-1800));
+    query.bindValue(":time_to", time.addSecs(1800));
+
+    if (!query.exec()) {
+        qCritical() << "MeasurementResults: Ошибка загрузки измеренного ветра:" << query.lastError().text();
+        return profile;
+    }
+
+    while (query.next()) {
+        MeasuredWindData point;
+        point.height = query.value(0).toFloat();
+        point.windSpeed = query.value(1).toFloat();
+        point.windDirection = query.value(2).toInt();
+        point.reliability = 2; // Из БД только достоверные данные
+        profile.append(point);
+    }
+
+    qDebug() << "MeasurementResults: Загружен профиль измеренного ветра," << profile.size() << "точек";
+    return profile;
+}
+
+// ===== ОТОБРАЖЕНИЕ ДАННЫХ =====
+
+void MeasurementResults::displayWindProfile(const QVector<WindProfileData> &avgWind,
+                                           const QVector<WindProfileData> &actualWind,
+                                           const QVector<MeasuredWindData> &measuredWind)
+{
+    // Заполняем таблицу среднего ветра
+    ui->tableWidget_AverageWind->setRowCount(avgWind.size());
+    for (int i = 0; i < avgWind.size(); i++) {
+        ui->tableWidget_AverageWind->setItem(i, 0,
+            new QTableWidgetItem(QString::number(avgWind[i].windSpeed, 'f', 2)));
+        ui->tableWidget_AverageWind->setItem(i, 1,
+            new QTableWidgetItem(QString::number(avgWind[i].windDirection)));
+    }
+
+    // Заполняем таблицу действительного ветра
+    ui->tableWidget_realWind->setRowCount(actualWind.size());
+    for (int i = 0; i < actualWind.size(); i++) {
+        ui->tableWidget_realWind->setItem(i, 0,
+            new QTableWidgetItem(QString::number(actualWind[i].windSpeed, 'f', 2)));
+        ui->tableWidget_realWind->setItem(i, 1,
+            new QTableWidgetItem(QString::number(actualWind[i].windDirection)));
+    }
+
+    // Заполняем таблицу измеренного ветра
+    ui->tableWidget_izmWind_2->setRowCount(measuredWind.size());
+    for (int i = 0; i < measuredWind.size(); i++) {
+        ui->tableWidget_izmWind_2->setItem(i, 0,
+            new QTableWidgetItem(QString::number(measuredWind[i].windSpeed, 'f', 2)));
+        ui->tableWidget_izmWind_2->setItem(i, 1,
+            new QTableWidgetItem(QString::number(measuredWind[i].windDirection)));
+    }
+
+    // TODO: Добавить построение графиков с использованием QwtPlot
+    // plot_midWindSpeed, plot_midWindAzimut
+    // plot_realWindSpeed, plot_realWindAzimut
+    // plot_izmWindSpeed_2, plot_izmWindAzimut_2
+}
+
+void MeasurementResults::updateAvailableRecordsLabel()
+{
+    QDate date = currentDateTime.date();
+    int hour = currentDateTime.time().hour();
+
+    int recordCount = 0;
+    if (availableMeasurements.contains(date)) {
+        auto hourMap = availableMeasurements[date];
+        if (hourMap.contains(hour)) {
+            recordCount = hourMap[hour].size();
+        }
+    }
+
+    if (recordCount > 0) {
+        ui->lblAvailableRecords->setText(QString("Доступно записей: %1").arg(recordCount));
+        ui->lblAvailableRecords->setStyleSheet("color: green; font-style: italic;");
+    } else {
+        ui->lblAvailableRecords->setText("Нет данных за выбранное время");
+        ui->lblAvailableRecords->setStyleSheet("color: red; font-style: italic;");
+    }
+}
+
+// ===== ОБНОВЛЕНИЕ ИНТЕРФЕЙСА =====
 
 void MeasurementResults::updateCoordinatesFromMainWindow(double latitude, double longitude)
 {
@@ -160,25 +437,9 @@ void MeasurementResults::onTableFormatClicked()
     switchMeteo11Display();
 }
 
-void MeasurementResults::setupMockData()
-{
-    QDate today = QDate::currentDate();
-
-    for (int dayOffset = -7; dayOffset <= 0; dayOffset++){
-        QDate date = today.addDays(dayOffset);
-        QSet<QTime> times;
-
-        for (int hour = 8; hour <= 20; hour++){
-            for (int minute = 0; minute < 60; minute += 30){
-                times.insert(QTime(hour, minute, 0));
-            }
-        }
-        availableMeasurements[date] = times;
-    }
-}
-
 void MeasurementResults::loadAvailableMeasurements()
 {
+    loadMeasurementsFromDatabase();
     updateDisplay();
 }
 
@@ -186,11 +447,12 @@ void MeasurementResults::updateDateTimeDisplay()
 {
     QString dateTimeStr = currentDateTime.toString("dd.MM.yyyy hh:mm");
     ui->lblCurrentDateTime->setText(dateTimeStr);
+    ui->btnSelectDate->setText(currentDateTime.toString("dd.MM.yyyy"));
 
-    int totalMinutes = currentDateTime.time().hour() * 60 + currentDateTime.time().minute();
-    int sliderValue = totalMinutes / 10;
+    // Устанавливаем слайдер на текущий час
+    int hour = currentDateTime.time().hour();
     ui->timeSlider->blockSignals(true);
-    ui->timeSlider->setValue(sliderValue);
+    ui->timeSlider->setValue(hour * 6); // 6 позиций на час (каждые 10 минут)
     ui->timeSlider->blockSignals(false);
 
     loadMeasurementData(currentDateTime);
@@ -198,45 +460,90 @@ void MeasurementResults::updateDateTimeDisplay()
 
 void MeasurementResults::updateSliderRange()
 {
-    QDate currentDate = currentDateTime.date();
-    QList<QTime> availableTimes = getAvailableTimesForDate(currentDate);
+    // Слайдер работает с часами (0-23), каждый час = 6 позиций
+    ui->timeSlider->setMinimum(0);
+    ui->timeSlider->setMaximum(143); // 24 часа * 6 - 1
+    ui->timeSlider->setTickInterval(6); // Отметки каждый час
 
-    if (!availableTimes.isEmpty()){
-        ui->lblAvailableRecords->setText(QString("Доступно записей: %1").arg(availableTimes.count()));
-    } else {
-        ui->lblAvailableRecords->setText("Нет данных за выбранную дату");
-    }
+    updateAvailableRecordsLabel();
 }
 
-QList<QTime> MeasurementResults::getAvailableTimesForDate(const QDate &date)
+QList<int> MeasurementResults::getAvailableHoursForDate(const QDate &date)
 {
-    QList<QTime> times;
+    QList<int> hours;
     if (availableMeasurements.contains(date)) {
-        times = availableMeasurements[date].values();
-        std::sort(times.begin(), times.end());
+        hours = availableMeasurements[date].keys();
+        std::sort(hours.begin(), hours.end());
     }
-    return times;
+    return hours;
+}
+
+MeasurementRecord MeasurementResults::findClosestRecord(const QDate &date, int hour)
+{
+    MeasurementRecord record;
+
+    if (!availableMeasurements.contains(date)) {
+        return record;
+    }
+
+    auto hourMap = availableMeasurements[date];
+    if (!hourMap.contains(hour)) {
+        return record;
+    }
+
+    // Берем первую запись для данного часа
+    if (!hourMap[hour].isEmpty()) {
+        record = hourMap[hour].first();
+    }
+
+    return record;
 }
 
 void MeasurementResults::loadMeasurementData(const QDateTime &dateTime)
 {
     QDate date = dateTime.date();
-    QTime time = dateTime.time();
+    int hour = dateTime.time().hour();
 
-    if (availableMeasurements.contains(date) && availableMeasurements[date].contains(time)){
-        ui->lblDataStatus->setText("Данные загружены");
+    MeasurementRecord record = findClosestRecord(date, hour);
+
+    if (record.recordId > 0) {
+        ui->lblDataStatus->setText(QString("Данные загружены (ID: %1)").arg(record.recordId));
         ui->lblDataStatus->setStyleSheet("color: green; font-weight: bold;");
 
-        //
-        //
-        // Логика заполнения данных
-        //
-        //
+        // Загружаем профили ветра
+        QVector<WindProfileData> avgWind = loadAvgWindProfile(record.measurementTime);
+        QVector<WindProfileData> actualWind = loadActualWindProfile(record.measurementTime);
+        QVector<MeasuredWindData> measuredWind = loadMeasuredWindProfile(record.measurementTime);
+
+        // Отображаем данные
+        displayWindProfile(avgWind, actualWind, measuredWind);
+
+        // Показываем информацию о доступных данных
+        QString info = "Доступно: ";
+        QStringList available;
+        if (record.hasAvgWind) available << "Средний ветер";
+        if (record.hasActualWind) available << "Действительный ветер";
+        if (record.hasMeasuredWind) available << "Измеренный ветер";
+
+        if (available.isEmpty()) {
+            info += "Нет данных профилей";
+        } else {
+            info += available.join(", ");
+        }
+
+        ui->lblDataStatus->setText(info);
 
     } else {
         ui->lblDataStatus->setText("Нет данных для выбранного времени");
-        ui->lblDataStatus->setStyleSheet("color: red;");
+        ui->lblDataStatus->setStyleSheet("color: red; font-weight: bold;");
+
+        // Очищаем таблицы
+        ui->tableWidget_AverageWind->clearContents();
+        ui->tableWidget_realWind->clearContents();
+        ui->tableWidget_izmWind_2->clearContents();
     }
+
+    updateAvailableRecordsLabel();
 }
 
 void MeasurementResults::updateDisplay()
@@ -247,13 +554,80 @@ void MeasurementResults::updateDisplay()
 
 void MeasurementResults::onPrevDateClicked()
 {
-    currentDateTime = currentDateTime.addSecs(-10 * 60);
+    // Переход на предыдущее доступное измерение
+    QDate currentDate = currentDateTime.date();
+    int currentHour = currentDateTime.time().hour();
+
+    // Пробуем найти предыдущий час в этой же дате
+    QList<int> hours = getAvailableHoursForDate(currentDate);
+    hours = hours.toSet().values(); // Убираем дубликаты
+    std::sort(hours.begin(), hours.end(), std::greater<int>());
+
+    bool found = false;
+    for (int hour : hours) {
+        if (hour < currentHour) {
+            currentDateTime.setTime(QTime(hour, 0, 0));
+            found = true;
+            break;
+        }
+    }
+
+    // Если не нашли в текущей дате, переходим к предыдущей дате
+    if (!found) {
+        QList<QDate> dates = availableMeasurements.keys();
+        std::sort(dates.begin(), dates.end(), std::greater<QDate>());
+
+        for (const QDate &date : dates) {
+            if (date < currentDate) {
+                QList<int> prevHours = getAvailableHoursForDate(date);
+                if (!prevHours.isEmpty()) {
+                    std::sort(prevHours.begin(), prevHours.end(), std::greater<int>());
+                    currentDateTime = QDateTime(date, QTime(prevHours.first(), 0, 0));
+                    break;
+                }
+            }
+        }
+    }
+
     updateDisplay();
 }
 
 void MeasurementResults::onNextDateClicked()
 {
-    currentDateTime = currentDateTime.addSecs(10 * 60);
+    // Переход на следующее доступное измерение
+    QDate currentDate = currentDateTime.date();
+    int currentHour = currentDateTime.time().hour();
+
+    // Пробуем найти следующий час в этой же дате
+    QList<int> hours = getAvailableHoursForDate(currentDate);
+    std::sort(hours.begin(), hours.end());
+
+    bool found = false;
+    for (int hour : hours) {
+        if (hour > currentHour) {
+            currentDateTime.setTime(QTime(hour, 0, 0));
+            found = true;
+            break;
+        }
+    }
+
+    // Если не нашли в текущей дате, переходим к следующей дате
+    if (!found) {
+        QList<QDate> dates = availableMeasurements.keys();
+        std::sort(dates.begin(), dates.end());
+
+        for (const QDate &date : dates) {
+            if (date > currentDate) {
+                QList<int> nextHours = getAvailableHoursForDate(date);
+                if (!nextHours.isEmpty()) {
+                    std::sort(nextHours.begin(), nextHours.end());
+                    currentDateTime = QDateTime(date, QTime(nextHours.first(), 0, 0));
+                    break;
+                }
+            }
+        }
+    }
+
     updateDisplay();
 }
 
@@ -261,32 +635,100 @@ void MeasurementResults::onSelectDateClicked()
 {
     QDialog *dateDialog = new QDialog(this);
     dateDialog->setWindowTitle("Выбор даты и времени");
-    dateDialog->resize(400, 500);
+    dateDialog->resize(500, 600);
 
     QVBoxLayout *layout = new QVBoxLayout(dateDialog);
 
+    // Календарь
     QCalendarWidget *calendar = new QCalendarWidget(dateDialog);
     calendar->setSelectedDate(currentDateTime.date());
+
+    // Подсвечиваем даты с доступными измерениями
+    QTextCharFormat availableFormat;
+    availableFormat.setBackground(QColor(144, 238, 144)); // Светло-зеленый
+    availableFormat.setFontWeight(QFont::Bold);
+
+    QTextCharFormat todayFormat;
+    todayFormat.setBackground(QColor(173, 216, 230)); // Голубой
+    todayFormat.setFontWeight(QFont::Bold);
+
+    for (auto it = availableMeasurements.constBegin(); it != availableMeasurements.constEnd(); ++it) {
+        if (it.key() == QDate::currentDate()) {
+            calendar->setDateTextFormat(it.key(), todayFormat);
+        } else {
+            calendar->setDateTextFormat(it.key(), availableFormat);
+        }
+    }
+
     layout->addWidget(calendar);
 
+    // Группа с доступными измерениями
     QGroupBox *timeGroup = new QGroupBox("Доступные измерения", dateDialog);
     QVBoxLayout *timeLayout = new QVBoxLayout(timeGroup);
 
     QListWidget *timeList = new QListWidget(dateDialog);
+    timeList->setStyleSheet(
+        "QListWidget::item { padding: 5px; }"
+        "QListWidget::item:selected { background-color: #4CAF50; color: white; }"
+    );
     timeLayout->addWidget(timeList);
+
+    QLabel *infoLabel = new QLabel(dateDialog);
+    infoLabel->setWordWrap(true);
+    infoLabel->setStyleSheet("color: #666; font-style: italic; padding: 5px;");
+    timeLayout->addWidget(infoLabel);
+
     layout->addWidget(timeGroup);
 
-    auto updateTimeList = [this, timeList, calendar](){
+    // Функция обновления списка времен
+    auto updateTimeList = [this, timeList, calendar, infoLabel](){
         timeList->clear();
-        QList<QTime> times = getAvailableTimesForDate(calendar->selectedDate());
+        QDate selectedDate = calendar->selectedDate();
+        QList<int> hours = getAvailableHoursForDate(selectedDate);
 
-        if (times.isEmpty()){
-           QListWidgetItem *item = new QListWidgetItem("Нет данных");
+        if (hours.isEmpty()){
+           QListWidgetItem *item = new QListWidgetItem("📭 Нет данных за выбранную дату");
            item->setFlags(item->flags() & ~Qt::ItemIsSelectable);
+           item->setForeground(Qt::red);
            timeList->addItem(item);
+           infoLabel->setText("Выберите другую дату");
         } else {
-            for (const QTime &time : times){
-                timeList->addItem(time.toString("hh.mm"));
+            infoLabel->setText(QString("Найдено измерений: %1").arg(hours.size()));
+
+            for (int hour : hours){
+                auto records = availableMeasurements[selectedDate][hour];
+
+                // Формируем строку с информацией о типах данных
+                QStringList dataTypes;
+                bool hasAvg = false, hasActual = false, hasMeasured = false;
+
+                for (const MeasurementRecord &rec : records) {
+                    if (rec.hasAvgWind) hasAvg = true;
+                    if (rec.hasActualWind) hasActual = true;
+                    if (rec.hasMeasuredWind) hasMeasured = true;
+                }
+
+                if (hasAvg) dataTypes << "Средний";
+                if (hasActual) dataTypes << "Действит.";
+                if (hasMeasured) dataTypes << "Измерен.";
+
+                QString timeStr = QString("🕐 %1:00 — %2")
+                    .arg(hour, 2, 10, QChar('0'))
+                    .arg(dataTypes.join(", "));
+
+                QListWidgetItem *item = new QListWidgetItem(timeStr);
+                item->setData(Qt::UserRole, hour);
+
+                // Цветовое кодирование по количеству типов данных
+                if (dataTypes.size() == 3) {
+                    item->setBackground(QColor(144, 238, 144)); // Зеленый - все данные
+                } else if (dataTypes.size() == 2) {
+                    item->setBackground(QColor(255, 255, 200)); // Желтый - частично
+                } else {
+                    item->setBackground(QColor(255, 228, 196)); // Бежевый - минимум
+                }
+
+                timeList->addItem(item);
             }
         }
     };
@@ -294,7 +736,10 @@ void MeasurementResults::onSelectDateClicked()
     connect(calendar, &QCalendarWidget::selectionChanged, updateTimeList);
     updateTimeList();
 
-    QDialogButtonBox *buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, dateDialog);
+    // Кнопки
+    QDialogButtonBox *buttonBox = new QDialogButtonBox(
+        QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
+        dateDialog);
     layout->addWidget(buttonBox);
 
     connect(buttonBox, &QDialogButtonBox::accepted, dateDialog, &QDialog::accept);
@@ -302,28 +747,15 @@ void MeasurementResults::onSelectDateClicked()
 
     if (dateDialog->exec() == QDialog::Accepted){
         QDate selectedDate = calendar->selectedDate();
-        QTime selectedTime = currentDateTime.time();
+        int selectedHour = currentDateTime.time().hour();
 
-        if (timeList->currentItem() && !timeList->currentItem()->text().isEmpty()
-                && timeList->currentItem()->text() != "Нет данных"){
-            selectedTime = QTime::fromString(timeList->currentItem()->text(), "hh::mm");
+        if (timeList->currentItem() && timeList->currentItem()->data(Qt::UserRole).isValid()){
+            selectedHour = timeList->currentItem()->data(Qt::UserRole).toInt();
         }
 
-        currentDateTime = QDateTime(selectedDate, selectedTime);
+        currentDateTime = QDateTime(selectedDate, QTime(selectedHour, 0, 0));
         updateDisplay();
     }
 
     delete dateDialog;
-}
-
-void MeasurementResults::onTimeSliderChanged(int value)
-{
-    int totalMinutes = value * 10;
-    int hours = totalMinutes / 60;
-    int minutes = totalMinutes % 60;
-
-    QTime newTime(hours, minutes, 0);
-    currentDateTime.setTime(newTime);
-
-    updateDateTimeDisplay();
 }
