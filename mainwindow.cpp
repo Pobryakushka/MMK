@@ -35,9 +35,10 @@ MainWindow::MainWindow(QWidget *parent)
     , m_amsHandler(nullptr)
     , m_amsComPort("")
     , m_amsBaudRate(9600)
-
 {
     ui->setupUi(this);
+
+    configureAmsDatabase();
 
     fMapView = new FormMapView(this);
 
@@ -120,7 +121,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     m_amsHandler = new AMSHandler(this);
     setupAmsHandler();
-    configureAmsDatabase();
+//    configureAmsDatabase();
 }
 
 MainWindow::~MainWindow()
@@ -566,9 +567,15 @@ void MainWindow::configureAmsDatabase()
     QString dbUser = "postgres";
     QString dbPassword = "123";
 
+    qDebug() << "MainWindow: Настройка БД:" << dbName << "на" << dbHost;
+
     DatabaseManager::instance()->configure(dbHost, dbPort, dbName, dbUser, dbPassword);
 
-    qDebug() << "MainWindow: Настроена БД:" << dbName << "на" << dbHost;
+    connect(DatabaseManager::instance(), &DatabaseManager::connected,
+            this, [this]() {
+        statusBar()->showMessage("База данных подключена", 5000);
+        qInfo() << "MainWindow: Сигнал connected от DatabaseManager";
+    });
 
     if(DatabaseManager::instance()->connect()) {
         qInfo() << "MainWindow: Успешное подключение к БД";
@@ -1047,6 +1054,10 @@ void MainWindow::onCalculationsClicked()
 void MainWindow::onMeasurementResultsClicked()
 {
     MeasurementResults *dialog = new MeasurementResults(this);
+
+//    if (!DatabaseManager::instance()->isConnected()){
+//        DatabaseManager::instance()->connect();
+//    }
 
     connect(this, &MainWindow::coordinatesUpdatedFromMap,
             dialog, &MeasurementResults::updateCoordinatesFromMainWindow);

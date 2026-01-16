@@ -13,8 +13,8 @@ MeasurementResults::MeasurementResults(QWidget *parent)
     , currentButtelinType(Updated)
     , currentOutputFormat(String)
     , m_mapCoordinatesMode(false)
-    , m_dbPort(5432)
-    , m_dbConfigured(false)
+//    , m_dbPort(5432)
+//    , m_dbConfigured(false)
 {
     ui->setupUi(this);
 
@@ -22,6 +22,8 @@ MeasurementResults::MeasurementResults(QWidget *parent)
     int minutes = currentDateTime.time().minute();
     minutes = (minutes / 10) * 10;
     currentDateTime.setTime(QTime(currentDateTime.time().hour(), minutes, 0));
+
+    loadAvailableMeasurements();
 
     updateDateTimeDisplay();
     updateSliderRange();
@@ -48,21 +50,24 @@ MeasurementResults::~MeasurementResults()
 
 // ===== НАСТРОЙКА БД =====
 
-void MeasurementResults::setDatabase(const QString &host, int port, const QString &dbName,
-                                     const QString &user, const QString &password)
-{
-    DatabaseManager::instance()->configure(host, port, dbName, user, password);
-    DatabaseManager::instance()->connect();
+//void MeasurementResults::setDatabase(const QString &host, int port, const QString &dbName,
+//                                     const QString &user, const QString &password)
+//{
+//    DatabaseManager::instance()->configure(host, port, dbName, user, password);
+//    DatabaseManager::instance()->connect();
 
-    qInfo() << "MeasurementResults: Использую подключение к БД";
+//    qInfo() << "MeasurementResults: Использую подключение к БД";
 
-    // Загружаем доступные измерения
-    loadAvailableMeasurements();
-}
+//    // Загружаем доступные измерения
+//    loadAvailableMeasurements();
+//}
 
 bool MeasurementResults::connectDatabase()
 {
-    return DatabaseManager::instance()->connect();
+    if(!DatabaseManager::instance()->isConnected()){
+        return DatabaseManager::instance()->connect();
+    }
+    return true;
 }
 
 void MeasurementResults::disconnectDatabase()
@@ -74,9 +79,12 @@ void MeasurementResults::disconnectDatabase()
 
 void MeasurementResults::loadMeasurementsFromDatabase()
 {
-    if (!connectDatabase()) {
-        qWarning() << "MeasurementResults: Не удалось подключиться к БД";
-        return;
+    if (!DatabaseManager::instance()->isConnected()) {
+        qWarning() << "MeasurementResults: БД не подключена";
+        if (!DatabaseManager::instance()->connect()) {
+            qCritical() << "MeasurementResults: Не удалось подключиться к БД";
+            return;
+        }
     }
 
     availableMeasurements.clear();
@@ -84,70 +92,118 @@ void MeasurementResults::loadMeasurementsFromDatabase()
     QSqlDatabase db = DatabaseManager::instance()->database();
     QSqlQuery query(db);
 
-    // Загружаем измерения с профилями ветра за последние 30 дней
-    query.prepare(
-        "SELECT DISTINCT "
-        "   DATE(awp.measurement_time) as meas_date, "
-        "   EXTRACT(HOUR FROM awp.measurement_time) as meas_hour, "
-        "   awp.measurement_time, "
-        "   awp.profile_id, "
-        "   true as has_avg "
-        "FROM avg_wind_profile awp "
-        "WHERE awp.measurement_time >= NOW() - INTERVAL '30 days' "
-        "UNION "
-        "SELECT DISTINCT "
-        "   DATE(awp.measurement_time) as meas_date, "
-        "   EXTRACT(HOUR FROM awp.measurement_time) as meas_hour, "
-        "   awp.measurement_time, "
-        "   awp.profile_id, "
-        "   true as has_actual "
-        "FROM actual_wind_profile awp "
-        "WHERE awp.measurement_time >= NOW() - INTERVAL '30 days' "
-        "UNION "
-        "SELECT DISTINCT "
-        "   DATE(mwp.measurement_time) as meas_date, "
-        "   EXTRACT(HOUR FROM mwp.measurement_time) as meas_hour, "
-        "   mwp.measurement_time, "
-        "   mwp.profile_id, "
-        "   true as has_measured "
-        "FROM measured_wind_profile mwp "
-        "WHERE mwp.measurement_time >= NOW() - INTERVAL '30 days' "
-        "ORDER BY meas_date DESC, meas_hour DESC"
-    );
+    // Загружаем ВСЕ записи из main_archive за последние 30 дней
+    QString sql =
+        "SELECT "
+        "   ma.record_id, "
+        "   ma.completion_time, "
+        "   ma.notes "
+        "FROM main_archive ma "
+        "WHERE ma.completion_time >= CURRENT_DATE - INTERVAL '30 days' "
+        "ORDER BY ma.completion_time DESC";
 
-    if (!query.exec()) {
-        qCritical() << "MeasurementResults: Ошибка загрузки:" << query.lastError().text();
+    qDebug() << "MeasurementResults: Выполняем запрос к main_archive...";
+
+    if (!query.exec(sql)) {
+        qCritical() << "MeasurementResults: Ошибка SQL:" << query.lastError().text();
+        qDebug() << "SQL запрос:" << sql;
         return;
     }
 
+    int totalRecords = 0;
     QMap<QString, MeasurementRecord> recordsByDateTime;
 
     while (query.next()) {
-        QDate date = query.value(0).toDate();
-        int hour = query.value(1).toInt();
-        QDateTime measurementTime = query.value(2).toDateTime();
-        int profileId = query.value(3).toInt();
+        MeasurementRecord record;
+        record.recordId = query.value(0).toInt();
+        record.measurementTime = query.value(1).toDateTime();
+        record.notes = query.value(2).toString();
 
-        QString key = measurementTime.toString("yyyy-MM-dd hh");
+        // Флаги наличия данных заполним позже
+        record.hasAvgWind = false;
+        record.hasActualWind = false;
+        record.hasMeasuredWind = false;
 
-        if (!recordsByDateTime.contains(key)) {
-            MeasurementRecord record;
-            record.recordId = profileId;
-            record.measurementTime = measurementTime;
-            record.hasAvgWind = false;
-            record.hasActualWind = false;
-            record.hasMeasuredWind = false;
-            recordsByDateTime[key] = record;
-        }
+        QDate date = record.measurementTime.date();
+        int hour = record.measurementTime.time().hour();
+        QString key = QString("%1_%2").arg(date.toString("yyyy-MM-dd")).arg(hour);
 
-        // Определяем тип данных (из какой таблицы)
-        // Это упрощенная версия, нужно доработать запрос для точного определения
-        recordsByDateTime[key].hasAvgWind = true;
+        recordsByDateTime[key] = record;
+        totalRecords++;
 
-        availableMeasurements[date][hour].append(recordsByDateTime[key]);
+        qDebug() << "  Запись" << record.recordId
+                 << "от" << record.measurementTime.toString("yyyy-MM-dd hh:mm:ss");
     }
 
-    qInfo() << "MeasurementResults: Загружено измерений для" << availableMeasurements.size() << "дат";
+    qInfo() << "MeasurementResults: Загружено" << totalRecords << "записей из main_archive";
+
+    // Теперь проверяем наличие профилей ветра для каждой записи
+    // Средний ветер
+    QSqlQuery avgQuery(db);
+    if (avgQuery.exec("SELECT DATE(measurement_time), EXTRACT(HOUR FROM measurement_time)::integer "
+                      "FROM avg_wind_profile "
+                      "WHERE measurement_time >= CURRENT_DATE - INTERVAL '30 days'")) {
+        while (avgQuery.next()) {
+            QDate date = avgQuery.value(0).toDate();
+            int hour = avgQuery.value(1).toInt();
+            QString key = QString("%1_%2").arg(date.toString("yyyy-MM-dd")).arg(hour);
+
+            if (recordsByDateTime.contains(key)) {
+                recordsByDateTime[key].hasAvgWind = true;
+            }
+        }
+        qDebug() << "MeasurementResults: Проверен средний ветер";
+    }
+
+    // Действительный ветер
+    QSqlQuery actualQuery(db);
+    if (actualQuery.exec("SELECT DATE(measurement_time), EXTRACT(HOUR FROM measurement_time)::integer "
+                         "FROM actual_wind_profile "
+                         "WHERE measurement_time >= CURRENT_DATE - INTERVAL '30 days'")) {
+        while (actualQuery.next()) {
+            QDate date = actualQuery.value(0).toDate();
+            int hour = actualQuery.value(1).toInt();
+            QString key = QString("%1_%2").arg(date.toString("yyyy-MM-dd")).arg(hour);
+
+            if (recordsByDateTime.contains(key)) {
+                recordsByDateTime[key].hasActualWind = true;
+            }
+        }
+        qDebug() << "MeasurementResults: Проверен действительный ветер";
+    }
+
+    // Измеренный ветер
+    QSqlQuery measuredQuery(db);
+    if (measuredQuery.exec("SELECT DATE(measurement_time), EXTRACT(HOUR FROM measurement_time)::integer "
+                           "FROM measured_wind_profile "
+                           "WHERE measurement_time >= CURRENT_DATE - INTERVAL '30 days'")) {
+        while (measuredQuery.next()) {
+            QDate date = measuredQuery.value(0).toDate();
+            int hour = measuredQuery.value(1).toInt();
+            QString key = QString("%1_%2").arg(date.toString("yyyy-MM-dd")).arg(hour);
+
+            if (recordsByDateTime.contains(key)) {
+                recordsByDateTime[key].hasMeasuredWind = true;
+            }
+        }
+        qDebug() << "MeasurementResults: Проверен измеренный ветер";
+    }
+
+    // Переносим в основную структуру availableMeasurements
+    for (auto it = recordsByDateTime.begin(); it != recordsByDateTime.end(); ++it) {
+        MeasurementRecord record = it.value();
+        QDate date = record.measurementTime.date();
+        int hour = record.measurementTime.time().hour();
+
+        availableMeasurements[date][hour].append(record);
+    }
+
+    qInfo() << "MeasurementResults: Данные распределены по" << availableMeasurements.size() << "датам";
+
+    // Выводим список дат для отладки
+    QList<QDate> dates = availableMeasurements.keys();
+    std::sort(dates.begin(), dates.end());
+    qDebug() << "Доступные даты в архиве:" << dates;
 }
 
 QVector<WindProfileData> MeasurementResults::loadAvgWindProfile(const QDateTime &time)
@@ -449,21 +505,26 @@ void MeasurementResults::updateDateTimeDisplay()
     ui->lblCurrentDateTime->setText(dateTimeStr);
     ui->btnSelectDate->setText(currentDateTime.toString("dd.MM.yyyy"));
 
-    // Устанавливаем слайдер на текущий час
-    int hour = currentDateTime.time().hour();
-    ui->timeSlider->blockSignals(true);
-    ui->timeSlider->setValue(hour * 6); // 6 позиций на час (каждые 10 минут)
-    ui->timeSlider->blockSignals(false);
-
     loadMeasurementData(currentDateTime);
 }
 
 void MeasurementResults::updateSliderRange()
 {
-    // Слайдер работает с часами (0-23), каждый час = 6 позиций
-    ui->timeSlider->setMinimum(0);
-    ui->timeSlider->setMaximum(143); // 24 часа * 6 - 1
-    ui->timeSlider->setTickInterval(6); // Отметки каждый час
+    if (ui->timeSlider){
+        ui->timeSlider->setVisible(false);
+    }
+    if (ui->lblTimeSliderLabel){
+        ui->lblTimeSliderLabel->setVisible(false);
+    }
+    if (ui->lblTimeStart){
+        ui->lblTimeStart->setVisible(false);
+    }
+    if (ui->lblTimeMiddle){
+        ui->lblTimeMiddle->setVisible(false);
+    }
+    if (ui->lblTimeEnd){
+        ui->lblTimeEnd->setVisible(false);
+    }
 
     updateAvailableRecordsLabel();
 }

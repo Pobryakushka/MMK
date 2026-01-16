@@ -36,14 +36,13 @@ public:
     explicit MeasurementResults(QWidget *parent = nullptr);
     ~MeasurementResults();
 
-    void setDatabase(const QString &host, int port, const QString &dbName,
-                    const QString &user, const QString &password);
+//    void setDatabase(const QString &host, int port, const QString &dbName,
+//                    const QString &user, const QString &password);
 
 private slots:
     void onPrevDateClicked();
     void onNextDateClicked();
     void onSelectDateClicked();
-    void onTimeSliderChanged(int value);
     void updateDisplay();
     void loadAvailableMeasurements();
 
@@ -75,13 +74,13 @@ private:
     bool m_mapCoordinatesMode;
 
     // База данных
-    QSqlDatabase m_database;
-    QString m_dbHost;
-    int m_dbPort;
-    QString m_dbName;
-    QString m_dbUser;
-    QString m_dbPassword;
-    bool m_dbConfigured;
+//    QSqlDatabase m_database;
+//    QString m_dbHost;
+//    int m_dbPort;
+//    QString m_dbName;
+//    QString m_dbUser;
+//    QString m_dbPassword;
+//    bool m_dbConfigured;
 
     void updateDateTimeDisplay();
     void updateSliderRange();
