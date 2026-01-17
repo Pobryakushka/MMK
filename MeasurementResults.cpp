@@ -111,7 +111,7 @@ void MeasurementResults::loadMeasurementsFromDatabase()
     }
 
     int totalRecords = 0;
-    QMap<QString, MeasurementRecord> recordsByDateTime;
+    QMap<QDateTime, MeasurementRecord> recordsByDateTime;
 
     while (query.next()) {
         MeasurementRecord record;
@@ -124,12 +124,15 @@ void MeasurementResults::loadMeasurementsFromDatabase()
         record.hasActualWind = false;
         record.hasMeasuredWind = false;
 
-        QDate date = record.measurementTime.date();
-        int hour = record.measurementTime.time().hour();
-        QString key = QString("%1_%2").arg(date.toString("yyyy-MM-dd")).arg(hour);
-
-        recordsByDateTime[key] = record;
+        recordsByDateTime[record.measurementTime] = record;
         totalRecords++;
+
+//        QDate date = record.measurementTime.date();
+//        int hour = record.measurementTime.time().hour();
+//        QString key = QString("%1_%2").arg(date.toString("yyyy-MM-dd")).arg(hour);
+
+//        recordsByDateTime[key] = record;
+//        totalRecords++;
 
         qDebug() << "  Запись" << record.recordId
                  << "от" << record.measurementTime.toString("yyyy-MM-dd hh:mm:ss");
@@ -138,55 +141,39 @@ void MeasurementResults::loadMeasurementsFromDatabase()
     qInfo() << "MeasurementResults: Загружено" << totalRecords << "записей из main_archive";
 
     // Теперь проверяем наличие профилей ветра для каждой записи
-    // Средний ветер
-    QSqlQuery avgQuery(db);
-    if (avgQuery.exec("SELECT DATE(measurement_time), EXTRACT(HOUR FROM measurement_time)::integer "
-                      "FROM avg_wind_profile "
-                      "WHERE measurement_time >= CURRENT_DATE - INTERVAL '30 days'")) {
-        while (avgQuery.next()) {
-            QDate date = avgQuery.value(0).toDate();
-            int hour = avgQuery.value(1).toInt();
-            QString key = QString("%1_%2").arg(date.toString("yyyy-MM-dd")).arg(hour);
 
-            if (recordsByDateTime.contains(key)) {
-                recordsByDateTime[key].hasAvgWind = true;
-            }
+    for (auto it = recordsByDateTime.begin(); it != recordsByDateTime.end(); ++it) {
+        QDateTime measurementTime = it.key();
+
+        QDateTime timeFrom = measurementTime.addSecs(-1800);
+        QDateTime timeTo = measurementTime.addSecs(1800);
+
+        QSqlQuery avgQuery(db);
+        avgQuery.prepare("SELECT COUNT(*) FROM avg_wind_profile "
+                         "WHERE measurement_time BETWEEN :from AND :to");
+        avgQuery.bindValue(":from", timeFrom);
+        avgQuery.bindValue(":to", timeTo);
+        if (avgQuery.exec() && avgQuery.next()) {
+            it.value().hasAvgWind = (avgQuery.value(0).toInt() > 0);
         }
-        qDebug() << "MeasurementResults: Проверен средний ветер";
-    }
 
-    // Действительный ветер
-    QSqlQuery actualQuery(db);
-    if (actualQuery.exec("SELECT DATE(measurement_time), EXTRACT(HOUR FROM measurement_time)::integer "
-                         "FROM actual_wind_profile "
-                         "WHERE measurement_time >= CURRENT_DATE - INTERVAL '30 days'")) {
-        while (actualQuery.next()) {
-            QDate date = actualQuery.value(0).toDate();
-            int hour = actualQuery.value(1).toInt();
-            QString key = QString("%1_%2").arg(date.toString("yyyy-MM-dd")).arg(hour);
-
-            if (recordsByDateTime.contains(key)) {
-                recordsByDateTime[key].hasActualWind = true;
-            }
+        QSqlQuery actualQuery(db);
+        actualQuery.prepare("SELECT COUNT(*) FROM actual_wind_profile "
+                         "WHERE measurement_time BETWEEN :from AND :to");
+        actualQuery.bindValue(":from", timeFrom);
+        actualQuery.bindValue(":to", timeTo);
+        if (actualQuery.exec() && actualQuery.next()) {
+            it.value().hasActualWind = (actualQuery.value(0).toInt() > 0);
         }
-        qDebug() << "MeasurementResults: Проверен действительный ветер";
-    }
 
-    // Измеренный ветер
-    QSqlQuery measuredQuery(db);
-    if (measuredQuery.exec("SELECT DATE(measurement_time), EXTRACT(HOUR FROM measurement_time)::integer "
-                           "FROM measured_wind_profile "
-                           "WHERE measurement_time >= CURRENT_DATE - INTERVAL '30 days'")) {
-        while (measuredQuery.next()) {
-            QDate date = measuredQuery.value(0).toDate();
-            int hour = measuredQuery.value(1).toInt();
-            QString key = QString("%1_%2").arg(date.toString("yyyy-MM-dd")).arg(hour);
-
-            if (recordsByDateTime.contains(key)) {
-                recordsByDateTime[key].hasMeasuredWind = true;
-            }
+        QSqlQuery measuredQuery(db);
+        measuredQuery.prepare("SELECT COUNT(*) FROM measured_wind_profile "
+                         "WHERE measurement_time BETWEEN :from AND :to");
+        measuredQuery.bindValue(":from", timeFrom);
+        measuredQuery.bindValue(":to", timeTo);
+        if (measuredQuery.exec() && measuredQuery.next()) {
+            it.value().hasMeasuredWind = (measuredQuery.value(0).toInt() > 0);
         }
-        qDebug() << "MeasurementResults: Проверен измеренный ветер";
     }
 
     // Переносим в основную структуру availableMeasurements
@@ -195,7 +182,14 @@ void MeasurementResults::loadMeasurementsFromDatabase()
         QDate date = record.measurementTime.date();
         int hour = record.measurementTime.time().hour();
 
-        availableMeasurements[date][hour].append(record);
+        availableMeasurements[date].append(record);
+    }
+
+    for (auto it = availableMeasurements.begin(); it != availableMeasurements.end(); ++it) {
+        std::sort(it.value().begin(), it.value().end(),
+                [](const MeasurementRecord &a, const MeasurementRecord &b) {
+            return a.measurementTime > b.measurementTime;
+        });
     }
 
     qInfo() << "MeasurementResults: Данные распределены по" << availableMeasurements.size() << "датам";
@@ -356,21 +350,18 @@ void MeasurementResults::displayWindProfile(const QVector<WindProfileData> &avgW
 void MeasurementResults::updateAvailableRecordsLabel()
 {
     QDate date = currentDateTime.date();
-    int hour = currentDateTime.time().hour();
 
     int recordCount = 0;
     if (availableMeasurements.contains(date)) {
-        auto hourMap = availableMeasurements[date];
-        if (hourMap.contains(hour)) {
-            recordCount = hourMap[hour].size();
-        }
+        recordCount = availableMeasurements[date].size();
     }
 
     if (recordCount > 0) {
-        ui->lblAvailableRecords->setText(QString("Доступно записей: %1").arg(recordCount));
+        ui->lblAvailableRecords->setText(QString("Доступно записей за %1: %2").arg(date.toString("dd.MM.yyyy"))
+                                         .arg(recordCount));
         ui->lblAvailableRecords->setStyleSheet("color: green; font-style: italic;");
     } else {
-        ui->lblAvailableRecords->setText("Нет данных за выбранное время");
+        ui->lblAvailableRecords->setText("Нет данных за выбранную дату");
         ui->lblAvailableRecords->setStyleSheet("color: red; font-style: italic;");
     }
 }
@@ -529,35 +520,35 @@ void MeasurementResults::updateSliderRange()
     updateAvailableRecordsLabel();
 }
 
-QList<int> MeasurementResults::getAvailableHoursForDate(const QDate &date)
+QVector<MeasurementRecord> MeasurementResults::getRecordsForDate(const QDate &date)
 {
-    QList<int> hours;
     if (availableMeasurements.contains(date)) {
-        hours = availableMeasurements[date].keys();
-        std::sort(hours.begin(), hours.end());
+        return availableMeasurements[date];
     }
-    return hours;
+    return QVector<MeasurementRecord>();
 }
 
 MeasurementRecord MeasurementResults::findClosestRecord(const QDate &date, int hour)
 {
-    MeasurementRecord record;
+    MeasurementRecord result;
 
     if (!availableMeasurements.contains(date)) {
-        return record;
+        return result;
     }
 
-    auto hourMap = availableMeasurements[date];
-    if (!hourMap.contains(hour)) {
-        return record;
-    }
+    QVector<MeasurementRecord> records = availableMeasurements[date];
 
-    // Берем первую запись для данного часа
-    if (!hourMap[hour].isEmpty()) {
-        record = hourMap[hour].first();
-    }
+    QTime targetTime(hour, 0, 0);
+    int minDiff = INT_MAX;
 
-    return record;
+    for (const MeasurementRecord &record : records){
+        int diff = qAbs(targetTime.secsTo(record.measurementTime.time()));
+        if (diff < minDiff) {
+            minDiff = diff;
+            result = record;
+        }
+    }
+    return result;
 }
 
 void MeasurementResults::loadMeasurementData(const QDateTime &dateTime)
@@ -615,81 +606,53 @@ void MeasurementResults::updateDisplay()
 
 void MeasurementResults::onPrevDateClicked()
 {
-    // Переход на предыдущее доступное измерение
-    QDate currentDate = currentDateTime.date();
-    int currentHour = currentDateTime.time().hour();
+    QList<QDate> dates = availableMeasurements.keys();
+    std::sort(dates.begin(), dates.end(), std::greater<QDate>());
 
-    // Пробуем найти предыдущий час в этой же дате
-    QList<int> hours = getAvailableHoursForDate(currentDate);
-    hours = hours.toSet().values(); // Убираем дубликаты
-    std::sort(hours.begin(), hours.end(), std::greater<int>());
+    bool foundCurrent = false;
+    for (const QDate &date : dates){
+        QVector<MeasurementRecord> records = availableMeasurements[date];
 
-    bool found = false;
-    for (int hour : hours) {
-        if (hour < currentHour) {
-            currentDateTime.setTime(QTime(hour, 0, 0));
-            found = true;
-            break;
-        }
-    }
+        for (const MeasurementRecord &record : records) {
+            if (foundCurrent) {
+                currentDateTime = record.measurementTime;
+                updateDisplay();
+                return;
+            }
 
-    // Если не нашли в текущей дате, переходим к предыдущей дате
-    if (!found) {
-        QList<QDate> dates = availableMeasurements.keys();
-        std::sort(dates.begin(), dates.end(), std::greater<QDate>());
-
-        for (const QDate &date : dates) {
-            if (date < currentDate) {
-                QList<int> prevHours = getAvailableHoursForDate(date);
-                if (!prevHours.isEmpty()) {
-                    std::sort(prevHours.begin(), prevHours.end(), std::greater<int>());
-                    currentDateTime = QDateTime(date, QTime(prevHours.first(), 0, 0));
-                    break;
-                }
+            if (record.measurementTime == currentDateTime) {
+                foundCurrent = true;
             }
         }
     }
-
-    updateDisplay();
 }
+
 
 void MeasurementResults::onNextDateClicked()
 {
-    // Переход на следующее доступное измерение
-    QDate currentDate = currentDateTime.date();
-    int currentHour = currentDateTime.time().hour();
+    QList<QDate> dates = availableMeasurements.keys();
+    std::sort(dates.begin(), dates.end());
 
-    // Пробуем найти следующий час в этой же дате
-    QList<int> hours = getAvailableHoursForDate(currentDate);
-    std::sort(hours.begin(), hours.end());
+    bool foundCurrent = false;
+    for (const QDate &date : dates){
+        QVector<MeasurementRecord> records = availableMeasurements[date];
+        std::sort(records.begin(), records.end(),
+                  [](const MeasurementRecord &a, const MeasurementRecord &b){
+            return a.measurementTime < b.measurementTime;
+        });
 
-    bool found = false;
-    for (int hour : hours) {
-        if (hour > currentHour) {
-            currentDateTime.setTime(QTime(hour, 0, 0));
-            found = true;
-            break;
-        }
-    }
+        for (const MeasurementRecord &record : records) {
+            if (foundCurrent) {
+                currentDateTime = record.measurementTime;
+                updateDisplay();
+                return;
+            }
 
-    // Если не нашли в текущей дате, переходим к следующей дате
-    if (!found) {
-        QList<QDate> dates = availableMeasurements.keys();
-        std::sort(dates.begin(), dates.end());
-
-        for (const QDate &date : dates) {
-            if (date > currentDate) {
-                QList<int> nextHours = getAvailableHoursForDate(date);
-                if (!nextHours.isEmpty()) {
-                    std::sort(nextHours.begin(), nextHours.end());
-                    currentDateTime = QDateTime(date, QTime(nextHours.first(), 0, 0));
-                    break;
-                }
+            if (record.measurementTime == currentDateTime) {
+                foundCurrent = true;
             }
         }
     }
-
-    updateDisplay();
 }
 
 void MeasurementResults::onSelectDateClicked()
@@ -745,40 +708,35 @@ void MeasurementResults::onSelectDateClicked()
     auto updateTimeList = [this, timeList, calendar, infoLabel](){
         timeList->clear();
         QDate selectedDate = calendar->selectedDate();
-        QList<int> hours = getAvailableHoursForDate(selectedDate);
+        QVector<MeasurementRecord> records = getRecordsForDate(selectedDate);
 
-        if (hours.isEmpty()){
+        if (records.isEmpty()){
            QListWidgetItem *item = new QListWidgetItem("📭 Нет данных за выбранную дату");
            item->setFlags(item->flags() & ~Qt::ItemIsSelectable);
            item->setForeground(Qt::red);
            timeList->addItem(item);
            infoLabel->setText("Выберите другую дату");
         } else {
-            infoLabel->setText(QString("Найдено измерений: %1").arg(hours.size()));
+            infoLabel->setText(QString("Найдено измерений: %1").arg(records.size()));
 
-            for (int hour : hours){
-                auto records = availableMeasurements[selectedDate][hour];
+            for (const MeasurementRecord &record : records){
 
                 // Формируем строку с информацией о типах данных
                 QStringList dataTypes;
-                bool hasAvg = false, hasActual = false, hasMeasured = false;
-
-                for (const MeasurementRecord &rec : records) {
-                    if (rec.hasAvgWind) hasAvg = true;
-                    if (rec.hasActualWind) hasActual = true;
-                    if (rec.hasMeasuredWind) hasMeasured = true;
-                }
-
-                if (hasAvg) dataTypes << "Средний";
-                if (hasActual) dataTypes << "Действит.";
-                if (hasMeasured) dataTypes << "Измерен.";
+                if (record.hasAvgWind) dataTypes << "Ср";
+                if (record.hasActualWind) dataTypes << "Действ";
+                if (record.hasMeasuredWind) dataTypes << "Изм";
 
                 QString timeStr = QString("🕐 %1:00 — %2")
-                    .arg(hour, 2, 10, QChar('0'))
-                    .arg(dataTypes.join(", "));
+                    .arg(record.measurementTime.toString("hh:mm:ss"))
+                    .arg(dataTypes.isEmpty() ? "Нет данных" : dataTypes.join(", "));
+
+                if (!record.notes.isEmpty()) {
+                    timeStr += " - " + record.notes;
+                }
 
                 QListWidgetItem *item = new QListWidgetItem(timeStr);
-                item->setData(Qt::UserRole, hour);
+                item->setData(Qt::UserRole, record.measurementTime);
 
                 // Цветовое кодирование по количеству типов данных
                 if (dataTypes.size() == 3) {
@@ -808,13 +766,15 @@ void MeasurementResults::onSelectDateClicked()
 
     if (dateDialog->exec() == QDialog::Accepted){
         QDate selectedDate = calendar->selectedDate();
-        int selectedHour = currentDateTime.time().hour();
 
         if (timeList->currentItem() && timeList->currentItem()->data(Qt::UserRole).isValid()){
-            selectedHour = timeList->currentItem()->data(Qt::UserRole).toInt();
+            currentDateTime = timeList->currentItem()->data(Qt::UserRole).toDateTime();
+        } else {
+            QVector<MeasurementRecord> records = getRecordsForDate(selectedDate);
+            if (!records.isEmpty()) {
+                currentDateTime = records.first().measurementTime;
+            }
         }
-
-        currentDateTime = QDateTime(selectedDate, QTime(selectedHour, 0, 0));
         updateDisplay();
     }
 

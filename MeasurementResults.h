@@ -63,7 +63,7 @@ private:
     QDateTime m_lockedDateTime;
 
     // Карта доступных измерений: дата -> (час -> список записей)
-    QMap<QDate, QMap<int, QVector<MeasurementRecord>>> availableMeasurements;
+    QMap<QDate, QVector<MeasurementRecord>> availableMeasurements;
 
     enum BulletinType { Updated, Approximate, FromMeteoStat };
     enum OutputFormat { String, Table };
@@ -85,7 +85,7 @@ private:
     void updateDateTimeDisplay();
     void updateSliderRange();
     void loadMeasurementData(const QDateTime &dateTime);
-    QList<int> getAvailableHoursForDate(const QDate &date);
+    QVector<MeasurementRecord> getRecordsForDate(const QDate &date);
     MeasurementRecord findClosestRecord(const QDate &date, int hour);
     void setupMockData();
 
