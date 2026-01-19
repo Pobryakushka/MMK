@@ -6,6 +6,7 @@
 #include <QVBoxLayout>
 #include <QStackedWidget>
 #include <QDebug>
+#include <limits>
 
 MeasurementResults::MeasurementResults(QWidget *parent)
     : QDialog(parent)
@@ -40,6 +41,8 @@ MeasurementResults::MeasurementResults(QWidget *parent)
     connect(ui->pushButton_table, &QPushButton::clicked, this, &MeasurementResults::onTableFormatClicked);
 
     switchMeteo11Display();
+
+    setupPlots();
 }
 
 MeasurementResults::~MeasurementResults()
@@ -314,7 +317,7 @@ void MeasurementResults::displayWindProfile(const QVector<WindProfileData> &avgW
                                            const QVector<WindProfileData> &actualWind,
                                            const QVector<MeasuredWindData> &measuredWind)
 {
-    // Заполняем таблицу среднего ветра
+    // Заполняем таблицы
     ui->tableWidget_AverageWind->setRowCount(avgWind.size());
     for (int i = 0; i < avgWind.size(); i++) {
         ui->tableWidget_AverageWind->setItem(i, 0,
@@ -323,7 +326,6 @@ void MeasurementResults::displayWindProfile(const QVector<WindProfileData> &avgW
             new QTableWidgetItem(QString::number(avgWind[i].windDirection)));
     }
 
-    // Заполняем таблицу действительного ветра
     ui->tableWidget_realWind->setRowCount(actualWind.size());
     for (int i = 0; i < actualWind.size(); i++) {
         ui->tableWidget_realWind->setItem(i, 0,
@@ -332,7 +334,6 @@ void MeasurementResults::displayWindProfile(const QVector<WindProfileData> &avgW
             new QTableWidgetItem(QString::number(actualWind[i].windDirection)));
     }
 
-    // Заполняем таблицу измеренного ветра
     ui->tableWidget_izmWind_2->setRowCount(measuredWind.size());
     for (int i = 0; i < measuredWind.size(); i++) {
         ui->tableWidget_izmWind_2->setItem(i, 0,
@@ -341,10 +342,15 @@ void MeasurementResults::displayWindProfile(const QVector<WindProfileData> &avgW
             new QTableWidgetItem(QString::number(measuredWind[i].windDirection)));
     }
 
-    // TODO: Добавить построение графиков с использованием QwtPlot
-    // plot_midWindSpeed, plot_midWindAzimut
-    // plot_realWindSpeed, plot_realWindAzimut
-    // plot_izmWindSpeed_2, plot_izmWindAzimut_2
+    // Строим графики
+    plotWindSpeed(ui->plot_midWindSpeed, avgWind, "Средний ветер", QColor(0, 120, 215));
+    plotWindDirection(ui->plot_midWindAzimut, avgWind, "Средний ветер", QColor(0, 120, 215));
+
+    plotWindSpeed(ui->plot_realWindSpeed, actualWind, "Действительный ветер", QColor(76, 175, 80));
+    plotWindDirection(ui->plot_realWindAzimut, actualWind, "Действительный ветер", QColor(76, 175, 80));
+
+    plotMeasuredWindSpeed(ui->plot_izmWindSpeed_2, measuredWind, "Измеренный ветер", QColor(255, 87, 34));
+    plotMeasuredWindDirection(ui->plot_izmWindAzimut_2, measuredWind, "Измеренный ветер", QColor(255, 87, 34));
 }
 
 void MeasurementResults::updateAvailableRecordsLabel()
@@ -539,7 +545,7 @@ MeasurementRecord MeasurementResults::findClosestRecord(const QDate &date, int h
     QVector<MeasurementRecord> records = availableMeasurements[date];
 
     QTime targetTime(hour, 0, 0);
-    int minDiff = INT_MAX;
+    int minDiff = std::numeric_limits<int>::max();
 
     for (const MeasurementRecord &record : records){
         int diff = qAbs(targetTime.secsTo(record.measurementTime.time()));
@@ -779,4 +785,187 @@ void MeasurementResults::onSelectDateClicked()
     }
 
     delete dateDialog;
+}
+
+void MeasurementResults::setupPlots()
+{
+    if (ui->plot_midWindSpeed){
+        ui->plot_midWindSpeed->setTitle("Скорость среднего ветра");
+        ui->plot_midWindSpeed->setAxisTitle(QwtPlot::xBottom, "Высота, м");
+        ui->plot_midWindSpeed->setAxisTitle(QwtPlot::yLeft, "Скорость, м/с");
+
+        QwtPlotGrid *grid = new QwtPlotGrid();
+        grid->setPen(QPen(Qt::gray, 0, Qt::DotLine));
+    }
+}
+
+void MeasurementResults::plotWindSpeed(QwtPlot *plot, const QVector<WindProfileData> &data,
+                                       const QString &title, const QColor &color)
+{
+    if (!plot || data.isEmpty()) return;
+
+    // Очищаем старые кривые
+    plot->detachItems(QwtPlotItem::Rtti_PlotCurve);
+
+    // Подготавливаем данные
+    QVector<double> heights;
+    QVector<double> speeds;
+
+    for (const WindProfileData &point : data) {
+        if (point.isValid) {
+            heights.append(point.height);
+            speeds.append(point.windSpeed);
+        }
+    }
+
+    if (heights.isEmpty()) {
+        plot->replot();
+        return;
+    }
+
+    // Создаем кривую
+    QwtPlotCurve *curve = new QwtPlotCurve(title);
+    curve->setSamples(heights, speeds);
+    curve->setPen(QPen(color, 2));
+
+    // Добавляем символы на точках
+    QwtSymbol *symbol = new QwtSymbol(QwtSymbol::Ellipse,
+                                      QBrush(color.lighter()),
+                                      QPen(color, 1),
+                                      QSize(6, 6));
+    curve->setSymbol(symbol);
+
+    curve->attach(plot);
+    plot->replot();
+}
+
+void MeasurementResults::plotWindDirection(QwtPlot *plot, const QVector<WindProfileData> &data,
+                                          const QString &title, const QColor &color)
+{
+    if (!plot || data.isEmpty()) return;
+
+    plot->detachItems(QwtPlotItem::Rtti_PlotCurve);
+
+    QVector<double> heights;
+    QVector<double> directions;
+
+    for (const WindProfileData &point : data) {
+        if (point.isValid) {
+            heights.append(point.height);
+            directions.append(point.windDirection);
+        }
+    }
+
+    if (heights.isEmpty()) {
+        plot->replot();
+        return;
+    }
+
+    QwtPlotCurve *curve = new QwtPlotCurve(title);
+    curve->setSamples(heights, directions);
+    curve->setPen(QPen(color, 2));
+
+    QwtSymbol *symbol = new QwtSymbol(QwtSymbol::Ellipse,
+                                      QBrush(color.lighter()),
+                                      QPen(color, 1),
+                                      QSize(6, 6));
+    curve->setSymbol(symbol);
+
+    curve->attach(plot);
+
+    // Устанавливаем диапазон для направления ветра (0-360 градусов)
+    plot->setAxisScale(QwtPlot::yLeft, 0, 360);
+    plot->replot();
+}
+
+void MeasurementResults::plotMeasuredWindSpeed(QwtPlot *plot, const QVector<MeasuredWindData> &data,
+                                              const QString &title, const QColor &color)
+{
+    if (!plot || data.isEmpty()) return;
+
+    plot->detachItems(QwtPlotItem::Rtti_PlotCurve);
+
+    QVector<double> heights;
+    QVector<double> speeds;
+
+    for (const MeasuredWindData &point : data) {
+        heights.append(point.height);
+        speeds.append(point.windSpeed);
+    }
+
+    QwtPlotCurve *curve = new QwtPlotCurve(title);
+    curve->setSamples(heights, speeds);
+    curve->setPen(QPen(color, 2));
+
+    QwtSymbol *symbol = new QwtSymbol(QwtSymbol::Ellipse,
+                                      QBrush(color.lighter()),
+                                      QPen(color, 1),
+                                      QSize(6, 6));
+    curve->setSymbol(symbol);
+
+    curve->attach(plot);
+    plot->replot();
+}
+
+void MeasurementResults::plotMeasuredWindDirection(QwtPlot *plot, const QVector<MeasuredWindData> &data,
+                                                  const QString &title, const QColor &color)
+{
+    if (!plot || data.isEmpty()) return;
+
+    plot->detachItems(QwtPlotItem::Rtti_PlotCurve);
+
+    QVector<double> heights;
+    QVector<double> directions;
+
+    for (const MeasuredWindData &point : data) {
+        heights.append(point.height);
+        directions.append(point.windDirection);
+    }
+
+    QwtPlotCurve *curve = new QwtPlotCurve(title);
+    curve->setSamples(heights, directions);
+    curve->setPen(QPen(color, 2));
+
+    QwtSymbol *symbol = new QwtSymbol(QwtSymbol::Ellipse,
+                                      QBrush(color.lighter()),
+                                      QPen(color, 1),
+                                      QSize(6, 6));
+    curve->setSymbol(symbol);
+
+    curve->attach(plot);
+    plot->setAxisScale(QwtPlot::yLeft, 0, 360);
+    plot->replot();
+}
+
+void MeasurementResults::clearDisplayedData()
+{
+    ui->tableWidget_AverageWind->clearContents();
+    ui->tableWidget_realWind->clearContents();
+    ui->tableWidget_izmWind_2->clearContents();
+
+    // Очищаем графики
+    if (ui->plot_midWindSpeed) {
+        ui->plot_midWindSpeed->detachItems(QwtPlotItem::Rtti_PlotCurve);
+        ui->plot_midWindSpeed->replot();
+    }
+    if (ui->plot_midWindAzimut) {
+        ui->plot_midWindAzimut->detachItems(QwtPlotItem::Rtti_PlotCurve);
+        ui->plot_midWindAzimut->replot();
+    }
+    if (ui->plot_realWindSpeed) {
+        ui->plot_realWindSpeed->detachItems(QwtPlotItem::Rtti_PlotCurve);
+        ui->plot_realWindSpeed->replot();
+    }
+    if (ui->plot_realWindAzimut) {
+        ui->plot_realWindAzimut->detachItems(QwtPlotItem::Rtti_PlotCurve);
+        ui->plot_realWindAzimut->replot();
+    }
+    if (ui->plot_izmWindSpeed_2) {
+        ui->plot_izmWindSpeed_2->detachItems(QwtPlotItem::Rtti_PlotCurve);
+        ui->plot_izmWindSpeed_2->replot();
+    }
+    if (ui->plot_izmWindAzimut_2) {
+        ui->plot_izmWindAzimut_2->detachItems(QwtPlotItem::Rtti_PlotCurve);
+        ui->plot_izmWindAzimut_2->replot();
+    }
 }

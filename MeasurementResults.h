@@ -11,6 +11,12 @@
 #include <QSqlQuery>
 #include <QSqlError>
 #include "amsprotocol.h"
+#include <qwt_plot.h>
+#include <qwt_plot_curve.h>
+#include <qwt_plot_grid.h>
+#include <qwt_legend.h>
+#include <qwt_symbol.h>
+#include <qwt_plot_canvas.h>
 
 namespace Ui {
 class MeasurementResults;
@@ -106,6 +112,17 @@ private:
                           const QVector<WindProfileData> &actualWind,
                           const QVector<MeasuredWindData> &measuredWind);
     void updateAvailableRecordsLabel();
+
+    void setupPlots();
+    void plotWindSpeed(QwtPlot *plot, const QVector<WindProfileData> &data,
+                       const QString &title, const QColor &color);
+    void plotWindDirection(QwtPlot *plot, const QVector<WindProfileData> &data,
+                           const QString &title, const QColor &color);
+    void plotMeasuredWindSpeed(QwtPlot *plot, const QVector<MeasuredWindData> &data,
+                               const QString &title, const QColor &color);
+    void plotMeasuredWindDirection(QwtPlot *plot, const QVector<MeasuredWindData> &data,
+                                   const QString &title, const QColor &color);
+    void clearDisplayedData();
 };
 
 #endif // MEASUREMENTRESULTS_H
