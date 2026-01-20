@@ -295,20 +295,21 @@ QVector<WindProfileData> AMSProtocol::parseAvgWindResponse(const QByteArray &dat
 {
     QVector<WindProfileData> profile;
     ok = false;
-    
+
     if (!isPacketValid(data)) return profile;
     if (getPacketCommand(data) != CMD_AVG_WIND_REQUEST) return profile;
-    if (data.size() < 131) return profile; // 1 + 64 + 64 + 1 + 1
-    
-    // 16 уровней высоты
+    if (data.size() < 131) return profile;
+
+    // 16 уровней высоты - ДОБАВЛЯЕМ РАСЧЕТ ВЫСОТЫ
     for (int i = 0; i < 16; i++) {
         WindProfileData point;
+        point.height = 100.0f + i * 200.0f; // Высоты: 100, 300, 500, ..., 3100 м
         point.windDirection = static_cast<int>(bytesToFloat(data, 1 + i * 4));
         point.windSpeed = bytesToFloat(data, 1 + 64 + i * 4);
         point.isValid = true;
         profile.append(point);
     }
-    
+
     ok = true;
     return profile;
 }
@@ -317,20 +318,21 @@ QVector<WindProfileData> AMSProtocol::parseActualWindResponse(const QByteArray &
 {
     QVector<WindProfileData> profile;
     ok = false;
-    
+
     if (!isPacketValid(data)) return profile;
     if (getPacketCommand(data) != CMD_ACTUAL_WIND_REQUEST) return profile;
-    if (data.size() < 243) return profile; // 1 + 120 + 120 + 1 + 1
-    
-    // 30 уровней высоты
+    if (data.size() < 243) return profile;
+
+    // 30 уровней высоты - ДОБАВЛЯЕМ РАСЧЕТ ВЫСОТЫ
     for (int i = 0; i < 30; i++) {
         WindProfileData point;
+        point.height = 100.0f + i * 100.0f; // Высоты: 100, 200, 300, ..., 3000 м
         point.windDirection = static_cast<int>(bytesToFloat(data, 1 + i * 4));
         point.windSpeed = bytesToFloat(data, 1 + 120 + i * 4);
         point.isValid = true;
         profile.append(point);
     }
-    
+
     ok = true;
     return profile;
 }
