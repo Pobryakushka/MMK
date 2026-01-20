@@ -789,14 +789,32 @@ void MeasurementResults::onSelectDateClicked()
 
 void MeasurementResults::setupPlots()
 {
-    if (ui->plot_midWindSpeed){
-        ui->plot_midWindSpeed->setTitle("Скорость среднего ветра");
-        ui->plot_midWindSpeed->setAxisTitle(QwtPlot::xBottom, "Высота, м");
-        ui->plot_midWindSpeed->setAxisTitle(QwtPlot::yLeft, "Скорость, м/с");
+    auto setupPlot = [](QwtPlot *plot, const QString &xTitle, const QString &yTitle,
+                        double xMin, double xMax, double xStep) {
+        if (!plot) return;
+
+        plot->setAxisTitle(QwtPlot::yLeft, yTitle);
+        plot->setAxisTitle(QwtPlot::xBottom, xTitle);
+        plot->setAxisScale(QwtPlot::yLeft, 0.0, 4000.0);
+        plot->setAxisScale(QwtPlot::xBottom, xMin, xMax, xStep);
 
         QwtPlotGrid *grid = new QwtPlotGrid();
-        grid->setPen(QPen(Qt::gray, 0, Qt::DotLine));
-    }
+        grid->setMajorPen(QPen(Qt::black, 0, Qt::DotLine));
+        grid->enableXMin(true);
+        grid->enableYMin(true);
+        grid->setMinorPen(QPen(Qt::lightGray, 0, Qt::DotLine));
+        grid->attach(plot);
+    };
+
+    // Настройка графиков скорости
+    setupPlot(ui->plot_midWindSpeed, "Скорость", "Высота", 0, 50, 10);
+    setupPlot(ui->plot_realWindSpeed, "Скорость", "Высота", 0, 50, 10);
+    setupPlot(ui->plot_izmWindSpeed_2, "Скорость", "Высота", 0, 50, 10);
+
+    // Настройка графиков направления
+    setupPlot(ui->plot_midWindAzimut, "Направление", "Высота", 0, 360, 60);
+    setupPlot(ui->plot_realWindAzimut, "Направление", "Высота", 0, 360, 60);
+    setupPlot(ui->plot_izmWindAzimut_2, "Направление", "Высота", 0, 360, 60);
 }
 
 void MeasurementResults::plotWindSpeed(QwtPlot *plot, const QVector<WindProfileData> &data,
@@ -825,15 +843,17 @@ void MeasurementResults::plotWindSpeed(QwtPlot *plot, const QVector<WindProfileD
 
     // Создаем кривую
     QwtPlotCurve *curve = new QwtPlotCurve(title);
-    curve->setSamples(heights, speeds);
+    // X-ось: скорость, Y-ось: высота
+    curve->setSamples(speeds, heights);
     curve->setPen(QPen(color, 2));
 
     // Добавляем символы на точках
     QwtSymbol *symbol = new QwtSymbol(QwtSymbol::Ellipse,
-                                      QBrush(color.lighter()),
+                                      QBrush(color),
                                       QPen(color, 1),
-                                      QSize(6, 6));
+                                      QSize(5, 5));
     curve->setSymbol(symbol);
+    curve->setStyle(QwtPlotCurve::NoCurve);
 
     curve->attach(plot);
     plot->replot();
@@ -862,19 +882,18 @@ void MeasurementResults::plotWindDirection(QwtPlot *plot, const QVector<WindProf
     }
 
     QwtPlotCurve *curve = new QwtPlotCurve(title);
-    curve->setSamples(heights, directions);
+    // X-ось: направление, Y-ось: высота
+    curve->setSamples(directions, heights);
     curve->setPen(QPen(color, 2));
 
     QwtSymbol *symbol = new QwtSymbol(QwtSymbol::Ellipse,
-                                      QBrush(color.lighter()),
+                                      QBrush(color),
                                       QPen(color, 1),
-                                      QSize(6, 6));
+                                      QSize(5, 5));
     curve->setSymbol(symbol);
+    curve->setStyle(QwtPlotCurve::NoCurve);
 
     curve->attach(plot);
-
-    // Устанавливаем диапазон для направления ветра (0-360 градусов)
-    plot->setAxisScale(QwtPlot::yLeft, 0, 360);
     plot->replot();
 }
 
@@ -894,14 +913,16 @@ void MeasurementResults::plotMeasuredWindSpeed(QwtPlot *plot, const QVector<Meas
     }
 
     QwtPlotCurve *curve = new QwtPlotCurve(title);
-    curve->setSamples(heights, speeds);
+    // X-ось: скорость, Y-ось: высота
+    curve->setSamples(speeds, heights);
     curve->setPen(QPen(color, 2));
 
     QwtSymbol *symbol = new QwtSymbol(QwtSymbol::Ellipse,
-                                      QBrush(color.lighter()),
+                                      QBrush(color),
                                       QPen(color, 1),
-                                      QSize(6, 6));
+                                      QSize(5, 5));
     curve->setSymbol(symbol);
+    curve->setStyle(QwtPlotCurve::NoCurve);
 
     curve->attach(plot);
     plot->replot();
@@ -923,17 +944,18 @@ void MeasurementResults::plotMeasuredWindDirection(QwtPlot *plot, const QVector<
     }
 
     QwtPlotCurve *curve = new QwtPlotCurve(title);
-    curve->setSamples(heights, directions);
+    // X-ось: направление, Y-ось: высота
+    curve->setSamples(directions, heights);
     curve->setPen(QPen(color, 2));
 
     QwtSymbol *symbol = new QwtSymbol(QwtSymbol::Ellipse,
-                                      QBrush(color.lighter()),
+                                      QBrush(color),
                                       QPen(color, 1),
-                                      QSize(6, 6));
+                                      QSize(5, 5));
     curve->setSymbol(symbol);
+    curve->setStyle(QwtPlotCurve::NoCurve);
 
     curve->attach(plot);
-    plot->setAxisScale(QwtPlot::yLeft, 0, 360);
     plot->replot();
 }
 
