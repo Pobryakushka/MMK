@@ -139,9 +139,13 @@ private:
     
     // Чтение float из QByteArray
     float bytesToFloat(const QByteArray &data, int offset);
-    
+
     // Чтение int из QByteArray
     qint32 bytesToInt(const QByteArray &data, int offset);
+
+    // Генерация стандартных высот для профилей ветра
+    static QVector<float> getAverageWindHeights(int count);    // Высоты для среднего ветра (16 уровней)
+    static QVector<float> getActualWindHeights(int count);     // Высоты для действительного ветра (30 уровней)
 };
 
 #endif // AMSPROTOCOL_H

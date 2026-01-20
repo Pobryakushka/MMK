@@ -73,6 +73,72 @@ AMSCommand AMSProtocol::getPacketCommand(const QByteArray &data)
     return static_cast<AMSCommand>(static_cast<quint8>(data[0]));
 }
 
+QVector<float> AMSProtocol::getAverageWindHeights(int count)
+{
+    // Генерация стандартных высот для среднего ветра
+    // Логика из store/storetypes.h:214-237
+    QVector<float> heights;
+    heights.reserve(count);
+
+    float currentHeight = 0.0f;
+    int plus = 50;
+
+    for (int i = 0; i < count; i++) {
+        if (i == 0) {
+            currentHeight = 50.0f;
+        } else {
+            if (currentHeight == 100.0f)
+                plus = 100;
+            else if (currentHeight == 200.0f)
+                plus = 200;
+            else if (currentHeight == 800.0f)
+                plus = 400;
+            else if (currentHeight == 2400.0f)
+                plus = 200;
+            else if (currentHeight == 2600.0f)
+                plus = 400;
+            else if (currentHeight == 3000.0f)
+                plus = 1000;
+            else if (currentHeight == 6000.0f)
+                plus = 2000;
+
+            currentHeight += plus;
+        }
+        heights.append(currentHeight);
+    }
+
+    return heights;
+}
+
+QVector<float> AMSProtocol::getActualWindHeights(int count)
+{
+    // Генерация стандартных высот для действительного ветра
+    // Логика из store/storetypes.h:196-212
+    QVector<float> heights;
+    heights.reserve(count);
+
+    float currentHeight = 0.0f;
+    int plus = 25;
+
+    for (int i = 0; i < count; i++) {
+        if (i == 0) {
+            currentHeight = 50.0f;
+        } else {
+            if (currentHeight == 100.0f)
+                plus = 50;
+            else if (currentHeight == 200.0f)
+                plus = 100;
+            else if (currentHeight == 1000.0f)
+                plus = 200;
+
+            currentHeight += plus;
+        }
+        heights.append(currentHeight);
+    }
+
+    return heights;
+}
+
 // ===== СОЗДАНИЕ ПАКЕТОВ =====
 
 QByteArray AMSProtocol::createLineTestPacket()
@@ -295,20 +361,24 @@ QVector<WindProfileData> AMSProtocol::parseAvgWindResponse(const QByteArray &dat
 {
     QVector<WindProfileData> profile;
     ok = false;
-    
+
     if (!isPacketValid(data)) return profile;
     if (getPacketCommand(data) != CMD_AVG_WIND_REQUEST) return profile;
     if (data.size() < 131) return profile; // 1 + 64 + 64 + 1 + 1
-    
+
+    // Получаем стандартные высоты для среднего ветра (16 уровней)
+    QVector<float> heights = getAverageWindHeights(16);
+
     // 16 уровней высоты
     for (int i = 0; i < 16; i++) {
         WindProfileData point;
+        point.height = heights[i];  // Устанавливаем стандартную высоту
         point.windDirection = static_cast<int>(bytesToFloat(data, 1 + i * 4));
         point.windSpeed = bytesToFloat(data, 1 + 64 + i * 4);
         point.isValid = true;
         profile.append(point);
     }
-    
+
     ok = true;
     return profile;
 }
@@ -317,20 +387,24 @@ QVector<WindProfileData> AMSProtocol::parseActualWindResponse(const QByteArray &
 {
     QVector<WindProfileData> profile;
     ok = false;
-    
+
     if (!isPacketValid(data)) return profile;
     if (getPacketCommand(data) != CMD_ACTUAL_WIND_REQUEST) return profile;
     if (data.size() < 243) return profile; // 1 + 120 + 120 + 1 + 1
-    
+
+    // Получаем стандартные высоты для действительного ветра (30 уровней)
+    QVector<float> heights = getActualWindHeights(30);
+
     // 30 уровней высоты
     for (int i = 0; i < 30; i++) {
         WindProfileData point;
+        point.height = heights[i];  // Устанавливаем стандартную высоту
         point.windDirection = static_cast<int>(bytesToFloat(data, 1 + i * 4));
         point.windSpeed = bytesToFloat(data, 1 + 120 + i * 4);
         point.isValid = true;
         profile.append(point);
     }
-    
+
     ok = true;
     return profile;
 }
