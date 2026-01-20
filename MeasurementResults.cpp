@@ -5,6 +5,7 @@
 #include <QMessageBox>
 #include <QVBoxLayout>
 #include <QStackedWidget>
+#include <QHeaderView>
 #include <QDebug>
 #include <limits>
 
@@ -317,28 +318,49 @@ void MeasurementResults::displayWindProfile(const QVector<WindProfileData> &avgW
                                            const QVector<WindProfileData> &actualWind,
                                            const QVector<MeasuredWindData> &measuredWind)
 {
-    // Заполняем таблицы
+    // Настраиваем таблицы: 3 колонки (Высота, Скорость, Направление), без заголовков строк
+    QStringList headers;
+    headers << "Высота" << "Скорость" << "Направление";
+
+    // Таблица среднего ветра
+    ui->tableWidget_AverageWind->setColumnCount(3);
+    ui->tableWidget_AverageWind->setHorizontalHeaderLabels(headers);
+    ui->tableWidget_AverageWind->verticalHeader()->setVisible(false);
     ui->tableWidget_AverageWind->setRowCount(avgWind.size());
     for (int i = 0; i < avgWind.size(); i++) {
         ui->tableWidget_AverageWind->setItem(i, 0,
-            new QTableWidgetItem(QString::number(avgWind[i].windSpeed, 'f', 2)));
+            new QTableWidgetItem(QString::number(avgWind[i].height, 'f', 0)));
         ui->tableWidget_AverageWind->setItem(i, 1,
+            new QTableWidgetItem(QString::number(avgWind[i].windSpeed, 'f', 2)));
+        ui->tableWidget_AverageWind->setItem(i, 2,
             new QTableWidgetItem(QString::number(avgWind[i].windDirection)));
     }
 
+    // Таблица действительного ветра
+    ui->tableWidget_realWind->setColumnCount(3);
+    ui->tableWidget_realWind->setHorizontalHeaderLabels(headers);
+    ui->tableWidget_realWind->verticalHeader()->setVisible(false);
     ui->tableWidget_realWind->setRowCount(actualWind.size());
     for (int i = 0; i < actualWind.size(); i++) {
         ui->tableWidget_realWind->setItem(i, 0,
-            new QTableWidgetItem(QString::number(actualWind[i].windSpeed, 'f', 2)));
+            new QTableWidgetItem(QString::number(actualWind[i].height, 'f', 0)));
         ui->tableWidget_realWind->setItem(i, 1,
+            new QTableWidgetItem(QString::number(actualWind[i].windSpeed, 'f', 2)));
+        ui->tableWidget_realWind->setItem(i, 2,
             new QTableWidgetItem(QString::number(actualWind[i].windDirection)));
     }
 
+    // Таблица измеренного ветра
+    ui->tableWidget_izmWind_2->setColumnCount(3);
+    ui->tableWidget_izmWind_2->setHorizontalHeaderLabels(headers);
+    ui->tableWidget_izmWind_2->verticalHeader()->setVisible(false);
     ui->tableWidget_izmWind_2->setRowCount(measuredWind.size());
     for (int i = 0; i < measuredWind.size(); i++) {
         ui->tableWidget_izmWind_2->setItem(i, 0,
-            new QTableWidgetItem(QString::number(measuredWind[i].windSpeed, 'f', 2)));
+            new QTableWidgetItem(QString::number(measuredWind[i].height, 'f', 0)));
         ui->tableWidget_izmWind_2->setItem(i, 1,
+            new QTableWidgetItem(QString::number(measuredWind[i].windSpeed, 'f', 2)));
+        ui->tableWidget_izmWind_2->setItem(i, 2,
             new QTableWidgetItem(QString::number(measuredWind[i].windDirection)));
     }
 
