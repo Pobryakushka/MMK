@@ -11,6 +11,7 @@
 #include <QSqlQuery>
 #include <QSqlError>
 #include "amsprotocol.h"
+#include "zoom/zoomscontainer.h"
 #include <qwt_plot.h>
 #include <qwt_plot_curve.h>
 #include <qwt_plot_grid.h>
@@ -79,6 +80,9 @@ private:
 
     bool m_mapCoordinatesMode;
 
+    // Контейнер для управления масштабированием графиков
+    ZoomsContainer *m_zoomsContainer;
+
     // База данных
 //    QSqlDatabase m_database;
 //    QString m_dbHost;
@@ -114,6 +118,7 @@ private:
     void updateAvailableRecordsLabel();
 
     void setupPlots();
+    void setupZoom();  // Метод для настройки масштабирования графиков
     void plotWindSpeed(QwtPlot *plot, const QVector<WindProfileData> &data,
                        const QString &title, const QColor &color);
     void plotWindDirection(QwtPlot *plot, const QVector<WindProfileData> &data,

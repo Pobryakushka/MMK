@@ -15,6 +15,7 @@ MeasurementResults::MeasurementResults(QWidget *parent)
     , currentButtelinType(Updated)
     , currentOutputFormat(String)
     , m_mapCoordinatesMode(false)
+    , m_zoomsContainer(nullptr)
 //    , m_dbPort(5432)
 //    , m_dbConfigured(false)
 {
@@ -44,11 +45,16 @@ MeasurementResults::MeasurementResults(QWidget *parent)
     switchMeteo11Display();
 
     setupPlots();
+    setupZoom();  // Инициализация масштабирования
 }
 
 MeasurementResults::~MeasurementResults()
 {
     disconnectDatabase();
+    if (m_zoomsContainer) {
+        delete m_zoomsContainer;
+        m_zoomsContainer = nullptr;
+    }
     delete ui;
 }
 
@@ -852,6 +858,40 @@ void MeasurementResults::setupPlots()
     setupPlot(ui->plot_midWindAzimut, "Направление", "Высота", 0, 360, 60);
     setupPlot(ui->plot_realWindAzimut, "Направление", "Высота", 0, 360, 60);
     setupPlot(ui->plot_izmWindAzimut_2, "Направление", "Высота", 0, 360, 60);
+}
+
+void MeasurementResults::setupZoom()
+{
+    // Создаем контейнер для управления масштабированием
+    m_zoomsContainer = new ZoomsContainer();
+    
+    // Прикрепляем масштабирование ко всем графикам
+    // Используем белый цвет для рамки выделения (можно изменить на любой другой)
+    
+    if (ui->plot_midWindSpeed) {
+        m_zoomsContainer->attachZoom(ui->plot_midWindSpeed, Qt::blue);
+    }
+    if (ui->plot_realWindSpeed) {
+        m_zoomsContainer->attachZoom(ui->plot_realWindSpeed, Qt::green);
+    }
+    if (ui->plot_izmWindSpeed_2) {
+        m_zoomsContainer->attachZoom(ui->plot_izmWindSpeed_2, Qt::red);
+    }
+    if (ui->plot_midWindAzimut) {
+        m_zoomsContainer->attachZoom(ui->plot_midWindAzimut, Qt::blue);
+    }
+    if (ui->plot_realWindAzimut) {
+        m_zoomsContainer->attachZoom(ui->plot_realWindAzimut, Qt::green);
+    }
+    if (ui->plot_izmWindAzimut_2) {
+        m_zoomsContainer->attachZoom(ui->plot_izmWindAzimut_2, Qt::red);
+    }
+    
+    // Синхронизируем масштабирование по оси X для всех графиков
+    // (при масштабировании одного графика по горизонтали, остальные тоже изменятся)
+    m_zoomsContainer->connectXZooms();
+    
+    qDebug() << "MeasurementResults: Масштабирование графиков настроено";
 }
 
 void MeasurementResults::plotWindSpeed(QwtPlot *plot, const QVector<WindProfileData> &data,

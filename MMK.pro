@@ -25,6 +25,10 @@ SOURCES += \
     customprotocol.cpp \
     amshandler.cpp \
     amsprotocol.cpp \
+    zoom/qaxiszoomsvc.cpp \
+    zoom/qwheelzoomsvc.cpp \
+    zoom/qwtchartzoom.cpp \
+    zoom/zoomscontainer.cpp
 
 HEADERS += \
     AlgorithmsCalc.h \
@@ -43,6 +47,10 @@ HEADERS += \
     customprotocol.h \
     amshandler.h \
     amsprotocol.h \
+    zoom/qaxiszoomsvc.h \
+    zoom/qwheelzoomsvc.h \
+    zoom/qwtchartzoom.h \
+    zoom/zoomscontainer.h
 
 
 # Default rules for deployment.
