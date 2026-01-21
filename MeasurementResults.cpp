@@ -8,6 +8,7 @@
 #include <QStackedWidget>
 #include <QDebug>
 #include <limits>
+#include <algorithm>  // Для std::sort
 
 MeasurementResults::MeasurementResults(QWidget *parent)
     : QDialog(parent)
@@ -864,10 +865,10 @@ void MeasurementResults::setupZoom()
 {
     // Создаем контейнер для управления масштабированием
     m_zoomsContainer = new ZoomsContainer();
-    
+
     // Прикрепляем масштабирование ко всем графикам
     // Используем белый цвет для рамки выделения (можно изменить на любой другой)
-    
+
     if (ui->plot_midWindSpeed) {
         m_zoomsContainer->attachZoom(ui->plot_midWindSpeed, Qt::blue);
     }
@@ -886,11 +887,11 @@ void MeasurementResults::setupZoom()
     if (ui->plot_izmWindAzimut_2) {
         m_zoomsContainer->attachZoom(ui->plot_izmWindAzimut_2, Qt::red);
     }
-    
+
     // Синхронизируем масштабирование по оси X для всех графиков
     // (при масштабировании одного графика по горизонтали, остальные тоже изменятся)
     m_zoomsContainer->connectXZooms();
-    
+
     qDebug() << "MeasurementResults: Масштабирование графиков настроено";
 }
 
@@ -930,7 +931,7 @@ void MeasurementResults::plotWindSpeed(QwtPlot *plot, const QVector<WindProfileD
                                       QPen(color, 1),
                                       QSize(5, 5));
     curve->setSymbol(symbol);
-    curve->setStyle(QwtPlotCurve::NoCurve);
+    curve->setStyle(QwtPlotCurve::Lines);
 
     curve->attach(plot);
     plot->replot();
@@ -968,7 +969,7 @@ void MeasurementResults::plotWindDirection(QwtPlot *plot, const QVector<WindProf
                                       QPen(color, 1),
                                       QSize(5, 5));
     curve->setSymbol(symbol);
-    curve->setStyle(QwtPlotCurve::NoCurve);
+    curve->setStyle(QwtPlotCurve::Lines);
 
     curve->attach(plot);
     plot->replot();
@@ -999,7 +1000,7 @@ void MeasurementResults::plotMeasuredWindSpeed(QwtPlot *plot, const QVector<Meas
                                       QPen(color, 1),
                                       QSize(5, 5));
     curve->setSymbol(symbol);
-    curve->setStyle(QwtPlotCurve::NoCurve);
+    curve->setStyle(QwtPlotCurve::Lines);
 
     curve->attach(plot);
     plot->replot();
@@ -1030,7 +1031,7 @@ void MeasurementResults::plotMeasuredWindDirection(QwtPlot *plot, const QVector<
                                       QPen(color, 1),
                                       QSize(5, 5));
     curve->setSymbol(symbol);
-    curve->setStyle(QwtPlotCurve::NoCurve);
+    curve->setStyle(QwtPlotCurve::Lines);
 
     curve->attach(plot);
     plot->replot();
