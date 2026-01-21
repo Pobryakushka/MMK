@@ -12,7 +12,7 @@ struct WindProfileData {
     float windSpeed;        // Скорость ветра, м/с
     int windDirection;      // Направление ветра, градусы
     bool isValid;
-    
+
     WindProfileData() : height(0), windSpeed(0), windDirection(0), isValid(false) {}
 };
 
@@ -22,7 +22,7 @@ struct MeasuredWindData {
     float windSpeed;        // Скорость ветра, м/с
     int windDirection;      // Направление ветра, градусы
     int reliability;        // Достоверность: 1 - недействительное, 2 - действительное
-    
+
     MeasuredWindData() : height(0), windSpeed(0), windDirection(0), reliability(0) {}
 };
 
@@ -40,8 +40,8 @@ struct StationCoordinates {
     float azimuth;          // Азимут, градусы
     float pitch;            // Угол тангажа, градусы
     float roll;             // Угол крена, градусы
-    
-    StationCoordinates() : latitude(0), longitude(0), altitude(0), 
+
+    StationCoordinates() : latitude(0), longitude(0), altitude(0),
                           azimuth(0), pitch(0), roll(0) {}
 };
 
@@ -83,15 +83,15 @@ class AMSProtocol : public QObject
 
 public:
     explicit AMSProtocol(QObject *parent = nullptr);
-    
+
     // Формирование пакетов для передачи
     QByteArray createLineTestPacket();
     QByteArray createModeTransferPacket(WorkMode mode, Litera litera);
     QByteArray createCoordsTransferPacket(const StationCoordinates &coords);
     QByteArray createStartMeasurementPacket();
     QByteArray createDataExchangePacket(bool continueProcess);
-    QByteArray createSourceDataPacket(int day, int hour, int tenMinutes, 
-                                     float stationAltitude, 
+    QByteArray createSourceDataPacket(int day, int hour, int tenMinutes,
+                                     float stationAltitude,
                                      const QVector<float> &avgWindDir,
                                      const QVector<float> &avgWindSpeed,
                                      float reachedHeight,
@@ -104,7 +104,7 @@ public:
     QByteArray createAntennaControlPacket(quint8 command);
     QByteArray createSetDateTimePacket(const QDateTime &dateTime);
     QByteArray createRotateAntennaPacket(quint8 command, float angle);
-    
+
     // Парсинг принятых пакетов
     bool parseLineTestResponse(const QByteArray &data);
     bool parseModeTransferResponse(const QByteArray &data);
@@ -119,33 +119,33 @@ public:
     quint8 parseAntennaControlResponse(const QByteArray &data, bool &ok);
     bool parseSetDateTimeResponse(const QByteArray &data);
     bool parseRotateAntennaResponse(const QByteArray &data, quint8 &status, float &currentAngle);
-    
+
     // Проверка пакета
     bool isPacketValid(const QByteArray &data);
     AMSCommand getPacketCommand(const QByteArray &data);
-    
+
+    // Генерация стандартных высот для профилей ветра (публичные статические методы)
+    static QVector<float> getAverageWindHeights(int count = 16);    // Высоты для среднего ветра
+    static QVector<float> getActualWindHeights(int count = 30);     // Высоты для действительного ветра
+
 private:
     // Вычисление контрольной суммы
     quint8 calculateChecksum(const QByteArray &data);
-    
+
     // Добавление контрольной суммы и стопового байта
     QByteArray finalizePacket(const QByteArray &data);
-    
+
     // Преобразование float в QByteArray (little-endian)
     QByteArray floatToBytes(float value);
-    
+
     // Преобразование int в QByteArray (little-endian)
     QByteArray intToBytes(qint32 value);
-    
+
     // Чтение float из QByteArray
     float bytesToFloat(const QByteArray &data, int offset);
 
     // Чтение int из QByteArray
     qint32 bytesToInt(const QByteArray &data, int offset);
-
-    // Генерация стандартных высот для профилей ветра
-    static QVector<float> getAverageWindHeights(int count);    // Высоты для среднего ветра (16 уровней)
-    static QVector<float> getActualWindHeights(int count);     // Высоты для действительного ветра (30 уровней)
 };
 
 #endif // AMSPROTOCOL_H
