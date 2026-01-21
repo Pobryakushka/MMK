@@ -1,6 +1,7 @@
 #include "MeasurementResults.h"
 #include "ui_MeasurementResults.h"
 #include "databasemanager.h"
+#include "amsprotocol.h"
 #include <QCalendarWidget>
 #include <QMessageBox>
 #include <QVBoxLayout>
@@ -212,10 +213,10 @@ QVector<WindProfileData> MeasurementResults::loadAvgWindProfile(const QDateTime 
     QSqlDatabase db = DatabaseManager::instance()->database();
     QSqlQuery query(db);
     query.prepare(
-        "SELECT height, wind_speed, wind_direction "
+        "SELECT wind_speed, wind_direction "
         "FROM avg_wind_profile "
         "WHERE measurement_time >= :time_from AND measurement_time <= :time_to "
-        "ORDER BY height ASC"
+        "ORDER BY profile_id ASC"
     );
 
     query.bindValue(":time_from", time.addSecs(-1800)); // -30 минут
@@ -226,15 +227,25 @@ QVector<WindProfileData> MeasurementResults::loadAvgWindProfile(const QDateTime 
         return profile;
     }
 
+    // Загружаем данные из БД (только скорость и направление)
+    QVector<WindProfileData> dbData;
     while (query.next()) {
         WindProfileData point;
-        point.height = query.value(0).toFloat();
-        point.windSpeed = query.value(1).toFloat();
-        point.windDirection = query.value(2).toInt();
+        point.windSpeed = query.value(0).toFloat();
+        point.windDirection = query.value(1).toInt();
         point.isValid = true;
-        profile.append(point);
+        dbData.append(point);
     }
 
+    // Применяем стандартные высоты АМС (фиксированные согласно протоколу)
+    if (!dbData.isEmpty()) {
+        QVector<float> standardHeights = AMSProtocol::getAverageWindHeights(dbData.size());
+        for (int i = 0; i < dbData.size() && i < standardHeights.size(); i++) {
+            dbData[i].height = standardHeights[i];
+        }
+    }
+
+    profile = dbData;
     qDebug() << "MeasurementResults: Загружен профиль среднего ветра," << profile.size() << "точек";
     return profile;
 }
@@ -248,10 +259,10 @@ QVector<WindProfileData> MeasurementResults::loadActualWindProfile(const QDateTi
     QSqlDatabase db = DatabaseManager::instance()->database();
     QSqlQuery query(db);
     query.prepare(
-        "SELECT height, wind_speed, wind_direction "
+        "SELECT wind_speed, wind_direction "
         "FROM actual_wind_profile "
         "WHERE measurement_time >= :time_from AND measurement_time <= :time_to "
-        "ORDER BY height ASC"
+        "ORDER BY profile_id ASC"
     );
 
     query.bindValue(":time_from", time.addSecs(-1800));
@@ -262,15 +273,25 @@ QVector<WindProfileData> MeasurementResults::loadActualWindProfile(const QDateTi
         return profile;
     }
 
+    // Загружаем данные из БД (только скорость и направление)
+    QVector<WindProfileData> dbData;
     while (query.next()) {
         WindProfileData point;
-        point.height = query.value(0).toFloat();
-        point.windSpeed = query.value(1).toFloat();
-        point.windDirection = query.value(2).toInt();
+        point.windSpeed = query.value(0).toFloat();
+        point.windDirection = query.value(1).toInt();
         point.isValid = true;
-        profile.append(point);
+        dbData.append(point);
     }
 
+    // Применяем стандартные высоты АМС (фиксированные согласно протоколу)
+    if (!dbData.isEmpty()) {
+        QVector<float> standardHeights = AMSProtocol::getActualWindHeights(dbData.size());
+        for (int i = 0; i < dbData.size() && i < standardHeights.size(); i++) {
+            dbData[i].height = standardHeights[i];
+        }
+    }
+
+    profile = dbData;
     qDebug() << "MeasurementResults: Загружен профиль действительного ветра," << profile.size() << "точек";
     return profile;
 }
@@ -317,32 +338,48 @@ void MeasurementResults::displayWindProfile(const QVector<WindProfileData> &avgW
                                            const QVector<WindProfileData> &actualWind,
                                            const QVector<MeasuredWindData> &measuredWind)
 {
-    // Заполняем таблицы
+    // Заполняем таблицу среднего ветра
+    // Заголовки строк остаются как в UI (диапазоны высот типа "0-50", "0-100")
+    // Высоты уже присвоены в loadAvgWindProfile для построения графиков
     ui->tableWidget_AverageWind->setRowCount(avgWind.size());
     for (int i = 0; i < avgWind.size(); i++) {
+        // Колонка 0: Скорость ветра
         ui->tableWidget_AverageWind->setItem(i, 0,
             new QTableWidgetItem(QString::number(avgWind[i].windSpeed, 'f', 2)));
+        // Колонка 1: Направление ветра
         ui->tableWidget_AverageWind->setItem(i, 1,
             new QTableWidgetItem(QString::number(avgWind[i].windDirection)));
     }
 
+    // Заполняем таблицу действительного ветра
+    // Заголовки строк остаются как в UI
+    // Высоты уже присвоены в loadActualWindProfile для построения графиков
     ui->tableWidget_realWind->setRowCount(actualWind.size());
     for (int i = 0; i < actualWind.size(); i++) {
+        // Колонка 0: Скорость ветра
         ui->tableWidget_realWind->setItem(i, 0,
             new QTableWidgetItem(QString::number(actualWind[i].windSpeed, 'f', 2)));
+        // Колонка 1: Направление ветра
         ui->tableWidget_realWind->setItem(i, 1,
             new QTableWidgetItem(QString::number(actualWind[i].windDirection)));
     }
 
+    // Заполняем таблицу измеренного ветра
+    // Высота приходит от АМС и хранится в БД - используем её для заголовков строк
     ui->tableWidget_izmWind_2->setRowCount(measuredWind.size());
     for (int i = 0; i < measuredWind.size(); i++) {
+        // Устанавливаем заголовок строки с высотой из БД
+        ui->tableWidget_izmWind_2->setVerticalHeaderItem(i,
+            new QTableWidgetItem(QString::number(measuredWind[i].height, 'f', 0)));
+        // Колонка 0: Скорость ветра
         ui->tableWidget_izmWind_2->setItem(i, 0,
             new QTableWidgetItem(QString::number(measuredWind[i].windSpeed, 'f', 2)));
+        // Колонка 1: Направление ветра
         ui->tableWidget_izmWind_2->setItem(i, 1,
             new QTableWidgetItem(QString::number(measuredWind[i].windDirection)));
     }
 
-    // Строим графики
+    // Строим графики (используют height из структур данных)
     plotWindSpeed(ui->plot_midWindSpeed, avgWind, "Средний ветер", QColor(0, 120, 215));
     plotWindDirection(ui->plot_midWindAzimut, avgWind, "Средний ветер", QColor(0, 120, 215));
 
@@ -789,14 +826,32 @@ void MeasurementResults::onSelectDateClicked()
 
 void MeasurementResults::setupPlots()
 {
-    if (ui->plot_midWindSpeed){
-        ui->plot_midWindSpeed->setTitle("Скорость среднего ветра");
-        ui->plot_midWindSpeed->setAxisTitle(QwtPlot::xBottom, "Высота, м");
-        ui->plot_midWindSpeed->setAxisTitle(QwtPlot::yLeft, "Скорость, м/с");
+    auto setupPlot = [](QwtPlot *plot, const QString &xTitle, const QString &yTitle,
+                        double xMin, double xMax, double xStep) {
+        if (!plot) return;
+
+        plot->setAxisTitle(QwtPlot::yLeft, yTitle);
+        plot->setAxisTitle(QwtPlot::xBottom, xTitle);
+        plot->setAxisScale(QwtPlot::yLeft, 0.0, 4000.0);
+        plot->setAxisScale(QwtPlot::xBottom, xMin, xMax, xStep);
 
         QwtPlotGrid *grid = new QwtPlotGrid();
-        grid->setPen(QPen(Qt::gray, 0, Qt::DotLine));
-    }
+        grid->setMajorPen(QPen(Qt::black, 0, Qt::DotLine));
+        grid->enableXMin(true);
+        grid->enableYMin(true);
+        grid->setMinorPen(QPen(Qt::lightGray, 0, Qt::DotLine));
+        grid->attach(plot);
+    };
+
+    // Настройка графиков скорости
+    setupPlot(ui->plot_midWindSpeed, "Скорость", "Высота", 0, 50, 10);
+    setupPlot(ui->plot_realWindSpeed, "Скорость", "Высота", 0, 50, 10);
+    setupPlot(ui->plot_izmWindSpeed_2, "Скорость", "Высота", 0, 50, 10);
+
+    // Настройка графиков направления
+    setupPlot(ui->plot_midWindAzimut, "Направление", "Высота", 0, 360, 60);
+    setupPlot(ui->plot_realWindAzimut, "Направление", "Высота", 0, 360, 60);
+    setupPlot(ui->plot_izmWindAzimut_2, "Направление", "Высота", 0, 360, 60);
 }
 
 void MeasurementResults::plotWindSpeed(QwtPlot *plot, const QVector<WindProfileData> &data,
@@ -825,15 +880,17 @@ void MeasurementResults::plotWindSpeed(QwtPlot *plot, const QVector<WindProfileD
 
     // Создаем кривую
     QwtPlotCurve *curve = new QwtPlotCurve(title);
-    curve->setSamples(heights, speeds);
+    // X-ось: скорость, Y-ось: высота
+    curve->setSamples(speeds, heights);
     curve->setPen(QPen(color, 2));
 
     // Добавляем символы на точках
     QwtSymbol *symbol = new QwtSymbol(QwtSymbol::Ellipse,
-                                      QBrush(color.lighter()),
+                                      QBrush(color),
                                       QPen(color, 1),
-                                      QSize(6, 6));
+                                      QSize(5, 5));
     curve->setSymbol(symbol);
+    curve->setStyle(QwtPlotCurve::NoCurve);
 
     curve->attach(plot);
     plot->replot();
@@ -862,19 +919,18 @@ void MeasurementResults::plotWindDirection(QwtPlot *plot, const QVector<WindProf
     }
 
     QwtPlotCurve *curve = new QwtPlotCurve(title);
-    curve->setSamples(heights, directions);
+    // X-ось: направление, Y-ось: высота
+    curve->setSamples(directions, heights);
     curve->setPen(QPen(color, 2));
 
     QwtSymbol *symbol = new QwtSymbol(QwtSymbol::Ellipse,
-                                      QBrush(color.lighter()),
+                                      QBrush(color),
                                       QPen(color, 1),
-                                      QSize(6, 6));
+                                      QSize(5, 5));
     curve->setSymbol(symbol);
+    curve->setStyle(QwtPlotCurve::NoCurve);
 
     curve->attach(plot);
-
-    // Устанавливаем диапазон для направления ветра (0-360 градусов)
-    plot->setAxisScale(QwtPlot::yLeft, 0, 360);
     plot->replot();
 }
 
@@ -894,14 +950,16 @@ void MeasurementResults::plotMeasuredWindSpeed(QwtPlot *plot, const QVector<Meas
     }
 
     QwtPlotCurve *curve = new QwtPlotCurve(title);
-    curve->setSamples(heights, speeds);
+    // X-ось: скорость, Y-ось: высота
+    curve->setSamples(speeds, heights);
     curve->setPen(QPen(color, 2));
 
     QwtSymbol *symbol = new QwtSymbol(QwtSymbol::Ellipse,
-                                      QBrush(color.lighter()),
+                                      QBrush(color),
                                       QPen(color, 1),
-                                      QSize(6, 6));
+                                      QSize(5, 5));
     curve->setSymbol(symbol);
+    curve->setStyle(QwtPlotCurve::NoCurve);
 
     curve->attach(plot);
     plot->replot();
@@ -923,17 +981,18 @@ void MeasurementResults::plotMeasuredWindDirection(QwtPlot *plot, const QVector<
     }
 
     QwtPlotCurve *curve = new QwtPlotCurve(title);
-    curve->setSamples(heights, directions);
+    // X-ось: направление, Y-ось: высота
+    curve->setSamples(directions, heights);
     curve->setPen(QPen(color, 2));
 
     QwtSymbol *symbol = new QwtSymbol(QwtSymbol::Ellipse,
-                                      QBrush(color.lighter()),
+                                      QBrush(color),
                                       QPen(color, 1),
-                                      QSize(6, 6));
+                                      QSize(5, 5));
     curve->setSymbol(symbol);
+    curve->setStyle(QwtPlotCurve::NoCurve);
 
     curve->attach(plot);
-    plot->setAxisScale(QwtPlot::yLeft, 0, 360);
     plot->replot();
 }
 
