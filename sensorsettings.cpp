@@ -76,6 +76,12 @@ void SensorSettings::populateComPorts()
     } else {
         ui->btnConnect->setEnabled(true);
     }
+    if (QFile::exists("/dev/pts/1")){
+        ui->comboBoxComPort->addItem("Virtual pts/1", "/dev/pts/1");
+    }
+    if (QFile::exists("/dev/pts/2")){
+        ui->comboBoxComPort->addItem("Virtual pts/2", "/dev/pts/2");
+    }
 }
 
 void SensorSettings::populateGnssPorts()
@@ -96,6 +102,12 @@ void SensorSettings::populateGnssPorts()
     } else {
         ui->btnConnectGnss->setEnabled(true);
         qDebug() << "SensorSettings: Найдено портов GNSS:" << ui->comboBoxGnssPort->count();
+    }
+    if (QFile::exists("/dev/pts/1")){
+        ui->comboBoxGnssPort->addItem("Virtual pts/1", "/dev/pts/1");
+    }
+    if (QFile::exists("/dev/pts/2")){
+        ui->comboBoxGnssPort->addItem("Virtual pts/2", "/dev/pts/2");
     }
 }
 
@@ -163,6 +175,19 @@ void SensorSettings::onDisconnectGnssClicked()
 
 void SensorSettings::onConnectAmsClicked()
 {
+    // Блокируем кнопку подключения и настройки во время процесса
+    ui->btnConnectAms->setEnabled(false);
+    ui->btnConnectAms->setText("Подключение...");
+    setAmsConnectionEnabled(false);
+
+    // Включаем кнопку отключения на случай, если нужно прервать
+    ui->btnDisconnectAms->setEnabled(true);
+    ui->btnDisconnectAms->setStyleSheet("background-color: #F44336; color: white; font-weight: bold;");
+
+    // Обновляем статус
+    ui->lblAmsStatus->setText("Подключение...");
+    ui->lblAmsStatus->setStyleSheet("color: orange; font-size: 10pt; padding: 5px; font-weight: bold;");
+
     emit amsConnectRequested();
 }
 
@@ -218,9 +243,9 @@ QSerialPort::Parity SensorSettings::getParity() const
     }
 
     switch (index) {
-        case 1: return QSerialPort::EvenParity;
-        case 2: return QSerialPort::OddParity;
-        default: return QSerialPort::NoParity;
+    case 1: return QSerialPort::EvenParity;
+    case 2: return QSerialPort::OddParity;
+    default: return QSerialPort::NoParity;
     }
 }
 
@@ -274,9 +299,9 @@ QSerialPort::Parity SensorSettings::getAmsParity() const
 {
     int index = ui->comboBoxAmsParity->currentIndex();
     switch (index) {
-        case 1: return QSerialPort::EvenParity;
-        case 2: return QSerialPort::OddParity;
-        default: return QSerialPort::NoParity;
+    case 1: return QSerialPort::EvenParity;
+    case 2: return QSerialPort::OddParity;
+    default: return QSerialPort::NoParity;
     }
 }
 
@@ -293,11 +318,14 @@ void SensorSettings::setAmsConnectionStatus(const QString& status, bool connecte
     if (connected) {
         ui->lblAmsStatus->setStyleSheet("color: green; font-size: 10pt; padding: 5px; font-weight: bold;");
         ui->btnConnectAms->setEnabled(false);
+        ui->btnConnectAms->setText("Подключить"); // Сбрасываем текст
         ui->btnDisconnectAms->setEnabled(true);
         ui->btnDisconnectAms->setStyleSheet("background-color: #F44336; color: white; font-weight: bold;");
     } else {
         ui->lblAmsStatus->setStyleSheet("color: #666; font-size: 10pt; padding: 5px;");
         ui->btnConnectAms->setEnabled(true);
+        ui->btnConnectAms->setText("Подключить"); // Сбрасываем текст
+        ui->btnConnectAms->setStyleSheet(""); // Убираем стиль
         ui->btnDisconnectAms->setEnabled(false);
         ui->btnDisconnectAms->setStyleSheet("background-color: #757575; color: white; font-weight: bold;");
     }
@@ -313,6 +341,24 @@ void SensorSettings::setAmsConnectionEnabled(bool enabled)
     ui->comboBoxAmsParity->setEnabled(enabled);
     ui->comboBoxAmsStopBits->setEnabled(enabled);
     ui->btnRefreshAmsPorts->setEnabled(enabled);
+}
+
+void SensorSettings::setAmsConnectionError(const QString& errorMessage)
+{
+    // Устанавливаем статус ошибки
+    ui->lblAmsStatus->setText(QString("Ошибка: %1").arg(errorMessage));
+    ui->lblAmsStatus->setStyleSheet("color: red; font-size: 10pt; padding: 5px; font-weight: bold;");
+
+    // Возвращаем кнопки в состояние "не подключено"
+    ui->btnConnectAms->setEnabled(true);
+    ui->btnDisconnectAms->setEnabled(false);
+    ui->btnDisconnectAms->setStyleSheet("background-color: #757575; color: white; font-weight: bold;");
+    ui->btnConnectAms->setStyleSheet(""); // Убираем стиль
+
+    // Включаем настройки для повторного подключения
+    setAmsConnectionEnabled(true);
+
+    qWarning() << "SensorSettings: Ошибка подключения АМС:" << errorMessage;
 }
 
 // ===== СУЩЕСТВУЮЩИЕ МЕТОДЫ =====

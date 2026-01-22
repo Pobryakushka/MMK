@@ -16,7 +16,7 @@ class AMSHandler : public QObject
 public:
     explicit AMSHandler(QObject *parent = nullptr);
     ~AMSHandler();
-    
+
     // Управление подключением
     bool connectToAMS(const QString &portName, qint32 baudRate,
                      QSerialPort::DataBits dataBits,
@@ -24,22 +24,22 @@ public:
                      QSerialPort::StopBits stopBits);
     void disconnectFromAMS();
     bool isConnected() const;
-    
+
     // Настройка БД
     void setDatabase(const QString &host, int port, const QString &dbName,
                     const QString &user, const QString &password);
-    
+
     // Управление измерениями
     bool startMeasurement();
     bool stopMeasurement();
     bool continueMeasurement();
-    
+
     // Запрос данных
     bool requestAvgWind();
     bool requestActualWind();
     bool requestMeasuredWind();
     bool requestFunctionalControl();
-    
+
     // Установка параметров
     bool setWorkMode(WorkMode mode, Litera litera);
     bool setStationCoordinates(const StationCoordinates &coords);
@@ -51,20 +51,20 @@ public:
                        float reachedHeight,
                        float surfaceWindDir, float surfaceWindSpeed,
                        const QDateTime &currentDateTime);
-    
+
     // Управление антенной
     bool openAntenna();
     bool closeAntenna();
     bool getAntennaStatus();
     bool rotateAntenna(float angle);
     bool stopAntennaRotation();
-    
+
 signals:
     void connected();
     void disconnected();
     void errorOccurred(const QString &error);
     void statusMessage(const QString &message);
-    
+
     // Сигналы о полученных данных
     void measurementProgressUpdated(int percent, float angle);
     void avgWindDataReceived(const QVector<WindProfileData> &data);
@@ -72,7 +72,7 @@ signals:
     void measuredWindDataReceived(const QVector<MeasuredWindData> &data);
     void functionalControlDataReceived(quint32 bitMask, quint32 powerOnCount);
     void antennaStatusReceived(quint8 status);
-    
+
     // Сигналы о записи в БД
     void dataWrittenToDatabase(int recordId);
     void databaseError(const QString &error);
@@ -87,25 +87,26 @@ private:
     AMSProtocol *m_protocol;
     QTimer *m_responseTimer;
     QByteArray m_receiveBuffer;
-    
+
     // Состояние
     bool m_waitingForResponse;
+    bool m_isConnecting;  // Флаг процесса подключения
     AMSCommand m_lastCommand;
     int m_currentRecordId;
-    
+
     // Внутренние методы
     bool sendPacket(const QByteArray &packet, AMSCommand command);
     void processReceivedPacket(const QByteArray &packet);
-    
+
     // Методы записи в БД
     int createMainArchiveRecord(const QString &notes = QString());
     bool saveAvgWindProfile(int recordId, const QVector<WindProfileData> &data);
     bool saveActualWindProfile(int recordId, const QVector<WindProfileData> &data);
     bool saveMeasuredWindProfile(int recordId, const QVector<MeasuredWindData> &data);
-    bool saveWindProfilesReferences(int recordId, int avgProfileId, int actualProfileId, 
+    bool saveWindProfilesReferences(int recordId, int avgProfileId, int actualProfileId,
                                    int measuredProfileId, int shearProfileId);
     bool saveStationCoordinates(int recordId, const StationCoordinates &coords);
-    bool saveCriticalMessage(int recordId, const QString &message, 
+    bool saveCriticalMessage(int recordId, const QString &message,
                             const QString &severity);
 };
 

@@ -8,11 +8,11 @@ AMSHandler::AMSHandler(QObject *parent)
     , m_protocol(new AMSProtocol(this))
     , m_responseTimer(new QTimer(this))
     , m_waitingForResponse(false)
+    , m_isConnecting(false)
     , m_lastCommand(static_cast<AMSCommand>(0x00))
     , m_currentRecordId(-1)
 {
     connect(m_serialPort, &QSerialPort::readyRead, this, &AMSHandler::onDataReceived);
-    connect(m_serialPort, &QSerialPort::errorOccurred, this, &AMSHandler::onSerialError);
 
     m_responseTimer->setSingleShot(true);
     m_responseTimer->setInterval(5000); // 5 секунд таймаут
@@ -47,18 +47,24 @@ bool AMSHandler::connectToAMS(const QString &portName, qint32 baudRate,
         QString error = QString("Не удалось открыть порт: %1").arg(m_serialPort->errorString());
         qCritical() << "AMSHandler:" << error;
         emit errorOccurred(error);
+        m_isConnecting = false;
         return false;
     }
 
-    qInfo() << "AMSHandler: Подключено к" << portName << "со скоростью" << baudRate;
-    emit connected();
-    emit statusMessage("Подключено к АМС");
+    qInfo() << "AMSHandler: Порт открыт:" << portName << "со скоростью" << baudRate;
+    qInfo() << "AMSHandler: Выполняется тест линии...";
+    m_isConnecting = true;  // Устанавливаем флаг подключения
+    emit statusMessage("Тест линии...");
 
     // Выполняем тест линии
     QTimer::singleShot(500, this, [this]() {
         QByteArray testPacket = m_protocol->createLineTestPacket();
         if (sendPacket(testPacket, CMD_LINE_TEST)) {
             qInfo() << "AMSHandler: Отправлен тест линии";
+        } else {
+            qWarning() << "AMSHandler: Не удалось отправить тест линии";
+            m_isConnecting = false;
+            emit errorOccurred("Не удалось отправить тест линии");
         }
     });
 
@@ -75,6 +81,7 @@ void AMSHandler::disconnectFromAMS()
     }
 
     m_waitingForResponse = false;
+    m_isConnecting = false;  // Сбрасываем флаг подключения
     m_responseTimer->stop();
     m_receiveBuffer.clear();
 }
@@ -134,21 +141,56 @@ void AMSHandler::onDataReceived()
     m_receiveBuffer.append(data);
 
     qDebug() << "AMSHandler: Получено" << data.size() << "байт, буфер:" << m_receiveBuffer.size();
+    qDebug() << "AMSHandler: Буфер HEX:" << m_receiveBuffer.toHex(' ');
 
-    // Ищем стоповый байт 0xFF
+    // Обрабатываем все пакеты в буфере
     while (true) {
-        int stopIndex = m_receiveBuffer.indexOf(static_cast<char>(0xFF));
-        if (stopIndex == -1) {
-            break; // Пакет не полный
+        // Ищем начало пакета (команду 0xA0-0xAC)
+        int startIndex = -1;
+        for (int i = 0; i < m_receiveBuffer.size(); i++) {
+            quint8 byte = static_cast<quint8>(m_receiveBuffer[i]);
+            if (byte >= 0xA0 && byte <= 0xAC) {
+                startIndex = i;
+                qDebug() << "AMSHandler: Найдено начало пакета на позиции" << i << ", команда:" << Qt::hex << byte;
+                break;
+            }
         }
 
-        // Извлекаем пакет
+        if (startIndex == -1) {
+            qDebug() << "AMSHandler: Начало пакета не найдено, очищаем буфер";
+            m_receiveBuffer.clear(); // Нет команды - очищаем мусор
+            break;
+        }
+
+        // Если начало не в начале буфера - удаляем мусор перед ним
+        if (startIndex > 0) {
+            qDebug() << "AMSHandler: Удаляем" << startIndex << "байт мусора перед командой";
+            m_receiveBuffer.remove(0, startIndex);
+            startIndex = 0;
+        }
+
+        // ИСПРАВЛЕНИЕ: Ищем ПОСЛЕДНИЙ байт 0xFF в буфере
+        // Это будет настоящий стоповый байт
+        int stopIndex = m_receiveBuffer.lastIndexOf(static_cast<char>(0xFF));
+
+        if (stopIndex == -1 || stopIndex < 2) {
+            qDebug() << "AMSHandler: Стоповый байт не найден или слишком близко, ждем больше данных";
+            break; // Пакет не полный, ждем еще данных
+        }
+
+        qDebug() << "AMSHandler: Найден стоповый байт на позиции" << stopIndex;
+
+        // Извлекаем полный пакет
         QByteArray packet = m_receiveBuffer.left(stopIndex + 1);
         m_receiveBuffer.remove(0, stopIndex + 1);
+
+        qDebug() << "AMSHandler: Извлечен пакет размером" << packet.size() << "байт";
 
         // Обрабатываем пакет
         if (packet.size() >= 3) {
             processReceivedPacket(packet);
+        } else {
+            qWarning() << "AMSHandler: Пакет слишком короткий, пропускаем";
         }
     }
 }
@@ -158,8 +200,48 @@ void AMSHandler::processReceivedPacket(const QByteArray &packet)
     m_responseTimer->stop();
     m_waitingForResponse = false;
 
+    qDebug() << "AMSHandler: Получен пакет, размер:" << packet.size() << "байт";
+    qDebug() << "AMSHandler: Пакет HEX:" << packet.toHex(' ');
+
+    // Детальная проверка пакета
+    if (packet.size() < 3) {
+        qWarning() << "AMSHandler: Пакет слишком короткий:" << packet.size() << "< 3";
+        emit errorOccurred("Ошибка: пакет слишком короткий");
+        return;
+    }
+
+    quint8 stopByte = static_cast<quint8>(packet.back());
+    if (stopByte != 0xFF) {
+        qWarning() << "AMSHandler: Неправильный стоповый байт:" << Qt::hex << stopByte << "(ожидается 0xFF)";
+        emit errorOccurred("Ошибка: неправильный стоповый байт");
+        return;
+    }
+
+    // Проверка контрольной суммы
+    quint8 receivedChecksum = static_cast<quint8>(packet[packet.size() - 2]);
+    qDebug() << "AMSHandler: Полученная КС:" << Qt::hex << receivedChecksum;
+
+    // Вычисляем КС
+    QByteArray dataForChecksum = packet.left(packet.size() - 2);
+    qDebug() << "AMSHandler: Данные для КС (без КС и стопа):" << dataForChecksum.toHex(' ');
+    qDebug() << "AMSHandler: Размер данных для КС:" << dataForChecksum.size();
+
+    // Вычисляем КС вручную для диагностики
+    quint8 calculatedChecksum = 0;
+    qDebug() << "AMSHandler: Вычисление КС (начиная с индекса 1, пропуская команду" << Qt::hex << static_cast<quint8>(dataForChecksum[0]) << "):";
+    for (int i = 1; i < dataForChecksum.size(); i++) {
+        quint8 byte = static_cast<quint8>(dataForChecksum[i]);
+        calculatedChecksum ^= byte;
+        if (i <= 5) { // Показываем первые несколько шагов
+            qDebug() << "  [" << i << "]:" << Qt::hex << byte << ", КС теперь:" << calculatedChecksum;
+        }
+    }
+    qDebug() << "AMSHandler: Вычисленная КС:" << Qt::hex << calculatedChecksum;
+    qDebug() << "AMSHandler: Полученная КС:" << Qt::hex << receivedChecksum;
+    qDebug() << "AMSHandler: КС совпадают:" << (receivedChecksum == calculatedChecksum ? "ДА" : "НЕТ");
+
     if (!m_protocol->isPacketValid(packet)) {
-        qWarning() << "AMSHandler: Получен невалидный пакет";
+        qWarning() << "AMSHandler: isPacketValid() вернул false";
         emit errorOccurred("Ошибка контрольной суммы");
         return;
     }
@@ -171,9 +253,24 @@ void AMSHandler::processReceivedPacket(const QByteArray &packet)
         case CMD_LINE_TEST: {
             if (m_protocol->parseLineTestResponse(packet)) {
                 qInfo() << "AMSHandler: Тест линии успешен";
+
+                // Если это было подключение - отправляем сигнал connected()
+                if (m_isConnecting) {
+                    m_isConnecting = false;
+                    emit connected();
+                    qInfo() << "AMSHandler: Подключение завершено успешно";
+                }
+
                 emit statusMessage("Тест линии: OK");
             } else {
                 qWarning() << "AMSHandler: Тест линии не пройден";
+
+                // Если это было подключение - отключаемся
+                if (m_isConnecting) {
+                    m_isConnecting = false;
+                    disconnectFromAMS();
+                }
+
                 emit errorOccurred("Тест линии не пройден");
             }
             break;
@@ -523,28 +620,30 @@ bool AMSHandler::saveAvgWindProfile(int recordId, const QVector<WindProfileData>
 
     QSqlDatabase db = DatabaseManager::instance()->database();
 
-    // ИСПРАВЛЕНИЕ: Получаем один profile_id для ВСЕГО профиля
-    QSqlQuery getIdQuery(db);
-    if (!getIdQuery.exec("SELECT nextval('avg_wind_profile_profile_id_seq')") || !getIdQuery.next()) {
-        QString error = QString("Ошибка получения profile_id: %1")
-            .arg(getIdQuery.lastError().text());
+    // ИЗМЕНЕНИЕ: Сначала создаем одну запись профиля
+    QSqlQuery queryProfile(db);
+    queryProfile.prepare("INSERT INTO avg_wind_profile (measurement_time) "
+                        "VALUES (NOW()) RETURNING profile_id");
+
+    if (!queryProfile.exec() || !queryProfile.next()) {
+        QString error = QString("Ошибка создания профиля среднего ветра: %1")
+            .arg(queryProfile.lastError().text());
         qCritical() << "AMSHandler:" << error;
         emit databaseError(error);
         return false;
     }
 
-    int profileId = getIdQuery.value(0).toInt();
-    qDebug() << "AMSHandler: Получен profile_id =" << profileId << "для среднего ветра";
+    int profileId = queryProfile.value(0).toInt();
 
-    // Теперь записываем ВСЕ точки профиля с ОДНИМ profile_id
+    // Теперь добавляем точки профиля, связанные с этим profile_id
     QSqlQuery queryPoint(db);
-    queryPoint.prepare("INSERT INTO avg_wind_profile (profile_id, height, wind_speed, wind_direction, measurement_time) "
-                      "VALUES (:profile_id, :height, :speed, :direction, NOW())");
+    queryPoint.prepare("INSERT INTO avg_wind_points (profile_id, height, wind_speed, wind_direction) "
+                      "VALUES (:profile_id, :height, :speed, :direction)");
 
     db.transaction();
 
     for (const WindProfileData &point : data) {
-        queryPoint.bindValue(":profile_id", profileId);  // ОДИНАКОВЫЙ для всех точек!
+        queryPoint.bindValue(":profile_id", profileId);
         queryPoint.bindValue(":height", point.height);
         queryPoint.bindValue(":speed", point.windSpeed);
         queryPoint.bindValue(":direction", point.windDirection);
@@ -560,50 +659,16 @@ bool AMSHandler::saveAvgWindProfile(int recordId, const QVector<WindProfileData>
     }
 
     db.commit();
-    qInfo() << "AMSHandler: Сохранён профиль среднего ветра, profile_id =" << profileId
+    qInfo() << "AMSHandler: Сохранён профиль среднего ветра ID:" << profileId
             << "," << data.size() << "точек";
 
-    // Теперь сохраняем ссылку в wind_profiles_references
-    // Сначала проверяем, есть ли уже запись для этого record_id
-    QSqlQuery checkQuery(db);
-    checkQuery.prepare("SELECT record_id FROM wind_profiles_references WHERE record_id = :record_id");
-    checkQuery.bindValue(":record_id", recordId);
-
-    if (!checkQuery.exec()) {
-        qCritical() << "AMSHandler: Ошибка проверки wind_profiles_references:" << checkQuery.lastError().text();
-        return false;
-    }
-
-    if (checkQuery.next()) {
-        // Запись существует - обновляем
-        qDebug() << "AMSHandler: Обновляем существующую запись wind_profiles_references для record_id" << recordId;
-        QSqlQuery updateQuery(db);
-        updateQuery.prepare("UPDATE wind_profiles_references SET avg_wind_profile_id = :profile_id "
-                          "WHERE record_id = :record_id");
-        updateQuery.bindValue(":profile_id", profileId);
-        updateQuery.bindValue(":record_id", recordId);
-
-        if (!updateQuery.exec()) {
-            qCritical() << "AMSHandler: Ошибка обновления avg_wind_profile_id:" << updateQuery.lastError().text();
-            return false;
-        }
-        qDebug() << "AMSHandler: Обновлено avg_wind_profile_id =" << profileId << "для record_id" << recordId;
-    } else {
-        // Записи нет - создаем новую (другие profile_id установим позже)
-        qDebug() << "AMSHandler: Создаем новую запись wind_profiles_references для record_id" << recordId;
-        QSqlQuery insertQuery(db);
-        insertQuery.prepare("INSERT INTO wind_profiles_references "
-                          "(record_id, avg_wind_profile_id, actual_wind_profile_id, measured_wind_profile_id, wind_shear_profile_id) "
-                          "VALUES (:record_id, :avg_id, NULL, NULL, NULL)");
-        insertQuery.bindValue(":record_id", recordId);
-        insertQuery.bindValue(":avg_id", profileId);
-
-        if (!insertQuery.exec()) {
-            qCritical() << "AMSHandler: Ошибка создания wind_profiles_references:" << insertQuery.lastError().text();
-            return false;
-        }
-        qDebug() << "AMSHandler: Создана запись wind_profiles_references: record_id" << recordId << ", avg_wind_profile_id" << profileId;
-    }
+    // Связываем профиль с записью архива
+    QSqlQuery queryLink(db);
+    queryLink.prepare("UPDATE main_archive SET avg_wind_profile_id = :profile_id "
+                     "WHERE record_id = :record_id");
+    queryLink.bindValue(":profile_id", profileId);
+    queryLink.bindValue(":record_id", recordId);
+    queryLink.exec();
 
     return true;
 }
@@ -614,23 +679,23 @@ bool AMSHandler::saveActualWindProfile(int recordId, const QVector<WindProfileDa
 
     QSqlDatabase db = DatabaseManager::instance()->database();
 
-    // ИСПРАВЛЕНИЕ: Получаем один profile_id для ВСЕГО профиля
-    QSqlQuery getIdQuery(db);
-    if (!getIdQuery.exec("SELECT nextval('actual_wind_profile_profile_id_seq')") || !getIdQuery.next()) {
-        QString error = QString("Ошибка получения profile_id: %1")
-            .arg(getIdQuery.lastError().text());
+    QSqlQuery queryProfile(db);
+    queryProfile.prepare("INSERT INTO actual_wind_profile (measurement_time) "
+                        "VALUES (NOW()) RETURNING profile_id");
+
+    if (!queryProfile.exec() || !queryProfile.next()) {
+        QString error = QString("Ошибка создания профиля действительного ветра: %1")
+            .arg(queryProfile.lastError().text());
         qCritical() << "AMSHandler:" << error;
         emit databaseError(error);
         return false;
     }
 
-    int profileId = getIdQuery.value(0).toInt();
-    qDebug() << "AMSHandler: Получен profile_id =" << profileId << "для действительного ветра";
+    int profileId = queryProfile.value(0).toInt();
 
-    // Записываем ВСЕ точки с ОДНИМ profile_id
     QSqlQuery queryPoint(db);
-    queryPoint.prepare("INSERT INTO actual_wind_profile (profile_id, height, wind_speed, wind_direction, measurement_time) "
-                      "VALUES (:profile_id, :height, :speed, :direction, NOW())");
+    queryPoint.prepare("INSERT INTO actual_wind_points (profile_id, height, wind_speed, wind_direction) "
+                      "VALUES (:profile_id, :height, :speed, :direction)");
 
     db.transaction();
 
@@ -651,47 +716,15 @@ bool AMSHandler::saveActualWindProfile(int recordId, const QVector<WindProfileDa
     }
 
     db.commit();
-    qInfo() << "AMSHandler: Сохранён профиль действительного ветра, profile_id =" << profileId
+    qInfo() << "AMSHandler: Сохранён профиль действительного ветра ID:" << profileId
             << "," << data.size() << "точек";
 
-    // Обновляем wind_profiles_references
-    QSqlQuery checkQuery(db);
-    checkQuery.prepare("SELECT record_id FROM wind_profiles_references WHERE record_id = :record_id");
-    checkQuery.bindValue(":record_id", recordId);
-
-    if (!checkQuery.exec()) {
-        qCritical() << "AMSHandler: Ошибка проверки wind_profiles_references:" << checkQuery.lastError().text();
-        return false;
-    }
-
-    if (checkQuery.next()) {
-        qDebug() << "AMSHandler: Обновляем actual_wind_profile_id для record_id" << recordId;
-        QSqlQuery updateQuery(db);
-        updateQuery.prepare("UPDATE wind_profiles_references SET actual_wind_profile_id = :profile_id "
-                          "WHERE record_id = :record_id");
-        updateQuery.bindValue(":profile_id", profileId);
-        updateQuery.bindValue(":record_id", recordId);
-
-        if (!updateQuery.exec()) {
-            qCritical() << "AMSHandler: Ошибка обновления actual_wind_profile_id:" << updateQuery.lastError().text();
-            return false;
-        }
-        qDebug() << "AMSHandler: Обновлено actual_wind_profile_id =" << profileId;
-    } else {
-        qDebug() << "AMSHandler: Создаем новую запись с actual_wind_profile_id для record_id" << recordId;
-        QSqlQuery insertQuery(db);
-        insertQuery.prepare("INSERT INTO wind_profiles_references "
-                          "(record_id, avg_wind_profile_id, actual_wind_profile_id, measured_wind_profile_id, wind_shear_profile_id) "
-                          "VALUES (:record_id, NULL, :actual_id, NULL, NULL)");
-        insertQuery.bindValue(":record_id", recordId);
-        insertQuery.bindValue(":actual_id", profileId);
-
-        if (!insertQuery.exec()) {
-            qCritical() << "AMSHandler: Ошибка создания wind_profiles_references:" << insertQuery.lastError().text();
-            return false;
-        }
-        qDebug() << "AMSHandler: Создана запись с actual_wind_profile_id" << profileId;
-    }
+    QSqlQuery queryLink(db);
+    queryLink.prepare("UPDATE main_archive SET actual_wind_profile_id = :profile_id "
+                     "WHERE record_id = :record_id");
+    queryLink.bindValue(":profile_id", profileId);
+    queryLink.bindValue(":record_id", recordId);
+    queryLink.exec();
 
     return true;
 }
@@ -702,51 +735,32 @@ bool AMSHandler::saveMeasuredWindProfile(int recordId, const QVector<MeasuredWin
 
     QSqlDatabase db = DatabaseManager::instance()->database();
 
-    // ИСПРАВЛЕНИЕ: Получаем один profile_id для ВСЕГО профиля
-    QSqlQuery getIdQuery(db);
-    if (!getIdQuery.exec("SELECT nextval('measured_wind_profile_profile_id_seq')") || !getIdQuery.next()) {
-        QString error = QString("Ошибка получения profile_id: %1")
-            .arg(getIdQuery.lastError().text());
+    QSqlQuery queryProfile(db);
+    queryProfile.prepare("INSERT INTO measured_wind_profile (measurement_time) "
+                        "VALUES (NOW()) RETURNING profile_id");
+
+    if (!queryProfile.exec() || !queryProfile.next()) {
+        QString error = QString("Ошибка создания профиля измеренного ветра: %1")
+            .arg(queryProfile.lastError().text());
         qCritical() << "AMSHandler:" << error;
         emit databaseError(error);
         return false;
     }
 
-    int profileId = getIdQuery.value(0).toInt();
-    qDebug() << "AMSHandler: Получен profile_id =" << profileId << "для измеренного ветра";
+    int profileId = queryProfile.value(0).toInt();
 
-    // Записываем ВСЕ точки с ОДНИМ profile_id
     QSqlQuery queryPoint(db);
-    queryPoint.prepare("INSERT INTO measured_wind_profile (profile_id, height, wind_speed, wind_direction, measurement_time) "
-                      "VALUES (:profile_id, :height, :speed, :direction, NOW())");
+    queryPoint.prepare("INSERT INTO measured_wind_points (profile_id, height, wind_speed, wind_direction, reliability) "
+                      "VALUES (:profile_id, :height, :speed, :direction, :reliability)");
 
     db.transaction();
 
-    int validCount = 0;
-    int invalidCount = 0;
-
     for (const MeasuredWindData &point : data) {
-        // Диагностика: выводим первые 3 точки
-        if (validCount + invalidCount < 3) {
-            qDebug() << "AMSHandler: Точка" << (validCount + invalidCount)
-                     << "- height:" << point.height
-                     << ", speed:" << point.windSpeed
-                     << ", dir:" << point.windDirection
-                     << ", reliability:" << point.reliability;
-        }
-
-        // Пропускаем недействительные точки (reliability != 2)
-        if (point.reliability != 2) {
-            invalidCount++;
-            continue;
-        }
-
-        validCount++;
-
         queryPoint.bindValue(":profile_id", profileId);
-        queryPoint.bindValue(":height", point.height);
+        queryPoint.bindValue(":height", point.height); // ИСПРАВЛЕНО: теперь высота записывается
         queryPoint.bindValue(":speed", point.windSpeed);
         queryPoint.bindValue(":direction", point.windDirection);
+        queryPoint.bindValue(":reliability", point.reliability);
 
         if (!queryPoint.exec()) {
             db.rollback();
@@ -759,49 +773,15 @@ bool AMSHandler::saveMeasuredWindProfile(int recordId, const QVector<MeasuredWin
     }
 
     db.commit();
-    qInfo() << "AMSHandler: Сохранён профиль измеренного ветра, profile_id =" << profileId
-            << ", всего точек:" << data.size()
-            << ", записано:" << validCount
-            << ", пропущено (недействительных):" << invalidCount;
+    qInfo() << "AMSHandler: Сохранён профиль измеренного ветра ID:" << profileId
+            << "," << data.size() << "точек";
 
-    // Обновляем wind_profiles_references
-    QSqlQuery checkQuery(db);
-    checkQuery.prepare("SELECT record_id FROM wind_profiles_references WHERE record_id = :record_id");
-    checkQuery.bindValue(":record_id", recordId);
-
-    if (!checkQuery.exec()) {
-        qCritical() << "AMSHandler: Ошибка проверки wind_profiles_references:" << checkQuery.lastError().text();
-        return false;
-    }
-
-    if (checkQuery.next()) {
-        qDebug() << "AMSHandler: Обновляем measured_wind_profile_id для record_id" << recordId;
-        QSqlQuery updateQuery(db);
-        updateQuery.prepare("UPDATE wind_profiles_references SET measured_wind_profile_id = :profile_id "
-                          "WHERE record_id = :record_id");
-        updateQuery.bindValue(":profile_id", profileId);
-        updateQuery.bindValue(":record_id", recordId);
-
-        if (!updateQuery.exec()) {
-            qCritical() << "AMSHandler: Ошибка обновления measured_wind_profile_id:" << updateQuery.lastError().text();
-            return false;
-        }
-        qDebug() << "AMSHandler: Обновлено measured_wind_profile_id =" << profileId;
-    } else {
-        qDebug() << "AMSHandler: Создаем новую запись с measured_wind_profile_id для record_id" << recordId;
-        QSqlQuery insertQuery(db);
-        insertQuery.prepare("INSERT INTO wind_profiles_references "
-                          "(record_id, avg_wind_profile_id, actual_wind_profile_id, measured_wind_profile_id, wind_shear_profile_id) "
-                          "VALUES (:record_id, NULL, NULL, :measured_id, NULL)");
-        insertQuery.bindValue(":record_id", recordId);
-        insertQuery.bindValue(":measured_id", profileId);
-
-        if (!insertQuery.exec()) {
-            qCritical() << "AMSHandler: Ошибка создания wind_profiles_references:" << insertQuery.lastError().text();
-            return false;
-        }
-        qDebug() << "AMSHandler: Создана запись с measured_wind_profile_id" << profileId;
-    }
+    QSqlQuery queryLink(db);
+    queryLink.prepare("UPDATE main_archive SET measured_wind_profile_id = :profile_id "
+                     "WHERE record_id = :record_id");
+    queryLink.bindValue(":profile_id", profileId);
+    queryLink.bindValue(":record_id", recordId);
+    queryLink.exec();
 
     return true;
 }

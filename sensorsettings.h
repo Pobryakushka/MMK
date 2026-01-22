@@ -41,6 +41,7 @@ public:
     // Установка статуса АМС
     void setAmsConnectionStatus(const QString& status, bool connected);
     void setAmsConnectionEnabled(bool enabled);
+    void setAmsConnectionError(const QString& errorMessage);
 
 signals:
     void connectRequested();
