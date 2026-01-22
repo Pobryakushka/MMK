@@ -8,6 +8,7 @@ AMSHandler::AMSHandler(QObject *parent)
     , m_protocol(new AMSProtocol(this))
     , m_responseTimer(new QTimer(this))
     , m_waitingForResponse(false)
+    , m_isConnecting(false)
     , m_lastCommand(static_cast<AMSCommand>(0x00))
     , m_currentRecordId(-1)
 {
@@ -47,18 +48,24 @@ bool AMSHandler::connectToAMS(const QString &portName, qint32 baudRate,
         QString error = QString("Не удалось открыть порт: %1").arg(m_serialPort->errorString());
         qCritical() << "AMSHandler:" << error;
         emit errorOccurred(error);
+        m_isConnecting = false;
         return false;
     }
 
-    qInfo() << "AMSHandler: Подключено к" << portName << "со скоростью" << baudRate;
-    emit connected();
-    emit statusMessage("Подключено к АМС");
+    qInfo() << "AMSHandler: Порт открыт:" << portName << "со скоростью" << baudRate;
+    qInfo() << "AMSHandler: Выполняется тест линии...";
+    m_isConnecting = true;  // Устанавливаем флаг подключения
+    emit statusMessage("Тест линии...");
 
     // Выполняем тест линии
     QTimer::singleShot(500, this, [this]() {
         QByteArray testPacket = m_protocol->createLineTestPacket();
         if (sendPacket(testPacket, CMD_LINE_TEST)) {
             qInfo() << "AMSHandler: Отправлен тест линии";
+        } else {
+            qWarning() << "AMSHandler: Не удалось отправить тест линии";
+            m_isConnecting = false;
+            emit errorOccurred("Не удалось отправить тест линии");
         }
     });
 
@@ -75,6 +82,7 @@ void AMSHandler::disconnectFromAMS()
     }
 
     m_waitingForResponse = false;
+    m_isConnecting = false;  // Сбрасываем флаг подключения
     m_responseTimer->stop();
     m_receiveBuffer.clear();
 }
@@ -134,21 +142,63 @@ void AMSHandler::onDataReceived()
     m_receiveBuffer.append(data);
 
     qDebug() << "AMSHandler: Получено" << data.size() << "байт, буфер:" << m_receiveBuffer.size();
+    qDebug() << "AMSHandler: Буфер HEX:" << m_receiveBuffer.toHex(' ');
 
-    // Ищем стоповый байт 0xFF
+    // Обрабатываем все пакеты в буфере
     while (true) {
-        int stopIndex = m_receiveBuffer.indexOf(static_cast<char>(0xFF));
-        if (stopIndex == -1) {
-            break; // Пакет не полный
+        // Ищем начало первого пакета (команду 0xA0-0xAC)
+        int startIndex = -1;
+        for (int i = 0; i < m_receiveBuffer.size(); i++) {
+            quint8 byte = static_cast<quint8>(m_receiveBuffer[i]);
+            if (byte >= 0xA0 && byte <= 0xAC) {
+                startIndex = i;
+                qDebug() << "AMSHandler: Найдено начало пакета на позиции" << i << ", команда:" << Qt::hex << byte;
+                break;
+            }
         }
+
+        if (startIndex == -1) {
+            qDebug() << "AMSHandler: Начало пакета не найдено, очищаем буфер";
+            // Нет начала пакета - очищаем буфер
+            m_receiveBuffer.clear();
+            break;
+        }
+
+        // Если начало не в начале буфера - удаляем мусор перед ним
+        if (startIndex > 0) {
+            qDebug() << "AMSHandler: Удаляем" << startIndex << "байт мусора перед командой";
+            m_receiveBuffer.remove(0, startIndex);
+        }
+
+        // Проверяем минимальный размер пакета
+        if (m_receiveBuffer.size() < 3) {
+            qDebug() << "AMSHandler: Буфер слишком мал (" << m_receiveBuffer.size() << "байт), ждем еще";
+            break;
+        }
+
+        // Проверяем ПОСЛЕДНИЙ байт буфера - это должен быть стоп-байт 0xFF
+        quint8 lastByte = static_cast<quint8>(m_receiveBuffer.back());
+        if (lastByte != 0xFF) {
+            qDebug() << "AMSHandler: Последний байт буфера не 0xFF, а" << Qt::hex << lastByte << "- ждем еще данных";
+            break;
+        }
+
+        // Последний байт = 0xFF! Весь буфер - это один пакет
+        int stopIndex = m_receiveBuffer.size() - 1;
+        qDebug() << "AMSHandler: Найден стоповый байт на позиции" << stopIndex;
 
         // Извлекаем пакет
         QByteArray packet = m_receiveBuffer.left(stopIndex + 1);
         m_receiveBuffer.remove(0, stopIndex + 1);
 
+        qDebug() << "AMSHandler: Извлечен пакет размером" << packet.size() << "байт";
+        qDebug() << "AMSHandler: Пакет HEX:" << packet.toHex(' ');
+
         // Обрабатываем пакет
         if (packet.size() >= 3) {
             processReceivedPacket(packet);
+        } else {
+            qWarning() << "AMSHandler: Пакет слишком короткий, пропускаем";
         }
     }
 }
@@ -171,9 +221,24 @@ void AMSHandler::processReceivedPacket(const QByteArray &packet)
         case CMD_LINE_TEST: {
             if (m_protocol->parseLineTestResponse(packet)) {
                 qInfo() << "AMSHandler: Тест линии успешен";
+
+                // Если это было подключение - отправляем сигнал connected()
+                if (m_isConnecting) {
+                    m_isConnecting = false;
+                    emit connected();
+                    qInfo() << "AMSHandler: Подключение завершено успешно";
+                }
+
                 emit statusMessage("Тест линии: OK");
             } else {
                 qWarning() << "AMSHandler: Тест линии не пройден";
+
+                // Если это было подключение - отключаемся
+                if (m_isConnecting) {
+                    m_isConnecting = false;
+                    disconnectFromAMS();
+                }
+
                 emit errorOccurred("Тест линии не пройден");
             }
             break;
