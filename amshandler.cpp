@@ -145,7 +145,7 @@ void AMSHandler::onDataReceived()
 
     // Обрабатываем все пакеты в буфере
     while (true) {
-        // Ищем начало пакета (команду 0xA0-0xAC)
+        // Ищем начало первого пакета (команду 0xA0-0xAC)
         int startIndex = -1;
         for (int i = 0; i < m_receiveBuffer.size(); i++) {
             quint8 byte = static_cast<quint8>(m_receiveBuffer[i]);
@@ -158,7 +158,8 @@ void AMSHandler::onDataReceived()
 
         if (startIndex == -1) {
             qDebug() << "AMSHandler: Начало пакета не найдено, очищаем буфер";
-            m_receiveBuffer.clear(); // Нет команды - очищаем мусор
+            // Нет начала пакета - очищаем буфер
+            m_receiveBuffer.clear();
             break;
         }
 
@@ -166,25 +167,31 @@ void AMSHandler::onDataReceived()
         if (startIndex > 0) {
             qDebug() << "AMSHandler: Удаляем" << startIndex << "байт мусора перед командой";
             m_receiveBuffer.remove(0, startIndex);
-            startIndex = 0;
         }
 
-        // ИСПРАВЛЕНИЕ: Ищем ПОСЛЕДНИЙ байт 0xFF в буфере
-        // Это будет настоящий стоповый байт
-        int stopIndex = m_receiveBuffer.lastIndexOf(static_cast<char>(0xFF));
-
-        if (stopIndex == -1 || stopIndex < 2) {
-            qDebug() << "AMSHandler: Стоповый байт не найден или слишком близко, ждем больше данных";
-            break; // Пакет не полный, ждем еще данных
+        // Проверяем минимальный размер пакета
+        if (m_receiveBuffer.size() < 3) {
+            qDebug() << "AMSHandler: Буфер слишком мал (" << m_receiveBuffer.size() << "байт), ждем еще";
+            break;
         }
 
+        // Проверяем ПОСЛЕДНИЙ байт буфера - это должен быть стоп-байт 0xFF
+        quint8 lastByte = static_cast<quint8>(m_receiveBuffer.back());
+        if (lastByte != 0xFF) {
+            qDebug() << "AMSHandler: Последний байт буфера не 0xFF, а" << Qt::hex << lastByte << "- ждем еще данных";
+            break;
+        }
+
+        // Последний байт = 0xFF! Весь буфер - это один пакет
+        int stopIndex = m_receiveBuffer.size() - 1;
         qDebug() << "AMSHandler: Найден стоповый байт на позиции" << stopIndex;
 
-        // Извлекаем полный пакет
+        // Извлекаем пакет
         QByteArray packet = m_receiveBuffer.left(stopIndex + 1);
         m_receiveBuffer.remove(0, stopIndex + 1);
 
         qDebug() << "AMSHandler: Извлечен пакет размером" << packet.size() << "байт";
+        qDebug() << "AMSHandler: Пакет HEX:" << packet.toHex(' ');
 
         // Обрабатываем пакет
         if (packet.size() >= 3) {

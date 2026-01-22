@@ -2,6 +2,7 @@
 #include "ui_sensorsettings.h"
 #include <QDebug>
 #include <QFile>
+#include <QDir>
 
 SensorSettings::SensorSettings(QWidget *parent)
     : QDialog(parent)
@@ -70,6 +71,21 @@ void SensorSettings::populateComPorts()
         qDebug() << "SensorSettings: Найден порт ИВС:" << portInfo << "->" << info.systemLocation();
     }
 
+    // Добавляем виртуальные pts порты (для эмуляторов)
+    QDir ptsDir("/dev/pts");
+    if (ptsDir.exists()) {
+        QStringList ptsFiles = ptsDir.entryList(QDir::System | QDir::Readable | QDir::NoDotAndDotDot);
+        for (const QString &ptsFile : ptsFiles) {
+            bool isNumber;
+            ptsFile.toInt(&isNumber);
+            if (isNumber) {  // Только числовые pts (пропускаем ptmx)
+                QString ptsPath = "/dev/pts/" + ptsFile;
+                ui->comboBoxComPort->addItem(QString("Virtual pts/%1").arg(ptsFile), ptsPath);
+                qDebug() << "SensorSettings: Найден виртуальный порт ИВС:" << ptsPath;
+            }
+        }
+    }
+
     if (ui->comboBoxComPort->count() == 0) {
         ui->comboBoxComPort->addItem("Нет доступных портов");
         ui->btnConnect->setEnabled(false);
@@ -93,6 +109,21 @@ void SensorSettings::populateGnssPorts()
         QString portInfo = QString("%1 (%2)").arg(info.portName()).arg(info.description());
         ui->comboBoxGnssPort->addItem(portInfo, info.systemLocation());
         qDebug() << "SensorSettings: Найден порт GNSS:" << portInfo << "->" << info.systemLocation();
+    }
+
+    // Добавляем виртуальные pts порты (для эмуляторов)
+    QDir ptsDir("/dev/pts");
+    if (ptsDir.exists()) {
+        QStringList ptsFiles = ptsDir.entryList(QDir::System | QDir::Readable | QDir::NoDotAndDotDot);
+        for (const QString &ptsFile : ptsFiles) {
+            bool isNumber;
+            ptsFile.toInt(&isNumber);
+            if (isNumber) {  // Только числовые pts (пропускаем ptmx)
+                QString ptsPath = "/dev/pts/" + ptsFile;
+                ui->comboBoxGnssPort->addItem(QString("Virtual pts/%1").arg(ptsFile), ptsPath);
+                qDebug() << "SensorSettings: Найден виртуальный порт GNSS:" << ptsPath;
+            }
+        }
     }
 
     if (ui->comboBoxGnssPort->count() == 0) {
@@ -122,6 +153,21 @@ void SensorSettings::populateAmsPorts()
         qDebug() << "SensorSettings: Найден порт АМС:" << portInfo << "->" << info.systemLocation();
     }
 
+    // Добавляем виртуальные pts порты (для эмуляторов)
+    QDir ptsDir("/dev/pts");
+    if (ptsDir.exists()) {
+        QStringList ptsFiles = ptsDir.entryList(QDir::System | QDir::Readable | QDir::NoDotAndDotDot);
+        for (const QString &ptsFile : ptsFiles) {
+            bool isNumber;
+            ptsFile.toInt(&isNumber);
+            if (isNumber) {  // Только числовые pts (пропускаем ptmx)
+                QString ptsPath = "/dev/pts/" + ptsFile;
+                ui->comboBoxAmsPort->addItem(QString("Virtual pts/%1").arg(ptsFile), ptsPath);
+                qDebug() << "SensorSettings: Найден виртуальный порт АМС:" << ptsPath;
+            }
+        }
+    }
+
     if (ui->comboBoxAmsPort->count() == 0) {
         ui->comboBoxAmsPort->addItem("Нет доступных портов");
         ui->btnConnectAms->setEnabled(false);
@@ -129,12 +175,6 @@ void SensorSettings::populateAmsPorts()
     } else {
         ui->btnConnectAms->setEnabled(true);
         qDebug() << "SensorSettings: Найдено портов АМС:" << ui->comboBoxAmsPort->count();
-    }
-    if (QFile::exists("/dev/pts/1")){
-        ui->comboBoxAmsPort->addItem("Virtual pts/1", "/dev/pts/1");
-    }
-    if (QFile::exists("/dev/pts/2")){
-        ui->comboBoxAmsPort->addItem("Virtual pts/2", "/dev/pts/2");
     }
 }
 
