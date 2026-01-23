@@ -34,7 +34,7 @@ SensorSettings::SensorSettings(QWidget *parent)
     ui->comboBoxAmsDataBits->setCurrentText("8");
     ui->comboBoxAmsParity->setCurrentIndex(0); // Нет
     ui->comboBoxAmsStopBits->setCurrentIndex(0); // 1
-    
+
     // Подключаем сигналы AutoConnector
     connect(m_autoConnector, &AutoConnector::detectionStarted,
             this, &SensorSettings::onAutoDetectionStarted);
@@ -367,6 +367,93 @@ QSerialPort::StopBits SensorSettings::getAmsStopBits() const
     return (index == 0) ? QSerialPort::OneStop : QSerialPort::TwoStop;
 }
 
+// ===== МЕТОДЫ ДЛЯ GNSS (независимо от активной вкладки) =====
+
+QString SensorSettings::getGnssComPort() const
+{
+    QString port = ui->comboBoxGnssPort->currentData().toString();
+    return port;
+}
+
+int SensorSettings::getGnssBaudRate() const
+{
+    int baudRate = ui->comboBoxGnssBaudRate->currentText().toInt();
+    return baudRate;
+}
+
+QSerialPort::DataBits SensorSettings::getGnssDataBits() const
+{
+    int bits = ui->comboBoxGnssDataBits->currentText().toInt();
+    return (bits == 8) ? QSerialPort::Data8 : QSerialPort::Data7;
+}
+
+QSerialPort::Parity SensorSettings::getGnssParity() const
+{
+    int index = ui->comboBoxGnssParity->currentIndex();
+    switch (index) {
+    case 1: return QSerialPort::EvenParity;
+    case 2: return QSerialPort::OddParity;
+    default: return QSerialPort::NoParity;
+    }
+}
+
+QSerialPort::StopBits SensorSettings::getGnssStopBits() const
+{
+    int index = ui->comboBoxGnssStopBits->currentIndex();
+    return (index == 0) ? QSerialPort::OneStop : QSerialPort::TwoStop;
+}
+
+// ===== МЕТОДЫ ДЛЯ ИВС (независимо от активной вкладки) =====
+
+QString SensorSettings::getIwsComPort() const
+{
+    QString port = ui->comboBoxComPort->currentData().toString();
+    return port;
+}
+
+int SensorSettings::getIwsBaudRate() const
+{
+    int baudRate = ui->comboBoxBaudRate->currentText().toInt();
+    return baudRate;
+}
+
+QSerialPort::DataBits SensorSettings::getIwsDataBits() const
+{
+    int bits = ui->comboBoxDataBits->currentText().toInt();
+    return (bits == 8) ? QSerialPort::Data8 : QSerialPort::Data7;
+}
+
+QSerialPort::Parity SensorSettings::getIwsParity() const
+{
+    int index = ui->comboBoxParity->currentIndex();
+    switch (index) {
+    case 1: return QSerialPort::EvenParity;
+    case 2: return QSerialPort::OddParity;
+    default: return QSerialPort::NoParity;
+    }
+}
+
+QSerialPort::StopBits SensorSettings::getIwsStopBits() const
+{
+    int index = ui->comboBoxStopBits->currentIndex();
+    return (index == 0) ? QSerialPort::OneStop : QSerialPort::TwoStop;
+}
+
+int SensorSettings::getIwsProtocolIndex() const
+{
+    return ui->comboBoxProtocol->currentIndex();
+}
+
+quint8 SensorSettings::getIwsDeviceAddress() const
+{
+    return static_cast<quint8>(ui->spinBoxDeviceAddress->value());
+}
+
+int SensorSettings::getIwsPollInterval() const
+{
+    return ui->spinBoxPollInterval->value();
+}
+
 void SensorSettings::setAmsConnectionStatus(const QString& status, bool connected)
 {
     ui->lblAmsStatus->setText(QString("Статус: %1").arg(status));
@@ -487,14 +574,14 @@ void SensorSettings::setConnectionEnabled(bool enabled)
 void SensorSettings::onAutoConnectClicked()
 {
     qDebug() << "Запуск автоопределения устройств...";
-    
+
     // Отключаем все кнопки подключения на время автопоиска
     ui->btnConnect->setEnabled(false);
     ui->btnConnectGnss->setEnabled(false);
     ui->btnConnectAms->setEnabled(false);
     ui->btnAutoConnect->setEnabled(false);
     ui->btnAutoConnect->setText("Поиск...");
-    
+
     // Запускаем автоопределение
     m_autoConnector->startDetection();
 }
@@ -508,63 +595,93 @@ void SensorSettings::onAutoDetectionStarted()
 void SensorSettings::onAutoDetectionFinished()
 {
     qDebug() << "Автоопределение завершено";
-    
+
     // Включаем кнопки обратно
     ui->btnConnect->setEnabled(true);
     ui->btnConnectGnss->setEnabled(true);
     ui->btnConnectAms->setEnabled(true);
     ui->btnAutoConnect->setEnabled(true);
     ui->btnAutoConnect->setText("Автоподключение");
-    
+
     // Получаем результаты
-    QMap<AutoConnector::DeviceType, AutoConnector::DeviceInfo> devices = 
+    QMap<AutoConnector::DeviceType, AutoConnector::DeviceInfo> devices =
         m_autoConnector->getDetectedDevices();
-    
+
     if (devices.isEmpty()) {
 //        ui->labelStatus->setText("Устройства не найдены");
         qDebug() << "Устройства не найдены на доступных портах";
         return;
     }
-    
+
     // Автоматически устанавливаем найденные порты в ComboBox
     int foundCount = 0;
-    
+    bool hasAms = false;
+    bool hasGnss = false;
+    bool hasIws = false;
+
     for (auto it = devices.begin(); it != devices.end(); ++it) {
         AutoConnector::DeviceInfo info = it.value();
         foundCount++;
-        
+
         switch (it.key()) {
             case AutoConnector::DEVICE_AMS:
                 qDebug() << "АМС найден на" << info.portName << "(" << info.baudRate << "бод)";
                 setComboBoxPort(ui->comboBoxAmsPort, info.portName);
                 ui->comboBoxAmsBaudRate->setCurrentText(QString::number(info.baudRate));
 //                ui->labelStatusAms->setText(QString("✓ Найден: %1").arg(info.portName));
+                hasAms = true;
                 break;
-                
+
             case AutoConnector::DEVICE_GNSS:
                 qDebug() << "GNSS найден на" << info.portName << "(" << info.baudRate << "бод)";
                 setComboBoxPort(ui->comboBoxGnssPort, info.portName);
                 ui->comboBoxGnssBaudRate->setCurrentText(QString::number(info.baudRate));
 //                ui->labelStatusGnss->setText(QString("✓ Найден: %1").arg(info.portName));
+                hasGnss = true;
                 break;
-                
+
             case AutoConnector::DEVICE_IWS:
                 qDebug() << "ИВС найден на" << info.portName << "(" << info.baudRate << "бод)";
                 setComboBoxPort(ui->comboBoxComPort, info.portName);
                 ui->comboBoxBaudRate->setCurrentText(QString::number(info.baudRate));
 //                ui->labelStatus->setText(QString("✓ Найден: %1").arg(info.portName));
+                hasIws = true;
                 break;
-                
+
             default:
                 break;
         }
     }
-    
+
     qDebug() << "Автоопределение завершено. Найдено устройств:" << foundCount;
+
+    // === АВТОМАТИЧЕСКОЕ ПОДКЛЮЧЕНИЕ КО ВСЕМ НАЙДЕННЫМ УСТРОЙСТВАМ ===
+    // Используем задержки чтобы подключения не конфликтовали
+
+    if (hasAms) {
+        qDebug() << "Автоподключение к АМС...";
+        QTimer::singleShot(200, this, [this]() {
+            emit amsConnectRequested();
+        });
+    }
+
+    if (hasGnss) {
+        qDebug() << "Автоподключение к GNSS...";
+        QTimer::singleShot(400, this, [this]() {
+            emit gnssConnectRequested();
+        });
+    }
+
+    if (hasIws) {
+        qDebug() << "Автоподключение к ИВС...";
+        QTimer::singleShot(600, this, [this]() {
+            emit connectRequested();
+        });
+    }
 }
 
-void SensorSettings::onDeviceDetected(AutoConnector::DeviceType type, 
-                                     const QString &portName, 
+void SensorSettings::onDeviceDetected(AutoConnector::DeviceType type,
+                                     const QString &portName,
                                      int baudRate)
 {
     QString deviceName;
@@ -574,7 +691,7 @@ void SensorSettings::onDeviceDetected(AutoConnector::DeviceType type,
         case AutoConnector::DEVICE_IWS:  deviceName = "ИВС"; break;
         default: deviceName = "Неизвестное"; break;
     }
-    
+
     qDebug() << "Обнаружено:" << deviceName << "на" << portName << baudRate << "бод";
 }
 
@@ -592,12 +709,26 @@ void SensorSettings::onAutoConnectLog(const QString &message)
 
 void SensorSettings::setComboBoxPort(QComboBox *comboBox, const QString &portName)
 {
+    // Сначала ищем по userData (полный путь /dev/pts/1)
+    for (int i = 0; i < comboBox->count(); i++) {
+        QString userData = comboBox->itemData(i).toString();
+        if (userData == portName) {
+            qDebug() << "Порт найден по userData:" << portName << "на позиции" << i;
+            comboBox->setCurrentIndex(i);
+            return;
+        }
+    }
+
+    // Если не нашли по userData, ищем по тексту
     int index = comboBox->findText(portName);
     if (index >= 0) {
+        qDebug() << "Порт найден по тексту:" << portName << "на позиции" << index;
         comboBox->setCurrentIndex(index);
-    } else {
-        qDebug() << "Порт" << portName << "не найден в ComboBox, добавляем...";
-        comboBox->addItem(portName);
-        comboBox->setCurrentText(portName);
+        return;
     }
+
+    // Если порт не найден вообще - добавляем его
+    qDebug() << "Порт" << portName << "не найден в ComboBox, добавляем...";
+    comboBox->addItem(portName, portName);  // Текст и userData одинаковые
+    comboBox->setCurrentIndex(comboBox->count() - 1);
 }

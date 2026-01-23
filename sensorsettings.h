@@ -36,6 +36,23 @@ public:
     QSerialPort::Parity getAmsParity() const;
     QSerialPort::StopBits getAmsStopBits() const;
 
+    // Получение настроек для GNSS (независимо от активной вкладки)
+    QString getGnssComPort() const;
+    int getGnssBaudRate() const;
+    QSerialPort::DataBits getGnssDataBits() const;
+    QSerialPort::Parity getGnssParity() const;
+    QSerialPort::StopBits getGnssStopBits() const;
+
+    // Получение настроек для ИВС (независимо от активной вкладки)
+    QString getIwsComPort() const;
+    int getIwsBaudRate() const;
+    QSerialPort::DataBits getIwsDataBits() const;
+    QSerialPort::Parity getIwsParity() const;
+    QSerialPort::StopBits getIwsStopBits() const;
+    int getIwsProtocolIndex() const;
+    quint8 getIwsDeviceAddress() const;
+    int getIwsPollInterval() const;
+
     // Установка статуса
     void setConnectionStatus(const QString& status, bool connected);
     void setConnectionEnabled(bool enabled);

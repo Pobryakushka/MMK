@@ -234,8 +234,8 @@ void MainWindow::setupGnssCheckbox()
 
 ////    connect(&dialog, &SensorSettings::connectRequested, this, [this, &dialog]() {
 ////        qDebug() << "MainWindow: Запрос на подключение GNSS из настроек";
-////        m_gnssComPort = dialog.getComPort();
-////        m_gnssBaudRate = dialog.getBaudRate();
+////        m_gnssComPort = dialog.getIwsComPort();
+////        m_gnssBaudRate = dialog.getIwsBaudRate();
 
 ////        if (m_gnssReceiver->connectToReceiver(m_gnssComPort, m_gnssBaudRate)) {
 ////                dialog.setConnectionStatus("Подключено", true);
@@ -266,8 +266,8 @@ void MainWindow::onGnssConnectFromSettings()
 {
     if (!sensorSettingsDialog) return;
 
-    m_gnssComPort = sensorSettingsDialog->getComPort();
-    m_gnssBaudRate = sensorSettingsDialog->getBaudRate();
+    m_gnssComPort = sensorSettingsDialog->getGnssComPort();
+    m_gnssBaudRate = sensorSettingsDialog->getGnssBaudRate();
 
     if (m_gnssReceiver->connectToReceiver(m_gnssComPort, m_gnssBaudRate)){
         sensorSettingsDialog->setConnectionStatus("Подключено", true);
@@ -800,8 +800,8 @@ void MainWindow::onSensorSettingsClicked()
 
 void MainWindow::onConnectRequested()
 {
-    if (sensorSettingsDialog->getComPort().isEmpty() ||
-        sensorSettingsDialog->getComPort() == "Нет доступных портов") {
+    if (sensorSettingsDialog->getIwsComPort().isEmpty() ||
+        sensorSettingsDialog->getIwsComPort() == "Нет доступных портов") {
         QMessageBox::warning(this, "Ошибка", "Нет доступных COM-портов");
         return;
     }
@@ -819,11 +819,11 @@ void MainWindow::onConnectRequested()
     }
 
     // Настраиваем порт из настроек
-    serialPort->setPortName(sensorSettingsDialog->getComPort());
-    serialPort->setBaudRate(sensorSettingsDialog->getBaudRate());
-    serialPort->setDataBits(sensorSettingsDialog->getDataBits());
-    serialPort->setParity(sensorSettingsDialog->getParity());
-    serialPort->setStopBits(sensorSettingsDialog->getStopBits());
+    serialPort->setPortName(sensorSettingsDialog->getIwsComPort());
+    serialPort->setBaudRate(sensorSettingsDialog->getIwsBaudRate());
+    serialPort->setDataBits(sensorSettingsDialog->getIwsDataBits());
+    serialPort->setParity(sensorSettingsDialog->getIwsParity());
+    serialPort->setStopBits(sensorSettingsDialog->getIwsStopBits());
     serialPort->setFlowControl(QSerialPort::NoFlowControl);
 
     // Пытаемся открыть порт
@@ -835,11 +835,11 @@ void MainWindow::onConnectRequested()
         GroundMeteoParams* meteoParams = GroundMeteoParams::instance();
         if (meteoParams) {
             GroundMeteoParams::RS485Protocol protocol =
-                (sensorSettingsDialog->getProtocolIndex() == 0) ?
+                (sensorSettingsDialog->getIwsProtocolIndex() == 0) ?
                 GroundMeteoParams::UMB_PROTOCOL :
                 GroundMeteoParams::MODBUS_RTU;
             meteoParams->setProtocol(protocol);
-            meteoParams->setDeviceAddress(sensorSettingsDialog->getDeviceAddress());
+            meteoParams->setDeviceAddress(sensorSettingsDialog->getIwsDeviceAddress());
             qDebug() << "Protocol configured in GroundMeteoParams";
         } else {
             qDebug() << "GroundMeteoParams not created yet. Will be configured when 'Initial Data' is opened.";
@@ -850,9 +850,9 @@ void MainWindow::onConnectRequested()
             pollTimer = new QTimer(this);
             connect(pollTimer, &QTimer::timeout, this, &MainWindow::pollMeteoStation);
         }
-        pollTimer->start(sensorSettingsDialog->getPollInterval() * 1000);
+        pollTimer->start(sensorSettingsDialog->getIwsPollInterval() * 1000);
 
-        qDebug() << "RS485 connected on" << sensorSettingsDialog->getComPort();
+        qDebug() << "RS485 connected on" << sensorSettingsDialog->getIwsComPort();
     } else {
         QMessageBox::critical(this, "Ошибка подключения",
                             QString("Не удалось открыть порт: %1").arg(serialPort->errorString()));
@@ -924,7 +924,7 @@ void MainWindow::pollMeteoStation()
 
     // Создаём запрос через GroundMeteoParams
     QByteArray request;
-    int protocolIndex = sensorSettingsDialog->getProtocolIndex();
+    int protocolIndex = sensorSettingsDialog->getIwsProtocolIndex();
 
     if (protocolIndex == 0) { // UMB
         request = meteoParams->createUmbReadRequest(params);
@@ -949,7 +949,7 @@ QList<quint16> MainWindow::getRequestParameters()
 {
     QList<quint16> params;
 
-    if (sensorSettingsDialog->getProtocolIndex() == 0) { // UMB
+    if (sensorSettingsDialog->getIwsProtocolIndex() == 0) { // UMB
         params << 0x0064  // Temperature
                << 0x00C8  // Humidity
                << 0x012C  // Pressure

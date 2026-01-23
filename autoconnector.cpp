@@ -64,15 +64,15 @@ void AutoConnector::startDetection()
         emit logMessage("Автоопределение уже запущено");
         return;
     }
-    
+
     emit logMessage("=== НАЧАЛО АВТООПРЕДЕЛЕНИЯ УСТРОЙСТВ ===");
-    
+
     // Очищаем предыдущие результаты
     m_detectedDevices.clear();
     m_portsToCheck.clear();
     m_currentPortIndex = 0;
     m_isDetecting = true;
-    
+
     // Получаем список доступных портов (реальные + /dev/pts)
     QStringList ports = collectAllSerialLikePorts();
 
@@ -88,17 +88,17 @@ void AutoConnector::startDetection()
                        .arg(portPath));
     }
 
-    
+
     if (m_portsToCheck.isEmpty()) {
         emit logMessage("Не найдено доступных портов");
         m_isDetecting = false;
         emit detectionFinished();
         return;
     }
-    
+
     emit logMessage(QString("Всего портов для проверки: %1").arg(m_portsToCheck.size()));
     emit detectionStarted();
-    
+
     // Начинаем с первого порта
     processNextPort();
 }
@@ -108,11 +108,11 @@ void AutoConnector::stopDetection()
     if (!m_isDetecting) {
         return;
     }
-    
+
     closeCurrentPort();
     m_timeoutTimer->stop();
     m_isDetecting = false;
-    
+
     emit logMessage("Автоопределение остановлено");
 }
 
@@ -120,7 +120,7 @@ void AutoConnector::processNextPort()
 {
     // Закрываем предыдущий порт если был открыт
     closeCurrentPort();
-    
+
     // Проверяем есть ли еще порты
     if (m_currentPortIndex >= m_portsToCheck.size()) {
         // Все порты проверены
@@ -130,21 +130,21 @@ void AutoConnector::processNextPort()
         emit detectionFinished();
         return;
     }
-    
+
     m_currentPortName = m_portsToCheck[m_currentPortIndex];
     m_deviceFoundOnCurrentPort = false;
     m_currentPhase = PHASE_AMS_TEST;
-    
+
     emit progressUpdated(m_currentPortIndex + 1, m_portsToCheck.size());
     emit logMessage(QString("\n--- Проверка порта %1 (%2/%3) ---")
                    .arg(m_currentPortName)
                    .arg(m_currentPortIndex + 1)
                    .arg(m_portsToCheck.size()));
-    
+
     // Пробуем разные скорости
     // АМС обычно 9600, GNSS 19200 или 38400, ИВС 19200
     QList<int> baudRates = {9600, 19200, 38400};
-    
+
     // Начинаем с первой скорости
     openPortAndTest(m_currentPortName, baudRates[0]);
 }
@@ -152,7 +152,7 @@ void AutoConnector::processNextPort()
 void AutoConnector::openPortAndTest(const QString &portName, int baudRate)
 {
     m_currentBaudRate = baudRate;
-    
+
     // Создаем новый порт
     m_testPort = new QSerialPort(this);
     m_testPort->setPortName(portName);
@@ -160,9 +160,9 @@ void AutoConnector::openPortAndTest(const QString &portName, int baudRate)
     m_testPort->setDataBits(QSerialPort::Data8);
     m_testPort->setParity(QSerialPort::NoParity);
     m_testPort->setStopBits(QSerialPort::OneStop);
-    
+
     connect(m_testPort, &QSerialPort::readyRead, this, &AutoConnector::onReadyRead);
-    
+
     if (!m_testPort->open(QIODevice::ReadWrite)) {
         emit logMessage(QString("  Ошибка открытия %1 (%2): %3")
                        .arg(portName)
@@ -170,18 +170,18 @@ void AutoConnector::openPortAndTest(const QString &portName, int baudRate)
                        .arg(m_testPort->errorString()));
         delete m_testPort;
         m_testPort = nullptr;
-        
+
         // Переходим к следующему порту
         m_currentPortIndex++;
         QTimer::singleShot(100, this, &AutoConnector::processNextPort);
         return;
     }
-    
+
     emit logMessage(QString("  Порт открыт: %1 бод").arg(baudRate));
-    
+
     m_receiveBuffer.clear();
     m_currentPhase = PHASE_AMS_TEST;
-    
+
     // Начинаем с теста АМС
     testAMS();
 }
@@ -201,13 +201,13 @@ void AutoConnector::closeCurrentPort()
 void AutoConnector::testAMS()
 {
     emit logMessage("  Тест АМС: отправка LINE_TEST...");
-    
+
     QByteArray command = createAmsLineTestCommand();
-    
+
     if (m_testPort && m_testPort->isOpen()) {
         m_testPort->write(command);
         m_testPort->flush();
-        
+
         // Ждем ответ 1 секунду
         m_timeoutTimer->start(1000);
     } else {
@@ -218,7 +218,7 @@ void AutoConnector::testAMS()
 void AutoConnector::testGNSS()
 {
     emit logMessage("  Тест GNSS: слушаем NMEA данные...");
-    
+
     // Для GNSS просто слушаем порт 2 секунды
     // GNSS сам отправляет данные
     m_timeoutTimer->start(2000);
@@ -227,13 +227,13 @@ void AutoConnector::testGNSS()
 void AutoConnector::testIWS()
 {
     emit logMessage("  Тест ИВС (UMB): отправка запроса...");
-    
+
     QByteArray command = createIwsTestCommand();
-    
+
     if (m_testPort && m_testPort->isOpen()) {
         m_testPort->write(command);
         m_testPort->flush();
-        
+
         // Ждем ответ 1 секунду
         m_timeoutTimer->start(1000);
     } else {
@@ -244,14 +244,14 @@ void AutoConnector::testIWS()
 void AutoConnector::onReadyRead()
 {
     if (!m_testPort) return;
-    
+
     QByteArray data = m_testPort->readAll();
     m_receiveBuffer.append(data);
-    
+
     emit logMessage(QString("  Получено %1 байт: %2")
                    .arg(data.size())
                    .arg(QString(data.toHex(' '))));
-    
+
     // Проверяем тип устройства в зависимости от текущей фазы
     switch (m_currentPhase) {
         case PHASE_AMS_TEST:
@@ -261,7 +261,7 @@ void AutoConnector::onReadyRead()
                 return;
             }
             break;
-            
+
         case PHASE_GNSS_LISTEN:
             if (isNmeaData(m_receiveBuffer)) {
                 m_timeoutTimer->stop();
@@ -269,7 +269,7 @@ void AutoConnector::onReadyRead()
                 return;
             }
             break;
-            
+
         case PHASE_IWS_TEST:
             if (isUmbResponse(m_receiveBuffer)) {
                 m_timeoutTimer->stop();
@@ -277,7 +277,7 @@ void AutoConnector::onReadyRead()
                 return;
             }
             break;
-            
+
         case PHASE_DONE:
             break;
     }
@@ -297,7 +297,7 @@ void AutoConnector::moveToNextPhase()
         processNextPort();
         return;
     }
-    
+
     // Переходим к следующей фазе тестирования
     switch (m_currentPhase) {
         case PHASE_AMS_TEST:
@@ -305,13 +305,13 @@ void AutoConnector::moveToNextPhase()
             m_receiveBuffer.clear();
             testGNSS();
             break;
-            
+
         case PHASE_GNSS_LISTEN:
             m_currentPhase = PHASE_IWS_TEST;
             m_receiveBuffer.clear();
             testIWS();
             break;
-            
+
         case PHASE_IWS_TEST:
         case PHASE_DONE:
             // Все тесты пройдены, переходим к следующему порту
@@ -324,18 +324,18 @@ void AutoConnector::moveToNextPhase()
 void AutoConnector::deviceFound(DeviceType type, const QString &description)
 {
     emit logMessage(QString("  ✓ НАЙДЕНО: %1").arg(description));
-    
+
     DeviceInfo info;
     info.type = type;
     info.portName = m_currentPortName;
     info.baudRate = m_currentBaudRate;
     info.description = description;
-    
+
     m_detectedDevices[type] = info;
     m_deviceFoundOnCurrentPort = true;
-    
+
     emit deviceDetected(type, m_currentPortName, m_currentBaudRate);
-    
+
     // Переходим к следующему порту
     m_currentPortIndex++;
     QTimer::singleShot(100, this, &AutoConnector::processNextPort);
@@ -347,13 +347,13 @@ bool AutoConnector::isAmsResponse(const QByteArray &data)
 {
     // АМС ответ на LINE_TEST: [0xA0] [len] [data...] [crc] [0xFF]
     if (data.size() < 5) return false;
-    
+
     // Проверяем что начинается с 0xA0 (LINE_TEST)
     if (static_cast<quint8>(data[0]) != 0xA0) return false;
-    
+
     // Проверяем что заканчивается на 0xFF (стоп-байт)
     if (static_cast<quint8>(data.back()) != 0xFF) return false;
-    
+
     emit logMessage("  → Обнаружен ответ АМС (команда 0xA0, стоп-байт 0xFF)");
     return true;
 }
@@ -362,13 +362,13 @@ bool AutoConnector::isNmeaData(const QByteArray &data)
 {
     // NMEA строки начинаются с '$' и содержат буквы
     QString str = QString::fromLatin1(data);
-    
+
     // Ищем NMEA строки типа $GNGGA, $GNRMC, $GPGGA и т.д.
     if (str.contains("$GN") || str.contains("$GP")) {
         emit logMessage("  → Обнаружены NMEA данные");
         return true;
     }
-    
+
     return false;
 }
 
@@ -376,12 +376,12 @@ bool AutoConnector::isUmbResponse(const QByteArray &data)
 {
     // UMB ответ: [SOH=0x01] [Ver] [TO] [FROM] [Len] ... [ETX=0x03] [CRC] [EOT=0x04]
     if (data.size() < 10) return false;
-    
+
     // Проверяем структуру UMB
     if (static_cast<quint8>(data[0]) != 0x01) return false;  // SOH
     if (static_cast<quint8>(data[1]) != 0x10) return false;  // Version
     if (static_cast<quint8>(data.back()) != 0x04) return false;  // EOT
-    
+
     // Ищем ETX (0x03) перед EOT
     bool hasEtx = false;
     for (int i = data.size() - 4; i > 5 && i < data.size() - 1; i++) {
@@ -390,12 +390,12 @@ bool AutoConnector::isUmbResponse(const QByteArray &data)
             break;
         }
     }
-    
+
     if (hasEtx) {
         emit logMessage("  → Обнаружен ответ UMB (SOH, ETX, EOT)");
         return true;
     }
-    
+
     return false;
 }
 
@@ -407,14 +407,14 @@ QByteArray AutoConnector::createAmsLineTestCommand()
     QByteArray command;
     command.append(static_cast<char>(0xA0));  // Команда
     command.append(static_cast<char>(0x00));  // Длина данных = 0
-    
+
     // Вычисляем CRC
     quint16 crc = calculateAmsCrc(command);
     command.append(static_cast<char>(crc & 0xFF));
     command.append(static_cast<char>((crc >> 8) & 0xFF));
-    
+
     command.append(static_cast<char>(0xFF));  // Стоп-байт
-    
+
     return command;
 }
 
@@ -422,7 +422,7 @@ QByteArray AutoConnector::createIwsTestCommand()
 {
     // Простой UMB запрос на чтение температуры (0x0064)
     QByteArray command;
-    
+
     command.append(static_cast<char>(0x01)); // SOH
     command.append(static_cast<char>(0x10)); // ver
     command.append(static_cast<char>(0x01)); // to (high)
@@ -437,14 +437,14 @@ QByteArray AutoConnector::createIwsTestCommand()
     command.append(static_cast<char>(0x64)); // param code (low) - температура
     command.append(static_cast<char>(0x00)); // param code (high)
     command.append(static_cast<char>(0x03)); // ETX
-    
+
     // CRC
     quint16 crc = calculateUmbCrc(command);
     command.append(static_cast<char>(crc & 0xFF));
     command.append(static_cast<char>((crc >> 8) & 0xFF));
-    
+
     command.append(static_cast<char>(0x04)); // EOT
-    
+
     return command;
 }
 
@@ -454,10 +454,10 @@ quint16 AutoConnector::calculateAmsCrc(const QByteArray &data)
 {
     // CRC-16 CCITT (0xFFFF, полином 0x1021)
     quint16 crc = 0xFFFF;
-    
+
     for (int i = 0; i < data.size(); i++) {
         crc ^= static_cast<quint8>(data[i]) << 8;
-        
+
         for (int j = 0; j < 8; j++) {
             if (crc & 0x8000) {
                 crc = (crc << 1) ^ 0x1021;
@@ -466,7 +466,7 @@ quint16 AutoConnector::calculateAmsCrc(const QByteArray &data)
             }
         }
     }
-    
+
     return crc;
 }
 
@@ -474,10 +474,10 @@ quint16 AutoConnector::calculateUmbCrc(const QByteArray &data)
 {
     // CRC-16 (полином 0x8408) - как в UMB
     quint16 crc = 0xFFFF;
-    
+
     for (int i = 0; i < data.size(); i++) {
         quint8 byte = static_cast<quint8>(data[i]);
-        
+
         for (int j = 0; j < 8; j++) {
             quint16 x16;
             if ((crc & 0x0001) ^ (byte & 0x01)) {
@@ -490,7 +490,7 @@ quint16 AutoConnector::calculateUmbCrc(const QByteArray &data)
             byte = byte >> 1;
         }
     }
-    
+
     return crc;
 }
 
