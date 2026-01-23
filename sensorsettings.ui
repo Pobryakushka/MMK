@@ -1208,6 +1208,28 @@ color: white; font-weight: bold;</string>
       </spacer>
      </item>
      <item>
+      <widget class="QPushButton" name="btnAutoConnect">
+       <property name="minimumSize">
+        <size>
+         <width>150</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="font">
+        <font>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="text">
+        <string>🔍 Автоподключение</string>
+       </property>
+       <property name="toolTip">
+        <string>Автоматически найти все подключенные устройства (АМС, GNSS, ИВС)</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="btnClose">
        <property name="minimumSize">
         <size>

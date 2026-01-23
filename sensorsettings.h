@@ -4,6 +4,8 @@
 #include <QDialog>
 #include <QSerialPort>
 #include <QSerialPortInfo>
+#include <QComboBox>
+#include "autoconnector.h"
 
 namespace Ui {
 class SensorSettings;
@@ -67,13 +69,23 @@ private slots:
     void onConnectAmsClicked();
     void onDisconnectAmsClicked();
 
+    // AutoConnector слоты
+    void onAutoConnectClicked();
+    void onAutoDetectionStarted();
+    void onAutoDetectionFinished();
+    void onDeviceDetected(AutoConnector::DeviceType type, const QString &portName, int baudRate);
+    void onAutoConnectProgress(int current, int total);
+    void onAutoConnectLog(const QString &message);
+
 private:
     Ui::SensorSettings *ui;
+    AutoConnector *m_autoConnector;
 
     void populateComPorts();
     void populateGnssPorts();
     void populateAmsPorts();
     void setupConnections();
+    void setComboBoxPort(QComboBox *comboBox, const QString &portName);
 };
 
 #endif // SENSORSETTINGS_H

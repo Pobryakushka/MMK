@@ -28,7 +28,8 @@ SOURCES += \
     zoom/qaxiszoomsvc.cpp \
     zoom/qwheelzoomsvc.cpp \
     zoom/qwtchartzoom.cpp \
-    zoom/zoomscontainer.cpp
+    zoom/zoomscontainer.cpp \
+    autoconnector.cpp
 
 HEADERS += \
     AlgorithmsCalc.h \
@@ -50,7 +51,8 @@ HEADERS += \
     zoom/qaxiszoomsvc.h \
     zoom/qwheelzoomsvc.h \
     zoom/qwtchartzoom.h \
-    zoom/zoomscontainer.h
+    zoom/zoomscontainer.h \
+    autoconnector.h
 
 
 # Default rules for deployment.

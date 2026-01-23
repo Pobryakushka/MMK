@@ -7,6 +7,7 @@
 SensorSettings::SensorSettings(QWidget *parent)
     : QDialog(parent)
     , ui(new Ui::SensorSettings)
+    , m_autoConnector(new AutoConnector(this))
 {
     ui->setupUi(this);
 
@@ -33,6 +34,18 @@ SensorSettings::SensorSettings(QWidget *parent)
     ui->comboBoxAmsDataBits->setCurrentText("8");
     ui->comboBoxAmsParity->setCurrentIndex(0); // Нет
     ui->comboBoxAmsStopBits->setCurrentIndex(0); // 1
+    
+    // Подключаем сигналы AutoConnector
+    connect(m_autoConnector, &AutoConnector::detectionStarted,
+            this, &SensorSettings::onAutoDetectionStarted);
+    connect(m_autoConnector, &AutoConnector::detectionFinished,
+            this, &SensorSettings::onAutoDetectionFinished);
+    connect(m_autoConnector, &AutoConnector::deviceDetected,
+            this, &SensorSettings::onDeviceDetected);
+    connect(m_autoConnector, &AutoConnector::progressUpdated,
+            this, &SensorSettings::onAutoConnectProgress);
+    connect(m_autoConnector, &AutoConnector::logMessage,
+            this, &SensorSettings::onAutoConnectLog);
 }
 
 SensorSettings::~SensorSettings()
@@ -56,6 +69,9 @@ void SensorSettings::setupConnections()
     connect(ui->btnRefreshAmsPorts, &QPushButton::clicked, this, &SensorSettings::onRefreshAmsPortsClicked);
     connect(ui->btnConnectAms, &QPushButton::clicked, this, &SensorSettings::onConnectAmsClicked);
     connect(ui->btnDisconnectAms, &QPushButton::clicked, this, &SensorSettings::onDisconnectAmsClicked);
+
+    // Автоподключение
+    connect(ui->btnAutoConnect, &QPushButton::clicked, this, &SensorSettings::onAutoConnectClicked);
 
     connect(ui->btnClose, &QPushButton::clicked, this, &SensorSettings::onCloseClicked);
 }
@@ -463,5 +479,125 @@ void SensorSettings::setConnectionEnabled(bool enabled)
         ui->spinBoxDeviceAddress->setEnabled(enabled);
         ui->spinBoxPollInterval->setEnabled(enabled);
         ui->btnRefreshPorts->setEnabled(enabled);
+    }
+}
+
+// ===== AutoConnector слоты =====
+
+void SensorSettings::onAutoConnectClicked()
+{
+    qDebug() << "Запуск автоопределения устройств...";
+    
+    // Отключаем все кнопки подключения на время автопоиска
+    ui->btnConnect->setEnabled(false);
+    ui->btnConnectGnss->setEnabled(false);
+    ui->btnConnectAms->setEnabled(false);
+    ui->btnAutoConnect->setEnabled(false);
+    ui->btnAutoConnect->setText("Поиск...");
+    
+    // Запускаем автоопределение
+    m_autoConnector->startDetection();
+}
+
+void SensorSettings::onAutoDetectionStarted()
+{
+    qDebug() << "Автоопределение началось";
+//    ui->labelStatus->setText("Поиск устройств...");
+}
+
+void SensorSettings::onAutoDetectionFinished()
+{
+    qDebug() << "Автоопределение завершено";
+    
+    // Включаем кнопки обратно
+    ui->btnConnect->setEnabled(true);
+    ui->btnConnectGnss->setEnabled(true);
+    ui->btnConnectAms->setEnabled(true);
+    ui->btnAutoConnect->setEnabled(true);
+    ui->btnAutoConnect->setText("Автоподключение");
+    
+    // Получаем результаты
+    QMap<AutoConnector::DeviceType, AutoConnector::DeviceInfo> devices = 
+        m_autoConnector->getDetectedDevices();
+    
+    if (devices.isEmpty()) {
+//        ui->labelStatus->setText("Устройства не найдены");
+        qDebug() << "Устройства не найдены на доступных портах";
+        return;
+    }
+    
+    // Автоматически устанавливаем найденные порты в ComboBox
+    int foundCount = 0;
+    
+    for (auto it = devices.begin(); it != devices.end(); ++it) {
+        AutoConnector::DeviceInfo info = it.value();
+        foundCount++;
+        
+        switch (it.key()) {
+            case AutoConnector::DEVICE_AMS:
+                qDebug() << "АМС найден на" << info.portName << "(" << info.baudRate << "бод)";
+                setComboBoxPort(ui->comboBoxAmsPort, info.portName);
+                ui->comboBoxAmsBaudRate->setCurrentText(QString::number(info.baudRate));
+//                ui->labelStatusAms->setText(QString("✓ Найден: %1").arg(info.portName));
+                break;
+                
+            case AutoConnector::DEVICE_GNSS:
+                qDebug() << "GNSS найден на" << info.portName << "(" << info.baudRate << "бод)";
+                setComboBoxPort(ui->comboBoxGnssPort, info.portName);
+                ui->comboBoxGnssBaudRate->setCurrentText(QString::number(info.baudRate));
+//                ui->labelStatusGnss->setText(QString("✓ Найден: %1").arg(info.portName));
+                break;
+                
+            case AutoConnector::DEVICE_IWS:
+                qDebug() << "ИВС найден на" << info.portName << "(" << info.baudRate << "бод)";
+                setComboBoxPort(ui->comboBoxComPort, info.portName);
+                ui->comboBoxBaudRate->setCurrentText(QString::number(info.baudRate));
+//                ui->labelStatus->setText(QString("✓ Найден: %1").arg(info.portName));
+                break;
+                
+            default:
+                break;
+        }
+    }
+    
+    qDebug() << "Автоопределение завершено. Найдено устройств:" << foundCount;
+}
+
+void SensorSettings::onDeviceDetected(AutoConnector::DeviceType type, 
+                                     const QString &portName, 
+                                     int baudRate)
+{
+    QString deviceName;
+    switch (type) {
+        case AutoConnector::DEVICE_AMS:  deviceName = "АМС"; break;
+        case AutoConnector::DEVICE_GNSS: deviceName = "GNSS"; break;
+        case AutoConnector::DEVICE_IWS:  deviceName = "ИВС"; break;
+        default: deviceName = "Неизвестное"; break;
+    }
+    
+    qDebug() << "Обнаружено:" << deviceName << "на" << portName << baudRate << "бод";
+}
+
+void SensorSettings::onAutoConnectProgress(int current, int total)
+{
+    QString statusText = QString("Проверка порта %1 из %2...").arg(current).arg(total);
+//    ui->labelStatus->setText(statusText);
+    qDebug() << statusText;
+}
+
+void SensorSettings::onAutoConnectLog(const QString &message)
+{
+    qDebug() << "[AutoConnect]" << message;
+}
+
+void SensorSettings::setComboBoxPort(QComboBox *comboBox, const QString &portName)
+{
+    int index = comboBox->findText(portName);
+    if (index >= 0) {
+        comboBox->setCurrentIndex(index);
+    } else {
+        qDebug() << "Порт" << portName << "не найден в ComboBox, добавляем...";
+        comboBox->addItem(portName);
+        comboBox->setCurrentText(portName);
     }
 }
