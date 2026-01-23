@@ -36,6 +36,23 @@ public:
     QSerialPort::Parity getAmsParity() const;
     QSerialPort::StopBits getAmsStopBits() const;
 
+    // Установка статуса
+    void setConnectionStatus(const QString& status, bool connected);
+    void setConnectionEnabled(bool enabled);
+
+    // Установка статуса АМС
+    void setAmsConnectionStatus(const QString& status, bool connected);
+    void setAmsConnectionEnabled(bool enabled);
+    void setAmsConnectionError(const QString& errorMessage);
+
+    // Установка статуса GNSS (независимо от вкладки)
+    void setGnssConnectionStatus(const QString& status, bool connected);
+    void setGnssConnectionEnabled(bool enabled);
+
+    // Установка статуса ИВС (независимо от вкладки)
+    void setIwsConnectionStatus(const QString& status, bool connected);
+    void setIwsConnectionEnabled(bool enabled);
+
     // Получение настроек для GNSS (независимо от активной вкладки)
     QString getGnssComPort() const;
     int getGnssBaudRate() const;
@@ -52,15 +69,6 @@ public:
     int getIwsProtocolIndex() const;
     quint8 getIwsDeviceAddress() const;
     int getIwsPollInterval() const;
-
-    // Установка статуса
-    void setConnectionStatus(const QString& status, bool connected);
-    void setConnectionEnabled(bool enabled);
-
-    // Установка статуса АМС
-    void setAmsConnectionStatus(const QString& status, bool connected);
-    void setAmsConnectionEnabled(bool enabled);
-    void setAmsConnectionError(const QString& errorMessage);
 
 signals:
     void connectRequested();

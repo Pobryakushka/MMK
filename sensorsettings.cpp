@@ -504,6 +504,71 @@ void SensorSettings::setAmsConnectionError(const QString& errorMessage)
     qWarning() << "SensorSettings: Ошибка подключения АМС:" << errorMessage;
 }
 
+// ===== МЕТОДЫ ДЛЯ GNSS (независимо от вкладки) =====
+
+void SensorSettings::setGnssConnectionStatus(const QString& status, bool connected)
+{
+    ui->lblGnssStatus->setText(QString("Статус: %1").arg(status));
+
+    if (connected) {
+        ui->lblGnssStatus->setStyleSheet("color: green; font-size: 10pt; padding: 5px; font-weight: bold;");
+        ui->btnConnectGnss->setEnabled(false);
+        ui->btnDisconnectGnss->setEnabled(true);
+        ui->btnDisconnectGnss->setStyleSheet("background-color: #F44336; color: white; font-weight: bold;");
+    } else {
+        ui->lblGnssStatus->setStyleSheet("color: #666; font-size: 10pt; padding: 5px;");
+        ui->btnConnectGnss->setEnabled(true);
+        ui->btnDisconnectGnss->setEnabled(false);
+        ui->btnDisconnectGnss->setStyleSheet("background-color: #757575; color: white; font-weight: bold;");
+    }
+
+    qDebug() << "SensorSettings: GNSS статус установлен:" << status << "Connected:" << connected;
+}
+
+void SensorSettings::setGnssConnectionEnabled(bool enabled)
+{
+    ui->comboBoxGnssPort->setEnabled(enabled);
+    ui->comboBoxGnssBaudRate->setEnabled(enabled);
+    ui->comboBoxGnssDataBits->setEnabled(enabled);
+    ui->comboBoxGnssParity->setEnabled(enabled);
+    ui->comboBoxGnssStopBits->setEnabled(enabled);
+    ui->btnRefreshGnssPorts->setEnabled(enabled);
+}
+
+// ===== МЕТОДЫ ДЛЯ ИВС (независимо от вкладки) =====
+
+void SensorSettings::setIwsConnectionStatus(const QString& status, bool connected)
+{
+    ui->lblConnectionStatus->setText(QString("Статус: %1").arg(status));
+
+    if (connected) {
+        ui->lblConnectionStatus->setStyleSheet("color: green; font-size: 10pt; padding: 5px; font-weight: bold;");
+        ui->btnConnect->setEnabled(false);
+        ui->btnDisconnect->setEnabled(true);
+        ui->btnDisconnect->setStyleSheet("background-color: #F44336; color: white; font-weight: bold;");
+    } else {
+        ui->lblConnectionStatus->setStyleSheet("color: #666; font-size: 10pt; padding: 5px;");
+        ui->btnConnect->setEnabled(true);
+        ui->btnDisconnect->setEnabled(false);
+        ui->btnDisconnect->setStyleSheet("background-color: #757575; color: white; font-weight: bold;");
+    }
+
+    qDebug() << "SensorSettings: ИВС статус установлен:" << status << "Connected:" << connected;
+}
+
+void SensorSettings::setIwsConnectionEnabled(bool enabled)
+{
+    ui->comboBoxComPort->setEnabled(enabled);
+    ui->comboBoxBaudRate->setEnabled(enabled);
+    ui->comboBoxDataBits->setEnabled(enabled);
+    ui->comboBoxParity->setEnabled(enabled);
+    ui->comboBoxStopBits->setEnabled(enabled);
+    ui->comboBoxProtocol->setEnabled(enabled);
+    ui->spinBoxDeviceAddress->setEnabled(enabled);
+    ui->spinBoxPollInterval->setEnabled(enabled);
+    ui->btnRefreshPorts->setEnabled(enabled);
+}
+
 // ===== СУЩЕСТВУЮЩИЕ МЕТОДЫ =====
 
 void SensorSettings::setConnectionStatus(const QString& status, bool connected)

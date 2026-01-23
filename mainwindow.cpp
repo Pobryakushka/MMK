@@ -270,12 +270,12 @@ void MainWindow::onGnssConnectFromSettings()
     m_gnssBaudRate = sensorSettingsDialog->getGnssBaudRate();
 
     if (m_gnssReceiver->connectToReceiver(m_gnssComPort, m_gnssBaudRate)){
-        sensorSettingsDialog->setConnectionStatus("Подключено", true);
-        sensorSettingsDialog->setConnectionEnabled(false);
+        sensorSettingsDialog->setGnssConnectionStatus("Подключено", true);
+        sensorSettingsDialog->setGnssConnectionEnabled(false);
         m_gnssEnabled = true;
         m_checkboxGnss->setChecked(true);
     } else {
-        sensorSettingsDialog->setConnectionStatus("Ошибка подключения", false);
+        sensorSettingsDialog->setGnssConnectionStatus("Ошибка подключения", false);
     }
 }
 
@@ -283,8 +283,8 @@ void MainWindow::onGnssDisconnectFromSettings()
 {
     disconnectFromGnss();
     if (sensorSettingsDialog){
-        sensorSettingsDialog->setConnectionStatus("Отключено", false);
-        sensorSettingsDialog->setConnectionEnabled(true);
+        sensorSettingsDialog->setGnssConnectionStatus("Отключено", false);
+        sensorSettingsDialog->setGnssConnectionEnabled(true);
     }
 }
 
@@ -828,8 +828,8 @@ void MainWindow::onConnectRequested()
 
     // Пытаемся открыть порт
     if (serialPort->open(QIODevice::ReadWrite)) {
-        sensorSettingsDialog->setConnectionStatus("Подключено", true);
-        sensorSettingsDialog->setConnectionEnabled(false);
+        sensorSettingsDialog->setIwsConnectionStatus("Подключено", true);
+        sensorSettingsDialog->setIwsConnectionEnabled(false);
 
         // Настраиваем протокол в GroundMeteoParams (если он уже создан)
         GroundMeteoParams* meteoParams = GroundMeteoParams::instance();
@@ -856,7 +856,7 @@ void MainWindow::onConnectRequested()
     } else {
         QMessageBox::critical(this, "Ошибка подключения",
                             QString("Не удалось открыть порт: %1").arg(serialPort->errorString()));
-        sensorSettingsDialog->setConnectionStatus("Ошибка подключения", false);
+        sensorSettingsDialog->setIwsConnectionStatus("Ошибка подключения", false);
     }
 }
 
@@ -870,8 +870,8 @@ void MainWindow::onDisconnectRequested()
         serialPort->close();
     }
 
-    sensorSettingsDialog->setConnectionStatus("Отключено", false);
-    sensorSettingsDialog->setConnectionEnabled(true);
+    sensorSettingsDialog->setIwsConnectionStatus("Отключено", false);
+    sensorSettingsDialog->setIwsConnectionEnabled(true);
 
     qDebug() << "RS485 disconnected";
 }
@@ -896,7 +896,7 @@ void MainWindow::onSerialError(QSerialPort::SerialPortError error)
         qDebug() << "Serial port error:" << serialPort->errorString();
 
         if (sensorSettingsDialog) {
-            sensorSettingsDialog->setConnectionStatus(
+            sensorSettingsDialog->setIwsConnectionStatus(
                 QString("Ошибка: %1").arg(serialPort->errorString()), false);
         }
 
