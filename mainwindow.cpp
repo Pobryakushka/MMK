@@ -128,6 +128,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     m_binsHandler = new BINSHandler(this);
     setupBinsHandler();
+
+    // Инициализация панели статуса датчиков
+    updateSensorStatusPanel();
 }
 
 MainWindow::~MainWindow()
@@ -152,51 +155,18 @@ MainWindow::~MainWindow()
 
 void MainWindow::setupMapCoordinatesButton()
 {
-    m_btnMapCoordinates = new QPushButton(this);
-    m_btnMapCoordinates->setFixedSize(40, 40);
-    m_btnMapCoordinates->setCheckable(true);
-    m_btnMapCoordinates->setToolTip("Использовать координаты с карты");
-
+    // Кнопка теперь в UI файле, просто настраиваем иконку и подключаем сигнал
     QIcon markerIcon(":/dat/images/marker.png");
-    m_btnMapCoordinates->setIcon(markerIcon);
-    m_btnMapCoordinates->setIconSize(QSize(32, 32));
+    ui->btnMapCoordinates->setIcon(markerIcon);
+    ui->btnMapCoordinates->setIconSize(QSize(32, 32));
 
-    m_btnMapCoordinates->setStyleSheet(
-                "QPushButton {"
-                "   background-color: white;"
-                "   border: 2px solid gray;"
-                "   border-radius: 20px;"
-                "}"
-                "QPushButton:hover {"
-                "   background-color: #f0f0f0;"
-                "}"
-    );
-
-    m_btnMapCoordinates->move(width() - 60, 20);
-    m_btnMapCoordinates->raise();
-
-    connect(m_btnMapCoordinates, &QPushButton::clicked, this, &MainWindow::onMapCoordinatesToggled);
+    connect(ui->btnMapCoordinates, &QPushButton::clicked, this, &MainWindow::onMapCoordinatesToggled);
 }
 
 void MainWindow::setupGnssCheckbox()
 {
-    m_checkboxGnss = new QCheckBox("GNSS", this);
-    m_checkboxGnss->setStyleSheet(
-        "QCheckBox {"
-        "   background-color: white;"
-        "   padding: 5px;"
-        "   border: 2px solid gray;"
-        "   border-radius: 5px;"
-        "}"
-        "   width: 18px;"
-        "   height: 18px;"
-        "}"
-    );
-
-    m_checkboxGnss->move(width() - 160, 20);
-    m_checkboxGnss->raise();
-
-    connect(m_checkboxGnss, &QCheckBox::toggled, this, &MainWindow::onGnssCheckboxToggled);
+    // Чекбокс теперь в UI файле, просто подключаем сигнал
+    connect(ui->checkboxGnss, &QCheckBox::toggled, this, &MainWindow::onGnssCheckboxToggled);
 }
 
 //void MainWindow::setupGnssSettingsButton()
@@ -282,7 +252,7 @@ void MainWindow::onGnssConnectFromSettings()
         sensorSettingsDialog->setGnssConnectionStatus("Подключено", true);
         sensorSettingsDialog->setGnssConnectionEnabled(false);
         m_gnssEnabled = true;
-        m_checkboxGnss->setChecked(true);
+        ui->checkboxGnss->setChecked(true);
     } else {
         sensorSettingsDialog->setGnssConnectionStatus("Ошибка подключения", false);
     }
@@ -311,11 +281,11 @@ void MainWindow::updateGnssMarkerOnMap(double latitude, double longitude)
 void MainWindow::updateMapCoordinatesButtonStyle()
 {
     QIcon markerIcon(":/dat/images/marker.png");
-    m_btnMapCoordinates->setIcon(markerIcon);
-    m_btnMapCoordinates->setIconSize(QSize(32, 32));
+    ui->btnMapCoordinates->setIcon(markerIcon);
+    ui->btnMapCoordinates->setIconSize(QSize(32, 32));
 
     if (m_mapCoordinatesEnabled) {
-        m_btnMapCoordinates->setStyleSheet(
+        ui->btnMapCoordinates->setStyleSheet(
             "QPushButton {"
             "   background-color: #4CAF50;"
             "   border: 3px solid #2E7D32;"
@@ -326,9 +296,9 @@ void MainWindow::updateMapCoordinatesButtonStyle()
             "   border: 3px solid #1B5E20;"
             "}"
         );
-        m_btnMapCoordinates->setToolTip("Режим координат с карты активен (нажмите для отключения)");
+        ui->btnMapCoordinates->setToolTip("Режим координат с карты активен (нажмите для отключения)");
     } else {
-        m_btnMapCoordinates->setStyleSheet(
+        ui->btnMapCoordinates->setStyleSheet(
             "QPushButton {"
             "   background-color: white;"
             "   border: 2px solid gray;"
@@ -338,7 +308,7 @@ void MainWindow::updateMapCoordinatesButtonStyle()
             "   background-color: #f0f0f0;"
             "}"
         );
-        m_btnMapCoordinates->setToolTip("Использовать координаты с карты (нажмите для включения)");
+        ui->btnMapCoordinates->setToolTip("Использовать координаты с карты (нажмите для включения)");
     }
 }
 
@@ -369,7 +339,7 @@ void MainWindow::onGnssCheckboxToggled(bool checked)
     if (checked) {
         if (m_gnssComPort.isEmpty()) {
             qDebug() << "MainWindow: COM-порт не настроен, открываем настройки...";
-            m_checkboxGnss->setChecked(false);
+            ui->checkboxGnss->setChecked(false);
             QMessageBox::information(this, "Настройки GNSS",
                 "Пожалуйста, настройте параметры подключения GNSS через кнопку настроек ⚙");
             return;
@@ -393,7 +363,7 @@ void MainWindow::connectToGnss()
     } else {
         qDebug() << "MainWindow: Ошибка подключения к GNSS";
         m_gnssEnabled = false;
-        m_checkboxGnss->setChecked(false);
+        ui->checkboxGnss->setChecked(false);
         QMessageBox::warning(this, "Ошибка", "Не удалось подключиться к GNSS приемнику");
     }
 
@@ -408,7 +378,7 @@ void MainWindow::disconnectFromGnss()
         m_gnssReceiver->disconnectFromReceiver();
     }
     m_gnssEnabled = false;
-    m_checkboxGnss->setChecked(false);
+    ui->checkboxGnss->setChecked(false);
 
     updateCoordinateSource("Нет");
     updateFieldsEditability();
@@ -473,15 +443,16 @@ void MainWindow::onNmeaReceived(const QString &nmea)
 void MainWindow::onGnssConnected()
 {
     qDebug() << "GNSS приемник подключен";
-    m_checkboxGnss->setStyleSheet(
+    ui->checkboxGnss->setStyleSheet(
         "QCheckBox {"
         "   background-color: #E8F5E9;"
-        "   padding: 5px;"
+        "   padding: 5px 10px;"
         "   border: 2px solid #4CAF50;"
         "   border-radius: 5px;"
         "}"
     );
     statusBar()->showMessage("GNSS приемник подключен успешно", 5000);
+    updateGnssStatusLabel(true);
 }
 
 void MainWindow::onGnssDisconnected()
@@ -490,19 +461,20 @@ void MainWindow::onGnssDisconnected()
 
     m_gnssEnabled = false;
 
-    if (m_checkboxGnss->isChecked()) {
-        m_checkboxGnss->setChecked(false);
+    if (ui->checkboxGnss->isChecked()) {
+        ui->checkboxGnss->setChecked(false);
     }
 
-    m_checkboxGnss->setStyleSheet(
+    ui->checkboxGnss->setStyleSheet(
         "QCheckBox {"
         "   background-color: white;"
-        "   padding: 5px;"
+        "   padding: 5px 10px;"
         "   border: 2px solid gray;"
         "   border-radius: 5px;"
         "}"
     );
     updateFieldsEditability();
+    updateGnssStatusLabel(false);
 }
 
 void MainWindow::onGnssError(const QString &error)
@@ -519,13 +491,13 @@ void MainWindow::checkAndDisableConflictingSources(const QString &activeSource)
     if (activeSource == "map") {
         // Отключаем GNSS и ручной ввод
         if (m_gnssEnabled) {
-            m_checkboxGnss->setChecked(false);
+            ui->checkboxGnss->setChecked(false);
         }
         m_manualInputEnabled = false;
     } else if (activeSource == "gnss") {
         // Отключаем карту и ручной ввод
         if (m_mapCoordinatesEnabled) {
-            m_btnMapCoordinates->setChecked(false);
+            ui->btnMapCoordinates->setChecked(false);
             m_mapCoordinatesEnabled = false;
             updateMapCoordinatesButtonStyle();
         }
@@ -533,12 +505,12 @@ void MainWindow::checkAndDisableConflictingSources(const QString &activeSource)
     } else if (activeSource == "manual") {
         // Отключаем карту и GNSS
         if (m_mapCoordinatesEnabled) {
-            m_btnMapCoordinates->setChecked(false);
+            ui->btnMapCoordinates->setChecked(false);
             m_mapCoordinatesEnabled = false;
             updateMapCoordinatesButtonStyle();
         }
         if (m_gnssEnabled) {
-            m_checkboxGnss->setChecked(false);
+            ui->checkboxGnss->setChecked(false);
         }
     }
 }
@@ -651,6 +623,7 @@ void MainWindow::onAmsConnected()
     }
 
     statusBar()->showMessage("АМС подключена успешно", 5000);
+    updateAmsStatusLabel(true);
 
     // Можно сразу запросить функциональный контроль
     QTimer::singleShot(1000, this, [this]() {
@@ -670,6 +643,7 @@ void MainWindow::onAmsDisconnected()
     }
 
     statusBar()->showMessage("АМС отключена", 3000);
+    updateAmsStatusLabel(false);
 }
 
 void MainWindow::onAmsError(const QString &error)
@@ -809,6 +783,7 @@ void MainWindow::onBinsConnected()
     }
 
     statusBar()->showMessage("БИНС подключен успешно", 5000);
+    updateBinsStatusLabel(true);
 }
 
 void MainWindow::onBinsDisconnected()
@@ -821,6 +796,7 @@ void MainWindow::onBinsDisconnected()
     }
 
     statusBar()->showMessage("БИНС отключен", 3000);
+    updateBinsStatusLabel(false);
 }
 
 void MainWindow::onBinsError(const QString &error)
@@ -889,16 +865,7 @@ void MainWindow::updateCoordinatesFromMap(double latitude, double longitude)
 void MainWindow::resizeEvent(QResizeEvent *event)
 {
     QMainWindow::resizeEvent(event);
-
-    if (m_btnMapCoordinates){
-        m_btnMapCoordinates->move(width() - 60, 20);
-    }
-    if (m_checkboxGnss){
-        m_checkboxGnss->move(width() - 160, 20);
-    }
-//    if (m_btnGnssSettings) {
-//        m_btnGnssSettings->move(width() - 210, 23);
-//    }
+    // Кнопки теперь в layout панели статуса, перемещение не требуется
 }
 
 void MainWindow::onSensorSettingsClicked()
@@ -942,6 +909,7 @@ void MainWindow::onConnectRequested()
     if (serialPort->open(QIODevice::ReadWrite)) {
         sensorSettingsDialog->setIwsConnectionStatus("Подключено", true);
         sensorSettingsDialog->setIwsConnectionEnabled(false);
+        updateIwsStatusLabel(true);
 
         // Настраиваем протокол в GroundMeteoParams (если он уже создан)
         GroundMeteoParams* meteoParams = GroundMeteoParams::instance();
@@ -984,6 +952,7 @@ void MainWindow::onDisconnectRequested()
 
     sensorSettingsDialog->setIwsConnectionStatus("Отключено", false);
     sensorSettingsDialog->setIwsConnectionEnabled(true);
+    updateIwsStatusLabel(false);
 
     qDebug() << "RS485 disconnected";
 }
@@ -1218,5 +1187,75 @@ void MainWindow::onStandbyModeChanged(int state)
 {
     if (state == Qt::Checked) {
         ui->cbWorkMode->setChecked(false);
+    }
+}
+
+// ==================== Методы обновления статуса датчиков ====================
+
+void MainWindow::updateSensorStatusPanel()
+{
+    updateGnssStatusLabel(m_gnssReceiver && m_gnssReceiver->isConnected());
+    updateAmsStatusLabel(m_amsHandler && m_amsHandler->isConnected());
+    updateBinsStatusLabel(m_binsHandler && m_binsHandler->isConnected());
+    updateIwsStatusLabel(serialPort && serialPort->isOpen());
+}
+
+void MainWindow::updateGnssStatusLabel(bool connected)
+{
+    if (connected) {
+        ui->lblGnssStatus->setText("GNSS: подключен");
+        ui->lblGnssStatus->setStyleSheet(
+            "background-color: #E8F5E9; color: #1B5E20; border: 1px solid #A5D6A7; "
+            "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
+    } else {
+        ui->lblGnssStatus->setText("GNSS: отключен");
+        ui->lblGnssStatus->setStyleSheet(
+            "background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2; "
+            "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
+    }
+}
+
+void MainWindow::updateAmsStatusLabel(bool connected)
+{
+    if (connected) {
+        ui->lblAmsStatus->setText("АМС: подключен");
+        ui->lblAmsStatus->setStyleSheet(
+            "background-color: #E8F5E9; color: #1B5E20; border: 1px solid #A5D6A7; "
+            "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
+    } else {
+        ui->lblAmsStatus->setText("АМС: отключен");
+        ui->lblAmsStatus->setStyleSheet(
+            "background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2; "
+            "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
+    }
+}
+
+void MainWindow::updateBinsStatusLabel(bool connected)
+{
+    if (connected) {
+        ui->lblBinsStatus->setText("БИНС: подключен");
+        ui->lblBinsStatus->setStyleSheet(
+            "background-color: #E8F5E9; color: #1B5E20; border: 1px solid #A5D6A7; "
+            "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
+    } else {
+        ui->lblBinsStatus->setText("БИНС: отключен");
+        ui->lblBinsStatus->setStyleSheet(
+            "background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2; "
+            "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
+    }
+}
+
+void MainWindow::updateIwsStatusLabel(bool connected)
+{
+    if (connected) {
+        ui->lblIwsStatus->setText("ИВС: подключен");
+        ui->lblIwsStatus->setStyleSheet(
+            "background-color: #E8F5E9; color: #1B5E20; border: 1px solid #A5D6A7; "
+            "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
+    } else {
+        ui->lblIwsStatus->setText("ИВС: отключен");
+        ui->lblIwsStatus->setStyleSheet(
+            "background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2; "
+            "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
     }
 }

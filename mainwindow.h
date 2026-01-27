@@ -121,9 +121,6 @@ private:
     bool m_gnssEnabled;
     bool m_manualInputEnabled;
 
-    QPushButton *m_btnMapCoordinates;
-    QCheckBox *m_checkboxGnss;
-
     ZedF9PReceiver *m_gnssReceiver;
 
     QString m_gnssComPort;
@@ -160,6 +157,13 @@ private:
 
     void resizeEvent(QResizeEvent *event);
     QList<quint16> getRequestParameters();
+
+    // Методы обновления статуса датчиков на панели
+    void updateSensorStatusPanel();
+    void updateGnssStatusLabel(bool connected);
+    void updateAmsStatusLabel(bool connected);
+    void updateBinsStatusLabel(bool connected);
+    void updateIwsStatusLabel(bool connected);
 };
 
 
