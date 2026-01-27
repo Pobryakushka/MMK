@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>551</width>
+    <width>708</width>
     <height>750</height>
    </rect>
   </property>
@@ -29,9 +29,8 @@
       </size>
      </property>
      <property name="currentIndex">
-      <number>2</number>
+      <number>3</number>
      </property>
-
      <widget class="QWidget" name="tabRS485">
       <attribute name="title">
        <string>ИВС (RS485)</string>
@@ -476,7 +475,6 @@ color: white; font-weight: bold;</string>
        </item>
       </layout>
      </widget>
-
      <widget class="QWidget" name="tabGNSS">
       <attribute name="title">
        <string>GNSS (GPS/GLONASS)</string>
@@ -834,356 +832,707 @@ color: white; font-weight: bold;</string>
       </layout>
      </widget>
      <widget class="QWidget" name="tabAMS">
-       <attribute name="title">
-        <string>АМС (RS-422C)</string>
-       </attribute>
-       <layout class="QVBoxLayout" name="verticalLayout_7">
-        <item>
-         <widget class="QGroupBox" name="groupBoxAmsConnection">
-          <property name="minimumSize">
-           <size>
-            <width>503</width>
-            <height>232</height>
-           </size>
-          </property>
-          <property name="title">
-           <string>Параметры подключения</string>
-          </property>
-          <layout class="QGridLayout" name="gridLayout_4">
-           <item row="0" column="0">
-            <widget class="QLabel" name="lblAmsPort">
-             <property name="minimumSize">
-              <size>
-               <width>216</width>
-               <height>31</height>
-              </size>
-             </property>
+      <attribute name="title">
+       <string>АМС (RS-422C)</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_7">
+       <item>
+        <widget class="QGroupBox" name="groupBoxAmsConnection">
+         <property name="minimumSize">
+          <size>
+           <width>503</width>
+           <height>232</height>
+          </size>
+         </property>
+         <property name="title">
+          <string>Параметры подключения</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_4">
+          <item row="0" column="0">
+           <widget class="QLabel" name="lblAmsPort">
+            <property name="minimumSize">
+             <size>
+              <width>216</width>
+              <height>31</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>COM-порт:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="comboBoxAmsPort">
+            <property name="minimumSize">
+             <size>
+              <width>215</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>Выберите COM-порт для подключения АМС</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QPushButton" name="btnRefreshAmsPorts">
+            <property name="minimumSize">
+             <size>
+              <width>30</width>
+              <height>31</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>30</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>Обновить список портов</string>
+            </property>
+            <property name="text">
+             <string>🔄</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="lblAmsBaudRate">
+            <property name="minimumSize">
+             <size>
+              <width>216</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Скорость:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1" colspan="2">
+           <widget class="QComboBox" name="comboBoxAmsBaudRate">
+            <property name="minimumSize">
+             <size>
+              <width>252</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>Скорость передачи данных (бод)</string>
+            </property>
+            <item>
              <property name="text">
-              <string>COM-порт:</string>
+              <string>9600</string>
              </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QComboBox" name="comboBoxAmsPort">
-             <property name="minimumSize">
-              <size>
-               <width>215</width>
-               <height>30</height>
-              </size>
-             </property>
-             <property name="toolTip">
-              <string>Выберите COM-порт для подключения АМС</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="2">
-            <widget class="QPushButton" name="btnRefreshAmsPorts">
-             <property name="minimumSize">
-              <size>
-               <width>30</width>
-               <height>31</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>30</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="toolTip">
-              <string>Обновить список портов</string>
-             </property>
+            </item>
+            <item>
              <property name="text">
-              <string>🔄</string>
+              <string>19200</string>
              </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="lblAmsBaudRate">
-             <property name="minimumSize">
-              <size>
-               <width>216</width>
-               <height>30</height>
-              </size>
-             </property>
+            </item>
+            <item>
              <property name="text">
-              <string>Скорость:</string>
+              <string>38400</string>
              </property>
-            </widget>
-           </item>
-           <item row="1" column="1" colspan="2">
-            <widget class="QComboBox" name="comboBoxAmsBaudRate">
-             <property name="minimumSize">
-              <size>
-               <width>252</width>
-               <height>30</height>
-              </size>
-             </property>
-             <property name="toolTip">
-              <string>Скорость передачи данных (бод)</string>
-             </property>
-             <item>
-              <property name="text">
-               <string>9600</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>19200</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>38400</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>57600</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>115200</string>
-              </property>
-             </item>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="lblAmsDataBits">
-             <property name="minimumSize">
-              <size>
-               <width>216</width>
-               <height>30</height>
-              </size>
-             </property>
+            </item>
+            <item>
              <property name="text">
-              <string>Биты данных:</string>
+              <string>57600</string>
              </property>
-            </widget>
-           </item>
-           <item row="2" column="1" colspan="2">
-            <widget class="QComboBox" name="comboBoxAmsDataBits">
-             <property name="minimumSize">
-              <size>
-               <width>252</width>
-               <height>30</height>
-              </size>
-             </property>
-             <item>
-              <property name="text">
-               <string>8</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>7</string>
-              </property>
-             </item>
-            </widget>
-           </item>
-           <item row="3" column="0">
-            <widget class="QLabel" name="lblAmsParity">
-             <property name="minimumSize">
-              <size>
-               <width>216</width>
-               <height>30</height>
-              </size>
-             </property>
+            </item>
+            <item>
              <property name="text">
-              <string>Четность:</string>
+              <string>115200</string>
              </property>
-            </widget>
-           </item>
-           <item row="3" column="1" colspan="2">
-            <widget class="QComboBox" name="comboBoxAmsParity">
-             <property name="minimumSize">
-              <size>
-               <width>252</width>
-               <height>30</height>
-              </size>
-             </property>
-             <item>
-              <property name="text">
-               <string>Нет</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>Четная</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>Нечетная</string>
-              </property>
-             </item>
-            </widget>
-           </item>
-           <item row="4" column="0">
-            <widget class="QLabel" name="lblAmsStopBits">
-             <property name="minimumSize">
-              <size>
-               <width>216</width>
-               <height>30</height>
-              </size>
-             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="lblAmsDataBits">
+            <property name="minimumSize">
+             <size>
+              <width>216</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Биты данных:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1" colspan="2">
+           <widget class="QComboBox" name="comboBoxAmsDataBits">
+            <property name="minimumSize">
+             <size>
+              <width>252</width>
+              <height>30</height>
+             </size>
+            </property>
+            <item>
              <property name="text">
-              <string>Стоп-биты:</string>
+              <string>8</string>
              </property>
-            </widget>
-           </item>
-           <item row="4" column="1" colspan="2">
-            <widget class="QComboBox" name="comboBoxAmsStopBits">
-             <property name="minimumSize">
-              <size>
-               <width>252</width>
-               <height>30</height>
-              </size>
-             </property>
-             <item>
-              <property name="text">
-               <string>1</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>2</string>
-              </property>
-             </item>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item>
-         <widget class="QGroupBox" name="groupBoxAmsInfo">
-          <property name="minimumSize">
-           <size>
-            <width>503</width>
-            <height>120</height>
-           </size>
-          </property>
-          <property name="title">
-           <string>Информация</string>
-          </property>
-          <layout class="QVBoxLayout" name="verticalLayout_8">
-           <item>
-            <widget class="QLabel" name="lblAmsInfo">
-             <property name="minimumSize">
-              <size>
-               <width>475</width>
-               <height>80</height>
-              </size>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: #666; font-size: 9pt; padding: 10px;</string>
-             </property>
+            </item>
+            <item>
              <property name="text">
-              <string>АМС (Аэрологический Метеорологический Станция) использует интерфейс RS-422C (программно совместим с RS-485). Протокол обмена: 9.6 Кбит/с, 8 бит данных, 0 четности, 1 стоп-бит. Данные автоматически записываются в архив БД.</string>
+              <string>7</string>
              </property>
-             <property name="wordWrap">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item>
-         <widget class="QGroupBox" name="groupBoxAmsStatus">
-          <property name="minimumSize">
-           <size>
-            <width>503</width>
-            <height>129</height>
-           </size>
-          </property>
-          <property name="title">
-           <string>Статус</string>
-          </property>
-          <layout class="QVBoxLayout" name="verticalLayout_9">
-           <item>
-            <widget class="QLabel" name="lblAmsStatus">
-             <property name="minimumSize">
-              <size>
-               <width>475</width>
-               <height>32</height>
-              </size>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: #666; font-size: 10pt; padding: 5px;</string>
-             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="lblAmsParity">
+            <property name="minimumSize">
+             <size>
+              <width>216</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Четность:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1" colspan="2">
+           <widget class="QComboBox" name="comboBoxAmsParity">
+            <property name="minimumSize">
+             <size>
+              <width>252</width>
+              <height>30</height>
+             </size>
+            </property>
+            <item>
              <property name="text">
-              <string>Статус: Не подключено</string>
+              <string>Нет</string>
              </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
+            </item>
+            <item>
+             <property name="text">
+              <string>Четная</string>
              </property>
-            </widget>
-           </item>
-           <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_4">
-             <item>
-              <widget class="QPushButton" name="btnConnectAms">
-               <property name="minimumSize">
-                <size>
-                 <width>233</width>
-                 <height>35</height>
-                </size>
-               </property>
-               <property name="styleSheet">
-                <string notr="true">background-color: #4CAF50; color: white; font-weight: bold;</string>
-               </property>
-               <property name="text">
-                <string>Подключить</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QPushButton" name="btnDisconnectAms">
-               <property name="enabled">
-                <bool>false</bool>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>233</width>
-                 <height>35</height>
-                </size>
-               </property>
-               <property name="styleSheet">
-                <string notr="true">background-color: #757575; color: white; font-weight: bold;</string>
-               </property>
-               <property name="text">
-                <string>Отключить</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item>
-         <spacer name="verticalSpacer_3">
-          <property name="minimumSize">
-           <size>
-            <width>503</width>
-            <height>10</height>
-           </size>
-          </property>
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>20</width>
-            <height>40</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-       </layout>
-      </widget>
+            </item>
+            <item>
+             <property name="text">
+              <string>Нечетная</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="lblAmsStopBits">
+            <property name="minimumSize">
+             <size>
+              <width>216</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Стоп-биты:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1" colspan="2">
+           <widget class="QComboBox" name="comboBoxAmsStopBits">
+            <property name="minimumSize">
+             <size>
+              <width>252</width>
+              <height>30</height>
+             </size>
+            </property>
+            <item>
+             <property name="text">
+              <string>1</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>2</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBoxAmsInfo">
+         <property name="minimumSize">
+          <size>
+           <width>503</width>
+           <height>120</height>
+          </size>
+         </property>
+         <property name="title">
+          <string>Информация</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_8">
+          <item>
+           <widget class="QLabel" name="lblAmsInfo">
+            <property name="minimumSize">
+             <size>
+              <width>475</width>
+              <height>80</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">color: #666; font-size: 9pt; padding: 10px;</string>
+            </property>
+            <property name="text">
+             <string>АМС (Аэрологический Метеорологический Станция) использует интерфейс RS-422C (программно совместим с RS-485). Протокол обмена: 9.6 Кбит/с, 8 бит данных, 0 четности, 1 стоп-бит. Данные автоматически записываются в архив БД.</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBoxAmsStatus">
+         <property name="minimumSize">
+          <size>
+           <width>503</width>
+           <height>129</height>
+          </size>
+         </property>
+         <property name="title">
+          <string>Статус</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_9">
+          <item>
+           <widget class="QLabel" name="lblAmsStatus">
+            <property name="minimumSize">
+             <size>
+              <width>475</width>
+              <height>32</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">color: #666; font-size: 10pt; padding: 5px;</string>
+            </property>
+            <property name="text">
+             <string>Статус: Не подключено</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_4">
+            <item>
+             <widget class="QPushButton" name="btnConnectAms">
+              <property name="minimumSize">
+               <size>
+                <width>233</width>
+                <height>35</height>
+               </size>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">background-color: #4CAF50; color: white; font-weight: bold;</string>
+              </property>
+              <property name="text">
+               <string>Подключить</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="btnDisconnectAms">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>233</width>
+                <height>35</height>
+               </size>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">background-color: #757575; color: white; font-weight: bold;</string>
+              </property>
+              <property name="text">
+               <string>Отключить</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer_3">
+         <property name="minimumSize">
+          <size>
+           <width>503</width>
+           <height>10</height>
+          </size>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabBINS">
+      <attribute name="title">
+       <string>БИНС (RS-232)</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_10">
+       <item>
+        <widget class="QGroupBox" name="groupBoxBinsConnection">
+         <property name="minimumSize">
+          <size>
+           <width>503</width>
+           <height>232</height>
+          </size>
+         </property>
+         <property name="title">
+          <string>Параметры подключения</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_5">
+          <item row="0" column="0">
+           <widget class="QLabel" name="lblBinsPort">
+            <property name="minimumSize">
+             <size>
+              <width>216</width>
+              <height>31</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>COM-порт:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="comboBoxBinsPort">
+            <property name="minimumSize">
+             <size>
+              <width>215</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>Выберите COM-порт для подключения БИНС</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QPushButton" name="btnRefreshBinsPorts">
+            <property name="minimumSize">
+             <size>
+              <width>30</width>
+              <height>31</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>30</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>Обновить список портов</string>
+            </property>
+            <property name="text">
+             <string>🔄</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="lblBinsBaudRate">
+            <property name="minimumSize">
+             <size>
+              <width>216</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Скорость:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1" colspan="2">
+           <widget class="QComboBox" name="comboBoxBinsBaudRate">
+            <property name="minimumSize">
+             <size>
+              <width>252</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>Скорость передачи данных (бод)</string>
+            </property>
+            <item>
+             <property name="text">
+              <string>9600</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>19200</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>38400</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>57600</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>115200</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="lblBinsDataBits">
+            <property name="minimumSize">
+             <size>
+              <width>216</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Биты данных:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1" colspan="2">
+           <widget class="QComboBox" name="comboBoxBinsDataBits">
+            <property name="minimumSize">
+             <size>
+              <width>252</width>
+              <height>30</height>
+             </size>
+            </property>
+            <item>
+             <property name="text">
+              <string>8</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>7</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="lblBinsParity">
+            <property name="minimumSize">
+             <size>
+              <width>216</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Четность:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1" colspan="2">
+           <widget class="QComboBox" name="comboBoxBinsParity">
+            <property name="minimumSize">
+             <size>
+              <width>252</width>
+              <height>30</height>
+             </size>
+            </property>
+            <item>
+             <property name="text">
+              <string>Нет</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Четная</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Нечетная</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="lblBinsStopBits">
+            <property name="minimumSize">
+             <size>
+              <width>216</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Стоп-биты:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1" colspan="2">
+           <widget class="QComboBox" name="comboBoxBinsStopBits">
+            <property name="minimumSize">
+             <size>
+              <width>252</width>
+              <height>30</height>
+             </size>
+            </property>
+            <item>
+             <property name="text">
+              <string>1</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>2</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBoxBinsInfo">
+         <property name="minimumSize">
+          <size>
+           <width>503</width>
+           <height>120</height>
+          </size>
+         </property>
+         <property name="title">
+          <string>Информация</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_11">
+          <item>
+           <widget class="QLabel" name="lblBinsInfo">
+            <property name="minimumSize">
+             <size>
+              <width>475</width>
+              <height>80</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">color: #666; font-size: 9pt; padding: 10px;</string>
+            </property>
+            <property name="text">
+             <string>БИНС (Бесплатформенная Инерциальная Навигационная Система) передает данные ориентации: дирекционный угол (курс), угол крена, угол тангажа и высоту над уровнем моря. Интерфейс: RS-232, 115200 бод, частота передачи: 10 Гц.</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBoxBinsStatus">
+         <property name="minimumSize">
+          <size>
+           <width>503</width>
+           <height>129</height>
+          </size>
+         </property>
+         <property name="title">
+          <string>Статус</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_12">
+          <item>
+           <widget class="QLabel" name="lblBinsStatus">
+            <property name="minimumSize">
+             <size>
+              <width>475</width>
+              <height>32</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">color: #666; font-size: 10pt; padding: 5px;</string>
+            </property>
+            <property name="text">
+             <string>Статус: Не подключено</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_5">
+            <item>
+             <widget class="QPushButton" name="btnConnectBins">
+              <property name="minimumSize">
+               <size>
+                <width>233</width>
+                <height>35</height>
+               </size>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">background-color: #4CAF50; color: white; font-weight: bold;</string>
+              </property>
+              <property name="text">
+               <string>Подключить</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="btnDisconnectBins">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>233</width>
+                <height>35</height>
+               </size>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">background-color: #757575; color: white; font-weight: bold;</string>
+              </property>
+              <property name="text">
+               <string>Отключить</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer_4">
+         <property name="minimumSize">
+          <size>
+           <width>503</width>
+           <height>10</height>
+          </size>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
     </widget>
    </item>
    <item>
@@ -1221,11 +1570,11 @@ color: white; font-weight: bold;</string>
          <bold>true</bold>
         </font>
        </property>
-       <property name="text">
-        <string>🔍 Автоподключение</string>
-       </property>
        <property name="toolTip">
         <string>Автоматически найти все подключенные устройства (АМС, GNSS, ИВС)</string>
+       </property>
+       <property name="text">
+        <string>🔍 Автоподключение</string>
        </property>
       </widget>
      </item>

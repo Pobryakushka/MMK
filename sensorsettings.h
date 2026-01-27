@@ -36,6 +36,13 @@ public:
     QSerialPort::Parity getAmsParity() const;
     QSerialPort::StopBits getAmsStopBits() const;
 
+    // Получение настроек для БИНС
+    QString getBinsComPort() const;
+    int getBinsBaudRate() const;
+    QSerialPort::DataBits getBinsDataBits() const;
+    QSerialPort::Parity getBinsParity() const;
+    QSerialPort::StopBits getBinsStopBits() const;
+
     // Установка статуса
     void setConnectionStatus(const QString& status, bool connected);
     void setConnectionEnabled(bool enabled);
@@ -52,6 +59,10 @@ public:
     // Установка статуса ИВС (независимо от вкладки)
     void setIwsConnectionStatus(const QString& status, bool connected);
     void setIwsConnectionEnabled(bool enabled);
+
+    // Установка статуса БИНС
+    void setBinsConnectionStatus(const QString& status, bool connected);
+    void setBinsConnectionEnabled(bool enabled);
 
     // Получение настроек для GNSS (независимо от активной вкладки)
     QString getGnssComPort() const;
@@ -80,6 +91,9 @@ signals:
     void amsConnectRequested();
     void amsDisconnectRequested();
 
+    void binsConnectRequested();
+    void binsDisconnectRequested();
+
 private slots:
     void onRefreshPortsClicked();
     void onConnectClicked();
@@ -93,6 +107,10 @@ private slots:
     void onRefreshAmsPortsClicked();
     void onConnectAmsClicked();
     void onDisconnectAmsClicked();
+
+    void onRefreshBinsPortsClicked();
+    void onConnectBinsClicked();
+    void onDisconnectBinsClicked();
 
     // AutoConnector слоты
     void onAutoConnectClicked();
@@ -109,6 +127,7 @@ private:
     void populateComPorts();
     void populateGnssPorts();
     void populateAmsPorts();
+    void populateBinsPorts();
     void setupConnections();
     void setComboBoxPort(QComboBox *comboBox, const QString &portName);
 };

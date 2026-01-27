@@ -14,6 +14,7 @@ SensorSettings::SensorSettings(QWidget *parent)
     populateComPorts();
     populateGnssPorts();
     populateAmsPorts();
+    populateBinsPorts();
     setupConnections();
 
     // Устанавливаем значения по умолчанию для ИВС
@@ -34,6 +35,12 @@ SensorSettings::SensorSettings(QWidget *parent)
     ui->comboBoxAmsDataBits->setCurrentText("8");
     ui->comboBoxAmsParity->setCurrentIndex(0); // Нет
     ui->comboBoxAmsStopBits->setCurrentIndex(0); // 1
+
+    // Устанавливаем значения по умолчанию для БИНС (RS-232)
+    ui->comboBoxBinsBaudRate->setCurrentText("115200");
+    ui->comboBoxBinsDataBits->setCurrentText("8");
+    ui->comboBoxBinsParity->setCurrentIndex(0); // Нет
+    ui->comboBoxBinsStopBits->setCurrentIndex(0); // 1
 
     // Подключаем сигналы AutoConnector
     connect(m_autoConnector, &AutoConnector::detectionStarted,
@@ -69,6 +76,11 @@ void SensorSettings::setupConnections()
     connect(ui->btnRefreshAmsPorts, &QPushButton::clicked, this, &SensorSettings::onRefreshAmsPortsClicked);
     connect(ui->btnConnectAms, &QPushButton::clicked, this, &SensorSettings::onConnectAmsClicked);
     connect(ui->btnDisconnectAms, &QPushButton::clicked, this, &SensorSettings::onDisconnectAmsClicked);
+
+    // БИНС
+    connect(ui->btnRefreshBinsPorts, &QPushButton::clicked, this, &SensorSettings::onRefreshBinsPortsClicked);
+    connect(ui->btnConnectBins, &QPushButton::clicked, this, &SensorSettings::onConnectBinsClicked);
+    connect(ui->btnDisconnectBins, &QPushButton::clicked, this, &SensorSettings::onDisconnectBinsClicked);
 
     // Автоподключение
     connect(ui->btnAutoConnect, &QPushButton::clicked, this, &SensorSettings::onAutoConnectClicked);
@@ -194,6 +206,40 @@ void SensorSettings::populateAmsPorts()
     }
 }
 
+void SensorSettings::populateBinsPorts()
+{
+    ui->comboBoxBinsPort->clear();
+
+    QList<QSerialPortInfo> ports = QSerialPortInfo::availablePorts();
+    for (const QSerialPortInfo &info : ports) {
+        QString portInfo = QString("%1 (%2)").arg(info.portName()).arg(info.description());
+        ui->comboBoxBinsPort->addItem(portInfo, info.systemLocation());
+        qDebug() << "SensorSettings: Найден порт БИНС:" << portInfo << "->" << info.systemLocation();
+    }
+
+    // Добавляем виртуальные pts порты
+    QDir ptsDir("/dev/pts");
+    if (ptsDir.exists()) {
+        QStringList ptsFiles = ptsDir.entryList(QDir::System | QDir::Readable | QDir::NoDotAndDotDot);
+        for (const QString &ptsFile : ptsFiles) {
+            bool isNumber;
+            ptsFile.toInt(&isNumber);
+            if (isNumber) {
+                QString ptsPath = "/dev/pts/" + ptsFile;
+                ui->comboBoxBinsPort->addItem(QString("Virtual pts/%1").arg(ptsFile), ptsPath);
+                qDebug() << "SensorSettings: Найден виртуальный порт БИНС:" << ptsPath;
+            }
+        }
+    }
+
+    if (ui->comboBoxBinsPort->count() == 0) {
+        ui->comboBoxBinsPort->addItem("Нет доступных портов");
+        ui->btnConnectBins->setEnabled(false);
+    } else {
+        ui->btnConnectBins->setEnabled(true);
+    }
+}
+
 void SensorSettings::onRefreshPortsClicked()
 {
     populateComPorts();
@@ -207,6 +253,11 @@ void SensorSettings::onRefreshGnssPortsClicked()
 void SensorSettings::onRefreshAmsPortsClicked()
 {
     populateAmsPorts();
+}
+
+void SensorSettings::onRefreshBinsPortsClicked()
+{
+    populateBinsPorts();
 }
 
 void SensorSettings::onConnectClicked()
@@ -255,6 +306,26 @@ void SensorSettings::onDisconnectAmsClicked()
 void SensorSettings::onCloseClicked()
 {
     close();
+}
+
+void SensorSettings::onConnectBinsClicked()
+{
+    ui->btnConnectBins->setEnabled(false);
+    ui->btnConnectBins->setText("Подключение...");
+    setBinsConnectionEnabled(false);
+
+    ui->btnDisconnectBins->setEnabled(true);
+    ui->btnDisconnectBins->setStyleSheet("background-color: #F44336; color: white; font-weight: bold;");
+
+    ui->lblBinsStatus->setText("Подключение...");
+    ui->lblBinsStatus->setStyleSheet("color: orange; font-size: 10pt; padding: 5px; font-weight: bold;");
+
+    emit binsConnectRequested();
+}
+
+void SensorSettings::onDisconnectBinsClicked()
+{
+    emit binsDisconnectRequested();
 }
 
 QString SensorSettings::getComPort() const
@@ -452,6 +523,71 @@ quint8 SensorSettings::getIwsDeviceAddress() const
 int SensorSettings::getIwsPollInterval() const
 {
     return ui->spinBoxPollInterval->value();
+}
+
+// ===== МЕТОДЫ ДЛЯ БИНС =====
+QString SensorSettings::getBinsComPort() const
+{
+    return ui->comboBoxBinsPort->currentData().toString();
+}
+
+int SensorSettings::getBinsBaudRate() const
+{
+    return ui->comboBoxBinsBaudRate->currentText().toInt();
+}
+
+QSerialPort::DataBits SensorSettings::getBinsDataBits() const
+{
+    int bits = ui->comboBoxBinsDataBits->currentText().toInt();
+    return (bits == 8) ? QSerialPort::Data8 : QSerialPort::Data7;
+}
+
+QSerialPort::Parity SensorSettings::getBinsParity() const
+{
+    int index = ui->comboBoxBinsParity->currentIndex();
+    switch (index) {
+    case 1: return QSerialPort::EvenParity;
+    case 2: return QSerialPort::OddParity;
+    default: return QSerialPort::NoParity;
+    }
+}
+
+QSerialPort::StopBits SensorSettings::getBinsStopBits() const
+{
+    int index = ui->comboBoxBinsStopBits->currentIndex();
+    return (index == 0) ? QSerialPort::OneStop : QSerialPort::TwoStop;
+}
+
+void SensorSettings::setBinsConnectionStatus(const QString &status, bool connected)
+{
+    ui->lblBinsStatus->setText(QString("Статус: %1").arg(status));
+
+    if (connected) {
+        ui->lblBinsStatus->setStyleSheet("color: green; font-size: 10pt; padding: 5px; font-weight: bold;");
+        ui->btnConnectBins->setEnabled(false);
+        ui->btnConnectBins->setText("Подключить"); // Сбрасываем текст
+        ui->btnDisconnectBins->setEnabled(true);
+        ui->btnDisconnectBins->setStyleSheet("background-color: #F44336; color: white; font-weight: bold;");
+    } else {
+        ui->lblBinsStatus->setStyleSheet("color: #666; font-size: 10pt; padding: 5px;");
+        ui->btnConnectBins->setEnabled(true);
+        ui->btnConnectBins->setText("Подключить"); // Сбрасываем текст
+        ui->btnConnectBins->setStyleSheet(""); // Убираем стиль
+        ui->btnDisconnectBins->setEnabled(false);
+        ui->btnDisconnectBins->setStyleSheet("background-color: #757575; color: white; font-weight: bold;");
+    }
+
+    qDebug() << "SensorSettings: Статус БИНС установлен:" << status << "Connected:" << connected;
+}
+
+void SensorSettings::setBinsConnectionEnabled(bool enabled)
+{
+    ui->comboBoxBinsPort->setEnabled(enabled);
+    ui->comboBoxBinsBaudRate->setEnabled(enabled);
+    ui->comboBoxBinsDataBits->setEnabled(enabled);
+    ui->comboBoxBinsParity->setEnabled(enabled);
+    ui->comboBoxBinsStopBits->setEnabled(enabled);
+    ui->btnRefreshBinsPorts->setEnabled(enabled);
 }
 
 void SensorSettings::setAmsConnectionStatus(const QString& status, bool connected)

@@ -114,6 +114,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(sensorSettingsDialog, &SensorSettings::amsConnectRequested, this, &MainWindow::onAmsConnectFromSettings);
     connect(sensorSettingsDialog, &SensorSettings::amsDisconnectRequested, this, &MainWindow::onAmsDisconnectFromSettings);
 
+    connect(sensorSettingsDialog, &SensorSettings::binsConnectRequested, this, &MainWindow::onBinsConnectFromSettings);
+    connect(sensorSettingsDialog, &SensorSettings::binsDisconnectRequested, this, &MainWindow::onBinsDisconnectFromSettings);
+
     // Создаём постоянный экземпляр SourceData (внутри создастся GroundMeteoParams)
     // Не показываем его, просто держим в памяти для доступа к данным
     sourceDataInstance = new SourceData(this);
@@ -122,6 +125,9 @@ MainWindow::MainWindow(QWidget *parent)
     m_amsHandler = new AMSHandler(this);
     setupAmsHandler();
 //    configureAmsDatabase();
+
+    m_binsHandler = new BINSHandler(this);
+    setupBinsHandler();
 }
 
 MainWindow::~MainWindow()
@@ -137,6 +143,9 @@ MainWindow::~MainWindow()
     }
     if (m_amsHandler && m_amsHandler->isConnected()) {
         m_amsHandler->disconnectFromAMS();
+    }
+    if (m_binsHandler && m_binsHandler->isConnected()) {
+        m_binsHandler->disconnectFromBINS();
     }
     delete ui;
 }
@@ -726,9 +735,6 @@ void MainWindow::onAmsDatabaseError(const QString &error)
         "Не удалось записать данные в базу данных:\n" + error);
 }
 
-// ===== ДОПОЛНИТЕЛЬНО: Можно добавить кнопки управления АМС в интерфейс =====
-// Например, в onFunctionalControlClicked() можно добавить:
-
 void MainWindow::onFunctionalControlClicked()
 {
     // Проверяем подключение к АМС
@@ -740,6 +746,112 @@ void MainWindow::onFunctionalControlClicked()
         QMessageBox::information(this, "АМС",
             "АМС не подключена. Подключитесь через настройки датчиков.");
     }
+}
+
+// ========= БИНС =========
+void MainWindow::setupBinsHandler()
+{
+    if (!m_binsHandler) return;
+
+    connect(m_binsHandler, &BINSHandler::connected, this, &MainWindow::onBinsConnected);
+    connect(m_binsHandler, &BINSHandler::disconnected, this, &MainWindow::onBinsDisconnected);
+    connect(m_binsHandler, &BINSHandler::errorOccurred, this, &MainWindow::onBinsError);
+    connect(m_binsHandler, &BINSHandler::statusMessage, this, &MainWindow::onBinsStatusMessage);
+    connect(m_binsHandler, &BINSHandler::dataReceived, this, &MainWindow::onBinsDataReceived);
+
+    qDebug() << "MainWindow: БИНС обработчик настроен";
+}
+
+void MainWindow::onBinsConnectFromSettings()
+{
+    if (!sensorSettingsDialog || !m_binsHandler) return;
+
+    m_binsComPort = sensorSettingsDialog->getBinsComPort();
+    m_binsBaudRate = sensorSettingsDialog->getBinsBaudRate();
+
+    qDebug() << "MainWindow: Попытка подключения к БИНС на" << m_binsComPort << "со скоростью" << m_binsBaudRate;
+
+    if (m_binsHandler->connectToBINS(
+                m_binsComPort,
+                m_binsBaudRate,
+                sensorSettingsDialog->getBinsDataBits(),
+                sensorSettingsDialog->getBinsParity(),
+                sensorSettingsDialog->getBinsStopBits())) {
+        qDebug() << "MainWindow: БИНС подключение инициализировано";
+        sensorSettingsDialog->setBinsConnectionStatus("Ожидание данных...", false);
+    } else {
+        qDebug() << "MainWindow: Ошибка подключения к БИНС";
+        sensorSettingsDialog->setBinsConnectionStatus("Ошибка подключения", false);
+        QMessageBox::warning(this, "Ошибка", "Не удалось подключиться к БИНС. Проверьте порт или настройки.");
+    }
+}
+
+void MainWindow::onBinsDisconnectFromSettings()
+{
+    if (!m_binsHandler) return;
+
+    qDebug() << "MainWindow: Отключение от БИНС";
+    m_binsHandler->disconnectFromBINS();
+
+    if (sensorSettingsDialog) {
+        sensorSettingsDialog->setBinsConnectionStatus("Отключено", false);
+        sensorSettingsDialog->setBinsConnectionEnabled(true);
+    }
+}
+
+void MainWindow::onBinsConnected()
+{
+    qDebug() << "MainWindow: БИНС подключен успешно";
+
+    if (sensorSettingsDialog) {
+        sensorSettingsDialog->setBinsConnectionStatus("Подключено", true);
+        sensorSettingsDialog->setBinsConnectionEnabled(false);
+    }
+
+    statusBar()->showMessage("БИНС подключен успешно", 5000);
+}
+
+void MainWindow::onBinsDisconnected()
+{
+    qDebug() << "MainWindow: БИНС отключен";
+
+    if (sensorSettingsDialog) {
+        sensorSettingsDialog->setBinsConnectionStatus("Отключено", false);
+        sensorSettingsDialog->setBinsConnectionEnabled(true);
+    }
+
+    statusBar()->showMessage("БИНС отключен", 3000);
+}
+
+void MainWindow::onBinsError(const QString &error)
+{
+    qWarning() << "MainWindow: Ошибка БИНС:" << error;
+    statusBar()->showMessage("Ошибка БИНС: " + error, 10000);
+}
+
+void MainWindow::onBinsStatusMessage(const QString &message)
+{
+    qDebug() << "MainWindow: Статус БИНС:" << message;
+    statusBar()->showMessage("БИНС: " + message, 3000);
+}
+
+void MainWindow::onBinsDataReceived(const BINSData &data)
+{
+    if (!data.valid) return;
+
+    // Обновляем поля в интерфейсе
+    ui->editDirectionAngle->setText(QString::number(data.heading, 'f', 2));
+    ui->editRollAngle->setText(QString::number(data.roll, 'f', 2));
+    ui->editPitchAngle->setText(QString::number(data.pitch, 'f', 2));
+    ui->editAltitude->setText(QString::number(data.altitude, 'f', 1));
+
+    // Обновляем строку состояния
+    statusBar()->showMessage(
+                QString("БИНС: Курс %.1f град. | Крен %.1f град. | Тангаж %.1f град.")
+                .arg(data.heading, 0, 'f', 1)
+                .arg(data.roll, 0, 'f', 1)
+                .arg(data.pitch, 0, 'f', 1),
+                2000);
 }
 
 void MainWindow::updateCoordinateSource(const QString &source)

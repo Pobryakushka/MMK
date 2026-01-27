@@ -11,6 +11,7 @@
 #include "qmlcoordinateproxy.h"
 #include "zedf9preceiver.h"
 #include "amshandler.h"
+#include "binshandler.h"
 
 #include "Map/InitialParameters.h"
 #include "Map/FormMapView.h"
@@ -93,6 +94,15 @@ private slots:
     void onAmsDataWritten(int recordId);
     void onAmsDatabaseError(const QString &error);
 
+    // БИНС слоты
+    void onBinsConnectFromSettings();
+    void onBinsDisconnectFromSettings();
+    void onBinsConnected();
+    void onBinsDisconnected();
+    void onBinsError(const QString &error);
+    void onBinsStatusMessage(const QString &message);
+    void onBinsDataReceived(const BINSData &data);
+
 private:
     Ui::MainWindow *ui;
     QTimer *timer;
@@ -124,6 +134,11 @@ private:
     QString m_amsComPort;
     int m_amsBaudRate;
 
+    // БИНС
+    BINSHandler *m_binsHandler;
+    QString m_binsComPort;
+    int m_binsBaudRate;
+
     void createMapComponent(const QString &pluginName);
     void setupMapItems(QQuickItem *item);
     void setupMapCoordinatesButton();
@@ -140,6 +155,8 @@ private:
     // АМС методы
     void setupAmsHandler();
     void configureAmsDatabase();
+
+    void setupBinsHandler();
 
     void resizeEvent(QResizeEvent *event);
     QList<quint16> getRequestParameters();
