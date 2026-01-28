@@ -11,14 +11,13 @@ struct BINSData {
     double heading;
     double roll;
     double pitch;
-    double altitude;
     quint16 packetCounter;
 //    quint32 timestamp;
     bool valid;
 
     BINSData()
-        : heading(0.0), roll(0.0), pitch(0.0), altitude(0.0)
-        , packetCounter(0), /*timestamp(0),*/ valid(false) {}
+        : heading(0.0), roll(0.0), pitch(0.0)
+        , packetCounter(0), valid(false) {}
 };
 
 // Обработчик протокола БИНС
@@ -64,8 +63,8 @@ private:
     // Константы протокола
     static const quint8 PACKET_HEADER = 0xAA;
     static const quint8 PACKET_TYPE_ORIENT = 0x02;
-    static const int MIN_PACKET_SIZE = 22;
-    static const int DATA_SIZE = 20;
+    static const int MIN_PACKET_SIZE = 18;
+    static const int DATA_SIZE = 16;
     static const int CONNECTION_TIMEOUT = 5000;
 
     // Обработка пакетов

@@ -819,11 +819,10 @@ void MainWindow::onBinsDataReceived(const BINSData &data)
     ui->editDirectionAngle->setText(QString::number(data.heading, 'f', 2));
     ui->editRollAngle->setText(QString::number(data.roll, 'f', 2));
     ui->editPitchAngle->setText(QString::number(data.pitch, 'f', 2));
-    ui->editAltitude->setText(QString::number(data.altitude, 'f', 1));
 
     // Обновляем строку состояния
     statusBar()->showMessage(
-                QString("БИНС: Курс %.1f град. | Крен %.1f град. | Тангаж %.1f град.")
+                QString("БИНС: Курс %1 град. | Крен %2 град. | Тангаж %3 град.")
                 .arg(data.heading, 0, 'f', 1)
                 .arg(data.roll, 0, 'f', 1)
                 .arg(data.pitch, 0, 'f', 1),

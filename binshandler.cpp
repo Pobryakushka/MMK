@@ -189,18 +189,13 @@ bool BINSHandler::parseOrientationPacket(const QByteArray &packet)
     m_currentData.pitch = static_cast<double>(extractFloat(packet, offset));
     offset += 4;
 
-    // Высота
-    m_currentData.altitude = static_cast<double>(extractFloat(packet, offset));
-    offset += 4;
-
     m_currentData.valid = true;
 
-    qInfo() << QString("БИНС [%1]: Курс=%.2f° Крен=%.2f° Тангаж=%.2f° Высота=%.1fм")
+    qInfo() << QString("БИНС [%1]: Курс=%2° Крен=%3° Тангаж=%4°")
                 .arg(m_currentData.packetCounter)
                 .arg(m_currentData.heading, 0, 'f', 2)
                 .arg(m_currentData.roll, 0, 'f', 2)
-                .arg(m_currentData.pitch, 0, 'f', 2)
-                .arg(m_currentData.altitude, 0, 'f', 1);
+                .arg(m_currentData.pitch, 0, 'f', 2);
 
     return true;
 }

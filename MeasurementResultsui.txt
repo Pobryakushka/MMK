@@ -483,12 +483,6 @@
             </item>
             <item>
              <widget class="QLabel" name="label_bulleten">
-              <property name="maximumSize">
-               <size>
-                <width>200</width>
-                <height>16777215</height>
-               </size>
-              </property>
               <property name="text">
                <string>ГОДНЫЙ БЮЛЛЕТЕНЬ</string>
               </property>
@@ -525,12 +519,6 @@
             </item>
             <item>
              <widget class="QLabel" name="label_bulletenTime">
-              <property name="maximumSize">
-               <size>
-                <width>220</width>
-                <height>16777215</height>
-               </size>
-              </property>
               <property name="text">
                <string>ВРЕМЯ СОСТАВЛЕНИЯ</string>
               </property>
@@ -703,7 +691,7 @@
                 </property>
                 <property name="minimumSize">
                  <size>
-                  <width>800</width>
+                  <width>600</width>
                   <height>0</height>
                  </size>
                 </property>
@@ -864,9 +852,6 @@ p, li { white-space: pre-wrap; }
               </item>
               <item row="0" column="2" rowspan="2">
                <widget class="QTableWidget" name="tableWidget_meteo11Formalize">
-                <property name="editTriggers">
-                 <set>QAbstractItemView::NoEditTriggers</set>
-                </property>
                 <property name="rowCount">
                  <number>19</number>
                 </property>
@@ -994,7 +979,7 @@ p, li { white-space: pre-wrap; }
                 </property>
                 <property name="minimumSize">
                  <size>
-                  <width>800</width>
+                  <width>450</width>
                   <height>0</height>
                  </size>
                 </property>
@@ -1024,7 +1009,7 @@ p, li { white-space: pre-wrap; }
                  <widget class="QLabel" name="label_amsDegrees1">
                   <property name="font">
                    <font>
-                    <pointsize>10</pointsize>
+                    <pointsize>9</pointsize>
                    </font>
                   </property>
                   <property name="text">
@@ -1041,15 +1026,9 @@ p, li { white-space: pre-wrap; }
                 </item>
                 <item row="1" column="0">
                  <widget class="QLabel" name="label_amsMinutes1">
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>25</height>
-                   </size>
-                  </property>
                   <property name="font">
                    <font>
-                    <pointsize>10</pointsize>
+                    <pointsize>9</pointsize>
                    </font>
                   </property>
                   <property name="text">
@@ -1066,15 +1045,9 @@ p, li { white-space: pre-wrap; }
                 </item>
                 <item row="2" column="0">
                  <widget class="QLabel" name="label_amsSeconds1">
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>25</height>
-                   </size>
-                  </property>
                   <property name="font">
                    <font>
-                    <pointsize>10</pointsize>
+                    <pointsize>9</pointsize>
                    </font>
                   </property>
                   <property name="text">
@@ -1091,15 +1064,9 @@ p, li { white-space: pre-wrap; }
                 </item>
                 <item row="3" column="0">
                  <widget class="QLabel" name="label_amsLongitude">
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>25</height>
-                   </size>
-                  </property>
                   <property name="font">
                    <font>
-                    <pointsize>10</pointsize>
+                    <pointsize>9</pointsize>
                    </font>
                   </property>
                   <property name="text">
@@ -1116,15 +1083,9 @@ p, li { white-space: pre-wrap; }
                 </item>
                 <item row="4" column="0">
                  <widget class="QLabel" name="label_amsDegrees2">
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>25</height>
-                   </size>
-                  </property>
                   <property name="font">
                    <font>
-                    <pointsize>10</pointsize>
+                    <pointsize>9</pointsize>
                    </font>
                   </property>
                   <property name="text">
@@ -1141,15 +1102,9 @@ p, li { white-space: pre-wrap; }
                 </item>
                 <item row="5" column="0">
                  <widget class="QLabel" name="label_amsMinutes2">
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>25</height>
-                   </size>
-                  </property>
                   <property name="font">
                    <font>
-                    <pointsize>10</pointsize>
+                    <pointsize>9</pointsize>
                    </font>
                   </property>
                   <property name="text">
@@ -1166,15 +1121,9 @@ p, li { white-space: pre-wrap; }
                 </item>
                 <item row="6" column="0">
                  <widget class="QLabel" name="label_amsSeconds2">
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>25</height>
-                   </size>
-                  </property>
                   <property name="font">
                    <font>
-                    <pointsize>10</pointsize>
+                    <pointsize>9</pointsize>
                    </font>
                   </property>
                   <property name="text">
@@ -1191,15 +1140,9 @@ p, li { white-space: pre-wrap; }
                 </item>
                 <item row="7" column="0">
                  <widget class="QLabel" name="label_amsLatitude">
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>25</height>
-                   </size>
-                  </property>
                   <property name="font">
                    <font>
-                    <pointsize>10</pointsize>
+                    <pointsize>9</pointsize>
                    </font>
                   </property>
                   <property name="text">
@@ -1237,15 +1180,9 @@ p, li { white-space: pre-wrap; }
                 </property>
                 <item row="0" column="0">
                  <widget class="QLabel" name="label_minutesFromProbe">
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>25</height>
-                   </size>
-                  </property>
                   <property name="font">
                    <font>
-                    <pointsize>10</pointsize>
+                    <pointsize>9</pointsize>
                    </font>
                   </property>
                   <property name="text">
@@ -1262,15 +1199,9 @@ p, li { white-space: pre-wrap; }
                 </item>
                 <item row="1" column="0">
                  <widget class="QLabel" name="label_probeDistance">
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>25</height>
-                   </size>
-                  </property>
                   <property name="font">
                    <font>
-                    <pointsize>10</pointsize>
+                    <pointsize>9</pointsize>
                    </font>
                   </property>
                   <property name="text">
@@ -1287,15 +1218,9 @@ p, li { white-space: pre-wrap; }
                 </item>
                 <item row="2" column="0">
                  <widget class="QLabel" name="label_bulletinType">
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>25</height>
-                   </size>
-                  </property>
                   <property name="font">
                    <font>
-                    <pointsize>10</pointsize>
+                    <pointsize>9</pointsize>
                    </font>
                   </property>
                   <property name="text">
@@ -1312,15 +1237,9 @@ p, li { white-space: pre-wrap; }
                 </item>
                 <item row="3" column="0">
                  <widget class="QLabel" name="label_bulletinDate">
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>25</height>
-                   </size>
-                  </property>
                   <property name="font">
                    <font>
-                    <pointsize>10</pointsize>
+                    <pointsize>9</pointsize>
                    </font>
                   </property>
                   <property name="text">
@@ -1337,15 +1256,9 @@ p, li { white-space: pre-wrap; }
                 </item>
                 <item row="4" column="0">
                  <widget class="QLabel" name="label_amsBias">
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>25</height>
-                   </size>
-                  </property>
                   <property name="font">
                    <font>
-                    <pointsize>10</pointsize>
+                    <pointsize>9</pointsize>
                    </font>
                   </property>
                   <property name="text">
@@ -1369,12 +1282,6 @@ p, li { white-space: pre-wrap; }
                 </property>
                 <item row="0" column="0">
                  <widget class="QLabel" name="label_lastProbeDate">
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>25</height>
-                   </size>
-                  </property>
                   <property name="font">
                    <font>
                     <family>Tahoma</family>
@@ -1395,12 +1302,6 @@ p, li { white-space: pre-wrap; }
                 </item>
                 <item row="1" column="0">
                  <widget class="QLabel" name="label_biasUTC">
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>25</height>
-                   </size>
-                  </property>
                   <property name="font">
                    <font>
                     <family>Tahoma</family>
@@ -1421,12 +1322,6 @@ p, li { white-space: pre-wrap; }
                 </item>
                 <item row="2" column="0">
                  <widget class="QLabel" name="label_avgTime">
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>25</height>
-                   </size>
-                  </property>
                   <property name="font">
                    <font>
                     <family>Tahoma</family>
@@ -1454,12 +1349,6 @@ p, li { white-space: pre-wrap; }
                 </property>
                 <item row="0" column="0">
                  <widget class="QLabel" name="label_probeDegrees1">
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>25</height>
-                   </size>
-                  </property>
                   <property name="font">
                    <font>
                     <pointsize>10</pointsize>
@@ -1479,12 +1368,6 @@ p, li { white-space: pre-wrap; }
                 </item>
                 <item row="1" column="0">
                  <widget class="QLabel" name="label_probeMinutes1">
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>25</height>
-                   </size>
-                  </property>
                   <property name="font">
                    <font>
                     <pointsize>10</pointsize>
@@ -1504,12 +1387,6 @@ p, li { white-space: pre-wrap; }
                 </item>
                 <item row="2" column="0">
                  <widget class="QLabel" name="label_probeSeconds1">
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>25</height>
-                   </size>
-                  </property>
                   <property name="font">
                    <font>
                     <pointsize>10</pointsize>
@@ -1529,12 +1406,6 @@ p, li { white-space: pre-wrap; }
                 </item>
                 <item row="3" column="0">
                  <widget class="QLabel" name="label_probeLongitude">
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>25</height>
-                   </size>
-                  </property>
                   <property name="font">
                    <font>
                     <pointsize>10</pointsize>
@@ -1554,12 +1425,6 @@ p, li { white-space: pre-wrap; }
                 </item>
                 <item row="4" column="0">
                  <widget class="QLabel" name="label_probeDegrees2">
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>25</height>
-                   </size>
-                  </property>
                   <property name="font">
                    <font>
                     <pointsize>10</pointsize>
@@ -1579,12 +1444,6 @@ p, li { white-space: pre-wrap; }
                 </item>
                 <item row="5" column="0">
                  <widget class="QLabel" name="label_probeMinutes2">
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>25</height>
-                   </size>
-                  </property>
                   <property name="font">
                    <font>
                     <pointsize>10</pointsize>
@@ -1604,12 +1463,6 @@ p, li { white-space: pre-wrap; }
                 </item>
                 <item row="6" column="0">
                  <widget class="QLabel" name="label_probeSeconds2">
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>25</height>
-                   </size>
-                  </property>
                   <property name="font">
                    <font>
                     <pointsize>10</pointsize>
@@ -1629,12 +1482,6 @@ p, li { white-space: pre-wrap; }
                 </item>
                 <item row="7" column="0">
                  <widget class="QLabel" name="label_probeLatitude">
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>25</height>
-                   </size>
-                  </property>
                   <property name="font">
                    <font>
                     <pointsize>10</pointsize>
@@ -1686,9 +1533,6 @@ p, li { white-space: pre-wrap; }
             <width>466</width>
             <height>601</height>
            </rect>
-          </property>
-          <property name="editTriggers">
-           <set>QAbstractItemView::NoEditTriggers</set>
           </property>
           <property name="minimumSize">
            <size>
@@ -1945,9 +1789,6 @@ p, li { white-space: pre-wrap; }
             <height>601</height>
            </rect>
           </property>
-          <property name="editTriggers">
-           <set>QAbstractItemView::NoEditTriggers</set>
-          </property>
           <property name="minimumSize">
            <size>
             <width>250</width>
@@ -2187,9 +2028,6 @@ p, li { white-space: pre-wrap; }
             <height>601</height>
            </rect>
           </property>
-          <property name="editTriggers">
-           <set>QAbstractItemView::NoEditTriggers</set>
-          </property>
           <property name="minimumSize">
            <size>
             <width>250</width>
@@ -2403,24 +2241,12 @@ p, li { white-space: pre-wrap; }
           </item>
           <item row="1" column="1">
            <widget class="QTableWidget" name="tableWidget_parm1b65">
-            <property name="editTriggers">
-             <set>QAbstractItemView::NoEditTriggers</set>
-            </property>
             <property name="minimumSize">
              <size>
-              <width>650</width>
+              <width>515</width>
               <height>200</height>
              </size>
             </property>
-            <attribute name="horizontalHeaderDefaultSectionSize">
-             <number>200</number>
-            </attribute>
-            <attribute name="horizontalHeaderStretchLastSection">
-             <bool>true</bool>
-            </attribute>
-            <attribute name="verticalHeaderDefaultSectionSize">
-             <number>35</number>
-            </attribute>
             <row>
              <property name="text">
               <string>Наземное атмосферное давление   Р, мм рт.ст.</string>
