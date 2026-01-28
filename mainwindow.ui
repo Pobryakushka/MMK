@@ -190,14 +190,57 @@
            </widget>
           </item>
           <item row="1" column="0" colspan="2">
-           <widget class="QLabel" name="lblDateTime">
-            <property name="styleSheet">
-             <string notr="true">font-weight: bold; font-size: 11pt;</string>
+           <layout class="QHBoxLayout" name="dateTimeLayout">
+            <property name="spacing">
+             <number>5</number>
             </property>
-            <property name="text">
-             <string>01.01.2024 00:00:00</string>
-            </property>
-           </widget>
+            <item>
+             <widget class="QLineEdit" name="editDateTime">
+              <property name="styleSheet">
+               <string notr="true">font-weight: bold; font-size: 11pt;</string>
+              </property>
+              <property name="text">
+               <string>01.01.2024 00:00:00</string>
+              </property>
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="btnSyncTime">
+              <property name="minimumSize">
+               <size>
+                <width>30</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>30</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Синхронизировать с системным временем</string>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">QPushButton {
+              background-color: white;
+              border: 1px solid gray;
+              border-radius: 3px;
+              font-size: 10pt;
+          }
+          QPushButton:hover {
+              background-color: #e0e0e0;
+          }</string>
+              </property>
+              <property name="text">
+               <string>🕐</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </item>
           <item row="8" column="1">
            <widget class="QLineEdit" name="editRollAngle">

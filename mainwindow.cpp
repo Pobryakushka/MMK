@@ -26,6 +26,9 @@ MainWindow::MainWindow(QWidget *parent)
     , serialPort(nullptr)
     , sensorSettingsDialog(nullptr)
     , sourceDataInstance(nullptr)
+    , m_useManualDateTime(false)
+    , m_isEditingDateTime(false)
+    , m_manualDateTimeSet(false)
     , m_mapCoordinatesEnabled(false)
     , m_gnssEnabled(false)
     , m_manualInputEnabled(false)
@@ -61,6 +64,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->cbWorkMode, &QCheckBox::stateChanged, this, &MainWindow::onWorkModeChanged);
     connect(ui->cbStandbyMode, &QCheckBox::stateChanged, this, &MainWindow::onStandbyModeChanged);
     connect(ui->btnSensorSettings, &QPushButton::clicked, this, &MainWindow::onSensorSettingsClicked);
+    connect(ui->btnSyncTime, &QPushButton::clicked, this, &MainWindow::onSyncTimeClicked);
+    connect(ui->editDateTime, &QLineEdit::editingFinished, this, &MainWindow::onDateTimeEditingFinished);
+    connect(ui->editDateTime, &QLineEdit::textEdited, this, &MainWindow::onDateTimeEditingStarted);
 
     // GNSS сигналы
     connect(m_gnssReceiver, &ZedF9PReceiver::dataReceived, this, &MainWindow::onGnssDataReceived);
@@ -1066,9 +1072,22 @@ void MainWindow::setupMapItems(QQuickItem *item)
 
 void MainWindow::updateDateTime()
 {
+    if (m_isEditingDateTime) {
+        return;
+    }
+
+    if (ui->editDateTime->hasFocus()) {
+        return;
+    }
+
     QString timeString;
 
-    if (m_gnssEnabled && m_gnssReceiver->isConnected()) {
+    if (m_manualDateTimeSet) {
+        // Используем вручную установленное время и продолжаем его инкремент
+        m_manualDateTime = m_manualDateTime.addSecs(1);
+        timeString = m_manualDateTime.toString("dd.MM.yyyy hh:mm:ss");
+    }
+    else if (m_gnssEnabled && m_gnssReceiver->isConnected()) {
         // Используем время из GNSS
         GNSSData data = m_gnssReceiver->getCurrentData();
         if (data.timestamp.isValid()){
@@ -1082,7 +1101,59 @@ void MainWindow::updateDateTime()
         timeString = QDateTime::currentDateTime().toString("dd.MM.yyyy hh:mm:ss");
     }
 
-    ui->lblDateTime->setText(timeString);
+    ui->editDateTime->setText(timeString);
+}
+
+void MainWindow::onSyncTimeClicked()
+{
+    // Синхронизируем с системным временем
+    m_manualDateTime = QDateTime::currentDateTime();
+    ui->editDateTime->setText(m_manualDateTime.toString("dd.MM.yyyy hh:mm:ss"));
+
+    // Помечаем, что время было установлено вручную
+    m_manualDateTimeSet = true;
+    m_useManualDateTime = true;
+
+    statusBar()->showMessage("Время синхронизировано с системным", 3000);
+
+    if (!m_manualInputEnabled) {
+        ui->editDateTime->setStyleSheet("font-weight: bold; font-size: 11pt; background-color: #E8F5E9;");
+    }
+}
+
+void MainWindow::onDateTimeEditingFinished()
+{
+    m_isEditingDateTime = false;
+
+    if (!m_useManualDateTime) {
+        return; // Валидация только в режиме ручного ввода
+    }
+
+    QString inputText = ui->editDateTime->text();
+    QDateTime newDateTime = QDateTime::fromString(inputText, "dd.MM.yyyy hh:mm:ss");
+
+    if (newDateTime.isValid()) {
+        // Время корректно введено
+        m_manualDateTime = newDateTime;
+        m_manualDateTimeSet = true;
+        ui->editDateTime->setStyleSheet("font-weight: bold; font-size: 11pt; background-color: #FFFACD;");
+    } else {
+        // Время введено некоррктно - возвращаем предыдущее значение
+        ui->editDateTime->setText(m_manualDateTime.toString("dd.MM.yyyy hh:mm:ss"));
+
+        // Кратковременная визуальная индикация ошибки
+        ui->editDateTime->setStyleSheet("font-weight: bold; font-size: 11pt; background-color: #FFB6C1;");
+        QTimer::singleShot(500, this, [this]() {
+            ui->editDateTime->setStyleSheet("font-weight: bold; font-size: 11pt; background-color: #FFFACD;");
+        });
+    }
+}
+
+void MainWindow::onDateTimeEditingStarted()
+{
+    if (m_useManualDateTime) {
+        m_isEditingDateTime = true;
+    }
 }
 
 //void MainWindow::onFunctionalControlClicked()
@@ -1110,12 +1181,40 @@ void MainWindow::onManualInputClicked()
     ui->editLongitude->setEnabled(!enabled);
     ui->editPitchAngle->setEnabled(!enabled);
     ui->editRollAngle->setEnabled(!enabled);
+    ui->editDateTime->setReadOnly(enabled);
 
     m_manualInputEnabled = !enabled;
 
     if (m_manualInputEnabled) {
         checkAndDisableConflictingSources("manual");
         updateCoordinateSource("Ручной ввод");
+
+        m_useManualDateTime = true;
+        m_isEditingDateTime = false;
+
+        // Если время еще не было установлено вручную, берем текущее
+        if (!m_manualDateTimeSet) {
+            QDateTime currentDisplayed = QDateTime::fromString(ui->editDateTime->text(), "dd.MM.yyyy hh:mm:ss");
+            if (currentDisplayed.isValid()) {
+                m_manualDateTime = currentDisplayed;
+            } else {
+                m_manualDateTime = QDateTime::currentDateTime();
+            }
+        }
+        // Визуальная индикация редактируемого поля
+        ui->editDateTime->setStyleSheet("font-weight: bold; font-size: 11pt; background-color: #FFFACD;");
+    } else {
+        // При выходе из режима ручного ввода возвращаемся к автоматическому времени
+        m_manualDateTimeSet = true;
+        m_isEditingDateTime = false;
+        ui->editDateTime->setStyleSheet("font-weight: bold; font-size: 11pt;");
+
+        QDateTime currentDisplayed = QDateTime::fromString(ui->editDateTime->text(), "dd.MM.yyyy hh:mm:ss");
+        if (currentDisplayed.isValid()) {
+            m_manualDateTime = currentDisplayed;
+        }
+
+        updateDateTime();
     }
 }
 

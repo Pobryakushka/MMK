@@ -59,6 +59,9 @@ private slots:
     void onWorkModeChanged(int state);
     void onStandbyModeChanged(int state);
     void updateDateTime();
+    void onSyncTimeClicked();
+    void onDateTimeEditingFinished();
+    void onDateTimeEditingStarted();
 
     void onMapCoordinatesToggled();
 
@@ -110,6 +113,11 @@ private:
     QSerialPort *serialPort;
     SensorSettings *sensorSettingsDialog;
     SourceData *sourceDataInstance;
+
+    QDateTime m_manualDateTime;
+    bool m_useManualDateTime;
+    bool m_isEditingDateTime;
+    bool m_manualDateTimeSet;
 
     QmlCoordinateProxy qcp;
 
