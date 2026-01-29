@@ -96,6 +96,13 @@ private slots:
     void onAmsMeasurementProgress(int percent, float angle);
     void onAmsDataWritten(int recordId);
     void onAmsDatabaseError(const QString &error);
+    void onAmsMeasurementStageChanged(MeasurementStage stage, const QString &description);
+    void onAmsMeasurementCompleted(int recordId);
+    void onAmsMeasurementFailed(const QString &reason);
+    void onAmsNeedIntermediateData(int progress);
+    void onAmsAvgWindReceived(const QVector<WindProfileData> &data);
+    void onAmsActualWindReceived(const QVector<WindProfileData> &data);
+    void onAmsMeasuredWindReceived(const QVector<MeasuredWindData> &data);
 
     // БИНС слоты
     void onBinsConnectFromSettings();

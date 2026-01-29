@@ -523,9 +523,9 @@ void MainWindow::checkAndDisableConflictingSources(const QString &activeSource)
 
 void MainWindow::setupAmsHandler()
 {
-    if (!m_amsHandler) return;
+    m_amsHandler = new AMSHandler(this);
 
-    // Подключаем сигналы АМС
+    // Существующие сигналы
     connect(m_amsHandler, &AMSHandler::connected,
             this, &MainWindow::onAmsConnected);
     connect(m_amsHandler, &AMSHandler::disconnected,
@@ -534,14 +534,26 @@ void MainWindow::setupAmsHandler()
             this, &MainWindow::onAmsError);
     connect(m_amsHandler, &AMSHandler::statusMessage,
             this, &MainWindow::onAmsStatusMessage);
+
+    // НОВЫЕ сигналы для процесса измерения
+    connect(m_amsHandler, &AMSHandler::measurementStageChanged,
+            this, &MainWindow::onAmsMeasurementStageChanged);
     connect(m_amsHandler, &AMSHandler::measurementProgressUpdated,
             this, &MainWindow::onAmsMeasurementProgress);
-    connect(m_amsHandler, &AMSHandler::dataWrittenToDatabase,
-            this, &MainWindow::onAmsDataWritten);
-    connect(m_amsHandler, &AMSHandler::databaseError,
-            this, &MainWindow::onAmsDatabaseError);
+    connect(m_amsHandler, &AMSHandler::measurementCompleted,
+            this, &MainWindow::onAmsMeasurementCompleted);
+    connect(m_amsHandler, &AMSHandler::measurementFailed,
+            this, &MainWindow::onAmsMeasurementFailed);
+    connect(m_amsHandler, &AMSHandler::needIntermediateData,
+            this, &MainWindow::onAmsNeedIntermediateData);
 
-    qDebug() << "MainWindow: АМС обработчик настроен";
+    // Подключаем результаты
+    connect(m_amsHandler, &AMSHandler::avgWindDataReceived,
+            this, &MainWindow::onAmsAvgWindReceived);
+    connect(m_amsHandler, &AMSHandler::actualWindDataReceived,
+            this, &MainWindow::onAmsActualWindReceived);
+    connect(m_amsHandler, &AMSHandler::measuredWindDataReceived,
+            this, &MainWindow::onAmsMeasuredWindReceived);
 }
 
 void MainWindow::configureAmsDatabase()
@@ -673,31 +685,31 @@ void MainWindow::onAmsStatusMessage(const QString &message)
     statusBar()->showMessage("АМС: " + message, 3000);
 }
 
-void MainWindow::onAmsMeasurementProgress(int percent, float angle)
-{
-    if (percent >= 0 && percent <= 100) {
-        qDebug() << "MainWindow: Прогресс измерений АМС:" << percent << "%, угол:" << angle << "°";
-        statusBar()->showMessage(
-            QString("АМС: Измерения %1% (угол: %2°)").arg(percent).arg(angle, 0, 'f', 1),
-            2000);
-    } else if (percent == -1) {
-        qDebug() << "MainWindow: Измерения АМС завершены успешно";
-        statusBar()->showMessage("АМС: Измерения завершены успешно", 5000);
+//void MainWindow::onAmsMeasurementProgress(int percent, float angle)
+//{
+//    if (percent >= 0 && percent <= 100) {
+//        qDebug() << "MainWindow: Прогресс измерений АМС:" << percent << "%, угол:" << angle << "°";
+//        statusBar()->showMessage(
+//            QString("АМС: Измерения %1% (угол: %2°)").arg(percent).arg(angle, 0, 'f', 1),
+//            2000);
+//    } else if (percent == -1) {
+//        qDebug() << "MainWindow: Измерения АМС завершены успешно";
+//        statusBar()->showMessage("АМС: Измерения завершены успешно", 5000);
 
-        // Можно запросить данные
-        QTimer::singleShot(500, this, [this]() {
-            if (m_amsHandler && m_amsHandler->isConnected()) {
-                m_amsHandler->requestAvgWind();
-                m_amsHandler->requestActualWind();
-                m_amsHandler->requestMeasuredWind();
-            }
-        });
-    } else if (percent == -2) {
-        qWarning() << "MainWindow: Ошибка при измерениях АМС";
-        statusBar()->showMessage("АМС: Ошибка при измерениях", 5000);
-        QMessageBox::warning(this, "АМС", "Ошибка при выполнении измерений");
-    }
-}
+//        // Можно запросить данные
+//        QTimer::singleShot(500, this, [this]() {
+//            if (m_amsHandler && m_amsHandler->isConnected()) {
+//                m_amsHandler->requestAvgWind();
+//                m_amsHandler->requestActualWind();
+//                m_amsHandler->requestMeasuredWind();
+//            }
+//        });
+//    } else if (percent == -2) {
+//        qWarning() << "MainWindow: Ошибка при измерениях АМС";
+//        statusBar()->showMessage("АМС: Ошибка при измерениях", 5000);
+//        QMessageBox::warning(this, "АМС", "Ошибка при выполнении измерений");
+//    }
+//}
 
 void MainWindow::onAmsDataWritten(int recordId)
 {
@@ -726,6 +738,153 @@ void MainWindow::onFunctionalControlClicked()
         QMessageBox::information(this, "АМС",
             "АМС не подключена. Подключитесь через настройки датчиков.");
     }
+}
+
+void MainWindow::onAmsMeasurementStageChanged(MeasurementStage stage, const QString &description)
+{
+    qDebug() << "MainWindow: Этап измерения:" << description;
+    statusBar()->showMessage(description);
+
+    // Можно добавить визуализацию этапов в UI
+    // Например, подсветить текущий этап в списке
+}
+
+void MainWindow::onAmsMeasurementProgress(int percent, float angle)
+{
+    qDebug() << "MainWindow: Прогресс измерения:" << percent << "%, угол:" << angle << "°";
+
+    // Обновляем прогресс-бар если есть
+    // ui->progressBarMeasurement->setValue(percent >= 0 ? percent : 0);
+
+    statusBar()->showMessage(
+        QString("Измерение: %1%, Угол РПВ: %2°").arg(percent).arg(angle, 0, 'f', 1)
+    );
+}
+
+void MainWindow::onAmsMeasurementCompleted(int recordId)
+{
+    qDebug() << "MainWindow: Измерение завершено успешно, ID записи:" << recordId;
+
+    QMessageBox::information(this, "Успех",
+        QString("Измерение завершено успешно!\n\nID записи в БД: %1\n\n"
+                "Результаты сохранены и доступны в разделе 'Результаты измерений'.")
+        .arg(recordId));
+
+    // Обновляем UI
+    ui->lblStatus->setText("ГОТОВ");
+    ui->lblStatus->setStyleSheet("color: green; font-weight: bold; font-size: 14pt; "
+                                  "border: 2px solid green; padding: 5px; border-radius: 5px;");
+
+    ui->btnStart->setEnabled(true);
+    ui->btnStop->setEnabled(false);
+
+    statusBar()->showMessage("Измерение завершено успешно", 10000);
+}
+
+void MainWindow::onAmsMeasurementFailed(const QString &reason)
+{
+    qWarning() << "MainWindow: Измерение не удалось:" << reason;
+
+    QMessageBox::critical(this, "Ошибка измерения",
+        QString("Измерение не было завершено:\n\n%1").arg(reason));
+
+    // Обновляем UI
+    ui->lblStatus->setText("ОШИБКА");
+    ui->lblStatus->setStyleSheet("color: red; font-weight: bold; font-size: 14pt; "
+                                  "border: 2px solid red; padding: 5px; border-radius: 5px;");
+
+    ui->btnStart->setEnabled(true);
+    ui->btnStop->setEnabled(false);
+
+    statusBar()->showMessage("Ошибка: " + reason, 10000);
+}
+
+void MainWindow::onAmsNeedIntermediateData(int progress)
+{
+    qDebug() << "MainWindow: Требуются промежуточные данные на" << progress << "%";
+
+    // ЗДЕСЬ нужно запросить данные от внешних систем:
+    // 1. Запрос приземных данных к 1Б65
+    // 2. Запрос Метео11 к ЭВМ
+
+    // Пока используем заглушку с тестовыми данными
+    QMessageBox::information(this, "Требуются данные",
+        QString("АМС запрашивает промежуточные данные.\n\nПрогресс: %1%\n\n"
+                "Будут отправлены тестовые данные.").arg(progress));
+
+    // Формируем тестовые данные
+    int day = QDate::currentDate().day();
+    int hour = QTime::currentTime().hour();
+    int tenMinutes = QTime::currentTime().minute() / 10;
+
+    float stationAltitude = ui->editAltitude->text().toFloat();
+
+    // Заполняем векторы нулями (в реальности здесь данные от 1Б65 и ЭВМ)
+    QVector<float> avgWindDir(23, 0.0f);
+    QVector<float> avgWindSpeed(23, 0.0f);
+
+    // Для теста заполним какими-то значениями
+    for (int i = 0; i < 23; i++) {
+        avgWindDir[i] = 180.0f + i * 5.0f;
+        avgWindSpeed[i] = 5.0f + i * 0.5f;
+    }
+
+    float reachedHeight = 3000.0f;
+    float surfaceWindDir = 270.0f;
+    float surfaceWindSpeed = 5.0f;
+    QDateTime currentDateTime = QDateTime::currentDateTime();
+
+    // Отправляем данные в АМС
+    bool success = m_amsHandler->sendSourceDataDuringMeasurement(
+        day, hour, tenMinutes,
+        stationAltitude,
+        avgWindDir, avgWindSpeed,
+        reachedHeight,
+        surfaceWindDir, surfaceWindSpeed,
+        currentDateTime
+    );
+
+    if (success) {
+        qDebug() << "MainWindow: Промежуточные данные отправлены";
+        statusBar()->showMessage("Промежуточные данные отправлены в АМС", 3000);
+    } else {
+        qWarning() << "MainWindow: Не удалось отправить промежуточные данные";
+        QMessageBox::warning(this, "Ошибка",
+            "Не удалось отправить промежуточные данные в АМС.");
+    }
+}
+
+void MainWindow::onAmsAvgWindReceived(const QVector<WindProfileData> &data)
+{
+    qDebug() << "MainWindow: Получен профиль среднего ветра:" << data.size() << "точек";
+
+    // Здесь можно отобразить данные в UI
+    // Например, построить график или показать в таблице
+
+    statusBar()->showMessage(
+        QString("Получен профиль среднего ветра (%1 уровней)").arg(data.size()),
+        3000
+    );
+}
+
+void MainWindow::onAmsActualWindReceived(const QVector<WindProfileData> &data)
+{
+    qDebug() << "MainWindow: Получен профиль действительного ветра:" << data.size() << "точек";
+
+    statusBar()->showMessage(
+        QString("Получен профиль действительного ветра (%1 уровней)").arg(data.size()),
+        3000
+    );
+}
+
+void MainWindow::onAmsMeasuredWindReceived(const QVector<MeasuredWindData> &data)
+{
+    qDebug() << "MainWindow: Получен профиль измеренного ветра:" << data.size() << "точек";
+
+    statusBar()->showMessage(
+        QString("Получен профиль измеренного ветра (%1 измерений)").arg(data.size()),
+        3000
+    );
 }
 
 // ========= БИНС =========
@@ -1262,16 +1421,107 @@ void MainWindow::onMeasurementResultsClicked()
 
 void MainWindow::onStartClicked()
 {
+    // Проверяем подключение к АМС
+    if (!m_amsHandler || !m_amsHandler->isConnected()) {
+        QMessageBox::warning(this, "Ошибка",
+            "АМС не подключен. Подключитесь к АМС через настройки датчиков.");
+        return;
+    }
+
+    // Проверяем, не выполняется ли уже измерение
+    if (m_amsHandler->getMeasurementStatus() == STATUS_RUNNING) {
+        QMessageBox::warning(this, "Ошибка",
+            "Измерение уже выполняется. Остановите текущее измерение перед запуском нового.");
+        return;
+    }
+
+    // Обновляем UI
     ui->lblStatus->setText("РАБОТА");
     ui->lblStatus->setStyleSheet("color: blue; font-weight: bold; font-size: 14pt; "
                                   "border: 2px solid blue; padding: 5px; border-radius: 5px;");
+
+    // Получаем параметры для запуска измерения
+    WorkMode mode = ui->cbWorkMode->isChecked() ? MODE_WORKING : MODE_STANDBY;
+    Litera litera = LITERA_1; // Можно добавить выбор в UI
+
+    // Собираем координаты станции
+    StationCoordinates coords;
+    bool ok;
+
+    // Широта (переводим в секунды)
+    double lat = ui->editLatitude->text().toDouble(&ok);
+    if (!ok) lat = 0.0;
+    coords.latitude = static_cast<int>(lat * 3600.0);
+
+    // Долгота (переводим в секунды)
+    double lon = ui->editLongitude->text().toDouble(&ok);
+    if (!ok) lon = 0.0;
+    coords.longitude = static_cast<int>(lon * 3600.0);
+
+    // Высота
+    coords.altitude = ui->editAltitude->text().toFloat();
+
+    // Углы ориентации
+    coords.azimuth = ui->editDirectionAngle->text().toFloat();
+    coords.pitch = ui->editPitchAngle->text().toFloat();
+    coords.roll = ui->editRollAngle->text().toFloat();
+
+    // Дата и время
+    QDateTime dateTime;
+    if (m_useManualDateTime && m_manualDateTimeSet) {
+        dateTime = m_manualDateTime;
+    } else {
+        dateTime = QDateTime::currentDateTime();
+    }
+
+    // Запускаем полную последовательность измерения
+    qDebug() << "MainWindow: Запуск измерения АМС";
+    qDebug() << "  Режим:" << (mode == MODE_WORKING ? "РАБОЧИЙ" : "ДЕЖУРНЫЙ");
+    qDebug() << "  Координаты:" << lat << lon << coords.altitude;
+    qDebug() << "  Углы:" << coords.azimuth << coords.pitch << coords.roll;
+
+    bool success = m_amsHandler->startMeasurementSequence(mode, litera, coords, dateTime);
+
+    if (!success) {
+        QMessageBox::warning(this, "Ошибка",
+            "Не удалось запустить измерение АМС. Проверьте подключение.");
+
+        // Возвращаем статус в ГОТОВ
+        ui->lblStatus->setText("ГОТОВ");
+        ui->lblStatus->setStyleSheet("color: green; font-weight: bold; font-size: 14pt; "
+                                      "border: 2px solid green; padding: 5px; border-radius: 5px;");
+        return;
+    }
+
+    // Блокируем кнопку старта, разблокируем стоп
+    ui->btnStart->setEnabled(false);
+    ui->btnStop->setEnabled(true);
+
+    statusBar()->showMessage("Измерение АМС запущено...", 5000);
 }
 
 void MainWindow::onStopClicked()
 {
+    // Останавливаем измерение АМС если оно выполняется
+    if (m_amsHandler && m_amsHandler->getMeasurementStatus() == STATUS_RUNNING) {
+        bool stopped = m_amsHandler->stopMeasurement();
+
+        if (stopped) {
+            statusBar()->showMessage("Измерение АМС остановлено", 3000);
+        } else {
+            QMessageBox::warning(this, "Предупреждение",
+                "Не удалось корректно остановить измерение АМС.");
+        }
+    }
+
+    // Обновляем UI
     ui->lblStatus->setText("ГОТОВ");
     ui->lblStatus->setStyleSheet("color: green; font-weight: bold; font-size: 14pt; "
                                   "border: 2px solid green; padding: 5px; border-radius: 5px;");
+
+    // Разблокируем кнопку старта, блокируем стоп
+    ui->btnStart->setEnabled(true);
+    ui->btnStop->setEnabled(false);
 }
 
 void MainWindow::onWorkModeChanged(int state)
