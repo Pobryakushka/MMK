@@ -19,6 +19,16 @@
 #include <QStatusBar>
 #include <QDebug>
 
+// ====================================================================
+// НАСТРОЙКА ПРОТОКОЛА IWS
+// ====================================================================
+// Измените эту константу для выбора протокола связи с IWS:
+// 0 = UMB Protocol (текущие значения)
+// 1 = Modbus RTU (средние значения) - рекомендуется для IWS
+// ====================================================================
+const int IWS_PROTOCOL = 1;  // 1 = Modbus RTU по умолчанию
+// ====================================================================
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -1075,16 +1085,30 @@ void MainWindow::onConnectRequested()
         sensorSettingsDialog->setIwsConnectionEnabled(false);
         updateIwsStatusLabel(true);
 
-        // Настраиваем протокол в GroundMeteoParams (если он уже создан)
+        // Настраиваем протокол в GroundMeteoParams
         GroundMeteoParams* meteoParams = GroundMeteoParams::instance();
         if (meteoParams) {
+            // ИСПОЛЬЗУЕМ КОНСТАНТУ IWS_PROTOCOL (определена в начале файла)
+            int protocolToUse = IWS_PROTOCOL;
+
+            // Если нужно, можно переопределить из настроек
+            // protocolToUse = sensorSettingsDialog->getIwsProtocolIndex();
+
             GroundMeteoParams::RS485Protocol protocol =
-                (sensorSettingsDialog->getIwsProtocolIndex() == 0) ?
+                (protocolToUse == 0) ?
                 GroundMeteoParams::UMB_PROTOCOL :
                 GroundMeteoParams::MODBUS_RTU;
+
             meteoParams->setProtocol(protocol);
-            meteoParams->setDeviceAddress(sensorSettingsDialog->getIwsDeviceAddress());
-            qDebug() << "Protocol configured in GroundMeteoParams";
+
+            // Получаем адрес устройства из настроек
+            quint8 deviceAddress = sensorSettingsDialog->getIwsDeviceAddress();
+            meteoParams->setDeviceAddress(deviceAddress);
+
+            qDebug() << "IWS: Configured"
+                     << (protocolToUse == 0 ? "UMB" : "Modbus RTU")
+                     << "protocol, address" << QString("0x%1").arg(deviceAddress, 2, 16, QChar('0'))
+                     << (protocolToUse == 1 ? "(AVERAGE values)" : "");
         } else {
             qDebug() << "GroundMeteoParams not created yet. Will be configured when 'Initial Data' is opened.";
         }
@@ -1167,14 +1191,37 @@ void MainWindow::pollMeteoStation()
     // Получаем параметры для запроса
     QList<quint16> params = getRequestParameters();
 
+    if (params.isEmpty()) {
+        qWarning() << "No parameters to request";
+        return;
+    }
+
     // Создаём запрос через GroundMeteoParams
     QByteArray request;
-    int protocolIndex = sensorSettingsDialog->getIwsProtocolIndex();
 
-    if (protocolIndex == 0) { // UMB
+    // ИСПОЛЬЗУЕМ КОНСТАНТУ IWS_PROTOCOL (определена в начале файла)
+    int protocolToUse = IWS_PROTOCOL;
+
+    // Если нужно, можно переопределить из настроек
+    // protocolToUse = sensorSettingsDialog->getIwsProtocolIndex();
+
+    // Получаем адрес устройства из настроек
+    quint8 deviceAddress = sensorSettingsDialog ?
+                           sensorSettingsDialog->getIwsDeviceAddress() :
+                           (protocolToUse == 0 ? 0x70 : 0x01);
+
+    if (protocolToUse == 0) { // UMB
+        meteoParams->setProtocol(GroundMeteoParams::UMB_PROTOCOL);
+        meteoParams->setDeviceAddress(deviceAddress);
         request = meteoParams->createUmbReadRequest(params);
-    } else { // MODBUS
+        qDebug() << "Polling IWS with UMB protocol (current values), address"
+                 << QString("0x%1").arg(deviceAddress, 2, 16, QChar('0'));
+    } else { // MODBUS RTU
+        meteoParams->setProtocol(GroundMeteoParams::MODBUS_RTU);
+        meteoParams->setDeviceAddress(deviceAddress);
         request = meteoParams->createModbusReadRequest(params);
+        qDebug() << "Polling IWS with Modbus RTU protocol (AVERAGE values), address"
+                 << QString("0x%1").arg(deviceAddress, 2, 16, QChar('0'));
     }
 
     if (request.isEmpty()) {
@@ -1194,18 +1241,38 @@ QList<quint16> MainWindow::getRequestParameters()
 {
     QList<quint16> params;
 
-    if (sensorSettingsDialog->getIwsProtocolIndex() == 0) { // UMB
-        params << 0x0064  // Temperature
-               << 0x00C8  // Humidity
-               << 0x012C  // Pressure
-               << 0x0190  // Wind Speed
-               << 0x01F4; // Wind Direction
-    } else { // MODBUS
-        params << 0x0000
-               << 0x0001
-               << 0x0002
-               << 0x0003
-               << 0x0004;
+    // ИСПОЛЬЗУЕМ КОНСТАНТУ IWS_PROTOCOL (определена в начале файла)
+    int protocolToUse = IWS_PROTOCOL;
+
+    // Если нужно, можно переопределить из настроек
+    // if (sensorSettingsDialog) {
+    //     protocolToUse = sensorSettingsDialog->getIwsProtocolIndex();
+    // }
+
+    if (protocolToUse == 0) { // UMB - текущие значения
+        params << 0x0064  // Temperature (текущая)
+               << 0x00C8  // Humidity (текущая)
+               << 0x012C  // Pressure (текущее)
+               << 0x0190  // Wind Speed (текущая)
+               << 0x01F4; // Wind Direction (текущее)
+        qDebug() << "Request parameters: UMB current values";
+    } else { // MODBUS RTU - СРЕДНИЕ значения (функция 0x04)
+        // Оптимизированный запрос: читаем близкие регистры вместе
+        // Группируем регистры чтобы не читать 70 штук сразу
+
+        // ВАРИАНТ 1: Все 5 регистров (читает 13-82 = 70 регистров)
+        // Работает, но читает много лишнего
+        params << 13  // Humidity Avg (влажность средняя)
+               << 21  // Wind Direction Avg (направление ветра среднее)
+               << 34  // Temperature Avg (температура средняя)
+               << 45  // Wind Speed Avg (скорость ветра средняя)
+               << 82; // Pressure Avg (давление среднее)
+
+        // ВАРИАНТ 2: Если хотите читать меньше за раз, раскомментируйте это:
+        // params << 13 << 21 << 34 << 45;  // 4 параметра (13-45 = 33 регистра)
+        // В следующем цикле добавить: params << 82;  // 1 параметр
+
+        qDebug() << "Request parameters: Modbus RTU (0x04) AVERAGE values, registers:" << params;
     }
 
     return params;

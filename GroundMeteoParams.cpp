@@ -2,18 +2,21 @@
 #include "ui_GroundMeteoParams.h"
 #include <QDebug>
 #include <QtMath>
+#include <algorithm>  // Для std::min_element, std::max_element
 
 GroundMeteoParams* GroundMeteoParams::s_instance = nullptr;
 
 GroundMeteoParams::GroundMeteoParams(QWidget *parent)
     : QDialog(parent, Qt::CustomizeWindowHint)
     , ui(new Ui::GroundMeteoParams)
-    , m_protocol(UMB_PROTOCOL)
-    , m_deviceAddress(0x70)
+    , m_protocol(MODBUS_RTU)  // Используем Modbus RTU по умолчанию для IWS
+    , m_deviceAddress(0x70)   // Адрес IWS по умолчанию
 {
     ui->setupUi(this);
 
     s_instance = this;
+
+    qDebug() << "GroundMeteoParams initialized with Modbus RTU protocol, device address 0x01";
 
     connect(ui->btnGroundParamsClose, &QPushButton::clicked, this, [this](){
         close();
@@ -36,21 +39,41 @@ GroundMeteoParams* GroundMeteoParams::instance()
 
 QByteArray GroundMeteoParams::createModbusReadRequest(const QList<quint16>& parameters)
 {
+    if (parameters.isEmpty()) {
+        qWarning() << "Modbus: empty parameters list";
+        return QByteArray();
+    }
+
+    // СОХРАНЯЕМ запрошенные регистры для парсинга
+    m_lastRequestedRegisters = parameters;
+
+    // Находим минимальный и максимальный адрес
+    quint16 minAddr = *std::min_element(parameters.begin(), parameters.end());
+    quint16 maxAddr = *std::max_element(parameters.begin(), parameters.end());
+    quint16 regCount = maxAddr - minAddr + 1;
+
+    qDebug() << "Modbus Request (AVERAGE values):";
+    qDebug() << "  Device:" << m_deviceAddress;
+    qDebug() << "  Start:" << minAddr;
+    qDebug() << "  Count:" << regCount;
+    qDebug() << "  Requested registers:" << parameters;
+    qDebug() << "  *** TESTING FUNCTION 0x04 (Read Input Registers) ***";
+
     QByteArray request;
     request.append(m_deviceAddress);
-    request.append(0x03); // Read holding registers
+    request.append(0x04); // Read INPUT registers (вместо 0x03 Holding)
 
-    quint16 startAddr = parameters.first();
-    request.append(static_cast<char>((startAddr >> 8) & 0xFF));
-    request.append(static_cast<char>(startAddr & 0xFF));
+    request.append(static_cast<char>((minAddr >> 8) & 0xFF));
+    request.append(static_cast<char>(minAddr & 0xFF));
 
-    quint16 regCount = parameters.size();
     request.append(static_cast<char>((regCount >> 8) & 0xFF));
     request.append(static_cast<char>(regCount & 0xFF));
 
     quint16 crc = calculateModbusCRC16(request);
     request.append(static_cast<char>(crc & 0xFF));
     request.append(static_cast<char>((crc >> 8) & 0xFF));
+
+    qDebug() << "Modbus request:" << request.toHex(' ');
 
     return request;
 }
@@ -132,16 +155,38 @@ void GroundMeteoParams::onDataReceived(const QByteArray& data)
     if (m_protocol == MODBUS_RTU) {
         qDebug() << "Parsing as MODBUS RTU";
         // Для MODBUS проверяем минимальный размер пакета
-        if (m_receiveBuffer.size() >= 5) {
-            parseSuccess = parseModbusResponse(m_receiveBuffer, values);
-            if (parseSuccess) {
-                qDebug() << "MODBUS parse successful";
-                m_receiveBuffer.clear();
+        if (m_receiveBuffer.size() >= 7) {
+            quint8 byteCount = static_cast<quint8>(m_receiveBuffer[2]);
+            int expectedSize = 3 + byteCount + 2;
+
+            qDebug() << "Expected Modbus packet size:" << expectedSize;
+            qDebug() << "Current buffer size:" << m_receiveBuffer.size();
+
+            if (m_receiveBuffer.size() >= expectedSize) {
+                QByteArray packet = m_receiveBuffer.left(expectedSize);
+                qDebug() << "Extracted Modbus packet:" << packet.toHex(' ');
+
+                // Используем метод с маппингом регистров
+                parseSuccess = parseModbusResponseWithMapping(packet, m_lastRequestedRegisters, values);
+
+                if (parseSuccess) {
+                    qDebug() << "MODBUS parse successful:" << values.size() << "AVERAGE values";
+                    m_receiveBuffer.remove(0, expectedSize);
+                } else {
+                    qDebug() << "MODBUS parse failed, clearing buffer";
+                    m_receiveBuffer.clear();
+                }
             } else {
-                qDebug() << "MODBUS parse failed";
+                qDebug() << "Waiting for more data...";
             }
         } else {
-            qDebug() << "Buffer too small for MODBUS (need 5, have" << m_receiveBuffer.size() << ")";
+            qDebug() << "Buffer too small for MODBUS (need 7, have" << m_receiveBuffer.size() << ")";
+        }
+
+        // Очистка переполненного буфера
+        if (m_receiveBuffer.size() > 512) {
+            qDebug() << "Buffer overflow, clearing";
+            m_receiveBuffer.clear();
         }
     } else if (m_protocol == UMB_PROTOCOL) {
         qDebug() << "Parsing as UMB protocol";
@@ -249,24 +294,47 @@ QString GroundMeteoParams::mapParameterToTableRow(const QString& paramName)
 
     qDebug() << "Mapping parameter:" << paramName;
 
+    // UMB протокол (старые текущие значения)
     if (paramName == "Wind Speed") {
-        qDebug() << "Mapped to: скорость ветра";
+        qDebug() << "Mapped to: скорость ветра (UMB текущее)";
         return "скорость ветра";
     }
     if (paramName == "Wind Direction") {
-        qDebug() << "Mapped to: направление ветра";
+        qDebug() << "Mapped to: направление ветра (UMB текущее)";
         return "направление ветра";
     }
     if (paramName == "Pressure") {
-        qDebug() << "Mapped to: давление";
+        qDebug() << "Mapped to: давление (UMB текущее)";
         return "давление";
     }
     if (paramName == "Humidity") {
-        qDebug() << "Mapped to: влажность";
+        qDebug() << "Mapped to: влажность (UMB текущая)";
         return "влажность";
     }
     if (paramName == "Temperature") {
-        qDebug() << "Mapped to: температура";
+        qDebug() << "Mapped to: температура (UMB текущая)";
+        return "температура";
+    }
+
+    // Modbus RTU (новые СРЕДНИЕ значения)
+    if (paramName == "Wind Speed Avg") {
+        qDebug() << "Mapped to: скорость ветра (Modbus СРЕДНЕЕ)";
+        return "скорость ветра";
+    }
+    if (paramName == "Wind Direction Avg") {
+        qDebug() << "Mapped to: направление ветра (Modbus СРЕДНЕЕ)";
+        return "направление ветра";
+    }
+    if (paramName == "Pressure Avg") {
+        qDebug() << "Mapped to: давление (Modbus СРЕДНЕЕ)";
+        return "давление";
+    }
+    if (paramName == "Humidity Avg") {
+        qDebug() << "Mapped to: влажность (Modbus СРЕДНЯЯ)";
+        return "влажность";
+    }
+    if (paramName == "Temperature Avg") {
+        qDebug() << "Mapped to: температура (Modbus СРЕДНЯЯ)";
         return "температура";
     }
 
@@ -555,4 +623,207 @@ QString GroundMeteoParams::parameterCodeToName(quint16 code)
             qDebug() << "Unknown parameter code:" << code;
             return QString("Parameter_%1").arg(code);
     }
+}
+
+// ===== НОВЫЕ МЕТОДЫ ДЛЯ MODBUS RTU =====
+
+bool GroundMeteoParams::parseModbusResponseWithMapping(
+    const QByteArray& response,
+    const QList<quint16>& requestedRegisters,
+    QMap<QString, double>& values)
+{
+    qDebug() << "=== Parsing Modbus Response With Mapping ===";
+    qDebug() << "Response hex:" << response.toHex(' ');
+    qDebug() << "Response size:" << response.size();
+
+    // Минимальный размер: Addr(1) + Func(1) + ByteCount(1) + Data(2+) + CRC(2) = 7
+    if (response.size() < 7) {
+        QString error = QString("Modbus response too short: %1 bytes").arg(response.size());
+        qWarning() << error;
+        emit errorOccurred(error);
+        return false;
+    }
+
+    quint8 deviceAddr = static_cast<quint8>(response[0]);
+    if (deviceAddr != m_deviceAddress) {
+        QString error = QString("Device address mismatch: expected 0x%1, got 0x%2")
+            .arg(m_deviceAddress, 2, 16, QChar('0'))
+            .arg(deviceAddr, 2, 16, QChar('0'));
+        qWarning() << error;
+        emit errorOccurred(error);
+        return false;
+    }
+
+    quint8 functionCode = static_cast<quint8>(response[1]);
+
+    // Проверка на ошибку (если бит 7 установлен)
+    if (functionCode & 0x80) {
+        quint8 exceptionCode = static_cast<quint8>(response[2]);
+        QString error = QString("Modbus exception: function 0x%1, code 0x%2")
+            .arg(functionCode, 2, 16, QChar('0'))
+            .arg(exceptionCode, 2, 16, QChar('0'));
+        qWarning() << error;
+        emit errorOccurred(error);
+        return false;
+    }
+
+    if (functionCode != 0x03 && functionCode != 0x04) {
+        QString error = QString("Unexpected function code: 0x%1 (expected 0x03 or 0x04)").arg(functionCode, 2, 16, QChar('0'));
+        qWarning() << error;
+        emit errorOccurred(error);
+        return false;
+    }
+
+    quint8 byteCount = static_cast<quint8>(response[2]);
+    qDebug() << "Byte count:" << byteCount;
+
+    int expectedSize = 3 + byteCount + 2;
+    if (response.size() < expectedSize) {
+        QString error = QString("Response size mismatch: expected %1, got %2")
+            .arg(expectedSize).arg(response.size());
+        qWarning() << error;
+        emit errorOccurred(error);
+        return false;
+    }
+
+    // Проверка CRC
+    QByteArray dataForCRC = response.left(3 + byteCount);
+    quint16 calculatedCRC = calculateModbusCRC16(dataForCRC);
+
+    quint16 receivedCRC = static_cast<quint8>(response[3 + byteCount]) |
+                         (static_cast<quint8>(response[3 + byteCount + 1]) << 8);
+
+    qDebug() << "Calculated CRC:" << QString("0x%1").arg(calculatedCRC, 4, 16, QChar('0'));
+    qDebug() << "Received CRC:" << QString("0x%1").arg(receivedCRC, 4, 16, QChar('0'));
+
+    if (calculatedCRC != receivedCRC) {
+        QString error = QString("CRC mismatch: calculated 0x%1, received 0x%2")
+            .arg(calculatedCRC, 4, 16, QChar('0'))
+            .arg(receivedCRC, 4, 16, QChar('0'));
+        qWarning() << error;
+        emit errorOccurred(error);
+        return false;
+    }
+
+    // Парсинг регистров
+    if (requestedRegisters.isEmpty()) {
+        qWarning() << "No requested registers provided";
+        return false;
+    }
+
+    quint16 minAddr = *std::min_element(requestedRegisters.begin(), requestedRegisters.end());
+    int registerCount = byteCount / 2;
+
+    qDebug() << "Parsing" << registerCount << "registers starting from" << minAddr;
+
+    for (int i = 0; i < registerCount; i++) {
+        quint16 currentRegAddr = minAddr + i;
+        int offset = 3 + (i * 2);
+
+        if (offset + 1 >= response.size()) break;
+
+        // Читаем значение регистра (big-endian)
+        quint16 regValue = (static_cast<quint8>(response[offset]) << 8) |
+                           static_cast<quint8>(response[offset + 1]);
+
+        qDebug() << "Register" << currentRegAddr << "=" << regValue;
+
+        // Преобразуем в реальное значение
+        QString paramName;
+        double scaledValue;
+
+        if (convertModbusRegisterToValue(currentRegAddr, regValue, paramName, scaledValue)) {
+            values[paramName] = scaledValue;
+            qDebug() << "  →" << paramName << "=" << scaledValue;
+        }
+    }
+
+    qDebug() << "Parsed" << values.size() << "parameters (AVERAGE values)";
+    qDebug() << "=== End Parsing ===";
+
+    return !values.isEmpty();
+}
+
+bool GroundMeteoParams::convertModbusRegisterToValue(
+    quint16 regAddr,
+    quint16 rawValue,
+    QString& paramName,
+    double& scaledValue)
+{
+    // Карта регистров IWS - СРЕДНИЕ значения
+    struct RegisterInfo {
+        quint16 address;
+        QString name;
+        int scaleFactor;
+    };
+
+    static const QVector<RegisterInfo> registerMap = {
+        // Влажность
+        {10, "Humidity", 10},
+        {11, "Humidity Min", 10},
+        {12, "Humidity Max", 10},
+        {13, "Humidity Avg", 10},          // СРЕДНЕЕ
+
+        // Направление ветра
+        {18, "Wind Direction", 10},
+        {19, "Wind Direction Min", 10},
+        {20, "Wind Direction Max", 10},
+        {21, "Wind Direction Avg", 10},    // СРЕДНЕЕ
+
+        // Тип осадков
+        {25, "Precipitation Type", 1},
+
+        // Температура воздуха
+        {31, "Temperature", 10},
+        {32, "Temperature Min", 10},
+        {33, "Temperature Max", 10},
+        {34, "Temperature Avg", 10},       // СРЕДНЕЕ
+
+        // Температура точки росы
+        {35, "Dew Point", 10},
+        {36, "Dew Point Min", 10},
+        {37, "Dew Point Max", 10},
+        {38, "Dew Point Avg", 10},
+
+        // Скорость ветра
+        {42, "Wind Speed", 10},
+        {43, "Wind Speed Min", 10},
+        {44, "Wind Speed Max", 10},
+        {45, "Wind Speed Avg", 10},        // СРЕДНЕЕ
+
+        // Осадки
+        {48, "Precipitation Amount", 100},
+        {49, "Precipitation Accumulated", 100},
+        {50, "Precipitation Intensity", 100},
+
+        // Давление
+        {79, "Pressure", 10},
+        {80, "Pressure Min", 10},
+        {81, "Pressure Max", 10},
+        {82, "Pressure Avg", 10},          // СРЕДНЕЕ
+    };
+
+    // Ищем регистр в карте
+    for (const RegisterInfo& reg : registerMap) {
+        if (reg.address == regAddr) {
+            paramName = reg.name;
+
+            // Применяем масштабный коэффициент
+            scaledValue = static_cast<double>(rawValue) / reg.scaleFactor;
+
+            // Обработка знаковых значений (температура может быть отрицательной)
+            if (paramName.contains("Temperature") || paramName.contains("Dew Point")) {
+                // Если старший бит установлен - это отрицательное число
+                if (rawValue & 0x8000) {
+                    qint16 signedValue = static_cast<qint16>(rawValue);
+                    scaledValue = static_cast<double>(signedValue) / reg.scaleFactor;
+                }
+            }
+
+            return true;
+        }
+    }
+
+    qDebug() << "Unknown register address:" << regAddr;
+    return false;
 }

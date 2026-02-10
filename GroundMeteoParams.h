@@ -51,9 +51,24 @@ private:
     // Статическая переменная для синглтона
     static GroundMeteoParams* s_instance;
 
+    // Для отслеживания запрошенных регистров (Modbus)
+    QList<quint16> m_lastRequestedRegisters;
+
     // Парсинг ответов (приватные методы)
     bool parseModbusResponse(const QByteArray& response, QMap<QString, double>& values);
     bool parseUmbResponse(const QByteArray& response, QMap<QString, double>& values);
+
+    // НОВЫЕ методы для Modbus RTU с маппингом регистров
+    bool parseModbusResponseWithMapping(
+        const QByteArray& response,
+        const QList<quint16>& requestedRegisters,
+        QMap<QString, double>& values);
+
+    bool convertModbusRegisterToValue(
+        quint16 regAddr,
+        quint16 rawValue,
+        QString& paramName,
+        double& scaledValue);
 
     // Вспомогательные функции
     quint16 calculateCRC16(const QByteArray& data);
