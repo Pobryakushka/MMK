@@ -12,7 +12,6 @@
 #include "zedf9preceiver.h"
 #include "amshandler.h"
 #include "binshandler.h"
-
 #include "Map/InitialParameters.h"
 #include "Map/FormMapView.h"
 #include "sensorsettings.h"

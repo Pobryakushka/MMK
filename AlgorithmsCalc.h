@@ -2,6 +2,7 @@
 #define ALGORITHMSCALC_H
 
 #include <QDialog>
+#include "mainwindow.h"
 
 namespace Ui {
 class AlgorithmsCalculation;
@@ -14,9 +15,12 @@ public:
     explicit AlgorithmsCalculation(QWidget *parent = nullptr);
     ~AlgorithmsCalculation();
 
+private slots:
+    void onLandingCalcClicked();
+
 private:
     Ui::AlgorithmsCalculation *ui;
-
+    MainWindow *m_mainWindow;
 
 };
 

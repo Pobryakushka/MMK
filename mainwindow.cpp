@@ -4,6 +4,7 @@
 #include "AlgorithmsCalc.h"
 #include "MeasurementResults.h"
 #include "GroundMeteoParams.h"
+#include "LandingCalculation.h"
 #include "amshandler.h"
 #include "databasemanager.h"
 #include <QDateTime>
