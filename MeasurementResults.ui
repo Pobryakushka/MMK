@@ -2369,6 +2369,79 @@ p, li { white-space: pre-wrap; }
          <attribute name="title">
           <string>Сдвиг ветра</string>
          </attribute>
+         <layout class="QHBoxLayout" name="horizontalLayout_windShear">
+          <property name="spacing">
+           <number>10</number>
+          </property>
+          <property name="leftMargin">
+           <number>10</number>
+          </property>
+          <property name="topMargin">
+           <number>10</number>
+          </property>
+          <property name="rightMargin">
+           <number>10</number>
+          </property>
+          <property name="bottomMargin">
+           <number>10</number>
+          </property>
+          <item>
+           <widget class="QwtPlot" name="plot_windShearSpeed">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+              <horstretch>3</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QwtPlot" name="plot_windShearDirection">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+              <horstretch>3</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QTableWidget" name="table_windShear">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+              <horstretch>1</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="alternatingRowColors">
+             <bool>true</bool>
+            </property>
+            <property name="columnCount">
+             <number>4</number>
+            </property>
+            <column>
+             <property name="text">
+              <string>Высота, м</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Скорость, м/с/30м</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Изменение направления, °</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Уровень</string>
+             </property>
+            </column>
+           </widget>
+          </item>
+         </layout>
         </widget>
         <widget class="QWidget" name="tab_groundMetParams">
          <attribute name="title">

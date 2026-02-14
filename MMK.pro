@@ -30,7 +30,8 @@ SOURCES += \
     zoom/qwheelzoomsvc.cpp \
     zoom/qwtchartzoom.cpp \
     zoom/zoomscontainer.cpp \
-    autoconnector.cpp
+    autoconnector.cpp \
+    WindShearCalculator.cpp
 
 HEADERS += \
     AlgorithmsCalc.h \
@@ -54,7 +55,8 @@ HEADERS += \
     zoom/qwheelzoomsvc.h \
     zoom/qwtchartzoom.h \
     zoom/zoomscontainer.h \
-    autoconnector.h
+    autoconnector.h \
+    WindShearCalculator.h
 
 
 # Default rules for deployment.

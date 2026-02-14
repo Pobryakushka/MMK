@@ -18,6 +18,8 @@
 #include <qwt_legend.h>
 #include <qwt_symbol.h>
 #include <qwt_plot_canvas.h>
+#include "WindShearCalculator.h"
+#include <QTableWidget>
 
 namespace Ui {
 class MeasurementResults;
@@ -128,6 +130,24 @@ private:
     void plotMeasuredWindDirection(QwtPlot *plot, const QVector<MeasuredWindData> &data,
                                    const QString &title, const QColor &color);
     void clearDisplayedData();
+
+    // ============ СДВИГ ВЕТРА ============
+    // UI элементы для вкладки сдвига ветра
+    QwtPlot *m_windShearPlot;           // График сдвига
+    QTableWidget *m_windShearTable;     // Таблица сдвига
+    QwtPlotCurve *m_windShearCurve;     // Кривая для графика
+    QwtPlotGrid *m_windShearGrid;       // Сетка для графика
+
+    // Данные сдвига ветра
+    QVector<WindShearData> m_currentShearData;
+
+    // Методы для работы со сдвигом ветра
+    void setupWindShearTab();           // Настройка вкладки сдвига
+    void updateWindShearDisplay();      // Обновление отображения сдвига
+    void clearWindShearDisplay();       // Очистка отображения
+
+    void plotWindShear(const QVector<WindShearData> &shearData);  // Построение графика
+    void updateWindShearTable(const QVector<WindShearData> &shearData); // Обновление таблицы
 };
 
 #endif // MEASUREMENTRESULTS_H

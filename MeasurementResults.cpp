@@ -47,6 +47,11 @@ MeasurementResults::MeasurementResults(QWidget *parent)
 
     setupPlots();
     setupZoom();  // Инициализация масштабирования
+
+    // Инициализация сдвига ветра
+    m_windShearCurve = nullptr;
+    m_windShearGrid = nullptr;
+    setupWindShearTab();
 }
 
 MeasurementResults::~MeasurementResults()
@@ -506,18 +511,21 @@ void MeasurementResults::onUpdatedButtonClicked()
 {
     currentButtelinType = Updated;
     switchMeteo11Display();
+    updateWindShearDisplay();
 }
 
 void MeasurementResults::onApproximateButtonClicked()
 {
     currentButtelinType = Approximate;
     switchMeteo11Display();
+    updateWindShearDisplay();
 }
 
 void MeasurementResults::onFromMeteoStatButtonClicked()
 {
     currentButtelinType = FromMeteoStat;
     switchMeteo11Display();
+    updateWindShearDisplay();
 }
 
 void MeasurementResults::onStringFormatClicked()
@@ -646,12 +654,14 @@ void MeasurementResults::loadMeasurementData(const QDateTime &dateTime)
     }
 
     updateAvailableRecordsLabel();
+    updateWindShearDisplay();
 }
 
 void MeasurementResults::updateDisplay()
 {
     updateDateTimeDisplay();
     updateSliderRange();
+    updateWindShearDisplay();
 }
 
 void MeasurementResults::onPrevDateClicked()
@@ -1068,4 +1078,266 @@ void MeasurementResults::clearDisplayedData()
         ui->plot_izmWindAzimut_2->detachItems(QwtPlotItem::Rtti_PlotCurve);
         ui->plot_izmWindAzimut_2->replot();
     }
+
+    // Очищаем график сдвига ветра
+    clearWindShearDisplay();
+}
+
+// ============================================================
+// МЕТОДЫ ДЛЯ РАБОТЫ СО СДВИГОМ ВЕТРА
+// ============================================================
+
+/**
+ * @brief Настройка вкладки сдвига ветра
+ */
+void MeasurementResults::setupWindShearTab()
+{
+    qDebug() << "setupWindShearTab: начало";
+
+    // Проверяем наличие элементов UI
+    if (!ui->plot_windShearSpeed || !ui->plot_windShearDirection || !ui->table_windShear) {
+        qWarning() << "WindShear UI elements not found!";
+        qWarning() << "plot_windShearSpeed:" << ui->plot_windShearSpeed;
+        qWarning() << "plot_windShearDirection:" << ui->plot_windShearDirection;
+        qWarning() << "table_windShear:" << ui->table_windShear;
+        return;
+    }
+
+    qDebug() << "setupWindShearTab: UI элементы найдены";
+
+    // ===== НАСТРОЙКА ГРАФИКА СКОРОСТИ =====
+    ui->plot_windShearSpeed->setTitle(QString::fromUtf8("Скорость сдвига ветра"));
+    ui->plot_windShearSpeed->setAxisTitle(QwtPlot::xBottom, QString::fromUtf8("Скорость, м/с/30м"));
+    ui->plot_windShearSpeed->setAxisTitle(QwtPlot::yLeft, QString::fromUtf8("Высота, м"));
+    ui->plot_windShearSpeed->setCanvasBackground(Qt::white);
+
+    // Сетка для графика скорости
+    m_windShearGrid = new QwtPlotGrid();
+    m_windShearGrid->setMajorPen(QPen(Qt::gray, 0, Qt::DotLine));
+    m_windShearGrid->setMinorPen(QPen(Qt::lightGray, 0, Qt::DotLine));
+    m_windShearGrid->attach(ui->plot_windShearSpeed);
+
+    // Кривая для скорости
+    m_windShearCurve = new QwtPlotCurve(QString::fromUtf8("Сдвиг ветра"));
+    m_windShearCurve->setPen(QPen(QColor(0, 0, 255), 2));  // Синяя линия
+    m_windShearCurve->setRenderHint(QwtPlotItem::RenderAntialiased, true);
+
+    // Символы на точках
+    QwtSymbol *symbolSpeed = new QwtSymbol(QwtSymbol::Ellipse);
+    symbolSpeed->setSize(8, 8);
+    symbolSpeed->setPen(QPen(QColor(0, 0, 255)));
+    symbolSpeed->setBrush(QBrush(QColor(0, 0, 255)));
+    m_windShearCurve->setSymbol(symbolSpeed);
+
+    m_windShearCurve->attach(ui->plot_windShearSpeed);
+
+    // Легенда для графика скорости
+    QwtLegend *legendSpeed = new QwtLegend();
+    ui->plot_windShearSpeed->insertLegend(legendSpeed, QwtPlot::BottomLegend);
+
+    qDebug() << "setupWindShearTab: график скорости настроен";
+
+    // ===== НАСТРОЙКА ГРАФИКА НАПРАВЛЕНИЯ =====
+    ui->plot_windShearDirection->setTitle(QString::fromUtf8("Изменение направления ветра"));
+    ui->plot_windShearDirection->setAxisTitle(QwtPlot::xBottom, QString::fromUtf8("Направление, °"));
+    ui->plot_windShearDirection->setAxisTitle(QwtPlot::yLeft, QString::fromUtf8("Высота, м"));
+    ui->plot_windShearDirection->setCanvasBackground(Qt::white);
+
+    // Сетка для графика направления
+    QwtPlotGrid *gridDirection = new QwtPlotGrid();
+    gridDirection->setMajorPen(QPen(Qt::gray, 0, Qt::DotLine));
+    gridDirection->setMinorPen(QPen(Qt::lightGray, 0, Qt::DotLine));
+    gridDirection->attach(ui->plot_windShearDirection);
+
+    // Кривая для направления
+    QwtPlotCurve *curveDirection = new QwtPlotCurve(QString::fromUtf8("Изменение направления"));
+    curveDirection->setPen(QPen(QColor(255, 0, 0), 2));  // Красная линия
+    curveDirection->setRenderHint(QwtPlotItem::RenderAntialiased, true);
+
+    // Символы на точках
+    QwtSymbol *symbolDirection = new QwtSymbol(QwtSymbol::Ellipse);
+    symbolDirection->setSize(8, 8);
+    symbolDirection->setPen(QPen(QColor(255, 0, 0)));
+    symbolDirection->setBrush(QBrush(QColor(255, 0, 0)));
+    curveDirection->setSymbol(symbolDirection);
+
+    curveDirection->attach(ui->plot_windShearDirection);
+
+    // Легенда для графика направления
+    QwtLegend *legendDirection = new QwtLegend();
+    ui->plot_windShearDirection->insertLegend(legendDirection, QwtPlot::BottomLegend);
+
+    qDebug() << "setupWindShearTab: график направления настроен";
+
+    // ===== НАСТРОЙКА ТАБЛИЦЫ =====
+    ui->table_windShear->horizontalHeader()->setStretchLastSection(true);
+    ui->table_windShear->verticalHeader()->setVisible(false);
+    ui->table_windShear->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    ui->table_windShear->setSelectionMode(QAbstractItemView::SingleSelection);
+    ui->table_windShear->setSelectionBehavior(QAbstractItemView::SelectRows);
+
+    ui->table_windShear->setColumnWidth(0, 90);   // Высота
+    ui->table_windShear->setColumnWidth(1, 140);  // Скорость
+    ui->table_windShear->setColumnWidth(2, 180);  // Изменение направления
+
+    qDebug() << "setupWindShearTab: завершено успешно";
+}
+
+/**
+ * @brief Обновление отображения сдвига ветра
+ */
+void MeasurementResults::updateWindShearDisplay()
+{
+    // Проверяем что вкладка инициализирована
+    if (!ui->plot_windShearSpeed || !ui->plot_windShearDirection || !ui->table_windShear || !m_windShearCurve) {
+        return;
+    }
+
+    // Загружаем ТОЛЬКО измеренный ветер - он содержит скорость и направление
+    QVector<MeasuredWindData> measuredWind = loadMeasuredWindProfile(currentDateTime);
+
+    qDebug() << "updateWindShearDisplay: measuredWind size =" << measuredWind.size();
+
+    QVector<WindShearData> shearData;
+
+    // ВСЕГДА используем измеренный ветер (он содержит данные скорости и направления)
+    if (!measuredWind.isEmpty()) {
+        qDebug() << "updateWindShearDisplay: используем measuredWind (способ 1: скорость+направление)";
+        shearData = WindShearCalculator::calculateShear(measuredWind);
+    }
+
+    qDebug() << "updateWindShearDisplay: shearData size =" << shearData.size();
+
+    // Сохраняем данные
+    m_currentShearData = shearData;
+
+    // Отображаем
+    if (!shearData.isEmpty()) {
+        plotWindShear(shearData);
+        updateWindShearTable(shearData);
+    } else {
+        clearWindShearDisplay();
+    }
+}
+
+/**
+ * @brief Построение графика сдвига ветра
+ */
+void MeasurementResults::plotWindShear(const QVector<WindShearData> &shearData)
+{
+    if (!m_windShearCurve || !ui->plot_windShearSpeed || !ui->plot_windShearDirection || shearData.isEmpty()) {
+        return;
+    }
+
+    // Подготовка данных для скорости
+    QVector<double> xDataSpeed;      // Скорость сдвига (м/с/30м)
+    QVector<double> yDataSpeed;      // Высота (м)
+
+    // Подготовка данных для направления
+    QVector<double> xDataDirection;  // Изменение направления (°)
+    QVector<double> yDataDirection;  // Высота (м)
+
+    for (const WindShearData &shear : shearData) {
+        // Данные для графика скорости
+        xDataSpeed.append(shear.shearPer30m);
+        yDataSpeed.append(shear.height);
+
+        // Данные для графика направления
+        xDataDirection.append(shear.shearDirection);
+        yDataDirection.append(shear.height);
+    }
+
+    // Установка данных в кривую скорости
+    m_windShearCurve->setSamples(xDataSpeed.data(), yDataSpeed.data(), xDataSpeed.size());
+
+    // Получаем кривую направления
+    QwtPlotItemList items = ui->plot_windShearDirection->itemList(QwtPlotItem::Rtti_PlotCurve);
+    if (!items.isEmpty()) {
+        QwtPlotCurve *curveDirection = static_cast<QwtPlotCurve*>(items.first());
+        curveDirection->setSamples(xDataDirection.data(), yDataDirection.data(), xDataDirection.size());
+    }
+
+    // Обновление графиков
+    ui->plot_windShearSpeed->replot();
+    ui->plot_windShearDirection->replot();
+}
+
+/**
+ * @brief Обновление таблицы сдвига ветра с цветовой индикацией
+ */
+void MeasurementResults::updateWindShearTable(const QVector<WindShearData> &shearData)
+{
+    if (!ui->table_windShear) {
+        return;
+    }
+
+    ui->table_windShear->setRowCount(shearData.size());
+
+    for (int i = 0; i < shearData.size(); ++i) {
+        const WindShearData &shear = shearData[i];
+
+        // Колонка 0: Высота
+        QTableWidgetItem *heightItem = new QTableWidgetItem(
+            QString::number(static_cast<int>(shear.height))
+        );
+        heightItem->setTextAlignment(Qt::AlignCenter);
+        ui->table_windShear->setItem(i, 0, heightItem);
+
+        // Колонка 1: Скорость сдвига с цветовой индикацией
+        QTableWidgetItem *speedItem = new QTableWidgetItem(
+            QString::number(shear.shearPer30m, 'f', 2)
+        );
+        speedItem->setTextAlignment(Qt::AlignCenter);
+
+        // Цвет фона по критичности
+        QColor bgColor = WindShearCalculator::getSeverityColor(shear.severityLevel);
+        speedItem->setBackground(QBrush(bgColor));
+
+        ui->table_windShear->setItem(i, 1, speedItem);
+
+        // Колонка 2: Изменение направления
+        QTableWidgetItem *directionItem = new QTableWidgetItem(
+            QString::number(shear.shearDirection, 'f', 1)
+        );
+        directionItem->setTextAlignment(Qt::AlignCenter);
+        ui->table_windShear->setItem(i, 2, directionItem);
+
+        // Колонка 3: Текстовое описание уровня
+        QTableWidgetItem *levelItem = new QTableWidgetItem(
+            WindShearCalculator::getSeverityText(shear.severityLevel)
+        );
+        levelItem->setTextAlignment(Qt::AlignCenter);
+        levelItem->setBackground(QBrush(bgColor));
+
+        ui->table_windShear->setItem(i, 3, levelItem);
+    }
+
+    // Автоподгонка высоты строк
+    ui->table_windShear->resizeRowsToContents();
+}
+
+/**
+ * @brief Очистка отображения сдвига ветра
+ */
+void MeasurementResults::clearWindShearDisplay()
+{
+    // Очищаем график скорости
+    if (ui->plot_windShearSpeed) {
+        ui->plot_windShearSpeed->detachItems(QwtPlotItem::Rtti_PlotCurve);
+        ui->plot_windShearSpeed->replot();
+    }
+
+    // Очищаем график направления
+    if (ui->plot_windShearDirection) {
+        ui->plot_windShearDirection->detachItems(QwtPlotItem::Rtti_PlotCurve);
+        ui->plot_windShearDirection->replot();
+    }
+
+    // Очищаем таблицу
+    if (ui->table_windShear) {
+        ui->table_windShear->setRowCount(0);
+    }
+
+    // Очищаем данные
+    m_currentShearData.clear();
 }
