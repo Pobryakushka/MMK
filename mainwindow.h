@@ -162,6 +162,9 @@ private:
     void connectToGnss();
     void disconnectFromGnss();
     void updateGnssMarkerOnMap(double latitude, double longitude);
+    void setCoordField(QLineEdit *edit, double dec_deg);
+    double getCoordField(QLineEdit *edit, bool &ok) const;
+    void onCoordTextEdited(QLineEdit *edit);
 
     // АМС методы
     void setupAmsHandler();

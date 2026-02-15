@@ -1,6 +1,7 @@
 #include "AlgorithmsCalc.h"
 #include "ui_AlgorithmsCalc.h"
 #include "LandingCalculation.h"
+#include "CoordHelper.h"
 #include <QMessageBox>
 #include <QLineEdit>
 
@@ -36,9 +37,10 @@ void AlgorithmsCalculation::onLandingCalcClicked()
         QLineEdit *editAlt = m_mainWindow->findChild<QLineEdit *>("editAltitude");
 
         if (editLat && editLon && editAlt) {
-            bool ok1, ok2, ok3;
-            double lat = editLat->text().toDouble(&ok1);
-            double lon = editLon->text().toDouble(&ok2);
+            double lat = 0.0, lon = 0.0;
+            bool ok1 = CoordHelper::parseDMS(editLat->text(), lat);
+            bool ok2 = CoordHelper::parseDMS(editLon->text(), lon);
+            bool ok3;
             double alt = editAlt->text().toDouble(&ok3);
 
             if (ok1 && ok2 && ok3) {

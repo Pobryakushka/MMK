@@ -1,5 +1,6 @@
 #include "LandingCalculation.h"
 #include "ui_LandingCalculation.h"
+#include "CoordHelper.h"
 #include <QTextStream>
 #include <QDebug>
 
@@ -76,6 +77,11 @@ LandingCalculation::LandingCalculation(QWidget *parent) :
     connect(ui->cbManualInput, &QCheckBox::toggled,
             this, &LandingCalculation::onManualWindInputToggled);
 
+    connect(ui->editLatCUP, &QLineEdit::textEdited,
+            this, [this](){ onCoordTextEdited(ui->editLatCUP); });
+    connect(ui->editLonCUP, &QLineEdit::textEdited,
+            this, [this](){ onCoordTextEdited(ui->editLonCUP); });
+
     ui->editDistance->setReadOnly(true);
     ui->editDirection->setReadOnly(true);
 
@@ -91,6 +97,20 @@ LandingCalculation::LandingCalculation(QWidget *parent) :
 LandingCalculation::~LandingCalculation()
 {
     delete ui;
+}
+
+// =================================================
+// Форматирование координат при вводе
+// =================================================
+
+void LandingCalculation::onCoordTextEdited(QLineEdit *edit)
+{
+    int pos = edit->cursorPosition();
+    QString formatted = CoordHelper::formatInput(edit->text(), pos);
+    edit->blockSignals(true);
+    edit->setText(formatted);
+    edit->setCursorPosition(pos);
+    edit->blockSignals(false);
 }
 
 // =================================================
@@ -111,7 +131,7 @@ void LandingCalculation::setMeteoStationCoords(double lat_deg, double lon_deg, d
 void LandingCalculation::onManualWindInputToggled(bool checked)
 {
     ui->editDistance->setReadOnly(!checked);
-    ui->editDistance->setReadOnly(!checked);
+    ui->editDirection->setReadOnly(!checked);
 
     if (!checked){
         // При снятии галочки сбрасваем поля в read-only стиль
@@ -120,7 +140,7 @@ void LandingCalculation::onManualWindInputToggled(bool checked)
     } else {
         // Показ, что поля редактируемы
         ui->editDistance->setStyleSheet("background-color: #FFFACD;");
-        ui->editDistance->setStyleSheet("background-color: #FFFACD;");
+        ui->editDirection->setStyleSheet("background-color: #FFFACD;");
     }
 }
 
@@ -130,35 +150,37 @@ void LandingCalculation::onManualWindInputToggled(bool checked)
 
 bool LandingCalculation::parseDMS(const QString &text, double &degrees)
 {
-    QString cleaned = text.trimmed();
-    if (cleaned.isEmpty()) return false;
+    return CoordHelper::parseDMS(text, degrees);
 
-    cleaned.replace(QRegExp("[°'\"°']+"), " ");
-    cleaned = cleaned.simplified();
+//    QString cleaned = text.trimmed();
+//    if (cleaned.isEmpty()) return false;
 
-    QStringList parts = cleaned.split(' ', Qt::SkipEmptyParts);
+//    cleaned.replace(QRegExp("[°'\"°']+"), " ");
+//    cleaned = cleaned.simplified();
 
-    if (parts.size() == 1) {
-        // Пробуем как десятичное число
-        bool ok = false;
-        degrees = parts[0].replace(',', '.').toDouble(&ok);
-        return ok;
-    }
-    if (parts.size() >= 2) {
-        bool ok1, ok2, ok3 = true;
-        double deg = parts[0].replace(',', '.').toDouble(&ok1);
-        double min = parts[1].replace(',', '.').toDouble(&ok2);
-        double sec = 0.0;
-        if (parts.size() >= 3) {
-            sec = parts[2].replace(',','.').toDouble(&ok3);
-        }
-        if (!ok1 || !ok2 || !ok3) return false;
+//    QStringList parts = cleaned.split(' ', Qt::SkipEmptyParts);
 
-        degrees = deg + min / 60.0 + sec / 3600.0;
-        return true;
-    }
+//    if (parts.size() == 1) {
+//        // Пробуем как десятичное число
+//        bool ok = false;
+//        degrees = parts[0].replace(',', '.').toDouble(&ok);
+//        return ok;
+//    }
+//    if (parts.size() >= 2) {
+//        bool ok1, ok2, ok3 = true;
+//        double deg = parts[0].replace(',', '.').toDouble(&ok1);
+//        double min = parts[1].replace(',', '.').toDouble(&ok2);
+//        double sec = 0.0;
+//        if (parts.size() >= 3) {
+//            sec = parts[2].replace(',','.').toDouble(&ok3);
+//        }
+//        if (!ok1 || !ok2 || !ok3) return false;
 
-    return false;
+//        degrees = deg + min / 60.0 + sec / 3600.0;
+//        return true;
+//    }
+
+//    return false;
 }
 
 // =================================================
@@ -173,7 +195,10 @@ QString LandingCalculation::formatDMS(double dec_deg, bool isLat)
     int d = static_cast<int>(dec_deg);
     double rem = (dec_deg - d) * 60.0;
     int m = static_cast<int>(rem);
-    double s = (rem - m) * 60.0;
+    double s = static_cast<int>(std::round((rem - m) * 60.0));
+
+    if (s >= 60) { s -= 60; m += 1; }
+    if (m >= 60) { m -= 60; d += 1; }
 
     QString suffix;
     if (isLat)
@@ -349,9 +374,16 @@ LandingCalculationResult LandingCalculation::calculate()
 
     double H_tnv = H_tpp + H_des;
 
+    auto roundToSeconds = [](double deg) -> double {
+        double sign = (deg < 0) ? -1.0 : 1.0;
+        deg = std::abs(deg);
+        double totalSeconds = std::round(deg * 3600.0);
+        return sign * totalSeconds / 3600.0;
+    };
+
     // Переводим в десятичные градусы
-    double B_tnv_deg = toDeg(B_tnv);
-    double L_tnv_deg = toDeg(L_tnv);
+    double B_tnv_deg = roundToSeconds(toDeg(B_tnv));
+    double L_tnv_deg = roundToSeconds(toDeg(L_tnv));
 
     // ========= 5. Расстояние и дирекционный угол от М до ТПП =========
     auto calcDistAngle = [&](double B_T_rad, double L_T_rad,
@@ -395,9 +427,12 @@ LandingCalculationResult LandingCalculation::calculate()
     double D_tnv, A_tnv_deg;
     calcDistAngle(B_tnv, L_tnv, D_tnv, A_tnv_deg);
 
+    qDebug() << "============== LandingCalculation::calculate() ==============";
     qDebug() << "B_tpp_deg:" << B_tpp_deg << "L_tpp_deg:" << L_tpp_deg;
     qDebug() << "T_sn:" << T_sn << "Z_sn:" << Z_sn;
     qDebug() << "dx:" << delta_x << "dy:" << delta_y;
+    qDebug() << "B_tnv_deg:" << B_tnv_deg << "L_tnv_deg:" << L_tnv_deg;
+    qDebug() << "=============================================================";
 
     // =================================================
     // Сохранение результата

@@ -35,6 +35,7 @@ SOURCES += \
 
 HEADERS += \
     AlgorithmsCalc.h \
+    CoordHelper.h \
     GroundMeteoParams.h \
     LandingCalculation.h \
     Map/FormMapView.h \

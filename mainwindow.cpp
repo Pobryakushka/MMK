@@ -7,6 +7,7 @@
 #include "LandingCalculation.h"
 #include "amshandler.h"
 #include "databasemanager.h"
+#include "CoordHelper.h"
 #include <QDateTime>
 #include <QTimer>
 #include <QQuickItem>
@@ -85,6 +86,12 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_gnssReceiver, &ZedF9PReceiver::disconnected, this, &MainWindow::onGnssDisconnected);
     connect(m_gnssReceiver, &ZedF9PReceiver::errorOccurred, this, &MainWindow::onGnssError);
     connect(m_gnssReceiver, &ZedF9PReceiver::nmeaReceived, this, &MainWindow::onNmeaReceived);
+
+    connect(ui->editLatitude, &QLineEdit::textEdited, this, [this](){ onCoordTextEdited(ui->editLatitude); });
+    connect(ui->editLongitude, &QLineEdit::textEdited, this, [this](){ onCoordTextEdited(ui->editLongitude); });
+
+    setCoordField(ui->editLatitude, 55.7558);
+    setCoordField(ui->editLongitude, 37.6173);
 
     ui->editAltitude->setEnabled(false);
     ui->editDirectionAngle->setEnabled(false);
@@ -168,6 +175,54 @@ MainWindow::~MainWindow()
         m_binsHandler->disconnectFromBINS();
     }
     delete ui;
+}
+
+// =================================================
+// Методы работы с координатами
+// =================================================
+
+void MainWindow::setCoordField(QLineEdit *edit, double dec_deg)
+{
+    if (!edit) return;
+
+    // Конвертируем десятичные градусы
+    QString dmsString = CoordHelper::toDisplayDMS(dec_deg);
+    edit->setText(dmsString);
+}
+
+double MainWindow::getCoordField(QLineEdit *edit, bool &ok) const
+{
+    ok = false;
+    if (!edit) return 0.0;
+
+    QString text = edit->text().trimmed();
+    if (text.isEmpty()) return 0.0;
+
+    double degrees = 0.0;
+    ok = CoordHelper::parseDMS(text, degrees);
+
+    return ok ? degrees : 0.0;
+}
+
+void MainWindow::onCoordTextEdited(QLineEdit *edit)
+{
+    if (!edit) return;
+
+    static bool isProcessing = false;
+    if (isProcessing) return;
+    isProcessing = true;
+
+    QString rawText = edit->text();
+    int cursorPos = edit->cursorPosition();
+
+    QString formatted = CoordHelper::formatInput(rawText, cursorPos);
+
+    if (formatted != rawText) {
+        edit->setText(formatted);
+        edit->setCursorPosition(cursorPos);
+    }
+
+    isProcessing = false;
 }
 
 void MainWindow::setupMapCoordinatesButton()
@@ -434,8 +489,8 @@ void MainWindow::onGnssDataReceived(const GNSSData &data)
     }
 
     // Обновляем поля координат
-    ui->editLatitude->setText(QString::number(data.latitude, 'f', 6));
-    ui->editLongitude->setText(QString::number(data.longitude, 'f', 6));
+    setCoordField(ui->editLatitude, data.latitude);
+    setCoordField(ui->editLongitude, data.longitude);
     ui->editAltitude->setText(QString::number(data.altitude, 'f', 2));
 
     // Передаем сигнал другим окнам
@@ -1030,8 +1085,8 @@ void MainWindow::updateFieldsEditability()
 
 void MainWindow::updateCoordinatesFromMap(double latitude, double longitude)
 {
-    ui->editLatitude->setText(QString::number(latitude, 'f', 6));
-    ui->editLongitude->setText(QString::number(longitude, 'f', 6));
+    setCoordField(ui->editLatitude, latitude);
+    setCoordField(ui->editLongitude, longitude);
 
     // Передаем сигнал другим окнам
     emit coordinatesUpdatedFromMap(latitude, longitude);
@@ -1476,8 +1531,8 @@ void MainWindow::onMeasurementResultsClicked()
 
     if ((m_mapCoordinatesEnabled || m_gnssEnabled) && ui->editLatitude && ui->editLongitude) {
         bool ok1, ok2;
-        double lat = ui->editLatitude->text().toDouble(&ok1);
-        double lon = ui->editLongitude->text().toDouble(&ok2);
+        double lat = getCoordField(ui->editLatitude, ok1);
+        double lon = getCoordField(ui->editLongitude, ok2);
         if (ok1 && ok2) {
             dialog->updateCoordinatesFromMainWindow(lat, lon);
         }
@@ -1516,13 +1571,13 @@ void MainWindow::onStartClicked()
     StationCoordinates coords;
     bool ok;
 
-    // Широта (переводим в секунды)
-    double lat = ui->editLatitude->text().toDouble(&ok);
+    // Широта
+    double lat = getCoordField(ui->editLatitude, ok);
     if (!ok) lat = 0.0;
     coords.latitude = static_cast<int>(lat * 3600.0);
 
-    // Долгота (переводим в секунды)
-    double lon = ui->editLongitude->text().toDouble(&ok);
+    // Долгота
+    double lon = getCoordField(ui->editLongitude, ok);
     if (!ok) lon = 0.0;
     coords.longitude = static_cast<int>(lon * 3600.0);
 

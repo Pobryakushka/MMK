@@ -97,6 +97,8 @@ private:
     void setupEditTable();
     void swapTableRows(int row1, int row2);
 
+    void onCoordTextEdited(QLineEdit *edit);
+
     // ======= Методы расчета =======
 
     // Парсинг координат
