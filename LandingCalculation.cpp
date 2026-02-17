@@ -297,7 +297,7 @@ QString LandingCalculation::formatDMS(double dec_deg, bool isLat)
     return QString("%1°%2'%3\" %4")
             .arg(d, 2, 10, QChar('0'))
             .arg(m, 2, 10, QChar('0'))
-            .arg(s, 5, 'f', 2, QChar('0'))
+            .arg(s)
             .arg(suffix);
 }
 
