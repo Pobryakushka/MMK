@@ -8,6 +8,8 @@
 #include <QDir>
 #include <QStandardPaths>
 #include <QTableWidgetItem>
+#include <QLineEdit>
+#include <cmath>
 #include <QtMath>
 
 namespace Ui {
@@ -96,6 +98,9 @@ private:
 
     void setupEditTable();
     void swapTableRows(int row1, int row2);
+
+    void saveState();
+    void restoreState();
 
     void onCoordTextEdited(QLineEdit *edit);
 

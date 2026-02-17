@@ -1,6 +1,7 @@
 #include "LandingCalculation.h"
 #include "ui_LandingCalculation.h"
 #include "CoordHelper.h"
+#include "LandingCalculationState.h"
 #include <QTextStream>
 #include <QDebug>
 
@@ -85,6 +86,8 @@ LandingCalculation::LandingCalculation(QWidget *parent) :
     ui->editDistance->setReadOnly(true);
     ui->editDirection->setReadOnly(true);
 
+    restoreState();
+
 //    connect(ui->tabWidget, &QTabWidget::currentChanged,
 //            this, &LandingCalculation::onTabChanged);
 
@@ -96,7 +99,92 @@ LandingCalculation::LandingCalculation(QWidget *parent) :
 
 LandingCalculation::~LandingCalculation()
 {
+    saveState();
     delete ui;
+}
+
+// =================================================
+// Сохранение состояния
+// =================================================
+
+void LandingCalculation::saveState()
+{
+    LandingCalculationState &st = LandingCalculationState::instance();
+
+    st.latCUP = ui->editLatCUP->text();
+    st.lonCUP = ui->editLonCUP->text();
+    st.comboLatCUP = ui->comboLatCUP->currentIndex();
+    st.comboLonCUP = ui->comboLonCUP->currentIndex();
+    st.heightUM = ui->editHeightUM->text();
+
+    st.timeVP = ui->editTimeVP->text();
+    st.lossPV = ui->editLossPV->text();
+    st.speedDescent = ui->editSpeedDescent->text();
+    st.staffTime = ui->editStaffTime->text();
+    st.hvhod = ui->editHvhod->text();
+    st.trueBearing = ui->editTrueBearing->text();
+
+    st.manualInput = ui->cbManualInput->isChecked();
+    st.distance = ui->editDistance->text();
+    st.direction = ui->editDirection->text();
+
+    st.latTNV = ui->editLatTNV->text();
+    st.lonTNV = ui->editLonTNV->text();
+    st.comboLatTNV = ui->comboBox_2->currentIndex();
+    st.comboLonTNV = ui->comboBox_3->currentIndex();
+    st.heightTNV = ui->editHeightTNV->text();
+    st.distanceTNV = ui->editDistanceTNV->text();
+    st.angleTNV = ui->editAngleTNV->text();
+    st.distanceTPP = ui->editDistanceTPP->text();
+    st.angleTPP = ui->editAngleTPP->text();
+
+    st.hasData = true;
+}
+
+// =================================================
+// Восстановление состояния
+// =================================================
+
+void LandingCalculation::restoreState()
+{
+    LandingCalculationState &st = LandingCalculationState::instance();
+    if (!st.hasData) return;
+
+    // Исходные данные
+    ui->editLatCUP->setText(st.latCUP);
+    ui->editLonCUP->setText(st.lonCUP);
+    ui->comboLatCUP->setCurrentIndex(st.comboLatCUP);
+    ui->comboLonCUP->setCurrentIndex(st.comboLonCUP);
+    ui->editHeightUM->setText(st.heightUM);
+
+    ui->editTimeVP->setText(st.timeVP);
+    ui->editLossPV->setText(st.lossPV);
+    ui->editSpeedDescent->setText(st.speedDescent);
+    ui->editStaffTime->setText(st.staffTime);
+    ui->editHvhod->setText(st.hvhod);
+    ui->editTrueBearing->setText(st.trueBearing);
+
+    ui->cbManualInput->setChecked(st.manualInput);
+    if (st.manualInput) {
+        ui->editDistance->setReadOnly(false);
+        ui->editDirection->setReadOnly(false);
+        ui->editDistance->setStyleSheet("background-color: #FFFACD;");
+        ui->editDirection->setStyleSheet("background-color: #FFFACD;");
+    }
+    ui->editDistance->setText(st.distance);
+    ui->editDirection->setText(st.direction);
+
+    if (!st.latTNV.isEmpty()) {
+        ui->editLatTNV->setText(st.latTNV);
+        ui->editLonTNV->setText(st.lonTNV);
+        ui->comboBox_2->setCurrentIndex(st.comboLatTNV);
+        ui->comboBox_3->setCurrentIndex(st.comboLonTNV);
+        ui->editHeightTNV->setText(st.heightTNV);
+        ui->editDistanceTNV->setText(st.distanceTNV);
+        ui->editAngleTNV->setText(st.angleTNV);
+        ui->editDistanceTPP->setText(st.distanceTPP);
+        ui->editAngleTPP->setText(st.angleTPP);
+    }
 }
 
 // =================================================
@@ -464,19 +552,19 @@ void LandingCalculation::displayResults(const LandingCalculationResult &res)
     // Координаты ТНВ
     ui->editLatTNV->setText(formatDMS(res.B_tnv_deg, true));
     ui->editLonTNV->setText(formatDMS(res.L_tnv_deg, false));
-    ui->editHeightTNV->setText(QString("%1 м").arg(res.H_tnv, 0, 'f', 0));
+    ui->editHeightTNV->setText(QString("%1 м").arg(static_cast<int>(std::round(res.H_tnv))));
 
     // Устанавливаем комбобоксы (N/S, E/W)
     ui->comboBox_2->setCurrentIndex(res.B_tnv_deg >= 0.0 ? 0 : 1); // Северная/Южная
     ui->comboBox_3->setCurrentIndex(res.L_tnv_deg >= 0.0 ? 0 : 1); // Восточная/Западная
 
     // Положение метеопоста относительно ТНВ
-    ui->editDistanceTNV->setText(QString("%1 м").arg(res.D_tnv, 0, 'f', 0));
-    ui->editAngleTNV->setText(QString("%1°").arg(res.A_tnv_deg, 0, 'f', 1));
+    ui->editDistanceTNV->setText(QString("%1 м").arg(static_cast<int>(std::round(res.D_tnv))));
+    ui->editAngleTNV->setText(QString("%1°").arg(static_cast<int>(std::round(res.A_tnv_deg))));
 
     // Положение метеопоста относительно ТПП
-    ui->editDistanceTPP->setText(QString("%1 м").arg(res.D_tpp, 0, 'f', 0));
-    ui->editAngleTPP->setText(QString("%1°").arg(res.A_tpp_deg, 0, 'f', 1));
+    ui->editDistanceTPP->setText(QString("%1 м").arg(static_cast<int>(std::round(res.D_tpp))));
+    ui->editAngleTPP->setText(QString("%1°").arg(static_cast<int>(std::round(res.A_tpp_deg))));
 
     // Переключаемся на вкладку результатов
     ui->tabWidget->setCurrentWidget(ui->tabResults);

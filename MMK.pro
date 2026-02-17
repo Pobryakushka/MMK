@@ -38,6 +38,7 @@ HEADERS += \
     CoordHelper.h \
     GroundMeteoParams.h \
     LandingCalculation.h \
+    LandingCalculationState.h \
     Map/FormMapView.h \
     Map/InitialParameters.h \
     MeasurementResults.h \
