@@ -1516,6 +1516,7 @@ void MainWindow::onCalculationsClicked()
 void MainWindow::onMeasurementResultsClicked()
 {
     MeasurementResults *dialog = new MeasurementResults(this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
 
 //    if (!DatabaseManager::instance()->isConnected()){
 //        DatabaseManager::instance()->connect();
@@ -1540,7 +1541,6 @@ void MainWindow::onMeasurementResultsClicked()
     }
 
     dialog->show();
-    delete dialog;
 }
 
 void MainWindow::onStartClicked()
@@ -1608,7 +1608,6 @@ void MainWindow::onStartClicked()
     // Запускаем полную последовательность измерения
     qDebug() << "MainWindow: Запуск измерения АМС";
     qDebug() << "  Режим:" << (mode == MODE_WORKING ? "РАБОЧИЙ" : "ДЕЖУРНЫЙ");
-    qDebug() << "  Время усреднения:" << (avgTime == AVERAGING_3_MIN ? "3 мин" : avgTime == AVERAGING_6_MIN ? "6 мин" : "9 мин");
     qDebug() << "  Координаты:" << lat << lon << coords.altitude;
     qDebug() << "  Углы:" << coords.azimuth << coords.pitch << coords.roll;
 
