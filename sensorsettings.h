@@ -6,6 +6,7 @@
 #include <QSerialPortInfo>
 #include <QComboBox>
 #include "autoconnector.h"
+#include <QSettings>
 
 namespace Ui {
 class SensorSettings;
@@ -130,6 +131,9 @@ private:
     void populateBinsPorts();
     void setupConnections();
     void setComboBoxPort(QComboBox *comboBox, const QString &portName);
+
+    void saveSettings();
+    void loadSettings();
 };
 
 #endif // SENSORSETTINGS_H

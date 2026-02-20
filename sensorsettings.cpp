@@ -3,6 +3,8 @@
 #include <QDebug>
 #include <QFile>
 #include <QDir>
+#include <QSettings>
+#include <QCoreApplication>
 
 SensorSettings::SensorSettings(QWidget *parent)
     : QDialog(parent)
@@ -53,6 +55,9 @@ SensorSettings::SensorSettings(QWidget *parent)
             this, &SensorSettings::onAutoConnectProgress);
     connect(m_autoConnector, &AutoConnector::logMessage,
             this, &SensorSettings::onAutoConnectLog);
+
+    // Загружаем сохранённые настройки (перезапишут дефолты если есть)
+    loadSettings();
 }
 
 SensorSettings::~SensorSettings()
@@ -305,6 +310,7 @@ void SensorSettings::onDisconnectAmsClicked()
 
 void SensorSettings::onCloseClicked()
 {
+    saveSettings();
     close();
 }
 
@@ -879,6 +885,9 @@ void SensorSettings::onAutoDetectionFinished()
             emit connectRequested();
         });
     }
+
+    // Сохраняем найденные порты сразу после автопоиска
+    saveSettings();
 }
 
 void SensorSettings::onDeviceDetected(AutoConnector::DeviceType type,
@@ -932,4 +941,129 @@ void SensorSettings::setComboBoxPort(QComboBox *comboBox, const QString &portNam
     qDebug() << "Порт" << portName << "не найден в ComboBox, добавляем...";
     comboBox->addItem(portName, portName);  // Текст и userData одинаковые
     comboBox->setCurrentIndex(comboBox->count() - 1);
+}
+
+// ===== СОХРАНЕНИЕ / ЗАГРУЗКА НАСТРОЕК =====
+
+void SensorSettings::saveSettings()
+{
+    QSettings settings(QCoreApplication::organizationName(),
+                       QCoreApplication::applicationName());
+
+    settings.beginGroup("Sensors");
+
+    // АМС
+    settings.setValue("ams/port",     ui->comboBoxAmsPort->currentData().toString());
+    settings.setValue("ams/baudrate", ui->comboBoxAmsBaudRate->currentText());
+    settings.setValue("ams/databits", ui->comboBoxAmsDataBits->currentText());
+    settings.setValue("ams/parity",   ui->comboBoxAmsParity->currentIndex());
+    settings.setValue("ams/stopbits", ui->comboBoxAmsStopBits->currentIndex());
+
+    // GNSS
+    settings.setValue("gnss/port",     ui->comboBoxGnssPort->currentData().toString());
+    settings.setValue("gnss/baudrate", ui->comboBoxGnssBaudRate->currentText());
+    settings.setValue("gnss/databits", ui->comboBoxGnssDataBits->currentText());
+    settings.setValue("gnss/parity",   ui->comboBoxGnssParity->currentIndex());
+    settings.setValue("gnss/stopbits", ui->comboBoxGnssStopBits->currentIndex());
+
+    // ИВС
+    settings.setValue("iws/port",        ui->comboBoxComPort->currentData().toString());
+    settings.setValue("iws/baudrate",    ui->comboBoxBaudRate->currentText());
+    settings.setValue("iws/databits",    ui->comboBoxDataBits->currentText());
+    settings.setValue("iws/parity",      ui->comboBoxParity->currentIndex());
+    settings.setValue("iws/stopbits",    ui->comboBoxStopBits->currentIndex());
+    settings.setValue("iws/protocol",    ui->comboBoxProtocol->currentIndex());
+    settings.setValue("iws/address",     ui->spinBoxDeviceAddress->value());
+    settings.setValue("iws/pollinterval",ui->spinBoxPollInterval->value());
+
+    // БИНС
+    settings.setValue("bins/port",     ui->comboBoxBinsPort->currentData().toString());
+    settings.setValue("bins/baudrate", ui->comboBoxBinsBaudRate->currentText());
+    settings.setValue("bins/databits", ui->comboBoxBinsDataBits->currentText());
+    settings.setValue("bins/parity",   ui->comboBoxBinsParity->currentIndex());
+    settings.setValue("bins/stopbits", ui->comboBoxBinsStopBits->currentIndex());
+
+    settings.endGroup();
+
+    qDebug() << "SensorSettings: Настройки сохранены в" << settings.fileName();
+}
+
+void SensorSettings::loadSettings()
+{
+    QSettings settings(QCoreApplication::organizationName(),
+                       QCoreApplication::applicationName());
+
+    // Если настроек ещё не было — выходим, оставляем дефолты
+    if (!settings.childGroups().contains("Sensors")) {
+        qDebug() << "SensorSettings: Сохранённых настроек нет, используются значения по умолчанию";
+        return;
+    }
+
+    settings.beginGroup("Sensors");
+
+    // АМС
+    QString amsPort = settings.value("ams/port").toString();
+    if (!amsPort.isEmpty()) {
+        setComboBoxPort(ui->comboBoxAmsPort, amsPort);
+    }
+    if (settings.contains("ams/baudrate"))
+        ui->comboBoxAmsBaudRate->setCurrentText(settings.value("ams/baudrate").toString());
+    if (settings.contains("ams/databits"))
+        ui->comboBoxAmsDataBits->setCurrentText(settings.value("ams/databits").toString());
+    if (settings.contains("ams/parity"))
+        ui->comboBoxAmsParity->setCurrentIndex(settings.value("ams/parity").toInt());
+    if (settings.contains("ams/stopbits"))
+        ui->comboBoxAmsStopBits->setCurrentIndex(settings.value("ams/stopbits").toInt());
+
+    // GNSS
+    QString gnssPort = settings.value("gnss/port").toString();
+    if (!gnssPort.isEmpty()) {
+        setComboBoxPort(ui->comboBoxGnssPort, gnssPort);
+    }
+    if (settings.contains("gnss/baudrate"))
+        ui->comboBoxGnssBaudRate->setCurrentText(settings.value("gnss/baudrate").toString());
+    if (settings.contains("gnss/databits"))
+        ui->comboBoxGnssDataBits->setCurrentText(settings.value("gnss/databits").toString());
+    if (settings.contains("gnss/parity"))
+        ui->comboBoxGnssParity->setCurrentIndex(settings.value("gnss/parity").toInt());
+    if (settings.contains("gnss/stopbits"))
+        ui->comboBoxGnssStopBits->setCurrentIndex(settings.value("gnss/stopbits").toInt());
+
+    // ИВС
+    QString iwsPort = settings.value("iws/port").toString();
+    if (!iwsPort.isEmpty()) {
+        setComboBoxPort(ui->comboBoxComPort, iwsPort);
+    }
+    if (settings.contains("iws/baudrate"))
+        ui->comboBoxBaudRate->setCurrentText(settings.value("iws/baudrate").toString());
+    if (settings.contains("iws/databits"))
+        ui->comboBoxDataBits->setCurrentText(settings.value("iws/databits").toString());
+    if (settings.contains("iws/parity"))
+        ui->comboBoxParity->setCurrentIndex(settings.value("iws/parity").toInt());
+    if (settings.contains("iws/stopbits"))
+        ui->comboBoxStopBits->setCurrentIndex(settings.value("iws/stopbits").toInt());
+    if (settings.contains("iws/protocol"))
+        ui->comboBoxProtocol->setCurrentIndex(settings.value("iws/protocol").toInt());
+    if (settings.contains("iws/address"))
+        ui->spinBoxDeviceAddress->setValue(settings.value("iws/address").toInt());
+    if (settings.contains("iws/pollinterval"))
+        ui->spinBoxPollInterval->setValue(settings.value("iws/pollinterval").toInt());
+
+    // БИНС
+    QString binsPort = settings.value("bins/port").toString();
+    if (!binsPort.isEmpty()) {
+        setComboBoxPort(ui->comboBoxBinsPort, binsPort);
+    }
+    if (settings.contains("bins/baudrate"))
+        ui->comboBoxBinsBaudRate->setCurrentText(settings.value("bins/baudrate").toString());
+    if (settings.contains("bins/databits"))
+        ui->comboBoxBinsDataBits->setCurrentText(settings.value("bins/databits").toString());
+    if (settings.contains("bins/parity"))
+        ui->comboBoxBinsParity->setCurrentIndex(settings.value("bins/parity").toInt());
+    if (settings.contains("bins/stopbits"))
+        ui->comboBoxBinsStopBits->setCurrentIndex(settings.value("bins/stopbits").toInt());
+
+    settings.endGroup();
+
+    qDebug() << "SensorSettings: Настройки загружены из" << settings.fileName();
 }
