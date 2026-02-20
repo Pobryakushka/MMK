@@ -77,6 +77,13 @@ enum Litera : quint8 {
     LITERA_3 = 0x02
 };
 
+// Время усреднения
+enum AveragingTime : quint8 {
+    AVERAGING_3_MIN = 0x01,   // 3 минуты
+    AVERAGING_6_MIN = 0x02,   // 6 минут
+    AVERAGING_9_MIN = 0x03    // 9 минут
+};
+
 class AMSProtocol : public QObject
 {
     Q_OBJECT
@@ -86,7 +93,7 @@ public:
 
     // Формирование пакетов для передачи
     QByteArray createLineTestPacket();
-    QByteArray createModeTransferPacket(WorkMode mode, Litera litera);
+    QByteArray createModeTransferPacket(WorkMode mode, AveragingTime avgTime, Litera litera);
     QByteArray createCoordsTransferPacket(const StationCoordinates &coords);
     QByteArray createStartMeasurementPacket();
     QByteArray createDataExchangePacket(bool continueProcess);

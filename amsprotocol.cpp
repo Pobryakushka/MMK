@@ -152,11 +152,12 @@ QByteArray AMSProtocol::createLineTestPacket()
     return finalizePacket(packet);
 }
 
-QByteArray AMSProtocol::createModeTransferPacket(WorkMode mode, Litera litera)
+QByteArray AMSProtocol::createModeTransferPacket(WorkMode mode, AveragingTime avgTime, Litera litera)
 {
     QByteArray packet;
     packet.append(static_cast<char>(CMD_MODE_TRANSFER));
     packet.append(static_cast<char>(mode));
+    packet.append(static_cast<char>(avgTime));
     packet.append(static_cast<char>(litera));
     return finalizePacket(packet);
 }

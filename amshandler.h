@@ -52,7 +52,7 @@ public:
                     const QString &user, const QString &password);
 
     // Управление измерениями - новый подход согласно диаграмме
-    bool startMeasurementSequence(WorkMode mode, Litera litera,
+    bool startMeasurementSequence(WorkMode mode, AveragingTime avgTime, Litera litera,
                                  const StationCoordinates &coords,
                                  const QDateTime &dateTime);
     bool stopMeasurement();
@@ -73,7 +73,7 @@ public:
     bool requestFunctionalControl();
 
     // Установка параметров (отдельные методы для совместимости)
-    bool setWorkMode(WorkMode mode, Litera litera);
+    bool setWorkMode(WorkMode mode, AveragingTime avgTime, Litera litera);
     bool setStationCoordinates(const StationCoordinates &coords);
     bool setDateTime(const QDateTime &dateTime);
 
@@ -138,6 +138,7 @@ private:
     MeasurementStatus m_measurementStatus;
     MeasurementStage m_currentStage;
     WorkMode m_currentMode;
+    AveragingTime m_currentAveragingTime;
     Litera m_currentLitera;
     StationCoordinates m_currentCoords;
     QDateTime m_currentDateTime;

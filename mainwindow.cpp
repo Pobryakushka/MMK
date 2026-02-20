@@ -808,6 +808,7 @@ void MainWindow::onFunctionalControlClicked()
 
 void MainWindow::onAmsMeasurementStageChanged(MeasurementStage stage, const QString &description)
 {
+    Q_UNUSED(stage)
     qDebug() << "MainWindow: Этап измерения:" << description;
     statusBar()->showMessage(description);
 
@@ -1538,7 +1539,7 @@ void MainWindow::onMeasurementResultsClicked()
         }
     }
 
-    dialog->exec();
+    dialog->show();
     delete dialog;
 }
 
@@ -1566,6 +1567,13 @@ void MainWindow::onStartClicked()
     // Получаем параметры для запуска измерения
     WorkMode mode = ui->cbWorkMode->isChecked() ? MODE_WORKING : MODE_STANDBY;
     Litera litera = LITERA_1; // Можно добавить выбор в UI
+
+    // Определяем время усреднения из радиокнопок
+    AveragingTime avgTime = AVERAGING_3_MIN;
+    if (ui->rbAvg6->isChecked())
+        avgTime = AVERAGING_6_MIN;
+    else if (ui->rbAvg9->isChecked())
+        avgTime = AVERAGING_9_MIN;
 
     // Собираем координаты станции
     StationCoordinates coords;
@@ -1600,10 +1608,11 @@ void MainWindow::onStartClicked()
     // Запускаем полную последовательность измерения
     qDebug() << "MainWindow: Запуск измерения АМС";
     qDebug() << "  Режим:" << (mode == MODE_WORKING ? "РАБОЧИЙ" : "ДЕЖУРНЫЙ");
+    qDebug() << "  Время усреднения:" << (avgTime == AVERAGING_3_MIN ? "3 мин" : avgTime == AVERAGING_6_MIN ? "6 мин" : "9 мин");
     qDebug() << "  Координаты:" << lat << lon << coords.altitude;
     qDebug() << "  Углы:" << coords.azimuth << coords.pitch << coords.roll;
 
-    bool success = m_amsHandler->startMeasurementSequence(mode, litera, coords, dateTime);
+    bool success = m_amsHandler->startMeasurementSequence(mode, avgTime, litera, coords, dateTime);
 
     if (!success) {
         QMessageBox::warning(this, "Ошибка",

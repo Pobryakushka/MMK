@@ -120,39 +120,15 @@ void WindShearCalculator::calculateShearMethod1(double V_i, double alpha_i,
     double cos_diff = cos(alpha_i_rad - alpha_i_1_rad);
     deltaV = sqrt(V_i * V_i + V_i_1 * V_i_1 - 2.0 * V_i * V_i_1 * cos_diff);
 
-    // Вычисление изменения направления Δα
-    if (fabs(alpha_i - alpha_i_1) < 1e-6 && fabs(deltaV) < 1e-6) {
-        // Если α_i - α_{i-1} = 0 и ΔV = 0, то Δα = 0
-        deltaAlpha = 0.0;
-    } else {
-        // Вычисляем y для функции sign
-        double y = (alpha_i - alpha_i_1) * (180.0 - fabs(alpha_i - alpha_i_1));
+    // ИЗМЕНЕНИЕ НАПРАВЛЕНИЯ - это просто разница углов
+    deltaAlpha = alpha_i - alpha_i_1;
 
-        // Формула: Δα = arccos((ΔV² + V_i² - V_{i-1}²)/(2·ΔV·V_i)) · sign(y) + α_i
-        double numerator = deltaV * deltaV + V_i * V_i - V_i_1 * V_i_1;
-        double denominator = 2.0 * deltaV * V_i;
-
-        if (fabs(denominator) > 1e-6) {
-            double cos_value = numerator / denominator;
-            // Ограничиваем значение для arccos в диапазоне [-1, 1]
-            cos_value = std::max(-1.0, std::min(1.0, cos_value));
-
-            double arccos_value = radToDeg(acos(cos_value));
-            deltaAlpha = arccos_value * sign(y) + alpha_i;
-        } else {
-            deltaAlpha = alpha_i;
-        }
-
-        // Нормализация угла
-        deltaAlpha = normalizeAngle(deltaAlpha);
-
-        // Корректировка согласно условиям из формул
-        if (deltaAlpha > 360.0) {
-            deltaAlpha = deltaAlpha - 360.0;
-        }
-        if (deltaAlpha < 0.0) {
-            deltaAlpha = deltaAlpha + 360.0;
-        }
+    // Нормализуем в диапазон [-180, 180] для удобства
+    while (deltaAlpha > 180.0) {
+        deltaAlpha -= 360.0;
+    }
+    while (deltaAlpha < -180.0) {
+        deltaAlpha += 360.0;
     }
 }
 

@@ -15,6 +15,7 @@ AMSHandler::AMSHandler(QObject *parent)
     , m_measurementStatus(STATUS_IDLE)
     , m_currentStage(STAGE_IDLE)
     , m_currentMode(MODE_WORKING)
+    , m_currentAveragingTime(AVERAGING_3_MIN)
     , m_currentLitera(LITERA_1)
     , m_lastProgress(0)
     , m_lastAngle(0.0f)
@@ -118,7 +119,7 @@ void AMSHandler::setDatabase(const QString &host, int port, const QString &dbNam
 
 // ===== УПРАВЛЕНИЕ ПРОЦЕССОМ ИЗМЕРЕНИЯ СОГЛАСНО ДИАГРАММЕ =====
 
-bool AMSHandler::startMeasurementSequence(WorkMode mode, Litera litera,
+bool AMSHandler::startMeasurementSequence(WorkMode mode, AveragingTime avgTime, Litera litera,
                                          const StationCoordinates &coords,
                                          const QDateTime &dateTime)
 {
@@ -134,6 +135,7 @@ bool AMSHandler::startMeasurementSequence(WorkMode mode, Litera litera,
 
     // Сохраняем параметры для использования в процессе
     m_currentMode = mode;
+    m_currentAveragingTime = avgTime;
     m_currentLitera = litera;
     m_currentCoords = coords;
     m_currentDateTime = dateTime;
@@ -210,7 +212,7 @@ void AMSHandler::advanceMeasurementStage()
         case STAGE_SEND_MODE: {
             // Передача признаков режимов работы (0xA1)
             setMeasurementStage(STAGE_SEND_MODE);
-            QByteArray packet = m_protocol->createModeTransferPacket(m_currentMode, m_currentLitera);
+            QByteArray packet = m_protocol->createModeTransferPacket(m_currentMode, m_currentAveragingTime, m_currentLitera);
             sendPacket(packet, CMD_MODE_TRANSFER);
             break;
         }
@@ -446,9 +448,9 @@ bool AMSHandler::requestFunctionalControl()
     return sendPacket(packet, CMD_FUNC_CONTROL);
 }
 
-bool AMSHandler::setWorkMode(WorkMode mode, Litera litera)
+bool AMSHandler::setWorkMode(WorkMode mode, AveragingTime avgTime, Litera litera)
 {
-    QByteArray packet = m_protocol->createModeTransferPacket(mode, litera);
+    QByteArray packet = m_protocol->createModeTransferPacket(mode, avgTime, litera);
     return sendPacket(packet, CMD_MODE_TRANSFER);
 }
 

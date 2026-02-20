@@ -2389,7 +2389,7 @@ p, li { white-space: pre-wrap; }
            <widget class="QwtPlot" name="plot_windShearSpeed">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-              <horstretch>3</horstretch>
+              <horstretch>2</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
@@ -2399,7 +2399,7 @@ p, li { white-space: pre-wrap; }
            <widget class="QwtPlot" name="plot_windShearDirection">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-              <horstretch>3</horstretch>
+              <horstretch>2</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
@@ -2409,7 +2409,7 @@ p, li { white-space: pre-wrap; }
            <widget class="QTableWidget" name="table_windShear">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-              <horstretch>1</horstretch>
+              <horstretch>3</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
