@@ -50,6 +50,8 @@ MainWindow::MainWindow(QWidget *parent)
     , m_amsHandler(nullptr)
     , m_amsComPort("")
     , m_amsBaudRate(9600)
+    , m_iwsWarmupTimer(nullptr)
+    , m_iwsWarmupDone(false)
 {
     ui->setupUi(this);
 
@@ -152,6 +154,15 @@ MainWindow::MainWindow(QWidget *parent)
 
     m_binsHandler = new BINSHandler(this);
     setupBinsHandler();
+
+    // Таймер прогрева ИВС (3 минуты)
+    m_iwsWarmupTimer = new QTimer(this);
+    m_iwsWarmupTimer->setSingleShot(true);
+    connect(m_iwsWarmupTimer, &QTimer::timeout, this, &MainWindow::onIwsWarmupFinished);
+
+    // rbAvg3 заблокирован до истечения 3 минут после подключения ИВС
+    ui->rbAvg3->setEnabled(false);
+    ui->rbAvg3->setToolTip("Режим 3 мин. станет доступен через 3 минуты после подключения ИВС");
 
     // Инициализация панели статуса датчиков
     updateSensorStatusPanel();
@@ -1142,6 +1153,16 @@ void MainWindow::onConnectRequested()
         sensorSettingsDialog->setIwsConnectionEnabled(false);
         updateIwsStatusLabel(true);
 
+        // Запускаем таймер прогрева ИВС (3 минуты)
+        m_iwsWarmupDone = false;
+        ui->rbAvg3->setEnabled(false);
+        ui->rbAvg3->setToolTip("Режим 3 мин. станет доступен через 3 минуты после подключения ИВС");
+        if (ui->rbAvg3->isChecked()) {
+            ui->rbAvg6->setChecked(true);
+        }
+        m_iwsWarmupTimer->start(3 * 60 * 1000);
+        statusBar()->showMessage("ИВС подключён. Режим усреднения 3 мин. станет доступен через 3 минуты.", 8000);
+
         // Настраиваем протокол в GroundMeteoParams
         GroundMeteoParams* meteoParams = GroundMeteoParams::instance();
         if (meteoParams) {
@@ -1185,8 +1206,28 @@ void MainWindow::onConnectRequested()
     }
 }
 
+void MainWindow::onIwsWarmupFinished()
+{
+    m_iwsWarmupDone = true;
+    ui->rbAvg3->setEnabled(true);
+    ui->rbAvg3->setToolTip("");
+    statusBar()->showMessage("ИВС: режим усреднения 3 минуты теперь доступен", 5000);
+    qDebug() << "MainWindow: ИВС прогрев завершён, rbAvg3 разблокирован";
+}
+
 void MainWindow::onDisconnectRequested()
 {
+    // Сбрасываем прогрев ИВС
+    if (m_iwsWarmupTimer) {
+        m_iwsWarmupTimer->stop();
+    }
+    m_iwsWarmupDone = false;
+    ui->rbAvg3->setEnabled(false);
+    ui->rbAvg3->setToolTip("Режим 3 мин. станет доступен через 3 минуты после подключения ИВС");
+    if (ui->rbAvg3->isChecked()) {
+        ui->rbAvg6->setChecked(true);
+    }
+
     if (pollTimer) {
         pollTimer->stop();
     }

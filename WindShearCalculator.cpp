@@ -83,7 +83,7 @@ QVector<WindShearData> WindShearCalculator::calculateShear(const QVector<Measure
         double deltaV = 0.0;
         double deltaAlpha = 0.0;
 
-        // ИСПОЛЬЗУЕМ СПОСОБ 1 (через скорость и направление) - КАК В ТЗ
+        // СПОСОБ 1 (через скорость и направление)
         calculateShearMethod1(upper.windSpeed, upper.windDirection,
                              lower.windSpeed, lower.windDirection,
                              upper.height, lower.height,

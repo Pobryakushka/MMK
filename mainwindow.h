@@ -103,6 +103,9 @@ private slots:
     void onAmsActualWindReceived(const QVector<WindProfileData> &data);
     void onAmsMeasuredWindReceived(const QVector<MeasuredWindData> &data);
 
+    // ИВС прогрев
+    void onIwsWarmupFinished();
+
     // БИНС слоты
     void onBinsConnectFromSettings();
     void onBinsDisconnectFromSettings();
@@ -149,6 +152,10 @@ private:
     BINSHandler *m_binsHandler;
     QString m_binsComPort;
     int m_binsBaudRate;
+
+    // Прогрев ИВС — ожидание 3 минут после подключения
+    QTimer *m_iwsWarmupTimer;
+    bool    m_iwsWarmupDone;
 
     void createMapComponent(const QString &pluginName);
     void setupMapItems(QQuickItem *item);
