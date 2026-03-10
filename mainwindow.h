@@ -15,6 +15,7 @@
 #include "Map/InitialParameters.h"
 #include "Map/FormMapView.h"
 #include "sensorsettings.h"
+#include "surfacemeteosaver.h"
 
 // Forward declaration
 class SourceData;
@@ -156,6 +157,9 @@ private:
     // Прогрев ИВС — ожидание 3 минут после подключения
     QTimer *m_iwsWarmupTimer;
     bool    m_iwsWarmupDone;
+
+    // Сохранение приземных данных ИВС в БД
+    SurfaceMeteoSaver *m_surfaceMeteoSaver;
 
     void createMapComponent(const QString &pluginName);
     void setupMapItems(QQuickItem *item);

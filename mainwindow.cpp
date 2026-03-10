@@ -8,6 +8,7 @@
 #include "amshandler.h"
 #include "databasemanager.h"
 #include "CoordHelper.h"
+#include "surfacemeteosaver.h"
 #include <QDateTime>
 #include <QTimer>
 #include <QQuickItem>
@@ -52,6 +53,7 @@ MainWindow::MainWindow(QWidget *parent)
     , m_amsBaudRate(9600)
     , m_iwsWarmupTimer(nullptr)
     , m_iwsWarmupDone(false)
+    , m_surfaceMeteoSaver(new SurfaceMeteoSaver(this))
 {
     ui->setupUi(this);
 
@@ -636,6 +638,10 @@ void MainWindow::setupAmsHandler()
             this, &MainWindow::onAmsActualWindReceived);
     connect(m_amsHandler, &AMSHandler::measuredWindDataReceived,
             this, &MainWindow::onAmsMeasuredWindReceived);
+
+    // Когда АМС записал данные в БД — сохраняем туда же данные ИВС
+    connect(m_amsHandler, &AMSHandler::dataWrittenToDatabase,
+            this, &MainWindow::onAmsDataWritten);
 }
 
 void MainWindow::configureAmsDatabase()
@@ -797,8 +803,16 @@ void MainWindow::onAmsDataWritten(int recordId)
 {
     qDebug() << "MainWindow: Данные АМС записаны в архив, record_id:" << recordId;
     statusBar()->showMessage(
-        QString("АМС: Данные записаны в архив (ID: %1)").arg(recordId),
-        3000);
+        QString("АМС: Данные записаны в архив (ID: %1)").arg(recordId), 3000);
+
+    // Сохраняем приземные данные ИВС в surface_meteo с тем же record_id
+    if (m_surfaceMeteoSaver->hasData()) {
+        qDebug() << "MainWindow: Сохраняем данные ИВС в surface_meteo, record_id=" << recordId;
+        m_surfaceMeteoSaver->saveToDatabase(recordId);
+    } else {
+        qWarning() << "MainWindow: Данные ИВС ещё не получены — surface_meteo не заполнена."
+                   << "(ИВС подключён и опрошен хотя бы раз?)";
+    }
 }
 
 void MainWindow::onAmsDatabaseError(const QString &error)
@@ -1194,6 +1208,12 @@ void MainWindow::onConnectRequested()
             quint8 deviceAddress = sensorSettingsDialog->getIwsDeviceAddress();
             meteoParams->setDeviceAddress(deviceAddress);
 
+            // Подключаем получение данных ИВС для записи в БД по завершении измерений
+            connect(meteoParams, &GroundMeteoParams::dataUpdated,
+                    m_surfaceMeteoSaver, &SurfaceMeteoSaver::updateLastValues,
+                    Qt::UniqueConnection);
+            qDebug() << "MainWindow: GroundMeteoParams::dataUpdated подключён к SurfaceMeteoSaver";
+
             qDebug() << "IWS: Configured"
                      << (protocolToUse == 0 ? "UMB" : "Modbus RTU")
                      << "protocol, address" << QString("0x%1").arg(deviceAddress, 2, 16, QChar('0'))
@@ -1554,6 +1574,16 @@ void MainWindow::onInitialDataClicked()
 {
     SourceData dialog(this);
     dialog.exec();
+
+    // После открытия SourceData GroundMeteoParams::instance() уже существует —
+    // подключаем обновление данных ИВС для записи в БД
+    GroundMeteoParams* meteoParams = GroundMeteoParams::instance();
+    if (meteoParams && serialPort && serialPort->isOpen()) {
+        connect(meteoParams, &GroundMeteoParams::dataUpdated,
+                m_surfaceMeteoSaver, &SurfaceMeteoSaver::updateLastValues,
+                Qt::UniqueConnection);
+        qDebug() << "MainWindow: GroundMeteoParams::dataUpdated подключён к SurfaceMeteoSaver";
+    }
 }
 
 void MainWindow::onCalculationsClicked()

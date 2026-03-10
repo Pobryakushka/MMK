@@ -17,6 +17,8 @@ MeasurementResults::MeasurementResults(QWidget *parent)
     , currentOutputFormat(String)
     , m_mapCoordinatesMode(false)
     , m_zoomsContainer(nullptr)
+    , m_windShearCurve(nullptr)
+    , m_windShearGrid(nullptr)
 //    , m_dbPort(5432)
 //    , m_dbConfigured(false)
 {
@@ -26,11 +28,6 @@ MeasurementResults::MeasurementResults(QWidget *parent)
     int minutes = currentDateTime.time().minute();
     minutes = (minutes / 10) * 10;
     currentDateTime.setTime(QTime(currentDateTime.time().hour(), minutes, 0));
-
-    loadAvailableMeasurements();
-
-    updateDateTimeDisplay();
-    updateSliderRange();
 
     connect(ui->btnPrevDate, &QPushButton::clicked, this, &MeasurementResults::onPrevDateClicked);
     connect(ui->btnNextDate, &QPushButton::clicked, this, &MeasurementResults::onNextDateClicked);
@@ -45,13 +42,16 @@ MeasurementResults::MeasurementResults(QWidget *parent)
 
     switchMeteo11Display();
 
+    // Все графики инициализируются ДО загрузки данных —
+    // иначе displayWindProfile/clearWindShearDisplay обращаются к неготовым виджетам
     setupPlots();
-    setupZoom();  // Инициализация масштабирования
-
-    // Инициализация сдвига ветра
-    m_windShearCurve = nullptr;
-    m_windShearGrid = nullptr;
+    setupZoom();
     setupWindShearTab();
+
+    loadAvailableMeasurements();
+
+    updateDateTimeDisplay();
+    updateSliderRange();
 }
 
 MeasurementResults::~MeasurementResults()

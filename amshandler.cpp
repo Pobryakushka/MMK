@@ -379,6 +379,9 @@ void AMSHandler::completeMeasurement()
     setMeasurementStatus(STATUS_READY);
 
     qInfo() << "AMSHandler: Измерение успешно завершено, ID записи:" << m_currentRecordId;
+
+    // Эмитим оба сигнала пока recordId ещё валиден
+    emit dataWrittenToDatabase(m_currentRecordId);
     emit measurementCompleted(m_currentRecordId);
     emit statusMessage("Измерение завершено успешно");
 
