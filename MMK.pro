@@ -19,6 +19,7 @@ SOURCES += \
     SourceData.cpp \
     binshandler.cpp \
     databasemanager.cpp \
+    gnsshandler.cpp \
     main.cpp \
     mainwindow.cpp \
     sensorsettings.cpp \
@@ -46,6 +47,7 @@ HEADERS += \
     SourceData.h \
     binshandler.h \
     databasemanager.h \
+    gnsshandler.h \
     mainwindow.h \
     qmlcoordinateproxy.h \
     sensorsettings.h \

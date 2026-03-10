@@ -9,7 +9,7 @@
 #include <QSerialPort>
 #include <QSerialPortInfo>
 #include "qmlcoordinateproxy.h"
-#include "zedf9preceiver.h"
+#include "gnsshandler.h"
 #include "amshandler.h"
 #include "binshandler.h"
 #include "Map/InitialParameters.h"
@@ -34,7 +34,7 @@ public:
     bool isMapCoordinatsEnabled() const { return m_mapCoordinatesEnabled; }
     void updateCoordinatesFromMap(double latitude, double longitude);
 
-    ZedF9PReceiver* getGnssReceiver() { return m_gnssReceiver; }
+    GNSSHandler* getGnssHandler() { return m_gnssHandler; }
     bool isGnssEnabled() const { return m_gnssEnabled; }
 
     // Геттер для АМС
@@ -138,7 +138,7 @@ private:
     bool m_gnssEnabled;
     bool m_manualInputEnabled;
 
-    ZedF9PReceiver *m_gnssReceiver;
+    GNSSHandler *m_gnssHandler;
 
     QString m_gnssComPort;
     int m_gnssBaudRate;

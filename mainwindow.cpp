@@ -44,7 +44,7 @@ MainWindow::MainWindow(QWidget *parent)
     , m_mapCoordinatesEnabled(false)
     , m_gnssEnabled(false)
     , m_manualInputEnabled(false)
-    , m_gnssReceiver(new ZedF9PReceiver(this))
+    , m_gnssHandler(new GNSSHandler(this))
     , m_gnssComPort("")
     , m_gnssBaudRate(19200)
     , m_amsHandler(nullptr)
@@ -83,11 +83,20 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->editDateTime, &QLineEdit::textEdited, this, &MainWindow::onDateTimeEditingStarted);
 
     // GNSS сигналы
-    connect(m_gnssReceiver, &ZedF9PReceiver::dataReceived, this, &MainWindow::onGnssDataReceived);
-    connect(m_gnssReceiver, &ZedF9PReceiver::connected, this, &MainWindow::onGnssConnected);
-    connect(m_gnssReceiver, &ZedF9PReceiver::disconnected, this, &MainWindow::onGnssDisconnected);
-    connect(m_gnssReceiver, &ZedF9PReceiver::errorOccurred, this, &MainWindow::onGnssError);
-    connect(m_gnssReceiver, &ZedF9PReceiver::nmeaReceived, this, &MainWindow::onNmeaReceived);
+    connect(m_gnssHandler, &GNSSHandler::dataReceived, this, &MainWindow::onGnssDataReceived);
+    connect(m_gnssHandler, &GNSSHandler::connected, this, &MainWindow::onGnssConnected);
+    connect(m_gnssHandler, &GNSSHandler::disconnected, this, &MainWindow::onGnssDisconnected);
+    connect(m_gnssHandler, &GNSSHandler::errorOccurred, this, &MainWindow::onGnssError);
+    connect(m_gnssHandler, &GNSSHandler::nmeaReceived, this, &MainWindow::onNmeaReceived);
+
+    connect(m_gnssHandler, &GNSSHandler::coordinatesUpdated, this, [this](int id){
+        statusBar()->showMessage(
+                    QString("GNSS: координаты обновлены в БД (record_id: %1)").arg(id), 5000);
+    });
+    connect(m_gnssHandler, &GNSSHandler::dbError, this, [this](const QString &err){
+        qWarning() << "MainWindow: Ошибка GNSS БД:" << err;
+        statusBar()->showMessage("Ошибка GNSS БД: " + err, 8000);
+    });
 
     connect(ui->editLatitude, &QLineEdit::textEdited, this, [this](){ onCoordTextEdited(ui->editLatitude); });
     connect(ui->editLongitude, &QLineEdit::textEdited, this, [this](){ onCoordTextEdited(ui->editLongitude); });
@@ -160,9 +169,10 @@ MainWindow::MainWindow(QWidget *parent)
     m_iwsWarmupTimer->setSingleShot(true);
     connect(m_iwsWarmupTimer, &QTimer::timeout, this, &MainWindow::onIwsWarmupFinished);
 
-    // rbAvg3 заблокирован до истечения 3 минут после подключения ИВС
-    ui->rbAvg3->setEnabled(false);
-    ui->rbAvg3->setToolTip("Режим 3 мин. станет доступен через 3 минуты после подключения ИВС");
+    // rbAvg3 доступен по умолчанию; блокируется только после подключения ИВС
+    // на 3 минуты прогрева (см. onConnectRequested / onDisconnectRequested)
+    ui->rbAvg3->setEnabled(true);
+    ui->rbAvg3->setToolTip("");
 
     // Инициализация панели статуса датчиков
     updateSensorStatusPanel();
@@ -175,9 +185,6 @@ MainWindow::~MainWindow()
     }
     if (pollTimer) {
         pollTimer->stop();
-    }
-    if (m_gnssReceiver->isConnected()){
-        m_gnssReceiver->disconnectFromReceiver();
     }
     if (m_amsHandler && m_amsHandler->isConnected()) {
         m_amsHandler->disconnectFromAMS();
@@ -331,7 +338,7 @@ void MainWindow::onGnssConnectFromSettings()
     m_gnssComPort = sensorSettingsDialog->getGnssComPort();
     m_gnssBaudRate = sensorSettingsDialog->getGnssBaudRate();
 
-    if (m_gnssReceiver->connectToReceiver(m_gnssComPort, m_gnssBaudRate)){
+    if (m_gnssHandler->connectToGnss(m_gnssComPort, m_gnssBaudRate)){
         sensorSettingsDialog->setGnssConnectionStatus("Подключено", true);
         sensorSettingsDialog->setGnssConnectionEnabled(false);
         m_gnssEnabled = true;
@@ -438,7 +445,7 @@ void MainWindow::connectToGnss()
 {
     checkAndDisableConflictingSources("gnss");
 
-    if (m_gnssReceiver->connectToReceiver(m_gnssComPort, m_gnssBaudRate)) {
+    if (m_gnssHandler->connectToGnss(m_gnssComPort, m_gnssBaudRate)) {
         qDebug() << "MainWindow: GNSS подключение инициировано успешно";
         m_gnssEnabled = true;
         updateCoordinateSource("GNSS");
@@ -457,9 +464,7 @@ void MainWindow::connectToGnss()
 void MainWindow::disconnectFromGnss()
 {
     qDebug() << "MainWindow: Отключение от GNSS";
-    if (m_gnssReceiver->isConnected()) {
-        m_gnssReceiver->disconnectFromReceiver();
-    }
+    m_gnssHandler->disconnectFromGnss();
     m_gnssEnabled = false;
     ui->checkboxGnss->setChecked(false);
 
@@ -564,7 +569,7 @@ void MainWindow::onGnssError(const QString &error)
 {
     qDebug() << "Ошибка GNSS:" << error;
 
-    if (m_gnssReceiver->isConnected()) {
+    if (m_gnssHandler->isConnected()) {
         statusBar()->showMessage("Ошибка GNSS: " + error, 5000);
     }
 }
@@ -857,6 +862,12 @@ void MainWindow::onAmsMeasurementCompleted(int recordId)
     ui->btnStop->setEnabled(false);
 
     statusBar()->showMessage("Измерение завершено успешно", 10000);
+
+    if (m_gnssHandler && m_gnssHandler->isConnected() && m_gnssHandler->hasVaidFix()) {
+        m_gnssHandler->updateCoordinatesInDb(recordId);
+    } else {
+        qDebug() << "MainWindow: GNSS недоступен - в БД записываются координаты из UI-полей";
+    }
 }
 
 void MainWindow::onAmsMeasurementFailed(const QString &reason)
@@ -1217,16 +1228,13 @@ void MainWindow::onIwsWarmupFinished()
 
 void MainWindow::onDisconnectRequested()
 {
-    // Сбрасываем прогрев ИВС
+    // Сбрасываем прогрев ИВС; ИВС отключён — разблокируем rbAvg3
     if (m_iwsWarmupTimer) {
         m_iwsWarmupTimer->stop();
     }
     m_iwsWarmupDone = false;
-    ui->rbAvg3->setEnabled(false);
-    ui->rbAvg3->setToolTip("Режим 3 мин. станет доступен через 3 минуты после подключения ИВС");
-    if (ui->rbAvg3->isChecked()) {
-        ui->rbAvg6->setChecked(true);
-    }
+    ui->rbAvg3->setEnabled(true);
+    ui->rbAvg3->setToolTip("");
 
     if (pollTimer) {
         pollTimer->stop();
@@ -1411,9 +1419,9 @@ void MainWindow::updateDateTime()
         m_manualDateTime = m_manualDateTime.addSecs(1);
         timeString = m_manualDateTime.toString("dd.MM.yyyy hh:mm:ss");
     }
-    else if (m_gnssEnabled && m_gnssReceiver->isConnected()) {
+    else if (m_gnssEnabled && m_gnssHandler->isConnected()) {
         // Используем время из GNSS
-        GNSSData data = m_gnssReceiver->getCurrentData();
+        GNSSData data = m_gnssHandler->getCurrentData();
         if (data.timestamp.isValid()){
             timeString = data.timestamp.toString("dd.MM.yyyy hh:mm:ss");
         } else {
@@ -1714,7 +1722,7 @@ void MainWindow::onStandbyModeChanged(int state)
 
 void MainWindow::updateSensorStatusPanel()
 {
-    updateGnssStatusLabel(m_gnssReceiver && m_gnssReceiver->isConnected());
+    updateGnssStatusLabel(m_gnssHandler && m_gnssHandler->isConnected());
     updateAmsStatusLabel(m_amsHandler && m_amsHandler->isConnected());
     updateBinsStatusLabel(m_binsHandler && m_binsHandler->isConnected());
     updateIwsStatusLabel(serialPort && serialPort->isOpen());
