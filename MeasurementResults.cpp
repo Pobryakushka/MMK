@@ -355,22 +355,14 @@ void MeasurementResults::loadSurfaceMeteoData(int recordId)
 
     ui->tableWidget_parm1b65->clearContents();
 
-    if (recordId <= 0) {
-        qWarning() << "MeasurementResults: loadSurfaceMeteoData — некорректный record_id=" << recordId;
-        return;
-    }
-
-    if (!connectDatabase()) {
-        qWarning() << "MeasurementResults: loadSurfaceMeteoData — не удалось подключиться к БД";
-        return;
-    }
+    if (recordId <= 0) return;
+    if (!connectDatabase()) return;
 
     QSqlDatabase db = DatabaseManager::instance()->database();
     QSqlQuery query(db);
     query.prepare(
         "SELECT temperature, humidity, pressure, wind_speed_surface, wind_direction_surface "
-        "FROM surface_meteo "
-        "WHERE record_id = :record_id"
+        "FROM surface_meteo WHERE record_id = :record_id"
     );
     query.bindValue(":record_id", recordId);
 
@@ -694,7 +686,8 @@ void MeasurementResults::loadMeasurementData(const QDateTime &dateTime)
         record = findClosestRecord(date, hour);
     }
 
-    qDebug() << "MeasurementResults: loadMeasurementData для" << dateTime.toString("yyyy-MM-dd hh:mm:ss")
+    qDebug() << "MeasurementResults: loadMeasurementData для"
+             << dateTime.toString("yyyy-MM-dd hh:mm:ss")
              << "→ record_id=" << record.recordId;
 
     if (record.recordId > 0) {
@@ -1405,15 +1398,22 @@ void MeasurementResults::updateWindShearTable(const QVector<WindShearData> &shea
  */
 void MeasurementResults::clearWindShearDisplay()
 {
-    // Очищаем график скорости
-    if (ui->plot_windShearSpeed) {
-        ui->plot_windShearSpeed->detachItems(QwtPlotItem::Rtti_PlotCurve);
-        ui->plot_windShearSpeed->replot();
+    // Очищаем данные кривой скорости — НЕ detach, чтобы не удалять m_windShearCurve
+    if (m_windShearCurve) {
+        m_windShearCurve->setSamples(QVector<QPointF>());
+        if (ui->plot_windShearSpeed) {
+            ui->plot_windShearSpeed->replot();
+        }
+    } else if (ui->plot_windShearSpeed) {
+        // m_windShearCurve ещё не создана (до setupWindShearTab) — ничего не делаем
     }
 
-    // Очищаем график направления
+    // Очищаем данные кривой направления — только её данные, не удаляем объект
     if (ui->plot_windShearDirection) {
-        ui->plot_windShearDirection->detachItems(QwtPlotItem::Rtti_PlotCurve);
+        QwtPlotItemList items = ui->plot_windShearDirection->itemList(QwtPlotItem::Rtti_PlotCurve);
+        for (QwtPlotItem *item : items) {
+            static_cast<QwtPlotCurve*>(item)->setSamples(QVector<QPointF>());
+        }
         ui->plot_windShearDirection->replot();
     }
 
