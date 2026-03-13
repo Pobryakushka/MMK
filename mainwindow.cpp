@@ -966,7 +966,7 @@ void MainWindow::onAmsMeasurementCompleted(int recordId)
 
     statusBar()->showMessage("Измерение завершено успешно", 10000);
 
-    if (m_gnssHandler && m_gnssHandler->isConnected() && m_gnssHandler->hasVaidFix()) {
+    if (m_gnssHandler && m_gnssHandler->isConnected() && m_gnssHandler->hasValidFix()) {
         m_gnssHandler->updateCoordinatesInDb(recordId);
     } else {
         qDebug() << "MainWindow: GNSS недоступен - в БД записываются координаты из UI-полей";

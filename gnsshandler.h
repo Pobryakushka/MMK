@@ -17,7 +17,7 @@ public:
     bool isConnected() const;
 
     GNSSData getCurrentData() const { return m_lastData; }
-    bool hasVaidFix() const { return m_hasValidFix; }
+    bool hasValidFix() const { return m_hasValidFix; }
 
     // Вызывается из MainWindow::onAmsMeasurementCompleted()
     // Обновляет запись station_coordinates для данного record_id
