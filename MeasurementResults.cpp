@@ -406,10 +406,10 @@ void MeasurementResults::loadStationCoordinates(int recordId)
     double lon = query.value(1).toDouble();
     double alt = query.value(2).toDouble();
 
-    ui->editLatitude->setText(QString::number(qAbs(lat), 'f', 6));
+    ui->editLatitude->setText(CoordHelper::toDisplayDMS(qAbs(lat)));
     ui->cmbLatitudeType->setCurrentIndex(lat >= 0 ? 0 : 1);  // 0=Северная, 1=Южная
 
-    ui->editLongitude->setText(QString::number(qAbs(lon), 'f', 6));
+    ui->editLongitude->setText(CoordHelper::toDisplayDMS(qAbs(lon)));
     ui->cmbLongitudeType->setCurrentIndex(lon >= 0 ? 0 : 1); // 0=Восточная, 1=Западная
 
     ui->editAltitude->setText(QString::number(alt, 'f', 1));
