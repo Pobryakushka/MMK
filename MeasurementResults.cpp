@@ -344,6 +344,70 @@ QVector<MeasuredWindData> MeasurementResults::loadMeasuredWindProfile(const QDat
     return profile;
 }
 
+void MeasurementResults::loadSurfaceMeteoData(int recordId)
+{
+    // Строки в tableWidget_parm1b65 (согласно UI):
+    //   row 0 — Наземное атмосферное давление P, мм рт.ст.
+    //   row 1 — Наземная температура воздуха T, C°
+    //   row 2 — Наземная относительная влажность воздуха r, %
+    //   row 3 — Наземное направление ветра А, град
+    //   row 4 — Наземная скорость ветра V, м/с
+
+    ui->tableWidget_parm1b65->clearContents();
+
+    if (recordId <= 0) {
+        qWarning() << "MeasurementResults: loadSurfaceMeteoData — некорректный record_id=" << recordId;
+        return;
+    }
+
+    if (!connectDatabase()) {
+        qWarning() << "MeasurementResults: loadSurfaceMeteoData — не удалось подключиться к БД";
+        return;
+    }
+
+    QSqlDatabase db = DatabaseManager::instance()->database();
+    QSqlQuery query(db);
+    query.prepare(
+        "SELECT temperature, humidity, pressure, wind_speed_surface, wind_direction_surface "
+        "FROM surface_meteo "
+        "WHERE record_id = :record_id"
+    );
+    query.bindValue(":record_id", recordId);
+
+    if (!query.exec()) {
+        qCritical() << "MeasurementResults: Ошибка загрузки данных ИВС:"
+                    << query.lastError().text();
+        return;
+    }
+
+    if (!query.next()) {
+        qDebug() << "MeasurementResults: Нет данных ИВС для record_id=" << recordId;
+        return;
+    }
+
+    double temperature   = query.value(0).toDouble();
+    double humidity      = query.value(1).toDouble();
+    double pressure      = query.value(2).toDouble();
+    double windSpeed     = query.value(3).toDouble();
+    int    windDirection = query.value(4).toInt();
+
+    qDebug() << "MeasurementResults: Данные ИВС record_id=" << recordId
+             << "T=" << temperature << "H=" << humidity
+             << "P=" << pressure << "WS=" << windSpeed << "WD=" << windDirection;
+
+    auto setCell = [&](int row, const QString &text) {
+        QTableWidgetItem *item = new QTableWidgetItem(text);
+        item->setTextAlignment(Qt::AlignCenter);
+        ui->tableWidget_parm1b65->setItem(row, 0, item);
+    };
+
+    setCell(0, QString::number(pressure,      'f', 1));
+    setCell(1, QString::number(temperature,   'f', 1));
+    setCell(2, QString::number(humidity,      'f', 1));
+    setCell(3, QString::number(windDirection, 10));
+    setCell(4, QString::number(windSpeed,     'f', 1));
+}
+
 // ===== ОТОБРАЖЕНИЕ ДАННЫХ =====
 
 void MeasurementResults::displayWindProfile(const QVector<WindProfileData> &avgWind,
@@ -614,7 +678,24 @@ void MeasurementResults::loadMeasurementData(const QDateTime &dateTime)
     QDate date = dateTime.date();
     int hour = dateTime.time().hour();
 
-    MeasurementRecord record = findClosestRecord(date, hour);
+    // Сначала ищем точное совпадение по времени (когда пользователь выбрал запись явно)
+    MeasurementRecord record;
+    if (availableMeasurements.contains(date)) {
+        for (const MeasurementRecord &r : availableMeasurements[date]) {
+            if (r.measurementTime == dateTime) {
+                record = r;
+                break;
+            }
+        }
+    }
+
+    // Если точного совпадения нет — ищем ближайшую к выбранному часу
+    if (record.recordId <= 0) {
+        record = findClosestRecord(date, hour);
+    }
+
+    qDebug() << "MeasurementResults: loadMeasurementData для" << dateTime.toString("yyyy-MM-dd hh:mm:ss")
+             << "→ record_id=" << record.recordId;
 
     if (record.recordId > 0) {
         ui->lblDataStatus->setText(QString("Данные загружены (ID: %1)").arg(record.recordId));
@@ -624,6 +705,9 @@ void MeasurementResults::loadMeasurementData(const QDateTime &dateTime)
         QVector<WindProfileData> avgWind = loadAvgWindProfile(record.measurementTime);
         QVector<WindProfileData> actualWind = loadActualWindProfile(record.measurementTime);
         QVector<MeasuredWindData> measuredWind = loadMeasuredWindProfile(record.measurementTime);
+
+        // Загружаем приземные данные ИВС
+        loadSurfaceMeteoData(record.recordId);
 
         // Отображаем данные
         displayWindProfile(avgWind, actualWind, measuredWind);
@@ -647,10 +731,10 @@ void MeasurementResults::loadMeasurementData(const QDateTime &dateTime)
         ui->lblDataStatus->setText("Нет данных для выбранного времени");
         ui->lblDataStatus->setStyleSheet("color: red; font-weight: bold;");
 
-        // Очищаем таблицы
         ui->tableWidget_AverageWind->clearContents();
         ui->tableWidget_realWind->clearContents();
         ui->tableWidget_izmWind_2->clearContents();
+        ui->tableWidget_parm1b65->clearContents();
     }
 
     updateAvailableRecordsLabel();

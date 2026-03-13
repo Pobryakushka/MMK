@@ -113,6 +113,9 @@ private:
     QVector<WindProfileData> loadActualWindProfile(const QDateTime &time);
     QVector<MeasuredWindData> loadMeasuredWindProfile(const QDateTime &time);
 
+    // Загрузка и отображение приземных данных ИВС
+    void loadSurfaceMeteoData(int recordId);
+
     // Отображение данных
     void displayWindProfile(const QVector<WindProfileData> &avgWind,
                           const QVector<WindProfileData> &actualWind,
