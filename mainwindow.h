@@ -158,6 +158,12 @@ private:
     QTimer *m_iwsWarmupTimer;
     bool    m_iwsWarmupDone;
 
+    // Финальный запрос к ИВС по завершении измерения АМС
+    int     m_pendingIwsRecordId;   // record_id ожидающий данных ИВС
+    QTimer *m_iwsFinalRequestTimer; // таймаут ожидания ответа
+    void requestIwsDataForRecord(int recordId);
+    void onIwsFinalDataReceived(const QMap<QString, double> &values);
+
     // Сохранение приземных данных ИВС в БД
     SurfaceMeteoSaver *m_surfaceMeteoSaver;
 
