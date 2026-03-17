@@ -67,7 +67,7 @@
          <bool>true</bool>
         </property>
         <property name="placeholderText">
-         <string>55.7558</string>
+         <string>55°45'21&quot;</string>
         </property>
        </widget>
        <widget class="QLabel" name="lblLongitude">
@@ -112,7 +112,7 @@
          <bool>true</bool>
         </property>
         <property name="placeholderText">
-         <string>37.6173</string>
+         <string>37°37'02&quot;</string>
         </property>
        </widget>
        <widget class="QLineEdit" name="editDirectionAngle">
