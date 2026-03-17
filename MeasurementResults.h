@@ -109,10 +109,10 @@ private:
     void disconnectDatabase();
     void loadMeasurementsFromDatabase();
 
-    // Загрузка данных профилей ветра
-    QVector<WindProfileData> loadAvgWindProfile(const QDateTime &time);
-    QVector<WindProfileData> loadActualWindProfile(const QDateTime &time);
-    QVector<MeasuredWindData> loadMeasuredWindProfile(const QDateTime &time);
+    // Загрузка данных профилей ветра (по record_id через wind_profiles_references)
+    QVector<WindProfileData> loadAvgWindProfile(int recordId);
+    QVector<WindProfileData> loadActualWindProfile(int recordId);
+    QVector<MeasuredWindData> loadMeasuredWindProfile(int recordId);
     void loadSurfaceMeteoData(int recordId);
     void loadStationCoordinates(int recordId);
 

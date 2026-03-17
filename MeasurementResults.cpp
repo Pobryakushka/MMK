@@ -163,40 +163,23 @@ void MeasurementResults::loadMeasurementsFromDatabase()
 
     qInfo() << "MeasurementResults: Загружено" << totalRecords << "записей из main_archive";
 
-    // Теперь проверяем наличие профилей ветра для каждой записи
-
+    // Теперь проверяем наличие профилей ветра для каждой записи через wind_profiles_references
     for (auto it = recordsByDateTime.begin(); it != recordsByDateTime.end(); ++it) {
-        QDateTime measurementTime = it.key();
+        int rid = it.value().recordId;
 
-        QDateTime timeFrom = measurementTime.addSecs(-1800);
-        QDateTime timeTo = measurementTime.addSecs(1800);
+        QSqlQuery refQuery(db);
+        refQuery.prepare(
+            "SELECT avg_wind_profile_id, actual_wind_profile_id, measured_wind_profile_id "
+            "FROM wind_profiles_references WHERE record_id = :rid"
+        );
+        refQuery.bindValue(":rid", rid);
 
-        QSqlQuery avgQuery(db);
-        avgQuery.prepare("SELECT COUNT(*) FROM avg_wind_profile "
-                         "WHERE measurement_time BETWEEN :from AND :to");
-        avgQuery.bindValue(":from", timeFrom);
-        avgQuery.bindValue(":to", timeTo);
-        if (avgQuery.exec() && avgQuery.next()) {
-            it.value().hasAvgWind = (avgQuery.value(0).toInt() > 0);
+        if (refQuery.exec() && refQuery.next()) {
+            it.value().hasAvgWind      = !refQuery.value(0).isNull();
+            it.value().hasActualWind   = !refQuery.value(1).isNull();
+            it.value().hasMeasuredWind = !refQuery.value(2).isNull();
         }
-
-        QSqlQuery actualQuery(db);
-        actualQuery.prepare("SELECT COUNT(*) FROM actual_wind_profile "
-                         "WHERE measurement_time BETWEEN :from AND :to");
-        actualQuery.bindValue(":from", timeFrom);
-        actualQuery.bindValue(":to", timeTo);
-        if (actualQuery.exec() && actualQuery.next()) {
-            it.value().hasActualWind = (actualQuery.value(0).toInt() > 0);
-        }
-
-        QSqlQuery measuredQuery(db);
-        measuredQuery.prepare("SELECT COUNT(*) FROM measured_wind_profile "
-                         "WHERE measurement_time BETWEEN :from AND :to");
-        measuredQuery.bindValue(":from", timeFrom);
-        measuredQuery.bindValue(":to", timeTo);
-        if (measuredQuery.exec() && measuredQuery.next()) {
-            it.value().hasMeasuredWind = (measuredQuery.value(0).toInt() > 0);
-        }
+        // Если строки нет в wind_profiles_references — все флаги остаются false
     }
 
     // Переносим в основную структуру availableMeasurements
@@ -223,115 +206,152 @@ void MeasurementResults::loadMeasurementsFromDatabase()
     qDebug() << "Доступные даты в архиве:" << dates;
 }
 
-QVector<WindProfileData> MeasurementResults::loadAvgWindProfile(const QDateTime &time)
+QVector<WindProfileData> MeasurementResults::loadAvgWindProfile(int recordId)
 {
     QVector<WindProfileData> profile;
 
-    if (!connectDatabase()) return profile;
+    if (recordId <= 0 || !connectDatabase()) return profile;
 
     QSqlDatabase db = DatabaseManager::instance()->database();
+
+    // Получаем profile_id из wind_profiles_references
+    QSqlQuery refQuery(db);
+    refQuery.prepare(
+        "SELECT avg_wind_profile_id FROM wind_profiles_references WHERE record_id = :rid"
+    );
+    refQuery.bindValue(":rid", recordId);
+
+    if (!refQuery.exec() || !refQuery.next() || refQuery.value(0).isNull()) {
+        qDebug() << "MeasurementResults: Нет avg_wind_profile для record_id=" << recordId;
+        return profile;
+    }
+
+    int profileId = refQuery.value(0).toInt();
+
     QSqlQuery query(db);
     query.prepare(
         "SELECT wind_speed, wind_direction "
         "FROM avg_wind_profile "
-        "WHERE measurement_time >= :time_from AND measurement_time <= :time_to "
-        "ORDER BY profile_id ASC"
+        "WHERE profile_id = :pid "
+        "ORDER BY height ASC"
     );
-
-    query.bindValue(":time_from", time.addSecs(-1800)); // -30 минут
-    query.bindValue(":time_to", time.addSecs(1800));    // +30 минут
+    query.bindValue(":pid", profileId);
 
     if (!query.exec()) {
         qCritical() << "MeasurementResults: Ошибка загрузки среднего ветра:" << query.lastError().text();
         return profile;
     }
 
-    // Загружаем данные из БД (только скорость и направление)
     QVector<WindProfileData> dbData;
     while (query.next()) {
         WindProfileData point;
-        point.windSpeed = query.value(0).toFloat();
+        point.windSpeed    = query.value(0).toFloat();
         point.windDirection = query.value(1).toInt();
-        point.isValid = true;
+        point.isValid      = true;
         dbData.append(point);
     }
 
-    // Применяем стандартные высоты АМС (фиксированные согласно протоколу)
+    // Применяем стандартные высоты АМС
     if (!dbData.isEmpty()) {
         QVector<float> standardHeights = AMSProtocol::getAverageWindHeights(dbData.size());
-        for (int i = 0; i < dbData.size() && i < standardHeights.size(); i++) {
+        for (int i = 0; i < dbData.size() && i < standardHeights.size(); i++)
             dbData[i].height = standardHeights[i];
-        }
     }
 
     profile = dbData;
-    qDebug() << "MeasurementResults: Загружен профиль среднего ветра," << profile.size() << "точек";
+    qDebug() << "MeasurementResults: Загружен профиль среднего ветра," << profile.size()
+             << "точек (record_id=" << recordId << ", profile_id=" << profileId << ")";
     return profile;
 }
 
-QVector<WindProfileData> MeasurementResults::loadActualWindProfile(const QDateTime &time)
+QVector<WindProfileData> MeasurementResults::loadActualWindProfile(int recordId)
 {
     QVector<WindProfileData> profile;
 
-    if (!connectDatabase()) return profile;
+    if (recordId <= 0 || !connectDatabase()) return profile;
 
     QSqlDatabase db = DatabaseManager::instance()->database();
+
+    // Получаем profile_id из wind_profiles_references
+    QSqlQuery refQuery(db);
+    refQuery.prepare(
+        "SELECT actual_wind_profile_id FROM wind_profiles_references WHERE record_id = :rid"
+    );
+    refQuery.bindValue(":rid", recordId);
+
+    if (!refQuery.exec() || !refQuery.next() || refQuery.value(0).isNull()) {
+        qDebug() << "MeasurementResults: Нет actual_wind_profile для record_id=" << recordId;
+        return profile;
+    }
+
+    int profileId = refQuery.value(0).toInt();
+
     QSqlQuery query(db);
     query.prepare(
         "SELECT wind_speed, wind_direction "
         "FROM actual_wind_profile "
-        "WHERE measurement_time >= :time_from AND measurement_time <= :time_to "
-        "ORDER BY profile_id ASC"
+        "WHERE profile_id = :pid "
+        "ORDER BY height ASC"
     );
-
-    query.bindValue(":time_from", time.addSecs(-1800));
-    query.bindValue(":time_to", time.addSecs(1800));
+    query.bindValue(":pid", profileId);
 
     if (!query.exec()) {
         qCritical() << "MeasurementResults: Ошибка загрузки действительного ветра:" << query.lastError().text();
         return profile;
     }
 
-    // Загружаем данные из БД (только скорость и направление)
     QVector<WindProfileData> dbData;
     while (query.next()) {
         WindProfileData point;
-        point.windSpeed = query.value(0).toFloat();
+        point.windSpeed     = query.value(0).toFloat();
         point.windDirection = query.value(1).toInt();
-        point.isValid = true;
+        point.isValid       = true;
         dbData.append(point);
     }
 
-    // Применяем стандартные высоты АМС (фиксированные согласно протоколу)
+    // Применяем стандартные высоты АМС
     if (!dbData.isEmpty()) {
         QVector<float> standardHeights = AMSProtocol::getActualWindHeights(dbData.size());
-        for (int i = 0; i < dbData.size() && i < standardHeights.size(); i++) {
+        for (int i = 0; i < dbData.size() && i < standardHeights.size(); i++)
             dbData[i].height = standardHeights[i];
-        }
     }
 
     profile = dbData;
-    qDebug() << "MeasurementResults: Загружен профиль действительного ветра," << profile.size() << "точек";
+    qDebug() << "MeasurementResults: Загружен профиль действительного ветра," << profile.size()
+             << "точек (record_id=" << recordId << ", profile_id=" << profileId << ")";
     return profile;
 }
 
-QVector<MeasuredWindData> MeasurementResults::loadMeasuredWindProfile(const QDateTime &time)
+QVector<MeasuredWindData> MeasurementResults::loadMeasuredWindProfile(int recordId)
 {
     QVector<MeasuredWindData> profile;
 
-    if (!connectDatabase()) return profile;
+    if (recordId <= 0 || !connectDatabase()) return profile;
 
     QSqlDatabase db = DatabaseManager::instance()->database();
+
+    // Получаем profile_id из wind_profiles_references
+    QSqlQuery refQuery(db);
+    refQuery.prepare(
+        "SELECT measured_wind_profile_id FROM wind_profiles_references WHERE record_id = :rid"
+    );
+    refQuery.bindValue(":rid", recordId);
+
+    if (!refQuery.exec() || !refQuery.next() || refQuery.value(0).isNull()) {
+        qDebug() << "MeasurementResults: Нет measured_wind_profile для record_id=" << recordId;
+        return profile;
+    }
+
+    int profileId = refQuery.value(0).toInt();
+
     QSqlQuery query(db);
     query.prepare(
         "SELECT height, wind_speed, wind_direction "
         "FROM measured_wind_profile "
-        "WHERE measurement_time >= :time_from AND measurement_time <= :time_to "
+        "WHERE profile_id = :pid "
         "ORDER BY height ASC"
     );
-
-    query.bindValue(":time_from", time.addSecs(-1800));
-    query.bindValue(":time_to", time.addSecs(1800));
+    query.bindValue(":pid", profileId);
 
     if (!query.exec()) {
         qCritical() << "MeasurementResults: Ошибка загрузки измеренного ветра:" << query.lastError().text();
@@ -340,14 +360,15 @@ QVector<MeasuredWindData> MeasurementResults::loadMeasuredWindProfile(const QDat
 
     while (query.next()) {
         MeasuredWindData point;
-        point.height = query.value(0).toFloat();
-        point.windSpeed = query.value(1).toFloat();
+        point.height        = query.value(0).toFloat();
+        point.windSpeed     = query.value(1).toFloat();
         point.windDirection = query.value(2).toInt();
-        point.reliability = 2; // Из БД только достоверные данные
+        point.reliability   = 2; // Из БД только достоверные данные
         profile.append(point);
     }
 
-    qDebug() << "MeasurementResults: Загружен профиль измеренного ветра," << profile.size() << "точек";
+    qDebug() << "MeasurementResults: Загружен профиль измеренного ветра," << profile.size()
+             << "точек (record_id=" << recordId << ", profile_id=" << profileId << ")";
     return profile;
 }
 
@@ -694,9 +715,9 @@ void MeasurementResults::loadMeasurementData(const QDateTime &dateTime)
         ui->lblDataStatus->setText(QString("Данные загружены (ID: %1)").arg(record.recordId));
         ui->lblDataStatus->setStyleSheet("color: green; font-weight: bold;");
 
-        QVector<WindProfileData>  avgWind      = loadAvgWindProfile(record.measurementTime);
-        QVector<WindProfileData>  actualWind   = loadActualWindProfile(record.measurementTime);
-        QVector<MeasuredWindData> measuredWind = loadMeasuredWindProfile(record.measurementTime);
+        QVector<WindProfileData>  avgWind      = loadAvgWindProfile(record.recordId);
+        QVector<WindProfileData>  actualWind   = loadActualWindProfile(record.recordId);
+        QVector<MeasuredWindData> measuredWind = loadMeasuredWindProfile(record.recordId);
 
         loadSurfaceMeteoData(record.recordId);
         loadStationCoordinates(record.recordId);
@@ -1264,8 +1285,16 @@ void MeasurementResults::updateWindShearDisplay()
         return;
     }
 
-    // Загружаем ТОЛЬКО измеренный ветер - он содержит скорость и направление
-    QVector<MeasuredWindData> measuredWind = loadMeasuredWindProfile(currentDateTime);
+    // Загружаем ТОЛЬКО измеренный ветер через record_id текущей записи
+    MeasurementRecord record = findClosestRecord(currentDateTime.date(), currentDateTime.time().hour());
+    // Уточняем: ищем точное совпадение
+    if (availableMeasurements.contains(currentDateTime.date())) {
+        for (const MeasurementRecord &r : availableMeasurements[currentDateTime.date()]) {
+            if (r.measurementTime == currentDateTime) { record = r; break; }
+        }
+    }
+
+    QVector<MeasuredWindData> measuredWind = loadMeasuredWindProfile(record.recordId);
 
     qDebug() << "updateWindShearDisplay: measuredWind size =" << measuredWind.size();
 

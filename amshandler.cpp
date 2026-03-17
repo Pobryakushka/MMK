@@ -873,27 +873,17 @@ bool AMSHandler::saveAvgWindProfile(int recordId, const QVector<WindProfileData>
     qInfo() << "AMSHandler: Сохранён профиль среднего ветра:"
             << data.size() << "точек с profile_id =" << profileId;
 
-    // ШАГ 3: Обновляем ссылку в wind_profiles_references
+    // ШАГ 3: Обновляем ссылку в wind_profiles_references (upsert по record_id)
     QSqlQuery refQuery(db);
-    refQuery.prepare("SELECT reference_id FROM wind_profiles_references "
-                    "WHERE record_id = :record_id");
+    refQuery.prepare(
+        "INSERT INTO wind_profiles_references (record_id, avg_wind_profile_id) "
+        "VALUES (:record_id, :profile_id) "
+        "ON CONFLICT (record_id) DO UPDATE SET avg_wind_profile_id = EXCLUDED.avg_wind_profile_id"
+    );
     refQuery.bindValue(":record_id", recordId);
-
-    if (refQuery.exec() && refQuery.next()) {
-        int refId = refQuery.value(0).toInt();
-        refQuery.prepare("UPDATE wind_profiles_references "
-                        "SET avg_wind_profile_id = :profile_id "
-                        "WHERE reference_id = :ref_id");
-        refQuery.bindValue(":profile_id", profileId);
-        refQuery.bindValue(":ref_id", refId);
-        refQuery.exec();
-    } else {
-        refQuery.prepare("INSERT INTO wind_profiles_references "
-                        "(record_id, avg_wind_profile_id) "
-                        "VALUES (:record_id, :profile_id)");
-        refQuery.bindValue(":record_id", recordId);
-        refQuery.bindValue(":profile_id", profileId);
-        refQuery.exec();
+    refQuery.bindValue(":profile_id", profileId);
+    if (!refQuery.exec()) {
+        qCritical() << "AMSHandler: Ошибка upsert avg_wind_profile_id:" << refQuery.lastError().text();
     }
 
     return true;
@@ -957,27 +947,17 @@ bool AMSHandler::saveActualWindProfile(int recordId, const QVector<WindProfileDa
     qInfo() << "AMSHandler: Сохранён профиль действительного ветра:"
             << data.size() << "точек с profile_id =" << profileId;
 
-    // ШАГ 3: Обновляем ссылку в wind_profiles_references
+    // ШАГ 3: Обновляем ссылку в wind_profiles_references (upsert по record_id)
     QSqlQuery refQuery(db);
-    refQuery.prepare("SELECT reference_id FROM wind_profiles_references "
-                    "WHERE record_id = :record_id");
+    refQuery.prepare(
+        "INSERT INTO wind_profiles_references (record_id, actual_wind_profile_id) "
+        "VALUES (:record_id, :profile_id) "
+        "ON CONFLICT (record_id) DO UPDATE SET actual_wind_profile_id = EXCLUDED.actual_wind_profile_id"
+    );
     refQuery.bindValue(":record_id", recordId);
-
-    if (refQuery.exec() && refQuery.next()) {
-        int refId = refQuery.value(0).toInt();
-        refQuery.prepare("UPDATE wind_profiles_references "
-                        "SET actual_wind_profile_id = :profile_id "
-                        "WHERE reference_id = :ref_id");
-        refQuery.bindValue(":profile_id", profileId);
-        refQuery.bindValue(":ref_id", refId);
-        refQuery.exec();
-    } else {
-        refQuery.prepare("INSERT INTO wind_profiles_references "
-                        "(record_id, actual_wind_profile_id) "
-                        "VALUES (:record_id, :profile_id)");
-        refQuery.bindValue(":record_id", recordId);
-        refQuery.bindValue(":profile_id", profileId);
-        refQuery.exec();
+    refQuery.bindValue(":profile_id", profileId);
+    if (!refQuery.exec()) {
+        qCritical() << "AMSHandler: Ошибка upsert actual_wind_profile_id:" << refQuery.lastError().text();
     }
 
     return true;
@@ -1041,27 +1021,17 @@ bool AMSHandler::saveMeasuredWindProfile(int recordId, const QVector<MeasuredWin
     qInfo() << "AMSHandler: Сохранён профиль измеренного ветра:"
             << data.size() << "точек с profile_id =" << profileId;
 
-    // ШАГ 3: Обновляем ссылку в wind_profiles_references
+    // ШАГ 3: Обновляем ссылку в wind_profiles_references (upsert по record_id)
     QSqlQuery refQuery(db);
-    refQuery.prepare("SELECT reference_id FROM wind_profiles_references "
-                    "WHERE record_id = :record_id");
+    refQuery.prepare(
+        "INSERT INTO wind_profiles_references (record_id, measured_wind_profile_id) "
+        "VALUES (:record_id, :profile_id) "
+        "ON CONFLICT (record_id) DO UPDATE SET measured_wind_profile_id = EXCLUDED.measured_wind_profile_id"
+    );
     refQuery.bindValue(":record_id", recordId);
-
-    if (refQuery.exec() && refQuery.next()) {
-        int refId = refQuery.value(0).toInt();
-        refQuery.prepare("UPDATE wind_profiles_references "
-                        "SET measured_wind_profile_id = :profile_id "
-                        "WHERE reference_id = :ref_id");
-        refQuery.bindValue(":profile_id", profileId);
-        refQuery.bindValue(":ref_id", refId);
-        refQuery.exec();
-    } else {
-        refQuery.prepare("INSERT INTO wind_profiles_references "
-                        "(record_id, measured_wind_profile_id) "
-                        "VALUES (:record_id, :profile_id)");
-        refQuery.bindValue(":record_id", recordId);
-        refQuery.bindValue(":profile_id", profileId);
-        refQuery.exec();
+    refQuery.bindValue(":profile_id", profileId);
+    if (!refQuery.exec()) {
+        qCritical() << "AMSHandler: Ошибка upsert measured_wind_profile_id:" << refQuery.lastError().text();
     }
 
     return true;
