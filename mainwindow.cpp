@@ -939,11 +939,20 @@ void MainWindow::onAmsMeasurementProgress(int percent, float angle)
 {
     qDebug() << "MainWindow: Прогресс измерения:" << percent << "%, угол:" << angle << "°";
 
-    // Обновляем прогресс-бар если есть
-    // ui->progressBarMeasurement->setValue(percent >= 0 ? percent : 0);
+    // Показываем виджет прогресса (если ещё не виден)
+    if (!ui->measurementProgressWidget->isVisible()) {
+        ui->measurementProgressWidget->setVisible(true);
+    }
+
+    int displayPercent = qBound(0, percent, 100);
+    ui->progressBarMeasurement->setValue(displayPercent);
+    ui->lblProgressPercent->setText(QString("%1%").arg(displayPercent));
+    ui->lblRpvAngle->setText(QString("%1°").arg(angle, 0, 'f', 1));
+    // Синхронизируем поле положения РПВ
+    ui->editRPVPosition->setText(QString::number(angle, 'f', 1));
 
     statusBar()->showMessage(
-        QString("Измерение: %1%, Угол РПВ: %2°").arg(percent).arg(angle, 0, 'f', 1)
+        QString("Измерение: %1%, Угол РПВ: %2°").arg(displayPercent).arg(angle, 0, 'f', 1)
     );
 }
 
@@ -963,6 +972,10 @@ void MainWindow::onAmsMeasurementCompleted(int recordId)
 
     ui->btnStart->setEnabled(true);
     ui->btnStop->setEnabled(false);
+
+    // Скрываем прогрессбар
+    ui->measurementProgressWidget->setVisible(false);
+    ui->progressBarMeasurement->setValue(0);
 
     statusBar()->showMessage("Измерение завершено успешно", 10000);
 
@@ -987,6 +1000,10 @@ void MainWindow::onAmsMeasurementFailed(const QString &reason)
 
     ui->btnStart->setEnabled(true);
     ui->btnStop->setEnabled(false);
+
+    // Скрываем прогрессбар
+    ui->measurementProgressWidget->setVisible(false);
+    ui->progressBarMeasurement->setValue(0);
 
     statusBar()->showMessage("Ошибка: " + reason, 10000);
 }
@@ -1780,6 +1797,12 @@ void MainWindow::onStartClicked()
     ui->btnStart->setEnabled(false);
     ui->btnStop->setEnabled(true);
 
+    // Сбрасываем и показываем прогрессбар
+    ui->progressBarMeasurement->setValue(0);
+    ui->lblProgressPercent->setText("0%");
+    ui->lblRpvAngle->setText("0.0°");
+    ui->measurementProgressWidget->setVisible(true);
+
     statusBar()->showMessage("Измерение АМС запущено...", 5000);
 }
 
@@ -1805,6 +1828,10 @@ void MainWindow::onStopClicked()
     // Разблокируем кнопку старта, блокируем стоп
     ui->btnStart->setEnabled(true);
     ui->btnStop->setEnabled(false);
+
+    // Скрываем прогрессбар
+    ui->measurementProgressWidget->setVisible(false);
+    ui->progressBarMeasurement->setValue(0);
 }
 
 void MainWindow::onWorkModeChanged(int state)

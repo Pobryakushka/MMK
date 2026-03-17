@@ -485,6 +485,148 @@
            </widget>
           </item>
           <item>
+           <widget class="QWidget" name="measurementProgressWidget" native="true">
+            <property name="visible">
+             <bool>false</bool>
+            </property>
+            <layout class="QVBoxLayout" name="progressVLayout">
+             <property name="spacing">
+              <number>4</number>
+             </property>
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
+             <item>
+              <layout class="QHBoxLayout" name="progressLabelLayout">
+               <property name="spacing">
+                <number>6</number>
+               </property>
+               <item>
+                <widget class="QLabel" name="lblProgressTitle">
+                 <property name="styleSheet">
+                  <string notr="true">font-size: 9pt; color: #555;</string>
+                 </property>
+                 <property name="text">
+                  <string>Прогресс измерения:</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="progressLabelSpacer">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>10</width>
+                   <height>10</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item>
+                <widget class="QLabel" name="lblProgressPercent">
+                 <property name="styleSheet">
+                  <string notr="true">font-size: 9pt; font-weight: bold; color: #1565C0;</string>
+                 </property>
+                 <property name="text">
+                  <string>0%</string>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignRight|Qt::AlignVCenter</set>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <widget class="QProgressBar" name="progressBarMeasurement">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>18</height>
+                </size>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">QProgressBar {
+    border: 1px solid #BDBDBD;
+    border-radius: 4px;
+    background-color: #F5F5F5;
+    text-align: center;
+    font-size: 8pt;
+}
+QProgressBar::chunk {
+    background-color: #1976D2;
+    border-radius: 3px;
+}</string>
+               </property>
+               <property name="maximum">
+                <number>100</number>
+               </property>
+               <property name="value">
+                <number>0</number>
+               </property>
+               <property name="textVisible">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="rpvLayout">
+               <property name="spacing">
+                <number>6</number>
+               </property>
+               <item>
+                <widget class="QLabel" name="lblRpvTitle">
+                 <property name="styleSheet">
+                  <string notr="true">font-size: 9pt; color: #555;</string>
+                 </property>
+                 <property name="text">
+                  <string>Угол РПВ:</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="rpvSpacer">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>10</width>
+                   <height>10</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item>
+                <widget class="QLabel" name="lblRpvAngle">
+                 <property name="styleSheet">
+                  <string notr="true">font-size: 9pt; font-weight: bold; color: #1565C0;</string>
+                 </property>
+                 <property name="text">
+                  <string>0.0°</string>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignRight|Qt::AlignVCenter</set>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="btnStop">
             <property name="minimumSize">
              <size>
