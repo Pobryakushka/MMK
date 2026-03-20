@@ -19,6 +19,7 @@ SOURCES += \
     SourceData.cpp \
     binshandler.cpp \
     databasemanager.cpp \
+    functionalcontroldialog.cpp \
     gnsshandler.cpp \
     main.cpp \
     mainwindow.cpp \
@@ -48,6 +49,7 @@ HEADERS += \
     SourceData.h \
     binshandler.h \
     databasemanager.h \
+    functionalcontroldialog.h \
     gnsshandler.h \
     mainwindow.h \
     qmlcoordinateproxy.h \
@@ -78,6 +80,7 @@ FORMS += \
     MeasurementResults.ui \
     Meteo11.ui \
     SourceData.ui \
+    functionalcontroldialog.ui \
     mainwindow.ui \
     sensorsettings.ui
 

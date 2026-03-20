@@ -16,6 +16,7 @@
 #include "Map/FormMapView.h"
 #include "sensorsettings.h"
 #include "surfacemeteosaver.h"
+#include "functionalcontroldialog.h"
 
 // Forward declaration
 class SourceData;
@@ -166,6 +167,8 @@ private:
 
     // Сохранение приземных данных ИВС в БД
     SurfaceMeteoSaver *m_surfaceMeteoSaver;
+
+    FunctionalControlDialog *m_functionalControlDialog;
 
     void createMapComponent(const QString &pluginName);
     void setupMapItems(QQuickItem *item);

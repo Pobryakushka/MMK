@@ -156,6 +156,10 @@ MainWindow::MainWindow(QWidget *parent)
     connect(sensorSettingsDialog, &SensorSettings::binsConnectRequested, this, &MainWindow::onBinsConnectFromSettings);
     connect(sensorSettingsDialog, &SensorSettings::binsDisconnectRequested, this, &MainWindow::onBinsDisconnectFromSettings);
 
+    m_functionalControlDialog = new FunctionalControlDialog(this);
+    connect(m_functionalControlDialog->findChild<QPushButton*>("btnRefresh"),
+            &QPushButton::clicked, this, &MainWindow::onFunctionalControlClicked);
+
     // Создаём постоянный экземпляр SourceData (внутри создастся GroundMeteoParams)
     // Не показываем его, просто держим в памяти для доступа к данным
     sourceDataInstance = new SourceData(this);
@@ -640,6 +644,10 @@ void MainWindow::setupAmsHandler()
             this, &MainWindow::onAmsActualWindReceived);
     connect(m_amsHandler, &AMSHandler::measuredWindDataReceived,
             this, &MainWindow::onAmsMeasuredWindReceived);
+    connect(m_amsHandler, &AMSHandler::functionalControlDataReceived,
+            this, [this](quint32 bitMask, quint32 powerOnCount) {
+        m_functionalControlDialog->setData(bitMask, powerOnCount);
+    });
 
     // Когда АМС записал данные в БД — делаем финальный запрос к ИВС
     connect(m_amsHandler, &AMSHandler::dataWrittenToDatabase,
@@ -758,6 +766,10 @@ void MainWindow::onAmsError(const QString &error)
 {
     qWarning() << "MainWindow: Ошибка АМС:" << error;
     statusBar()->showMessage("Ошибка АМС: " + error, 10000);
+
+    if (m_functionalControlDialog->isVisible()) {
+        m_functionalControlDialog->setErrorState(error);
+    }
 
     // Можно показать диалог с ошибкой
     if (error.contains("Таймаут") || error.contains("контрольной суммы")) {
@@ -914,15 +926,19 @@ void MainWindow::onAmsDatabaseError(const QString &error)
 
 void MainWindow::onFunctionalControlClicked()
 {
-    // Проверяем подключение к АМС
-    if (m_amsHandler && m_amsHandler->isConnected()) {
-        // Запрашиваем функциональный контроль
-        m_amsHandler->requestFunctionalControl();
-        statusBar()->showMessage("АМС: Запрос функционального контроля...", 3000);
-    } else {
+    if (!m_amsHandler || !m_amsHandler->isConnected()) {
         QMessageBox::information(this, "АМС",
-            "АМС не подключена. Подключитесь через настройки датчиков.");
+                                 "АМС не подключена. Подключитесь через настройки датчиков.");
+        return;
     }
+
+    m_functionalControlDialog->setWaitingState();
+    m_functionalControlDialog->show();
+    m_functionalControlDialog->raise();
+    m_functionalControlDialog->activateWindow();
+
+    m_amsHandler->requestFunctionalControl();
+    statusBar()->showMessage("АМС: Запрос функционального контроля...", 3000);
 }
 
 void MainWindow::onAmsMeasurementStageChanged(MeasurementStage stage, const QString &description)
@@ -962,7 +978,7 @@ void MainWindow::onAmsMeasurementCompleted(int recordId)
 
     QMessageBox::information(this, "Успех",
         QString("Измерение завершено успешно!\n\nID записи в БД: %1\n\n"
-                "Результаты сохранены и доступны в разделе 'Результаты измерений'.")
+                "Результаты сохранеRны и доступны в разделе 'Результаты измерений'.")
         .arg(recordId));
 
     // Обновляем UI
