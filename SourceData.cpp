@@ -2,6 +2,7 @@
 #include "ui_SourceData.h"
 #include "Meteo11.h"
 #include "GroundMeteoParams.h"
+#include <QCloseEvent>
 #include <QDebug>
 
 SourceData::SourceData(QWidget *parent)
@@ -16,7 +17,7 @@ SourceData::SourceData(QWidget *parent)
     qDebug() << "GroundMeteoParams instance created in SourceData";
 
     connect(ui->btnCloseSourceData, &QPushButton::clicked, this, [this](){
-        close();
+        hide();
     });
 
     connect(ui->btnMeteo11, &QPushButton::clicked, this, [this](){
@@ -38,4 +39,10 @@ SourceData::~SourceData()
 {
     delete ui;
     // groundMeteoParams удалится автоматически через parent
+}
+
+void SourceData::closeEvent(QCloseEvent *event)
+{
+    hide();
+    event->ignore();
 }

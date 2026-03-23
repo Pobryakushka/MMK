@@ -9,8 +9,11 @@ GroundMeteoParams* GroundMeteoParams::s_instance = nullptr;
 GroundMeteoParams::GroundMeteoParams(QWidget *parent)
     : QDialog(parent, Qt::CustomizeWindowHint)
     , ui(new Ui::GroundMeteoParams)
-    , m_protocol(MODBUS_RTU)  // Используем Modbus RTU по умолчанию для IWS
-    , m_deviceAddress(0x70)   // Адрес IWS по умолчанию
+    , m_protocol(MODBUS_RTU)
+    , m_deviceAddress(0x70)
+    , m_lastWindSpeed(0.0)
+    , m_lastWindDirection(0.0)
+    , m_hasLastData(false)
 {
     ui->setupUi(this);
 
@@ -19,9 +22,21 @@ GroundMeteoParams::GroundMeteoParams(QWidget *parent)
     qDebug() << "GroundMeteoParams initialized with Modbus RTU protocol, device address 0x01";
 
     connect(ui->btnGroundParamsClose, &QPushButton::clicked, this, [this](){
-        close();
+        hide();
     });
     connect(ui->btnGroundParamsClear, &QPushButton::clicked, this, &GroundMeteoParams::deleteDataFromTable);
+    connect(ui->btnGroundParamsApply, &QPushButton::clicked, this, &GroundMeteoParams::applyManualInput);
+
+    // Делаем колонку значений редактируемой
+    QTableWidget *table = ui->tableWidget_GroundParams;
+    for (int row = 0; row < table->rowCount(); ++row) {
+        QTableWidgetItem *item = table->item(row, 1);
+        if (!item) {
+            item = new QTableWidgetItem("");
+            table->setItem(row, 1, item);
+        }
+        item->setFlags(item->flags() | Qt::ItemIsEditable);
+    }
 }
 
 GroundMeteoParams::~GroundMeteoParams()
@@ -30,6 +45,13 @@ GroundMeteoParams::~GroundMeteoParams()
         s_instance = nullptr;
     }
     delete ui;
+}
+
+// Переопределяем закрытие окна: скрываем вместо удаления, чтобы кеш данных сохранялся
+void GroundMeteoParams::closeEvent(QCloseEvent *event)
+{
+    hide();
+    event->ignore(); // Не допускаем реального закрытия/уничтожения
 }
 
 GroundMeteoParams* GroundMeteoParams::instance()
@@ -127,6 +149,55 @@ void GroundMeteoParams::deleteDataFromTable()
             item->setText("");
         }
     }
+    // Сбрасываем кеш при очистке
+    m_lastWindSpeed    = 0.0;
+    m_lastWindDirection = 0.0;
+    m_hasLastData      = false;
+}
+
+void GroundMeteoParams::applyManualInput()
+{
+    QTableWidget *table = ui->tableWidget_GroundParams;
+
+    // Строка 0 — скорость ветра, строка 1 — направление ветра
+    auto readRow = [&](int row) -> std::pair<bool, double> {
+        QTableWidgetItem *item = table->item(row, 1);
+        if (!item || item->text().trimmed().isEmpty())
+            return {false, 0.0};
+        bool ok = false;
+        double val = item->text().trimmed().replace(',', '.').toDouble(&ok);
+        return {ok, val};
+    };
+
+    auto [speedOk, speed] = readRow(0);
+    auto [dirOk,   dir]   = readRow(1);
+
+    if (speedOk) {
+        m_lastWindSpeed = speed;
+        m_hasLastData   = true;
+        qDebug() << "GroundMeteoParams: ручной ввод Wind Speed =" << m_lastWindSpeed;
+    }
+    if (dirOk) {
+        m_lastWindDirection = dir;
+        m_hasLastData       = true;
+        qDebug() << "GroundMeteoParams: ручной ввод Wind Direction =" << m_lastWindDirection;
+    }
+
+    if (!speedOk && !dirOk) {
+        qWarning() << "GroundMeteoParams: нет корректных данных для применения";
+        return;
+    }
+
+    qDebug() << "GroundMeteoParams: применены ручные данные —"
+             << "speed =" << m_lastWindSpeed
+             << "dir =" << m_lastWindDirection
+             << "hasLastData =" << m_hasLastData;
+
+    // Оповещаем подписчиков так же, как при получении от датчика
+    QMap<QString, double> values;
+    if (speedOk) values["Wind Speed Avg"] = m_lastWindSpeed;
+    if (dirOk)   values["Wind Direction Avg"] = m_lastWindDirection;
+    emit dataUpdated(values);
 }
 
 void GroundMeteoParams::setProtocol(RS485Protocol protocol)
@@ -224,6 +295,33 @@ void GroundMeteoParams::onDataReceived(const QByteArray& data)
         for (auto it = values.begin(); it != values.end(); ++it) {
             qDebug() << "  " << it.key() << "=" << it.value();
         }
+
+        // Кешируем скорость и направление ветра (для передачи в АМС)
+        // Поддерживаем оба протокола: UMB (текущие) и Modbus (средние)
+        if (values.contains("Wind Speed Avg")) {
+            m_lastWindSpeed = values["Wind Speed Avg"];
+            m_hasLastData = true;
+            qDebug() << "GroundMeteoParams: кеш Wind Speed Avg =" << m_lastWindSpeed;
+        } else if (values.contains("Wind Speed")) {
+            m_lastWindSpeed = values["Wind Speed"];
+            m_hasLastData = true;
+            qDebug() << "GroundMeteoParams: кеш Wind Speed =" << m_lastWindSpeed;
+        }
+
+        if (values.contains("Wind Direction Avg")) {
+            m_lastWindDirection = values["Wind Direction Avg"];
+            m_hasLastData = true;
+            qDebug() << "GroundMeteoParams: кеш Wind Direction Avg =" << m_lastWindDirection;
+        } else if (values.contains("Wind Direction")) {
+            m_lastWindDirection = values["Wind Direction"];
+            m_hasLastData = true;
+            qDebug() << "GroundMeteoParams: кеш Wind Direction =" << m_lastWindDirection;
+        }
+
+        qDebug() << "GroundMeteoParams: m_hasLastData =" << m_hasLastData
+                 << "speed =" << m_lastWindSpeed
+                 << "dir =" << m_lastWindDirection;
+
         updateTableWithData(values);
         emit dataUpdated(values);
     } else {

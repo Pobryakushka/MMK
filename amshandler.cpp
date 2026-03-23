@@ -730,19 +730,8 @@ void AMSHandler::processReceivedPacket(const QByteArray &packet)
         quint32 bitMask, powerOnCount;
         bool ok = m_protocol->parseFuncControlResponse(packet, bitMask, powerOnCount);
         if (ok) {
-            qInfo() << "AMSHandler: Функциональный контроль: маска ="
-                    << Qt::hex << bitMask << ", включений =" << Qt::dec << powerOnCount;
-
-            QStringList faults = AMSProtocol::funcControlFaults(bitMask);
-            if (faults.isEmpty()) {
-                emit statusMessage("Функциональный контроль: всё оборудование исправно");
-            } else {
-                QString msg = "Неисправности АМС: " + faults.join("; ");
-                qWarning() << "AMSHandler:" << msg;
-                emit errorOccurred(msg);
-                emit statusMessage(msg);
-            }
-
+            qInfo() << "AMSHandler: Функциональный контроль: битовая маска =" << Qt::hex << bitMask
+                    << ", счётчик включений =" << powerOnCount;
             emit functionalControlDataReceived(bitMask, powerOnCount);
         }
         break;
@@ -752,12 +741,7 @@ void AMSHandler::processReceivedPacket(const QByteArray &packet)
         bool ok;
         quint8 status = m_protocol->parseAntennaControlResponse(packet, ok);
         if (ok) {
-            QString statusStr = AMSProtocol::antennaStatusString(status);
-            qInfo() << "AMSHandler: Антенна —" << statusStr;
-            emit statusMessage(statusStr);
-            if (status == ANTENNA_FAULT) {
-                emit errorOccurred("Антенна: аварийная остановка открытия/закрытия");
-            }
+            qInfo() << "AMSHandler: Статус антенны:" << status;
             emit antennaStatusReceived(status);
         }
         break;
@@ -768,12 +752,7 @@ void AMSHandler::processReceivedPacket(const QByteArray &packet)
         float currentAngle;
         bool ok = m_protocol->parseRotateAntennaResponse(packet, status, currentAngle);
         if (ok) {
-            QString statusStr = AMSProtocol::rotateStatusString(status);
-            qInfo() << "AMSHandler: Поворот —" << statusStr << "угол:" << currentAngle;
-            emit statusMessage(QString("%1, угол: %2°").arg(statusStr).arg(currentAngle, 0, 'f', 1));
-            if (status == ROTATE_FAULT) {
-                emit errorOccurred("Поворот антенны: аварийная остановка");
-            }
+            qInfo() << "AMSHandler: Поворот антенны: статус =" << status << ", угол =" << currentAngle;
             emit antennaStatusReceived(status);
         }
         break;
@@ -878,8 +857,15 @@ bool AMSHandler::saveAvgWindProfile(int recordId, const QVector<WindProfileData>
                   "(profile_id, height, wind_speed, wind_direction, measurement_time) "
                   "VALUES (:profile_id, :height, :speed, :direction, :time)");
 
-    for (const WindProfileData &point : data) {
-        query.bindValue(":profile_id", profileId);  // ОДИН И ТОТ ЖЕ!
+    for (int i = 0; i < data.size(); i++) {
+        const WindProfileData &point = data[i];
+
+        qDebug() << "AMSHandler: avg_wind точка" << i
+                 << "height=" << point.height
+                 << "speed=" << point.windSpeed
+                 << "direction=" << point.windDirection;
+
+        query.bindValue(":profile_id", profileId);
         query.bindValue(":height", point.height);
         query.bindValue(":speed", point.windSpeed);
         query.bindValue(":direction", point.windDirection);
@@ -952,8 +938,15 @@ bool AMSHandler::saveActualWindProfile(int recordId, const QVector<WindProfileDa
                   "(profile_id, height, wind_speed, wind_direction, measurement_time) "
                   "VALUES (:profile_id, :height, :speed, :direction, :time)");
 
-    for (const WindProfileData &point : data) {
-        query.bindValue(":profile_id", profileId);  // ОДИН И ТОТ ЖЕ!
+    for (int i = 0; i < data.size(); i++) {
+        const WindProfileData &point = data[i];
+
+        qDebug() << "AMSHandler: actual_wind точка" << i
+                 << "height=" << point.height
+                 << "speed=" << point.windSpeed
+                 << "direction=" << point.windDirection;
+
+        query.bindValue(":profile_id", profileId);
         query.bindValue(":height", point.height);
         query.bindValue(":speed", point.windSpeed);
         query.bindValue(":direction", point.windDirection);

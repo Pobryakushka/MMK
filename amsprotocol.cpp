@@ -62,92 +62,18 @@ bool AMSProtocol::isPacketValid(const QByteArray &data)
 
     if (data.size() < 3) return false;
     if (static_cast<quint8>(data.back()) != 0xFF) return false;
-    
+
     quint8 receivedChecksum = static_cast<quint8>(data[data.size() - 2]);
     QByteArray dataWithoutChecksumAndStop = data.left(data.size() - 2);
     quint8 calculatedChecksum = calculateChecksum(dataWithoutChecksumAndStop);
 
     qDebug() << "Полученная КС" << receivedChecksum;
         qDebug() << "Вычисленная КС" << calculatedChecksum;
-    
+
     return receivedChecksum == calculatedChecksum;
 }
 
-// Детальная проверка пакета: возвращает причину ошибки
-ParseError AMSProtocol::checkPacket(const QByteArray &data, AMSCommand expectedCmd, int minSize)
-{
-    if (data.size() < 3) return PARSE_ERR_TOO_SHORT;
-    if (static_cast<quint8>(data.back()) != 0xFF) return PARSE_ERR_BAD_STOP;
-
-    quint8 receivedCs = static_cast<quint8>(data[data.size() - 2]);
-    quint8 calcCs = calculateChecksum(data.left(data.size() - 2));
-    if (receivedCs != calcCs) return PARSE_ERR_BAD_CHECKSUM;
-
-    if (getPacketCommand(data) != expectedCmd) return PARSE_ERR_WRONG_COMMAND;
-    if (data.size() < minSize) return PARSE_ERR_TOO_SHORT;
-
-    return PARSE_OK;
-}
-
-QString AMSProtocol::parseErrorString(ParseError err)
-{
-    switch (err) {
-    case PARSE_OK:               return "OK";
-    case PARSE_ERR_TOO_SHORT:    return "Пакет слишком короткий";
-    case PARSE_ERR_BAD_STOP:     return "Отсутствует стоповый байт 0xFF";
-    case PARSE_ERR_BAD_CHECKSUM: return "Ошибка контрольной суммы";
-    case PARSE_ERR_WRONG_COMMAND:return "Неожиданная команда в ответе";
-    case PARSE_ERR_BAD_DATA:     return "Некорректные данные в пакете";
-    }
-    return "Неизвестная ошибка";
-}
-
-QString AMSProtocol::antennaStatusString(quint8 status)
-{
-    switch (status) {
-    case ANTENNA_IN_PROGRESS: return "Процесс открытия/закрытия антенны";
-    case ANTENNA_SUCCESS:     return "Антенна: завершено успешно";
-    case ANTENNA_FAULT:       return "Антенна: аварийная остановка";
-    }
-    return QString("Антенна: неизвестный статус 0x%1").arg(status, 2, 16, QChar('0'));
-}
-
-QString AMSProtocol::rotateStatusString(quint8 status)
-{
-    switch (status) {
-    case ROTATE_IDLE_OK: return "Поворот: ожидание / завершено успешно";
-    case ROTATE_RUNNING: return "Поворот: вращение";
-    case ROTATE_FAULT:   return "Поворот: аварийная остановка";
-    }
-    return QString("Поворот: неизвестный статус 0x%1").arg(status, 2, 16, QChar('0'));
-}
-
-// Возвращает список текстов неисправностей из битовой маски 0xA7
-// Бит=0 → неисправность, бит=1 → исправно (согласно протоколу)
-QStringList AMSProtocol::funcControlFaults(quint32 bitMask)
-{
-    static const struct { quint32 bit; const char *desc; } kBits[] = {
-        { FC_BIT_ROTATION_TIMEOUT,  "Превышено время ожидания завершения вращения" },
-        { FC_BIT_ANTENNA_FAULT,     "Аварийная остановка открытия/закрытия антенны" },
-        { FC_BIT_OPEN_TIMEOUT,      "Превышено время ожидания открытия антенны" },
-        { FC_BIT_CLOSE_TIMEOUT,     "Превышено время ожидания закрытия антенны" },
-        { FC_BIT_NO_DATA,           "Нет сбора данных" },
-        { FC_BIT_CLOCK_FAIL,        "СЧ не пошёл контроль" },
-        { FC_BIT_TRANSMITTER_FAIL,  "Не готов передатчик" },
-        { FC_BIT_SOFTWARE_ERROR,    "Ошибка программного обеспечения" },
-        { FC_BIT_DATETIME_INVALID,  "Неверное значение даты и времени" },
-    };
-
-    QStringList faults;
-    for (const auto &entry : kBits) {
-        if (!(bitMask & entry.bit)) {   // бит=0 → неисправность
-            faults << QString::fromUtf8(entry.desc);
-        }
-    }
-    return faults;
-}
-
-
+AMSCommand AMSProtocol::getPacketCommand(const QByteArray &data)
 {
     if (data.isEmpty()) return static_cast<AMSCommand>(0x00);
     return static_cast<AMSCommand>(static_cast<quint8>(data[0]));
@@ -284,26 +210,26 @@ QByteArray AMSProtocol::createSourceDataPacket(int day, int hour, int tenMinutes
     packet.append(intToBytes(hour));
     packet.append(intToBytes(tenMinutes));
     packet.append(floatToBytes(stationAltitude));
-    
+
     // 23 значения направления ветра
     for (int i = 0; i < 23; i++) {
         packet.append(floatToBytes(i < avgWindDir.size() ? avgWindDir[i] : 0.0f));
     }
-    
+
     // 23 значения скорости ветра
     for (int i = 0; i < 23; i++) {
         packet.append(floatToBytes(i < avgWindSpeed.size() ? avgWindSpeed[i] : 0.0f));
     }
-    
+
     packet.append(floatToBytes(reachedHeight));
     packet.append(floatToBytes(surfaceWindDir));
     packet.append(floatToBytes(surfaceWindSpeed));
-    
+
     // Дата/время в формате ММДДччммГГГГ
 //    QString dateTimeStr = currentDateTime.toString("MMddhhmmyyyy");
     QString dateTimeStr = currentDateTime.toString("MMddhhmmyyyy");
     packet.append(dateTimeStr.toLatin1());
-    
+
     qDebug() << "Дата и время: " << dateTimeStr.toLatin1();
 
     return finalizePacket(packet);
@@ -369,50 +295,42 @@ bool AMSProtocol::parseLineTestResponse(const QByteArray &data)
 {
     if (!isPacketValid(data)) return false;
     if (getPacketCommand(data) != CMD_LINE_TEST) return false;
-    
+
     // Проверяем, что ответ содержит те же тестовые данные
     QByteArray expectedTest;
     expectedTest.append(QByteArray::fromHex("FFFFFFFF"));
     expectedTest.append(QByteArray::fromHex("EEEEEEEE"));
     expectedTest.append(QByteArray::fromHex("DDDDDDDD"));
     expectedTest.append(QByteArray::fromHex("CCCCCC00"));
-    
+
     if (data.size() < 1 + expectedTest.size() + 2) return false;
-    
+
     QByteArray receivedTest = data.mid(1, expectedTest.size());
     return receivedTest == expectedTest;
 }
 
 bool AMSProtocol::parseModeTransferResponse(const QByteArray &data)
 {
-    ParseError err = checkPacket(data, CMD_MODE_TRANSFER, 3);
-    if (err != PARSE_OK) {
-        qWarning() << "AMSProtocol [0xA1 Режим]: " << parseErrorString(err);
-        return false;
-    }
-    return true;
+    if (!isPacketValid(data)) return false;
+    return getPacketCommand(data) == CMD_MODE_TRANSFER && data.size() == 3;
 }
 
 bool AMSProtocol::parseCoordsTransferResponse(const QByteArray &data)
 {
-    ParseError err = checkPacket(data, CMD_COORDS_TRANSFER, 3);
-    if (err != PARSE_OK) {
-        qWarning() << "AMSProtocol [0xA2 Координаты]: " << parseErrorString(err);
-        return false;
-    }
-    return true;
+    if (!isPacketValid(data)) return false;
+    return getPacketCommand(data) == CMD_COORDS_TRANSFER && data.size() == 3;
 }
 
 WorkMode AMSProtocol::parseStartMeasurementResponse(const QByteArray &data, bool &ok)
 {
     ok = false;
-    ParseError err = checkPacket(data, CMD_START_MEASUREMENT, 4);
-    if (err != PARSE_OK) {
-        qWarning() << "AMSProtocol [0xA3 Старт измерений]: " << parseErrorString(err);
-        return MODE_WORKING;
-    }
+    if (!isPacketValid(data)) return MODE_WORKING;
+    if (getPacketCommand(data) != CMD_START_MEASUREMENT) return MODE_WORKING;
+    if (data.size() < 4) return MODE_WORKING;
+
     ok = true;
-    return static_cast<WorkMode>(static_cast<quint8>(data[1]));
+    quint8 mode = static_cast<quint8>(data[1]);
+    return static_cast<WorkMode>(mode);
 }
 
 MeasurementProgress AMSProtocol::parseDataExchangeResponse(const QByteArray &data, bool &ok)
@@ -420,48 +338,32 @@ MeasurementProgress AMSProtocol::parseDataExchangeResponse(const QByteArray &dat
     MeasurementProgress progress;
     ok = false;
 
-    ParseError err = checkPacket(data, CMD_DATA_EXCHANGE, 11);
-    if (err != PARSE_OK) {
-        qWarning() << "AMSProtocol [0xA4 Обмен данными]: " << parseErrorString(err);
-        return progress;
-    }
+    if (!isPacketValid(data)) return progress;
+    if (getPacketCommand(data) != CMD_DATA_EXCHANGE) return progress;
+    if (data.size() < 11) return progress;
 
     progress.percentComplete = bytesToInt(data, 1);
-    progress.currentAngle    = bytesToFloat(data, 5);
+    progress.currentAngle = bytesToFloat(data, 5);
     ok = true;
+
     return progress;
 }
 
 bool AMSProtocol::parseSourceDataResponse(const QByteArray &data)
 {
-    ParseError err = checkPacket(data, CMD_SOURCE_DATA, 3);
-    if (err != PARSE_OK) {
-        qWarning() << "AMSProtocol [0xA6 Исходные данные]: " << parseErrorString(err);
-        return false;
-    }
-    return true;
+    if (!isPacketValid(data)) return false;
+    return getPacketCommand(data) == CMD_SOURCE_DATA && data.size() == 3;
 }
 
 bool AMSProtocol::parseFuncControlResponse(const QByteArray &data, quint32 &bitMask, quint32 &powerOnCount)
 {
-    ParseError err = checkPacket(data, CMD_FUNC_CONTROL, 11);
-    if (err != PARSE_OK) {
-        qWarning() << "AMSProtocol [0xA7 Функциональный контроль]: " << parseErrorString(err);
-        return false;
-    }
+    if (!isPacketValid(data)) return false;
+    if (getPacketCommand(data) != CMD_FUNC_CONTROL) return false;
+    if (data.size() < 11) return false;
 
-    bitMask      = static_cast<quint32>(bytesToInt(data, 1));
+    bitMask = static_cast<quint32>(bytesToInt(data, 1));
     powerOnCount = static_cast<quint32>(bytesToInt(data, 5));
 
-    // Декодируем неисправности и логируем
-    QStringList faults = funcControlFaults(bitMask);
-    if (faults.isEmpty()) {
-        qInfo() << "AMSProtocol [0xA7]: Всё оборудование исправно";
-    } else {
-        qWarning() << "AMSProtocol [0xA7] Неисправности:";
-        for (const QString &f : faults)
-            qWarning() << "  •" << f;
-    }
     return true;
 }
 
@@ -470,18 +372,21 @@ QVector<WindProfileData> AMSProtocol::parseAvgWindResponse(const QByteArray &dat
     QVector<WindProfileData> profile;
     ok = false;
 
-    ParseError err = checkPacket(data, CMD_AVG_WIND_REQUEST, 399);
-    if (err != PARSE_OK) {
-        qWarning() << "AMSProtocol [0xA9 Средний ветер]: " << parseErrorString(err);
-        return profile;
-    }
+    if (!isPacketValid(data)) return profile;
+    if (getPacketCommand(data) != CMD_AVG_WIND_REQUEST) return profile;
+    if (data.size() < 399) return profile; // 1 + 64 + 64 + 1 + 1
 
+    // Получаем стандартные высоты для среднего ветра (16 уровней)
+    QVector<float> heights = getAverageWindHeights(33);
+
+    // 16 уровней высоты
     for (int i = 0; i < 33; i++) {
         WindProfileData point;
-        point.height        = bytesToFloat(data, 1 + 33 * 2 * 4 + i * 4);
-        point.windDirection = static_cast<int>(bytesToFloat(data, 1 + i * 4));
-        point.windSpeed     = bytesToFloat(data, 1 + 33 * 4 + i * 4);
-        point.isValid       = true;
+        point.height = bytesToFloat(data, 1 + 33 * 2 * 4 + i * 4);  // Устанавливаем стандартную высоту
+        point.windDirection = (data, 1 + i * 4);
+        point.windSpeed = bytesToFloat(data, 1 + 33 * 4 + i * 4);
+//        point.windHeight = bytesToFloat(data, 1 + 33 * 2 * 4 + i * 4);
+        point.isValid = true;
         profile.append(point);
     }
 
@@ -494,18 +399,20 @@ QVector<WindProfileData> AMSProtocol::parseActualWindResponse(const QByteArray &
     QVector<WindProfileData> profile;
     ok = false;
 
-    ParseError err = checkPacket(data, CMD_ACTUAL_WIND_REQUEST, 399);
-    if (err != PARSE_OK) {
-        qWarning() << "AMSProtocol [0xAA Действительный ветер]: " << parseErrorString(err);
-        return profile;
-    }
+    if (!isPacketValid(data)) return profile;
+    if (getPacketCommand(data) != CMD_ACTUAL_WIND_REQUEST) return profile;
+    if (data.size() < 399) return profile; // 1 + 120 + 120 + 1 + 1
 
+    // Получаем стандартные высоты для действительного ветра (30 уровней)
+    QVector<float> heights = getActualWindHeights(33);
+
+    // 30 уровней высоты
     for (int i = 0; i < 33; i++) {
         WindProfileData point;
-        point.height        = bytesToFloat(data, 1 + 33 * 2 * 4 + i * 4);
-        point.windDirection = static_cast<int>(bytesToFloat(data, 1 + i * 4));
-        point.windSpeed     = bytesToFloat(data, 1 + 33 * 4 + i * 4);
-        point.isValid       = true;
+        point.height = bytesToFloat(data, 1 + 33 * 2 * 4 + i * 4);  // Устанавливаем стандартную высоту
+        point.windDirection = bytesToFloat(data, 1 + i * 4);
+        point.windSpeed = bytesToFloat(data, 1 + 33 * 4 + i * 4);
+        point.isValid = true;
         profile.append(point);
     }
 
@@ -518,19 +425,18 @@ QVector<MeasuredWindData> AMSProtocol::parseMeasuredWindResponse(const QByteArra
     QVector<MeasuredWindData> profile;
     ok = false;
 
-    ParseError err = checkPacket(data, CMD_MEASURED_WIND_REQUEST, 1603);
-    if (err != PARSE_OK) {
-        qWarning() << "AMSProtocol [0xAC Измеренный ветер]: " << parseErrorString(err);
-        return profile;
-    }
+    if (!isPacketValid(data)) return profile;
+    if (getPacketCommand(data) != CMD_MEASURED_WIND_REQUEST) return profile;
+    if (data.size() < 1603) return profile; // 1 + 1600 + 1 + 1
 
+    // 100 измерений по 16 байт каждое
     for (int i = 0; i < 100; i++) {
         int offset = 1 + i * 16;
         MeasuredWindData point;
-        point.windSpeed     = bytesToFloat(data, offset);
+        point.windSpeed = bytesToFloat(data, offset);
         point.windDirection = static_cast<int>(bytesToFloat(data, offset + 4));
-        point.height        = bytesToFloat(data, offset + 8);
-        point.reliability   = bytesToInt(data, offset + 12);
+        point.height = bytesToFloat(data, offset + 8);
+        point.reliability = bytesToInt(data, offset + 12);
         profile.append(point);
     }
 
@@ -541,37 +447,28 @@ QVector<MeasuredWindData> AMSProtocol::parseMeasuredWindResponse(const QByteArra
 quint8 AMSProtocol::parseAntennaControlResponse(const QByteArray &data, bool &ok)
 {
     ok = false;
-    ParseError err = checkPacket(data, CMD_ANTENNA_CONTROL, 4);
-    if (err != PARSE_OK) {
-        qWarning() << "AMSProtocol [0xAD Антенна]: " << parseErrorString(err);
-        return 0;
-    }
-    quint8 status = static_cast<quint8>(data[1]);
-    qInfo() << "AMSProtocol [0xAD]:" << antennaStatusString(status);
+    if (!isPacketValid(data)) return 0;
+    if (getPacketCommand(data) != CMD_ANTENNA_CONTROL) return 0;
+    if (data.size() < 4) return 0;
+
     ok = true;
-    return status;
+    return static_cast<quint8>(data[1]);
 }
 
 bool AMSProtocol::parseSetDateTimeResponse(const QByteArray &data)
 {
-    ParseError err = checkPacket(data, CMD_SET_DATETIME, 3);
-    if (err != PARSE_OK) {
-        qWarning() << "AMSProtocol [0xAE Дата/время]: " << parseErrorString(err);
-        return false;
-    }
-    return true;
+    if (!isPacketValid(data)) return false;
+    return getPacketCommand(data) == CMD_SET_DATETIME && data.size() == 3;
 }
 
 bool AMSProtocol::parseRotateAntennaResponse(const QByteArray &data, quint8 &status, float &currentAngle)
 {
-    ParseError err = checkPacket(data, CMD_ROTATE_ANTENNA, 8);
-    if (err != PARSE_OK) {
-        qWarning() << "AMSProtocol [0xAF Поворот антенны]: " << parseErrorString(err);
-        return false;
-    }
+    if (!isPacketValid(data)) return false;
+    if (getPacketCommand(data) != CMD_ROTATE_ANTENNA) return false;
+    if (data.size() < 8) return false;
+
     status = static_cast<quint8>(data[1]);
     currentAngle = bytesToFloat(data, 2);
-    qInfo() << "AMSProtocol [0xAF]:" << rotateStatusString(status)
-            << "угол:" << currentAngle;
+
     return true;
 }

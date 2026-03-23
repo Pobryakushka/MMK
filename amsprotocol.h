@@ -10,7 +10,7 @@
 struct WindProfileData {
     float height;           // Высота, м
     float windSpeed;        // Скорость ветра, м/с
-    int windDirection;      // Направление ветра, градусы
+    float windDirection;      // Направление ветра, градусы
     float windHeight;       // Высота, м
     bool isValid;
 
@@ -21,7 +21,7 @@ struct WindProfileData {
 struct MeasuredWindData {
     float height;           // Высота, м
     float windSpeed;        // Скорость ветра, м/с
-    int windDirection;      // Направление ветра, градусы
+    float windDirection;      // Направление ветра, градусы
     int reliability;        // Достоверность: 1 - недействительное, 2 - действительное
 
     MeasuredWindData() : height(0), windSpeed(0), windDirection(0), reliability(0) {}

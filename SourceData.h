@@ -3,6 +3,7 @@
 #include <QWidget>
 #include <QDialog>
 #include <QButtonGroup>
+#include <QCloseEvent>
 
 // Forward declaration
 class GroundMeteoParams;
@@ -17,6 +18,9 @@ class SourceData : public QDialog {
 public:
     explicit SourceData(QWidget *parent = nullptr);
     ~SourceData();
+
+protected:
+    void closeEvent(QCloseEvent *event) override;
 
 private:
     Ui::SourceData *ui;

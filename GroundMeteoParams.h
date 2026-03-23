@@ -4,6 +4,7 @@
 #include <QDialog>
 #include <QMap>
 #include <QSerialPort>
+#include <QCloseEvent>
 
 namespace Ui {
 class GroundMeteoParams;
@@ -30,6 +31,11 @@ public:
     void setProtocol(RS485Protocol protocol);
     void setDeviceAddress(quint8 address);
 
+    // Геттеры для последних полученных значений приземного ветра
+    double lastWindSpeed() const     { return m_lastWindSpeed; }
+    double lastWindDirection() const { return m_lastWindDirection; }
+    bool   hasLastData() const       { return m_hasLastData; }
+
     // Создание запросов (публичные методы)
     QByteArray createModbusReadRequest(const QList<quint16>& parameters);
     QByteArray createUmbReadRequest(const QList<quint16>& parameters);
@@ -41,6 +47,7 @@ public slots:
 
 private slots:
     void updateTableWithData(const QMap<QString, double>& values);
+    void applyManualInput();
 
 private:
     Ui::GroundMeteoParams *ui;
@@ -50,6 +57,11 @@ private:
 
     // Статическая переменная для синглтона
     static GroundMeteoParams* s_instance;
+
+    // Кеш последних полученных значений приземного ветра
+    double m_lastWindSpeed    = 0.0;
+    double m_lastWindDirection = 0.0;
+    bool   m_hasLastData      = false;
 
     // Для отслеживания запрошенных регистров (Modbus)
     QList<quint16> m_lastRequestedRegisters;
@@ -75,6 +87,9 @@ private:
     quint16 calculateModbusCRC16(const QByteArray& data);
     QString parameterCodeToName(quint16 code);
     QString mapParameterToTableRow(const QString& paramName);
+
+protected:
+    void closeEvent(QCloseEvent *event) override;
 
 signals:
     void errorOccurred(const QString& error);
