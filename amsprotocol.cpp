@@ -13,7 +13,7 @@ quint8 AMSProtocol::calculateChecksum(const QByteArray &data)
 {
     // Контрольная сумма = сумма по модулю 2 всех байтов кроме номера команды
     quint8 checksum = 0;
-    for (int i = 1; i < data.size(); i++) {
+    for (int i = 0; i < data.size(); i++) {
         checksum ^= static_cast<quint8>(data[i]);
     }
     return checksum;
@@ -57,12 +57,18 @@ qint32 AMSProtocol::bytesToInt(const QByteArray &data, int offset)
 
 bool AMSProtocol::isPacketValid(const QByteArray &data)
 {
+    qDebug() << "Размер пакета: " << data.size();
+    qDebug() << "Результат сравнения: " <<static_cast<quint8>(data.back());
+
     if (data.size() < 3) return false;
     if (static_cast<quint8>(data.back()) != 0xFF) return false;
     
     quint8 receivedChecksum = static_cast<quint8>(data[data.size() - 2]);
     QByteArray dataWithoutChecksumAndStop = data.left(data.size() - 2);
     quint8 calculatedChecksum = calculateChecksum(dataWithoutChecksumAndStop);
+
+    qDebug() << "Полученная КС" << receivedChecksum;
+        qDebug() << "Вычисленная КС" << calculatedChecksum;
     
     return receivedChecksum == calculatedChecksum;
 }
@@ -220,9 +226,12 @@ QByteArray AMSProtocol::createSourceDataPacket(int day, int hour, int tenMinutes
     packet.append(floatToBytes(surfaceWindSpeed));
     
     // Дата/время в формате ММДДччммГГГГ
+//    QString dateTimeStr = currentDateTime.toString("MMddhhmmyyyy");
     QString dateTimeStr = currentDateTime.toString("MMddhhmmyyyy");
     packet.append(dateTimeStr.toLatin1());
     
+    qDebug() << "Дата и время: " << dateTimeStr.toLatin1();
+
     return finalizePacket(packet);
 }
 
@@ -266,7 +275,7 @@ QByteArray AMSProtocol::createSetDateTimePacket(const QDateTime &dateTime)
 {
     QByteArray packet;
     packet.append(static_cast<char>(CMD_SET_DATETIME));
-    QString dateTimeStr = dateTime.toString("MMddhhmmyyyy");
+    QString dateTimeStr = dateTime.toString("MMddhhmmyyyy.ss");
     packet.append(dateTimeStr.toLatin1());
     return finalizePacket(packet);
 }
