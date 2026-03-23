@@ -13,7 +13,7 @@ quint8 AMSProtocol::calculateChecksum(const QByteArray &data)
 {
     // Контрольная сумма = сумма по модулю 2 всех байтов кроме номера команды
     quint8 checksum = 0;
-    for (int i = 1; i < data.size(); i++) {
+    for (int i = 0; i < data.size(); i++) {
         checksum ^= static_cast<quint8>(data[i]);
     }
     return checksum;
@@ -57,13 +57,19 @@ qint32 AMSProtocol::bytesToInt(const QByteArray &data, int offset)
 
 bool AMSProtocol::isPacketValid(const QByteArray &data)
 {
+    qDebug() << "Размер пакета: " << data.size();
+    qDebug() << "Результат сравнения: " <<static_cast<quint8>(data.back());
+
     if (data.size() < 3) return false;
     if (static_cast<quint8>(data.back()) != 0xFF) return false;
-    
+
     quint8 receivedChecksum = static_cast<quint8>(data[data.size() - 2]);
     QByteArray dataWithoutChecksumAndStop = data.left(data.size() - 2);
     quint8 calculatedChecksum = calculateChecksum(dataWithoutChecksumAndStop);
-    
+
+    qDebug() << "Полученная КС" << receivedChecksum;
+        qDebug() << "Вычисленная КС" << calculatedChecksum;
+
     return receivedChecksum == calculatedChecksum;
 }
 
@@ -204,25 +210,28 @@ QByteArray AMSProtocol::createSourceDataPacket(int day, int hour, int tenMinutes
     packet.append(intToBytes(hour));
     packet.append(intToBytes(tenMinutes));
     packet.append(floatToBytes(stationAltitude));
-    
+
     // 23 значения направления ветра
     for (int i = 0; i < 23; i++) {
         packet.append(floatToBytes(i < avgWindDir.size() ? avgWindDir[i] : 0.0f));
     }
-    
+
     // 23 значения скорости ветра
     for (int i = 0; i < 23; i++) {
         packet.append(floatToBytes(i < avgWindSpeed.size() ? avgWindSpeed[i] : 0.0f));
     }
-    
+
     packet.append(floatToBytes(reachedHeight));
     packet.append(floatToBytes(surfaceWindDir));
     packet.append(floatToBytes(surfaceWindSpeed));
-    
+
     // Дата/время в формате ММДДччммГГГГ
+//    QString dateTimeStr = currentDateTime.toString("MMddhhmmyyyy");
     QString dateTimeStr = currentDateTime.toString("MMddhhmmyyyy");
     packet.append(dateTimeStr.toLatin1());
-    
+
+    qDebug() << "Дата и время: " << dateTimeStr.toLatin1();
+
     return finalizePacket(packet);
 }
 
@@ -266,7 +275,7 @@ QByteArray AMSProtocol::createSetDateTimePacket(const QDateTime &dateTime)
 {
     QByteArray packet;
     packet.append(static_cast<char>(CMD_SET_DATETIME));
-    QString dateTimeStr = dateTime.toString("MMddhhmmyyyy");
+    QString dateTimeStr = dateTime.toString("MMddhhmmyyyy.ss");
     packet.append(dateTimeStr.toLatin1());
     return finalizePacket(packet);
 }
@@ -286,16 +295,16 @@ bool AMSProtocol::parseLineTestResponse(const QByteArray &data)
 {
     if (!isPacketValid(data)) return false;
     if (getPacketCommand(data) != CMD_LINE_TEST) return false;
-    
+
     // Проверяем, что ответ содержит те же тестовые данные
     QByteArray expectedTest;
     expectedTest.append(QByteArray::fromHex("FFFFFFFF"));
     expectedTest.append(QByteArray::fromHex("EEEEEEEE"));
     expectedTest.append(QByteArray::fromHex("DDDDDDDD"));
     expectedTest.append(QByteArray::fromHex("CCCCCC00"));
-    
+
     if (data.size() < 1 + expectedTest.size() + 2) return false;
-    
+
     QByteArray receivedTest = data.mid(1, expectedTest.size());
     return receivedTest == expectedTest;
 }
@@ -318,7 +327,7 @@ WorkMode AMSProtocol::parseStartMeasurementResponse(const QByteArray &data, bool
     if (!isPacketValid(data)) return MODE_WORKING;
     if (getPacketCommand(data) != CMD_START_MEASUREMENT) return MODE_WORKING;
     if (data.size() < 4) return MODE_WORKING;
-    
+
     ok = true;
     quint8 mode = static_cast<quint8>(data[1]);
     return static_cast<WorkMode>(mode);
@@ -328,15 +337,15 @@ MeasurementProgress AMSProtocol::parseDataExchangeResponse(const QByteArray &dat
 {
     MeasurementProgress progress;
     ok = false;
-    
+
     if (!isPacketValid(data)) return progress;
     if (getPacketCommand(data) != CMD_DATA_EXCHANGE) return progress;
     if (data.size() < 11) return progress;
-    
+
     progress.percentComplete = bytesToInt(data, 1);
     progress.currentAngle = bytesToFloat(data, 5);
     ok = true;
-    
+
     return progress;
 }
 
@@ -351,10 +360,10 @@ bool AMSProtocol::parseFuncControlResponse(const QByteArray &data, quint32 &bitM
     if (!isPacketValid(data)) return false;
     if (getPacketCommand(data) != CMD_FUNC_CONTROL) return false;
     if (data.size() < 11) return false;
-    
+
     bitMask = static_cast<quint32>(bytesToInt(data, 1));
     powerOnCount = static_cast<quint32>(bytesToInt(data, 5));
-    
+
     return true;
 }
 
@@ -365,17 +374,18 @@ QVector<WindProfileData> AMSProtocol::parseAvgWindResponse(const QByteArray &dat
 
     if (!isPacketValid(data)) return profile;
     if (getPacketCommand(data) != CMD_AVG_WIND_REQUEST) return profile;
-    if (data.size() < 131) return profile; // 1 + 64 + 64 + 1 + 1
+    if (data.size() < 399) return profile; // 1 + 64 + 64 + 1 + 1
 
     // Получаем стандартные высоты для среднего ветра (16 уровней)
-    QVector<float> heights = getAverageWindHeights(16);
+    QVector<float> heights = getAverageWindHeights(33);
 
     // 16 уровней высоты
-    for (int i = 0; i < 16; i++) {
+    for (int i = 0; i < 33; i++) {
         WindProfileData point;
-        point.height = heights[i];  // Устанавливаем стандартную высоту
-        point.windDirection = static_cast<int>(bytesToFloat(data, 1 + i * 4));
-        point.windSpeed = bytesToFloat(data, 1 + 64 + i * 4);
+        point.height = bytesToFloat(data, 1 + 33 * 2 * 4 + i * 4);  // Устанавливаем стандартную высоту
+        point.windDirection = (data, 1 + i * 4);
+        point.windSpeed = bytesToFloat(data, 1 + 33 * 4 + i * 4);
+//        point.windHeight = bytesToFloat(data, 1 + 33 * 2 * 4 + i * 4);
         point.isValid = true;
         profile.append(point);
     }
@@ -391,17 +401,17 @@ QVector<WindProfileData> AMSProtocol::parseActualWindResponse(const QByteArray &
 
     if (!isPacketValid(data)) return profile;
     if (getPacketCommand(data) != CMD_ACTUAL_WIND_REQUEST) return profile;
-    if (data.size() < 243) return profile; // 1 + 120 + 120 + 1 + 1
+    if (data.size() < 399) return profile; // 1 + 120 + 120 + 1 + 1
 
     // Получаем стандартные высоты для действительного ветра (30 уровней)
-    QVector<float> heights = getActualWindHeights(30);
+    QVector<float> heights = getActualWindHeights(33);
 
     // 30 уровней высоты
-    for (int i = 0; i < 30; i++) {
+    for (int i = 0; i < 33; i++) {
         WindProfileData point;
-        point.height = heights[i];  // Устанавливаем стандартную высоту
-        point.windDirection = static_cast<int>(bytesToFloat(data, 1 + i * 4));
-        point.windSpeed = bytesToFloat(data, 1 + 120 + i * 4);
+        point.height = bytesToFloat(data, 1 + 33 * 2 * 4 + i * 4);  // Устанавливаем стандартную высоту
+        point.windDirection = bytesToFloat(data, 1 + i * 4);
+        point.windSpeed = bytesToFloat(data, 1 + 33 * 4 + i * 4);
         point.isValid = true;
         profile.append(point);
     }
@@ -414,11 +424,11 @@ QVector<MeasuredWindData> AMSProtocol::parseMeasuredWindResponse(const QByteArra
 {
     QVector<MeasuredWindData> profile;
     ok = false;
-    
+
     if (!isPacketValid(data)) return profile;
     if (getPacketCommand(data) != CMD_MEASURED_WIND_REQUEST) return profile;
     if (data.size() < 1603) return profile; // 1 + 1600 + 1 + 1
-    
+
     // 100 измерений по 16 байт каждое
     for (int i = 0; i < 100; i++) {
         int offset = 1 + i * 16;
@@ -429,7 +439,7 @@ QVector<MeasuredWindData> AMSProtocol::parseMeasuredWindResponse(const QByteArra
         point.reliability = bytesToInt(data, offset + 12);
         profile.append(point);
     }
-    
+
     ok = true;
     return profile;
 }
@@ -440,7 +450,7 @@ quint8 AMSProtocol::parseAntennaControlResponse(const QByteArray &data, bool &ok
     if (!isPacketValid(data)) return 0;
     if (getPacketCommand(data) != CMD_ANTENNA_CONTROL) return 0;
     if (data.size() < 4) return 0;
-    
+
     ok = true;
     return static_cast<quint8>(data[1]);
 }
@@ -456,9 +466,9 @@ bool AMSProtocol::parseRotateAntennaResponse(const QByteArray &data, quint8 &sta
     if (!isPacketValid(data)) return false;
     if (getPacketCommand(data) != CMD_ROTATE_ANTENNA) return false;
     if (data.size() < 8) return false;
-    
+
     status = static_cast<quint8>(data[1]);
     currentAngle = bytesToFloat(data, 2);
-    
+
     return true;
 }

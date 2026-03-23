@@ -19,6 +19,7 @@ AMSHandler::AMSHandler(QObject *parent)
     , m_currentLitera(LITERA_1)
     , m_lastProgress(0)
     , m_lastAngle(0.0f)
+    , m_intermediateDataSent(false)
 {
     connect(m_serialPort, &QSerialPort::readyRead, this, &AMSHandler::onDataReceived);
 
@@ -120,9 +121,10 @@ void AMSHandler::setDatabase(const QString &host, int port, const QString &dbNam
 // ===== УПРАВЛЕНИЕ ПРОЦЕССОМ ИЗМЕРЕНИЯ СОГЛАСНО ДИАГРАММЕ =====
 
 bool AMSHandler::startMeasurementSequence(WorkMode mode, AveragingTime avgTime, Litera litera,
-                                         const StationCoordinates &coords,
-                                         const QDateTime &dateTime)
+                                          const StationCoordinates &coords,
+                                          const QDateTime &dateTime)
 {
+    m_intermediateDataSent = false;
     if (!isConnected()) {
         emit errorOccurred("Нет подключения к АМС");
         return false;
@@ -171,16 +173,16 @@ void AMSHandler::setMeasurementStage(MeasurementStage stage)
 
     QString stageDesc;
     switch (stage) {
-        case STAGE_IDLE: stageDesc = "Ожидание"; break;
-        case STAGE_SEND_SOURCE_DATA: stageDesc = "Отправка исходных данных"; break;
-        case STAGE_SEND_MODE: stageDesc = "Передача режима работы"; break;
-        case STAGE_SEND_COORDS: stageDesc = "Передача координат"; break;
-        case STAGE_SEND_DATETIME: stageDesc = "Установка даты и времени"; break;
-        case STAGE_START_MEASUREMENT: stageDesc = "Старт измерений"; break;
-        case STAGE_EXCHANGE_DATA: stageDesc = "Обмен данными о процессе"; break;
-        case STAGE_REQUEST_RESULTS: stageDesc = "Запрос результатов"; break;
-        case STAGE_CALCULATE_PROFILE: stageDesc = "Расчёт профиля ветра"; break;
-        case STAGE_COMPLETED: stageDesc = "Завершено"; break;
+    case STAGE_IDLE: stageDesc = "Ожидание"; break;
+    case STAGE_SEND_SOURCE_DATA: stageDesc = "Отправка исходных данных"; break;
+    case STAGE_SEND_MODE: stageDesc = "Передача режима работы"; break;
+    case STAGE_SEND_COORDS: stageDesc = "Передача координат"; break;
+    case STAGE_SEND_DATETIME: stageDesc = "Установка даты и времени"; break;
+    case STAGE_START_MEASUREMENT: stageDesc = "Старт измерений"; break;
+    case STAGE_EXCHANGE_DATA: stageDesc = "Обмен данными о процессе"; break;
+    case STAGE_REQUEST_RESULTS: stageDesc = "Запрос результатов"; break;
+    case STAGE_CALCULATE_PROFILE: stageDesc = "Расчёт профиля ветра"; break;
+    case STAGE_COMPLETED: stageDesc = "Завершено"; break;
     }
 
     qInfo() << "AMSHandler: Этап измерения:" << stageDesc;
@@ -196,10 +198,10 @@ void AMSHandler::setMeasurementStatus(MeasurementStatus status)
 
     QString statusDesc;
     switch (status) {
-        case STATUS_IDLE: statusDesc = "Нет активных измерений"; break;
-        case STATUS_RUNNING: statusDesc = "Измерение в процессе"; break;
-        case STATUS_READY: statusDesc = "Измерение завершено успешно"; break;
-        case STATUS_FAILURE: statusDesc = "Ошибка измерения"; break;
+    case STATUS_IDLE: statusDesc = "Нет активных измерений"; break;
+    case STATUS_RUNNING: statusDesc = "Измерение в процессе"; break;
+    case STATUS_READY: statusDesc = "Измерение завершено успешно"; break;
+    case STATUS_FAILURE: statusDesc = "Ошибка измерения"; break;
     }
 
     qInfo() << "AMSHandler: Статус измерения:" << statusDesc;
@@ -209,63 +211,63 @@ void AMSHandler::setMeasurementStatus(MeasurementStatus status)
 void AMSHandler::advanceMeasurementStage()
 {
     switch (m_currentStage) {
-        case STAGE_SEND_MODE: {
-            // Передача признаков режимов работы (0xA1)
-            setMeasurementStage(STAGE_SEND_MODE);
-            QByteArray packet = m_protocol->createModeTransferPacket(m_currentMode, m_currentAveragingTime, m_currentLitera);
-            sendPacket(packet, CMD_MODE_TRANSFER);
-            break;
-        }
+    case STAGE_SEND_MODE: {
+        // Передача признаков режимов работы (0xA1)
+        setMeasurementStage(STAGE_SEND_MODE);
+        QByteArray packet = m_protocol->createModeTransferPacket(m_currentMode, m_currentAveragingTime, m_currentLitera);
+        sendPacket(packet, CMD_MODE_TRANSFER);
+        break;
+    }
 
-        case STAGE_SEND_COORDS: {
-            // Передача координат (0xA2)
-            setMeasurementStage(STAGE_SEND_COORDS);
-            QByteArray packet = m_protocol->createCoordsTransferPacket(m_currentCoords);
-            sendPacket(packet, CMD_COORDS_TRANSFER);
-            break;
-        }
+    case STAGE_SEND_COORDS: {
+        // Передача координат (0xA2)
+        setMeasurementStage(STAGE_SEND_COORDS);
+        QByteArray packet = m_protocol->createCoordsTransferPacket(m_currentCoords);
+        sendPacket(packet, CMD_COORDS_TRANSFER);
+        break;
+    }
 
-        case STAGE_SEND_DATETIME: {
-            // Установка даты и времени (0xAE)
-            setMeasurementStage(STAGE_SEND_DATETIME);
-            QByteArray packet = m_protocol->createSetDateTimePacket(m_currentDateTime);
-            sendPacket(packet, CMD_SET_DATETIME);
-            break;
-        }
+    case STAGE_SEND_DATETIME: {
+        // Установка даты и времени (0xAE)
+        setMeasurementStage(STAGE_SEND_DATETIME);
+        QByteArray packet = m_protocol->createSetDateTimePacket(m_currentDateTime);
+        sendPacket(packet, CMD_SET_DATETIME);
+        break;
+    }
 
-        case STAGE_START_MEASUREMENT: {
-            // Старт измерений (0xA3)
-            setMeasurementStage(STAGE_START_MEASUREMENT);
-            QByteArray packet = m_protocol->createStartMeasurementPacket();
-            sendPacket(packet, CMD_START_MEASUREMENT);
-            break;
-        }
+    case STAGE_START_MEASUREMENT: {
+        // Старт измерений (0xA3)
+        setMeasurementStage(STAGE_START_MEASUREMENT);
+        QByteArray packet = m_protocol->createStartMeasurementPacket();
+        sendPacket(packet, CMD_START_MEASUREMENT);
+        break;
+    }
 
-        case STAGE_EXCHANGE_DATA: {
-            // Начинаем периодический опрос процесса (0xA4)
-            setMeasurementStage(STAGE_EXCHANGE_DATA);
-            m_exchangeDataTimer->start();
-            onExchangeDataTimer(); // Сразу делаем первый запрос
-            break;
-        }
+    case STAGE_EXCHANGE_DATA: {
+        // Начинаем периодический опрос процесса (0xA4)
+        setMeasurementStage(STAGE_EXCHANGE_DATA);
+        m_exchangeDataTimer->start();
+        onExchangeDataTimer(); // Сразу делаем первый запрос
+        break;
+    }
 
-        case STAGE_REQUEST_RESULTS: {
-            // Запрос результатов измерения
-            setMeasurementStage(STAGE_REQUEST_RESULTS);
-            requestMeasurementResults();
-            break;
-        }
+    case STAGE_REQUEST_RESULTS: {
+        // Запрос результатов измерения
+        setMeasurementStage(STAGE_REQUEST_RESULTS);
+        requestMeasurementResults();
+        break;
+    }
 
-        case STAGE_CALCULATE_PROFILE: {
-            // Расчёт профиля ветра (может быть выполнен внешним модулем)
-            setMeasurementStage(STAGE_CALCULATE_PROFILE);
-            completeMeasurement();
-            break;
-        }
+    case STAGE_CALCULATE_PROFILE: {
+        // Расчёт профиля ветра (может быть выполнен внешним модулем)
+        setMeasurementStage(STAGE_CALCULATE_PROFILE);
+        completeMeasurement();
+        break;
+    }
 
-        default:
-            qWarning() << "AMSHandler: Неизвестный этап измерения";
-            break;
+    default:
+        qWarning() << "AMSHandler: Неизвестный этап измерения";
+        break;
     }
 }
 
@@ -307,16 +309,18 @@ void AMSHandler::processExchangeDataResponse(int progress, float angle)
         failMeasurement("АМС сообщил об ошибке измерения");
 
     } else if (progress == 80 || progress == 72) {
-        // Case: 80 или 72 → Требуются промежуточные данные
-        qInfo() << "AMSHandler: Запрос промежуточных данных (progress =" << progress << ")";
-        m_exchangeDataTimer->stop(); // Временно останавливаем
+        if (!m_intermediateDataSent){
+            m_intermediateDataSent = true;
+            // Case: 80 или 72 → Требуются промежуточные данные
+            qInfo() << "AMSHandler: Запрос промежуточных данных (progress =" << progress << ")";
+            m_exchangeDataTimer->stop(); // Временно останавливаем
 
-        // Сигнализируем о необходимости предоставить данные
-        emit needIntermediateData(progress);
+            // Сигнализируем о необходимости предоставить данные
+            emit needIntermediateData(progress);
 
-        // После получения данных через sendSourceDataDuringMeasurement()
-        // измерение продолжится
-
+            // После получения данных через sendSourceDataDuringMeasurement()
+            // измерение продолжится
+        }
     } else {
         // Default: 0-100 → Обновление данных, продолжение цикла
         QString msg = QString("Процесс измерения: %1%, угол: %2°").arg(progress).arg(angle, 0, 'f', 1);
@@ -375,6 +379,7 @@ void AMSHandler::requestMeasurementResults()
 
 void AMSHandler::completeMeasurement()
 {
+    m_intermediateDataSent = false;
     setMeasurementStage(STAGE_COMPLETED);
     setMeasurementStatus(STATUS_READY);
 
@@ -391,6 +396,7 @@ void AMSHandler::completeMeasurement()
 
 void AMSHandler::failMeasurement(const QString &reason)
 {
+    m_intermediateDataSent = false;
     setMeasurementStatus(STATUS_FAILURE);
 
     if (m_currentRecordId > 0) {
@@ -598,163 +604,163 @@ void AMSHandler::processReceivedPacket(const QByteArray &packet)
     qDebug() << "AMSHandler: Обработка ответа на команду" << Qt::hex << static_cast<int>(command);
 
     switch (command) {
-        case CMD_LINE_TEST: {
-            bool ok = m_protocol->parseLineTestResponse(packet);
-            if (ok) {
-                qInfo() << "AMSHandler: Тест линии пройден успешно";
-                m_isConnecting = false;
-                emit connected();
-                emit statusMessage("Подключено к АМС");
-            } else {
-                qWarning() << "AMSHandler: Тест линии не пройден";
-                m_isConnecting = false;
-                emit errorOccurred("Тест линии не пройден");
-            }
-            break;
+    case CMD_LINE_TEST: {
+        bool ok = m_protocol->parseLineTestResponse(packet);
+        if (ok) {
+            qInfo() << "AMSHandler: Тест линии пройден успешно";
+            m_isConnecting = false;
+            emit connected();
+            emit statusMessage("Подключено к АМС");
+        } else {
+            qWarning() << "AMSHandler: Тест линии не пройден";
+            m_isConnecting = false;
+            emit errorOccurred("Тест линии не пройден");
         }
+        break;
+    }
 
-        case CMD_MODE_TRANSFER: {
-            bool ok = m_protocol->parseModeTransferResponse(packet);
-            if (ok && m_currentStage == STAGE_SEND_MODE) {
-                qInfo() << "AMSHandler: Режим работы установлен";
-                // Переходим к следующему этапу
-                setMeasurementStage(STAGE_SEND_COORDS);
+    case CMD_MODE_TRANSFER: {
+        bool ok = m_protocol->parseModeTransferResponse(packet);
+        if (ok && m_currentStage == STAGE_SEND_MODE) {
+            qInfo() << "AMSHandler: Режим работы установлен";
+            // Переходим к следующему этапу
+            setMeasurementStage(STAGE_SEND_COORDS);
+            advanceMeasurementStage();
+        }
+        break;
+    }
+
+    case CMD_COORDS_TRANSFER: {
+        bool ok = m_protocol->parseCoordsTransferResponse(packet);
+        if (ok && m_currentStage == STAGE_SEND_COORDS) {
+            qInfo() << "AMSHandler: Координаты установлены";
+            // Переходим к следующему этапу
+            setMeasurementStage(STAGE_SEND_DATETIME);
+            advanceMeasurementStage();
+        }
+        break;
+    }
+
+    case CMD_SET_DATETIME: {
+        bool ok = m_protocol->parseSetDateTimeResponse(packet);
+        if (ok && m_currentStage == STAGE_SEND_DATETIME) {
+            qInfo() << "AMSHandler: Дата и время установлены";
+            // Переходим к старту измерений
+            setMeasurementStage(STAGE_START_MEASUREMENT);
+            advanceMeasurementStage();
+        }
+        break;
+    }
+
+    case CMD_START_MEASUREMENT: {
+        bool ok;
+        WorkMode mode = m_protocol->parseStartMeasurementResponse(packet, ok);
+        if (ok) {
+            qInfo() << "AMSHandler: Измерение запущено, режим:" << mode;
+            // Переходим к циклу обмена данными
+            setMeasurementStage(STAGE_EXCHANGE_DATA);
+            advanceMeasurementStage();
+        }
+        break;
+    }
+
+    case CMD_DATA_EXCHANGE: {
+        bool ok;
+        MeasurementProgress progress = m_protocol->parseDataExchangeResponse(packet, ok);
+        if (ok) {
+            processExchangeDataResponse(progress.percentComplete, progress.currentAngle);
+        }
+        break;
+    }
+
+    case CMD_SOURCE_DATA: {
+        bool ok = m_protocol->parseSourceDataResponse(packet);
+        if (ok) {
+            qInfo() << "AMSHandler: Исходные данные приняты АМС";
+        }
+        break;
+    }
+
+    case CMD_MEASURED_WIND_REQUEST: {
+        bool ok;
+        QVector<MeasuredWindData> data = m_protocol->parseMeasuredWindResponse(packet, ok);
+        if (ok) {
+            qInfo() << "AMSHandler: Получен профиль измеренного ветра," << data.size() << "точек";
+            saveMeasuredWindProfile(m_currentRecordId, data);
+            emit measuredWindDataReceived(data);
+
+            // Запрашиваем средний ветер
+            QTimer::singleShot(500, this, &AMSHandler::requestAvgWind);
+        }
+        break;
+    }
+
+    case CMD_AVG_WIND_REQUEST: {
+        bool ok;
+        QVector<WindProfileData> data = m_protocol->parseAvgWindResponse(packet, ok);
+        if (ok) {
+            qInfo() << "AMSHandler: Получен профиль среднего ветра," << data.size() << "точек";
+            saveAvgWindProfile(m_currentRecordId, data);
+            emit avgWindDataReceived(data);
+
+            // Запрашиваем действительный ветер
+            QTimer::singleShot(500, this, &AMSHandler::requestActualWind);
+        }
+        break;
+    }
+
+    case CMD_ACTUAL_WIND_REQUEST: {
+        bool ok;
+        QVector<WindProfileData> data = m_protocol->parseActualWindResponse(packet, ok);
+        if (ok) {
+            qInfo() << "AMSHandler: Получен профиль действительного ветра," << data.size() << "точек";
+            saveActualWindProfile(m_currentRecordId, data);
+            emit actualWindDataReceived(data);
+
+            // Все данные получены, завершаем процесс
+            QTimer::singleShot(500, this, [this]() {
+                setMeasurementStage(STAGE_CALCULATE_PROFILE);
                 advanceMeasurementStage();
-            }
-            break;
+            });
         }
+        break;
+    }
 
-        case CMD_COORDS_TRANSFER: {
-            bool ok = m_protocol->parseCoordsTransferResponse(packet);
-            if (ok && m_currentStage == STAGE_SEND_COORDS) {
-                qInfo() << "AMSHandler: Координаты установлены";
-                // Переходим к следующему этапу
-                setMeasurementStage(STAGE_SEND_DATETIME);
-                advanceMeasurementStage();
-            }
-            break;
+    case CMD_FUNC_CONTROL: {
+        quint32 bitMask, powerOnCount;
+        bool ok = m_protocol->parseFuncControlResponse(packet, bitMask, powerOnCount);
+        if (ok) {
+            qInfo() << "AMSHandler: Функциональный контроль: битовая маска =" << Qt::hex << bitMask
+                    << ", счётчик включений =" << powerOnCount;
+            emit functionalControlDataReceived(bitMask, powerOnCount);
         }
+        break;
+    }
 
-        case CMD_SET_DATETIME: {
-            bool ok = m_protocol->parseSetDateTimeResponse(packet);
-            if (ok && m_currentStage == STAGE_SEND_DATETIME) {
-                qInfo() << "AMSHandler: Дата и время установлены";
-                // Переходим к старту измерений
-                setMeasurementStage(STAGE_START_MEASUREMENT);
-                advanceMeasurementStage();
-            }
-            break;
+    case CMD_ANTENNA_CONTROL: {
+        bool ok;
+        quint8 status = m_protocol->parseAntennaControlResponse(packet, ok);
+        if (ok) {
+            qInfo() << "AMSHandler: Статус антенны:" << status;
+            emit antennaStatusReceived(status);
         }
+        break;
+    }
 
-        case CMD_START_MEASUREMENT: {
-            bool ok;
-            WorkMode mode = m_protocol->parseStartMeasurementResponse(packet, ok);
-            if (ok) {
-                qInfo() << "AMSHandler: Измерение запущено, режим:" << mode;
-                // Переходим к циклу обмена данными
-                setMeasurementStage(STAGE_EXCHANGE_DATA);
-                advanceMeasurementStage();
-            }
-            break;
+    case CMD_ROTATE_ANTENNA: {
+        quint8 status;
+        float currentAngle;
+        bool ok = m_protocol->parseRotateAntennaResponse(packet, status, currentAngle);
+        if (ok) {
+            qInfo() << "AMSHandler: Поворот антенны: статус =" << status << ", угол =" << currentAngle;
+            emit antennaStatusReceived(status);
         }
+        break;
+    }
 
-        case CMD_DATA_EXCHANGE: {
-            bool ok;
-            MeasurementProgress progress = m_protocol->parseDataExchangeResponse(packet, ok);
-            if (ok) {
-                processExchangeDataResponse(progress.percentComplete, progress.currentAngle);
-            }
-            break;
-        }
-
-        case CMD_SOURCE_DATA: {
-            bool ok = m_protocol->parseSourceDataResponse(packet);
-            if (ok) {
-                qInfo() << "AMSHandler: Исходные данные приняты АМС";
-            }
-            break;
-        }
-
-        case CMD_MEASURED_WIND_REQUEST: {
-            bool ok;
-            QVector<MeasuredWindData> data = m_protocol->parseMeasuredWindResponse(packet, ok);
-            if (ok) {
-                qInfo() << "AMSHandler: Получен профиль измеренного ветра," << data.size() << "точек";
-                saveMeasuredWindProfile(m_currentRecordId, data);
-                emit measuredWindDataReceived(data);
-
-                // Запрашиваем средний ветер
-                QTimer::singleShot(500, this, &AMSHandler::requestAvgWind);
-            }
-            break;
-        }
-
-        case CMD_AVG_WIND_REQUEST: {
-            bool ok;
-            QVector<WindProfileData> data = m_protocol->parseAvgWindResponse(packet, ok);
-            if (ok) {
-                qInfo() << "AMSHandler: Получен профиль среднего ветра," << data.size() << "точек";
-                saveAvgWindProfile(m_currentRecordId, data);
-                emit avgWindDataReceived(data);
-
-                // Запрашиваем действительный ветер
-                QTimer::singleShot(500, this, &AMSHandler::requestActualWind);
-            }
-            break;
-        }
-
-        case CMD_ACTUAL_WIND_REQUEST: {
-            bool ok;
-            QVector<WindProfileData> data = m_protocol->parseActualWindResponse(packet, ok);
-            if (ok) {
-                qInfo() << "AMSHandler: Получен профиль действительного ветра," << data.size() << "точек";
-                saveActualWindProfile(m_currentRecordId, data);
-                emit actualWindDataReceived(data);
-
-                // Все данные получены, завершаем процесс
-                QTimer::singleShot(500, this, [this]() {
-                    setMeasurementStage(STAGE_CALCULATE_PROFILE);
-                    advanceMeasurementStage();
-                });
-            }
-            break;
-        }
-
-        case CMD_FUNC_CONTROL: {
-            quint32 bitMask, powerOnCount;
-            bool ok = m_protocol->parseFuncControlResponse(packet, bitMask, powerOnCount);
-            if (ok) {
-                qInfo() << "AMSHandler: Функциональный контроль: битовая маска =" << Qt::hex << bitMask
-                        << ", счётчик включений =" << powerOnCount;
-                emit functionalControlDataReceived(bitMask, powerOnCount);
-            }
-            break;
-        }
-
-        case CMD_ANTENNA_CONTROL: {
-            bool ok;
-            quint8 status = m_protocol->parseAntennaControlResponse(packet, ok);
-            if (ok) {
-                qInfo() << "AMSHandler: Статус антенны:" << status;
-                emit antennaStatusReceived(status);
-            }
-            break;
-        }
-
-        case CMD_ROTATE_ANTENNA: {
-            quint8 status;
-            float currentAngle;
-            bool ok = m_protocol->parseRotateAntennaResponse(packet, status, currentAngle);
-            if (ok) {
-                qInfo() << "AMSHandler: Поворот антенны: статус =" << status << ", угол =" << currentAngle;
-                emit antennaStatusReceived(status);
-            }
-            break;
-        }
-
-        default:
-            qWarning() << "AMSHandler: Неизвестная команда в ответе:" << Qt::hex << static_cast<int>(command);
-            break;
+    default:
+        qWarning() << "AMSHandler: Неизвестная команда в ответе:" << Qt::hex << static_cast<int>(command);
+        break;
     }
 }
 
@@ -763,7 +769,7 @@ void AMSHandler::onResponseTimeout()
     m_waitingForResponse = false;
 
     QString error = QString("Таймаут ответа на команду 0x%1")
-        .arg(static_cast<int>(m_lastCommand), 2, 16, QChar('0'));
+            .arg(static_cast<int>(m_lastCommand), 2, 16, QChar('0'));
 
     qWarning() << "AMSHandler:" << error;
 
@@ -799,12 +805,12 @@ int AMSHandler::createMainArchiveRecord(const QString &notes)
 
     // ИСПРАВЛЕНО: используем completion_time (название поля в реальной БД)
     query.prepare("INSERT INTO main_archive (completion_time, notes) "
-                 "VALUES (NOW(), :notes) RETURNING record_id");
+                  "VALUES (NOW(), :notes) RETURNING record_id");
     query.bindValue(":notes", notes.isEmpty() ? QVariant(QVariant::String) : notes);
 
     if (!query.exec() || !query.next()) {
         QString error = QString("Ошибка создания записи в main_archive: %1")
-            .arg(query.lastError().text());
+                .arg(query.lastError().text());
         qCritical() << "AMSHandler:" << error;
         emit databaseError(error);
         return -1;
@@ -830,7 +836,7 @@ bool AMSHandler::saveAvgWindProfile(int recordId, const QVector<WindProfileData>
     if (!idQuery.exec("SELECT nextval('avg_wind_profile_profile_id_seq')")) {
         db.rollback();
         QString error = QString("Ошибка генерации profile_id: %1")
-            .arg(idQuery.lastError().text());
+                .arg(idQuery.lastError().text());
         qCritical() << "AMSHandler:" << error;
         emit databaseError(error);
         return false;
@@ -848,11 +854,18 @@ bool AMSHandler::saveAvgWindProfile(int recordId, const QVector<WindProfileData>
     // ШАГ 2: Вставляем ВСЕ точки с ОДНИМ И ТЕМ ЖЕ profile_id
     QSqlQuery query(db);
     query.prepare("INSERT INTO avg_wind_profile "
-                 "(profile_id, height, wind_speed, wind_direction, measurement_time) "
-                 "VALUES (:profile_id, :height, :speed, :direction, :time)");
+                  "(profile_id, height, wind_speed, wind_direction, measurement_time) "
+                  "VALUES (:profile_id, :height, :speed, :direction, :time)");
 
-    for (const WindProfileData &point : data) {
-        query.bindValue(":profile_id", profileId);  // ОДИН И ТОТ ЖЕ!
+    for (int i = 0; i < data.size(); i++) {
+        const WindProfileData &point = data[i];
+
+        qDebug() << "AMSHandler: avg_wind точка" << i
+                 << "height=" << point.height
+                 << "speed=" << point.windSpeed
+                 << "direction=" << point.windDirection;
+
+        query.bindValue(":profile_id", profileId);
         query.bindValue(":height", point.height);
         query.bindValue(":speed", point.windSpeed);
         query.bindValue(":direction", point.windDirection);
@@ -861,7 +874,7 @@ bool AMSHandler::saveAvgWindProfile(int recordId, const QVector<WindProfileData>
         if (!query.exec()) {
             db.rollback();
             QString error = QString("Ошибка записи точки среднего ветра: %1")
-                .arg(query.lastError().text());
+                    .arg(query.lastError().text());
             qCritical() << "AMSHandler:" << error;
             emit databaseError(error);
             return false;
@@ -876,10 +889,10 @@ bool AMSHandler::saveAvgWindProfile(int recordId, const QVector<WindProfileData>
     // ШАГ 3: Обновляем ссылку в wind_profiles_references (upsert по record_id)
     QSqlQuery refQuery(db);
     refQuery.prepare(
-        "INSERT INTO wind_profiles_references (record_id, avg_wind_profile_id) "
-        "VALUES (:record_id, :profile_id) "
-        "ON CONFLICT (record_id) DO UPDATE SET avg_wind_profile_id = EXCLUDED.avg_wind_profile_id"
-    );
+                "INSERT INTO wind_profiles_references (record_id, avg_wind_profile_id) "
+                "VALUES (:record_id, :profile_id) "
+                "ON CONFLICT (record_id) DO UPDATE SET avg_wind_profile_id = EXCLUDED.avg_wind_profile_id"
+                );
     refQuery.bindValue(":record_id", recordId);
     refQuery.bindValue(":profile_id", profileId);
     if (!refQuery.exec()) {
@@ -904,7 +917,7 @@ bool AMSHandler::saveActualWindProfile(int recordId, const QVector<WindProfileDa
     if (!idQuery.exec("SELECT nextval('actual_wind_profile_profile_id_seq')")) {
         db.rollback();
         QString error = QString("Ошибка генерации profile_id: %1")
-            .arg(idQuery.lastError().text());
+                .arg(idQuery.lastError().text());
         qCritical() << "AMSHandler:" << error;
         emit databaseError(error);
         return false;
@@ -922,11 +935,18 @@ bool AMSHandler::saveActualWindProfile(int recordId, const QVector<WindProfileDa
     // ШАГ 2: Вставляем ВСЕ точки с ОДНИМ И ТЕМ ЖЕ profile_id
     QSqlQuery query(db);
     query.prepare("INSERT INTO actual_wind_profile "
-                 "(profile_id, height, wind_speed, wind_direction, measurement_time) "
-                 "VALUES (:profile_id, :height, :speed, :direction, :time)");
+                  "(profile_id, height, wind_speed, wind_direction, measurement_time) "
+                  "VALUES (:profile_id, :height, :speed, :direction, :time)");
 
-    for (const WindProfileData &point : data) {
-        query.bindValue(":profile_id", profileId);  // ОДИН И ТОТ ЖЕ!
+    for (int i = 0; i < data.size(); i++) {
+        const WindProfileData &point = data[i];
+
+        qDebug() << "AMSHandler: actual_wind точка" << i
+                 << "height=" << point.height
+                 << "speed=" << point.windSpeed
+                 << "direction=" << point.windDirection;
+
+        query.bindValue(":profile_id", profileId);
         query.bindValue(":height", point.height);
         query.bindValue(":speed", point.windSpeed);
         query.bindValue(":direction", point.windDirection);
@@ -935,7 +955,7 @@ bool AMSHandler::saveActualWindProfile(int recordId, const QVector<WindProfileDa
         if (!query.exec()) {
             db.rollback();
             QString error = QString("Ошибка записи точки действительного ветра: %1")
-                .arg(query.lastError().text());
+                    .arg(query.lastError().text());
             qCritical() << "AMSHandler:" << error;
             emit databaseError(error);
             return false;
@@ -950,10 +970,10 @@ bool AMSHandler::saveActualWindProfile(int recordId, const QVector<WindProfileDa
     // ШАГ 3: Обновляем ссылку в wind_profiles_references (upsert по record_id)
     QSqlQuery refQuery(db);
     refQuery.prepare(
-        "INSERT INTO wind_profiles_references (record_id, actual_wind_profile_id) "
-        "VALUES (:record_id, :profile_id) "
-        "ON CONFLICT (record_id) DO UPDATE SET actual_wind_profile_id = EXCLUDED.actual_wind_profile_id"
-    );
+                "INSERT INTO wind_profiles_references (record_id, actual_wind_profile_id) "
+                "VALUES (:record_id, :profile_id) "
+                "ON CONFLICT (record_id) DO UPDATE SET actual_wind_profile_id = EXCLUDED.actual_wind_profile_id"
+                );
     refQuery.bindValue(":record_id", recordId);
     refQuery.bindValue(":profile_id", profileId);
     if (!refQuery.exec()) {
@@ -978,7 +998,7 @@ bool AMSHandler::saveMeasuredWindProfile(int recordId, const QVector<MeasuredWin
     if (!idQuery.exec("SELECT nextval('measured_wind_profile_profile_id_seq')")) {
         db.rollback();
         QString error = QString("Ошибка генерации profile_id: %1")
-            .arg(idQuery.lastError().text());
+                .arg(idQuery.lastError().text());
         qCritical() << "AMSHandler:" << error;
         emit databaseError(error);
         return false;
@@ -996,8 +1016,8 @@ bool AMSHandler::saveMeasuredWindProfile(int recordId, const QVector<MeasuredWin
     // ШАГ 2: Вставляем ВСЕ точки с ОДНИМ И ТЕМ ЖЕ profile_id
     QSqlQuery query(db);
     query.prepare("INSERT INTO measured_wind_profile "
-                 "(profile_id, height, wind_speed, wind_direction, measurement_time) "
-                 "VALUES (:profile_id, :height, :speed, :direction, :time)");
+                  "(profile_id, height, wind_speed, wind_direction, measurement_time) "
+                  "VALUES (:profile_id, :height, :speed, :direction, :time)");
 
     for (const MeasuredWindData &point : data) {
         query.bindValue(":profile_id", profileId);  // ОДИН И ТОТ ЖЕ!
@@ -1009,7 +1029,7 @@ bool AMSHandler::saveMeasuredWindProfile(int recordId, const QVector<MeasuredWin
         if (!query.exec()) {
             db.rollback();
             QString error = QString("Ошибка записи точки измеренного ветра: %1")
-                .arg(query.lastError().text());
+                    .arg(query.lastError().text());
             qCritical() << "AMSHandler:" << error;
             emit databaseError(error);
             return false;
@@ -1024,10 +1044,10 @@ bool AMSHandler::saveMeasuredWindProfile(int recordId, const QVector<MeasuredWin
     // ШАГ 3: Обновляем ссылку в wind_profiles_references (upsert по record_id)
     QSqlQuery refQuery(db);
     refQuery.prepare(
-        "INSERT INTO wind_profiles_references (record_id, measured_wind_profile_id) "
-        "VALUES (:record_id, :profile_id) "
-        "ON CONFLICT (record_id) DO UPDATE SET measured_wind_profile_id = EXCLUDED.measured_wind_profile_id"
-    );
+                "INSERT INTO wind_profiles_references (record_id, measured_wind_profile_id) "
+                "VALUES (:record_id, :profile_id) "
+                "ON CONFLICT (record_id) DO UPDATE SET measured_wind_profile_id = EXCLUDED.measured_wind_profile_id"
+                );
     refQuery.bindValue(":record_id", recordId);
     refQuery.bindValue(":profile_id", profileId);
     if (!refQuery.exec()) {
@@ -1044,7 +1064,7 @@ bool AMSHandler::saveStationCoordinates(int recordId, const StationCoordinates &
     QSqlDatabase db = DatabaseManager::instance()->database();
     QSqlQuery query(db);
     query.prepare("INSERT INTO station_coordinates (record_id, latitude, longitude, altitude) "
-                 "VALUES (:record_id, :lat, :lon, :alt)");
+                  "VALUES (:record_id, :lat, :lon, :alt)");
 
     double latDeg = coords.latitude / 3600.0;
     double lonDeg = coords.longitude / 3600.0;
@@ -1072,7 +1092,7 @@ bool AMSHandler::saveCriticalMessage(int recordId, const QString &message, const
     QSqlDatabase db = DatabaseManager::instance()->database();
     QSqlQuery query(db);
     query.prepare("INSERT INTO critical_messages (record_id, message_text, message_time, severity_level) "
-                 "VALUES (:record_id, :message, NOW(), :severity)");
+                  "VALUES (:record_id, :message, NOW(), :severity)");
 
     query.bindValue(":record_id", recordId);
     query.bindValue(":message", message);

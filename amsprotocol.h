@@ -10,7 +10,8 @@
 struct WindProfileData {
     float height;           // Высота, м
     float windSpeed;        // Скорость ветра, м/с
-    int windDirection;      // Направление ветра, градусы
+    float windDirection;      // Направление ветра, градусы
+    float windHeight;       // Высота, м
     bool isValid;
 
     WindProfileData() : height(0), windSpeed(0), windDirection(0), isValid(false) {}
@@ -20,7 +21,7 @@ struct WindProfileData {
 struct MeasuredWindData {
     float height;           // Высота, м
     float windSpeed;        // Скорость ветра, м/с
-    int windDirection;      // Направление ветра, градусы
+    float windDirection;      // Направление ветра, градусы
     int reliability;        // Достоверность: 1 - недействительное, 2 - действительное
 
     MeasuredWindData() : height(0), windSpeed(0), windDirection(0), reliability(0) {}
@@ -43,6 +44,44 @@ struct StationCoordinates {
 
     StationCoordinates() : latitude(0), longitude(0), altitude(0),
                           azimuth(0), pitch(0), roll(0) {}
+};
+
+// Причина отказа разбора пакета
+enum ParseError {
+    PARSE_OK,                   // Успешно
+    PARSE_ERR_TOO_SHORT,        // Пакет короче минимального
+    PARSE_ERR_BAD_STOP,         // Стоповый байт не 0xFF
+    PARSE_ERR_BAD_CHECKSUM,     // Контрольная сумма не совпадает
+    PARSE_ERR_WRONG_COMMAND,    // Команда в ответе не совпадает с ожидаемой
+    PARSE_ERR_BAD_DATA          // Данные пакета некорректны
+};
+
+// Статус антенны (команда 0xAD)
+enum AntennaStatus : quint8 {
+    ANTENNA_IN_PROGRESS = 0x00, // Процесс открытия/закрытия
+    ANTENNA_SUCCESS     = 0x01, // Завершено успешно
+    ANTENNA_FAULT       = 0x02  // Аварийная остановка
+};
+
+// Статус поворота антенны (команда 0xAF)
+enum RotateStatus : quint8 {
+    ROTATE_IDLE_OK  = 0x00,     // Ожидание / завершено успешно
+    ROTATE_RUNNING  = 0x01,     // Вращение
+    ROTATE_FAULT    = 0x02      // Аварийная остановка
+};
+
+// Биты неисправностей из функционального контроля (0xA7, Таблица 2)
+// Бит=0 → устройство неисправно, бит=1 → устройство исправно
+enum FuncControlBit : quint32 {
+    FC_BIT_ROTATION_TIMEOUT   = (1u << 0), // Бит 1: Превышено время ожидания вращения
+    FC_BIT_ANTENNA_FAULT      = (1u << 1), // Бит 2: Аварийная остановка открытия/закрытия антенны
+    FC_BIT_OPEN_TIMEOUT       = (1u << 2), // Бит 3: Превышено время ожидания открытия антенны
+    FC_BIT_CLOSE_TIMEOUT      = (1u << 3), // Бит 4: Превышено время ожидания закрытия антенны
+    FC_BIT_NO_DATA            = (1u << 4), // Бит 5: Нет сбора данных
+    FC_BIT_CLOCK_FAIL         = (1u << 5), // Бит 6: СЧ не пошёл контроль
+    FC_BIT_TRANSMITTER_FAIL   = (1u << 6), // Бит 7: Не готов передатчик
+    FC_BIT_SOFTWARE_ERROR     = (1u << 7), // Бит 8: Ошибка ПО
+    FC_BIT_DATETIME_INVALID   = (1u << 8)  // Бит 9: Неверное значение даты и времени
 };
 
 // Коды команд протокола АМС
@@ -130,6 +169,13 @@ public:
     // Проверка пакета
     bool isPacketValid(const QByteArray &data);
     AMSCommand getPacketCommand(const QByteArray &data);
+
+    // Детальная диагностика ошибок
+    ParseError checkPacket(const QByteArray &data, AMSCommand expectedCmd, int minSize);
+    static QString parseErrorString(ParseError err);
+    static QString antennaStatusString(quint8 status);
+    static QString rotateStatusString(quint8 status);
+    static QStringList funcControlFaults(quint32 bitMask);
 
     // Генерация стандартных высот для профилей ветра (публичные статические методы)
     static QVector<float> getAverageWindHeights(int count = 16);    // Высоты для среднего ветра

@@ -169,6 +169,7 @@ private:
     bool saveStationCoordinates(int recordId, const StationCoordinates &coords);
     bool saveCriticalMessage(int recordId, const QString &message,
                             const QString &severity);
+    bool m_intermediateDataSent;
 };
 
 #endif // AMSHANDLER_H

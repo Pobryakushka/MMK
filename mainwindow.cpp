@@ -1028,38 +1028,44 @@ void MainWindow::onAmsNeedIntermediateData(int progress)
 {
     qDebug() << "MainWindow: Требуются промежуточные данные на" << progress << "%";
 
-    // ЗДЕСЬ нужно запросить данные от внешних систем:
-    // 1. Запрос приземных данных к 1Б65
-    // 2. Запрос Метео11 к ЭВМ
+    // --- Дата и время — берём из поля интерфейса (там актуальное значение:
+    //     GNSS, ручной ввод или системные часы — в зависимости от режима) ---
+    QDateTime currentDateTime = QDateTime::fromString(
+        ui->editDateTime->text(), "dd.MM.yyyy hh:mm:ss");
+    if (!currentDateTime.isValid()) {
+        // Резервный вариант на случай нестандартного формата в поле
+        currentDateTime = QDateTime::currentDateTime();
+        qWarning() << "MainWindow: Не удалось распарсить время из editDateTime, используем системное";
+    }
 
-    // Пока используем заглушку с тестовыми данными
-    QMessageBox::information(this, "Требуются данные",
-        QString("АМС запрашивает промежуточные данные.\n\nПрогресс: %1%\n\n"
-                "Будут отправлены тестовые данные.").arg(progress));
+    int day        = currentDateTime.date().day();
+    int hour       = currentDateTime.time().hour();
+    int tenMinutes = currentDateTime.time().minute() / 10;
 
-    // Формируем тестовые данные
-    int day = QDate::currentDate().day();
-    int hour = QTime::currentTime().hour();
-    int tenMinutes = QTime::currentTime().minute() / 10;
-
+    // --- Высота над уровнем моря из поля положения метеокомплекса ---
     float stationAltitude = ui->editAltitude->text().toFloat();
 
-    // Заполняем векторы нулями (в реальности здесь данные от 1Б65 и ЭВМ)
+    // --- Достигнутая высота и профили среднего ветра заполняются нулями ---
+    float reachedHeight = 0.0f;
     QVector<float> avgWindDir(23, 0.0f);
     QVector<float> avgWindSpeed(23, 0.0f);
 
-    // Для теста заполним какими-то значениями
-    for (int i = 0; i < 23; i++) {
-        avgWindDir[i] = 180.0f + i * 5.0f;
-        avgWindSpeed[i] = 5.0f + i * 0.5f;
+    // --- Приземный ветер из GroundMeteoParams ---
+    float surfaceWindDir   = 0.0f;
+    float surfaceWindSpeed = 0.0f;
+
+    GroundMeteoParams* meteoParams = GroundMeteoParams::instance();
+    if (meteoParams && meteoParams->hasLastData()) {
+        surfaceWindDir   = static_cast<float>(meteoParams->lastWindDirection());
+        surfaceWindSpeed = static_cast<float>(meteoParams->lastWindSpeed());
+        qDebug() << "MainWindow: Приземный ветер из ИВС:"
+                 << "направление" << surfaceWindDir << "°,"
+                 << "скорость" << surfaceWindSpeed << "м/с";
+    } else {
+        qWarning() << "MainWindow: Данные ИВС недоступны, приземный ветер = 0";
     }
 
-    float reachedHeight = 3000.0f;
-    float surfaceWindDir = 270.0f;
-    float surfaceWindSpeed = 5.0f;
-    QDateTime currentDateTime = QDateTime::currentDateTime();
-
-    // Отправляем данные в АМС
+    // --- Отправляем данные в АМС ---
     bool success = m_amsHandler->sendSourceDataDuringMeasurement(
         day, hour, tenMinutes,
         stationAltitude,
@@ -1071,7 +1077,8 @@ void MainWindow::onAmsNeedIntermediateData(int progress)
 
     if (success) {
         qDebug() << "MainWindow: Промежуточные данные отправлены";
-        statusBar()->showMessage("Промежуточные данные отправлены в АМС", 3000);
+        statusBar()->showMessage(
+            QString("Промежуточные данные отправлены (прогресс %1%)").arg(progress), 3000);
     } else {
         qWarning() << "MainWindow: Не удалось отправить промежуточные данные";
         QMessageBox::warning(this, "Ошибка",
@@ -1688,8 +1695,12 @@ void MainWindow::onManualInputClicked()
 
 void MainWindow::onInitialDataClicked()
 {
-    SourceData dialog(this);
-    dialog.exec();
+    // Используем постоянный экземпляр, чтобы GroundMeteoParams (и его данные) жили всё время
+    if (sourceDataInstance) {
+        sourceDataInstance->show();
+        sourceDataInstance->raise();
+        sourceDataInstance->activateWindow();
+    }
 }
 
 void MainWindow::onCalculationsClicked()
