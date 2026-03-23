@@ -730,8 +730,19 @@ void AMSHandler::processReceivedPacket(const QByteArray &packet)
         quint32 bitMask, powerOnCount;
         bool ok = m_protocol->parseFuncControlResponse(packet, bitMask, powerOnCount);
         if (ok) {
-            qInfo() << "AMSHandler: Функциональный контроль: битовая маска =" << Qt::hex << bitMask
-                    << ", счётчик включений =" << powerOnCount;
+            qInfo() << "AMSHandler: Функциональный контроль: маска ="
+                    << Qt::hex << bitMask << ", включений =" << Qt::dec << powerOnCount;
+
+            QStringList faults = AMSProtocol::funcControlFaults(bitMask);
+            if (faults.isEmpty()) {
+                emit statusMessage("Функциональный контроль: всё оборудование исправно");
+            } else {
+                QString msg = "Неисправности АМС: " + faults.join("; ");
+                qWarning() << "AMSHandler:" << msg;
+                emit errorOccurred(msg);
+                emit statusMessage(msg);
+            }
+
             emit functionalControlDataReceived(bitMask, powerOnCount);
         }
         break;
@@ -741,7 +752,12 @@ void AMSHandler::processReceivedPacket(const QByteArray &packet)
         bool ok;
         quint8 status = m_protocol->parseAntennaControlResponse(packet, ok);
         if (ok) {
-            qInfo() << "AMSHandler: Статус антенны:" << status;
+            QString statusStr = AMSProtocol::antennaStatusString(status);
+            qInfo() << "AMSHandler: Антенна —" << statusStr;
+            emit statusMessage(statusStr);
+            if (status == ANTENNA_FAULT) {
+                emit errorOccurred("Антенна: аварийная остановка открытия/закрытия");
+            }
             emit antennaStatusReceived(status);
         }
         break;
@@ -752,7 +768,12 @@ void AMSHandler::processReceivedPacket(const QByteArray &packet)
         float currentAngle;
         bool ok = m_protocol->parseRotateAntennaResponse(packet, status, currentAngle);
         if (ok) {
-            qInfo() << "AMSHandler: Поворот антенны: статус =" << status << ", угол =" << currentAngle;
+            QString statusStr = AMSProtocol::rotateStatusString(status);
+            qInfo() << "AMSHandler: Поворот —" << statusStr << "угол:" << currentAngle;
+            emit statusMessage(QString("%1, угол: %2°").arg(statusStr).arg(currentAngle, 0, 'f', 1));
+            if (status == ROTATE_FAULT) {
+                emit errorOccurred("Поворот антенны: аварийная остановка");
+            }
             emit antennaStatusReceived(status);
         }
         break;
