@@ -374,17 +374,18 @@ QVector<WindProfileData> AMSProtocol::parseAvgWindResponse(const QByteArray &dat
 
     if (!isPacketValid(data)) return profile;
     if (getPacketCommand(data) != CMD_AVG_WIND_REQUEST) return profile;
-    if (data.size() < 131) return profile; // 1 + 64 + 64 + 1 + 1
+    if (data.size() < 399) return profile; // 1 + 64 + 64 + 1 + 1
 
     // Получаем стандартные высоты для среднего ветра (16 уровней)
-    QVector<float> heights = getAverageWindHeights(16);
+    QVector<float> heights = getAverageWindHeights(33);
 
     // 16 уровней высоты
-    for (int i = 0; i < 16; i++) {
+    for (int i = 0; i < 33; i++) {
         WindProfileData point;
-        point.height = heights[i];  // Устанавливаем стандартную высоту
+        point.height = bytesToFloat(data, 1 + 33 * 2 * 4 + i * 4);  // Устанавливаем стандартную высоту
         point.windDirection = static_cast<int>(bytesToFloat(data, 1 + i * 4));
-        point.windSpeed = bytesToFloat(data, 1 + 64 + i * 4);
+        point.windSpeed = bytesToFloat(data, 1 + 33 * 4 + i * 4);
+//        point.windHeight = bytesToFloat(data, 1 + 33 * 2 * 4 + i * 4);
         point.isValid = true;
         profile.append(point);
     }
@@ -400,17 +401,17 @@ QVector<WindProfileData> AMSProtocol::parseActualWindResponse(const QByteArray &
 
     if (!isPacketValid(data)) return profile;
     if (getPacketCommand(data) != CMD_ACTUAL_WIND_REQUEST) return profile;
-    if (data.size() < 243) return profile; // 1 + 120 + 120 + 1 + 1
+    if (data.size() < 399) return profile; // 1 + 120 + 120 + 1 + 1
 
     // Получаем стандартные высоты для действительного ветра (30 уровней)
-    QVector<float> heights = getActualWindHeights(30);
+    QVector<float> heights = getActualWindHeights(33);
 
     // 30 уровней высоты
-    for (int i = 0; i < 30; i++) {
+    for (int i = 0; i < 33; i++) {
         WindProfileData point;
-        point.height = heights[i];  // Устанавливаем стандартную высоту
+        point.height = bytesToFloat(data, 1 + 33 * 2 * 4 + i * 4);  // Устанавливаем стандартную высоту
         point.windDirection = static_cast<int>(bytesToFloat(data, 1 + i * 4));
-        point.windSpeed = bytesToFloat(data, 1 + 120 + i * 4);
+        point.windSpeed = bytesToFloat(data, 1 + 33 * 4 + i * 4);
         point.isValid = true;
         profile.append(point);
     }

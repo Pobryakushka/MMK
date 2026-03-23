@@ -11,6 +11,7 @@ struct WindProfileData {
     float height;           // Высота, м
     float windSpeed;        // Скорость ветра, м/с
     int windDirection;      // Направление ветра, градусы
+    float windHeight;       // Высота, м
     bool isValid;
 
     WindProfileData() : height(0), windSpeed(0), windDirection(0), isValid(false) {}
