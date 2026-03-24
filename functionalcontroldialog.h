@@ -4,6 +4,7 @@
 #include <QDialog>
 #include <QVector>
 #include <QDateTime>
+#include "amsprotocol.h"
 
 namespace Ui {
 class FunctionalControlDialog;
@@ -14,6 +15,7 @@ class FunctionalControlDialog : public QDialog
     Q_OBJECT
 
 public:
+    // Тип датчика — для заголовка и таблицы неисправностей
     enum SensorType {
         AMS,
         GNSS,
@@ -27,13 +29,13 @@ public:
     void setSensorType(SensorType type);
 
     // Вызывается из MainWindow при получении данных от АМС
-    void setAmsData(quint32 bitmask, quint32 powerOnCount);
+    void setAmsData(quint32 bitMask, quint32 powerOnCount);
 
-    // Состояние "Ожидание ответа"
+    // Состояние "ожидание ответа"
     void setWaitingState();
 
     // Состояние "АМС не подключена"
-    void setDisconnectState();
+    void setDisconnectedState();
 
     // Ошибка при запросе
     void setErrorState(const QString &errorText);
@@ -42,6 +44,7 @@ public:
     void updateLastPollTime();
 
 signals:
+    // Кнопка "Обновить" нажата — MainWindow должен инициировать запрос
     void refreshRequested();
 
 private:
@@ -50,15 +53,20 @@ private:
     SensorType m_sensorType;
 
     struct FaultEntry {
-        int bit;
-        QString description;
+        int     bit;          // 0-индексированный номер бита
+        QString description;  // Описание из протокола
     };
 
+    // Таблица неисправностей АМС согласно Таблице 2 протокола.
+    // ВАЖНО: бит = 0 означает НЕИСПРАВНОСТЬ, бит = 1 — устройство исправно.
     static const QVector<FaultEntry> s_amsFaultTable;
 
     void resetDisplay();
-    void populateAmsFaults(quint32 bitMask);
+    void populateFromResult(const FuncControlResult &fc);
     void updateSensorTitle();
+
+protected:
+    void showEvent(QShowEvent *event) override;
 };
 
 #endif // FUNCTIONALCONTROLDIALOG_H

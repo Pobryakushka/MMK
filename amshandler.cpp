@@ -304,8 +304,12 @@ void AMSHandler::processExchangeDataResponse(int progress, float angle)
 
     } else if (progress == -2) {
         // Case: -2 → Ошибка
-        qWarning() << "AMSHandler: Ошибка измерения (progress = -2)";
+        qWarning() << "AMSHandler: Ошибка измерения (progress = -2), запрос функционального контроля";
         m_exchangeDataTimer->stop();
+
+        emit functionalControlRequested();
+        requestFunctionalControl();
+
         failMeasurement("АМС сообщил об ошибке измерения");
 
     } else if (progress == 80 || progress == 72) {
@@ -730,8 +734,13 @@ void AMSHandler::processReceivedPacket(const QByteArray &packet)
         quint32 bitMask, powerOnCount;
         bool ok = m_protocol->parseFuncControlResponse(packet, bitMask, powerOnCount);
         if (ok) {
-            qInfo() << "AMSHandler: Функциональный контроль: битовая маска =" << Qt::hex << bitMask
-                    << ", счётчик включений =" << powerOnCount;
+            FuncControlResult fc = AMSProtocol::funcControlDetails(bitMask);
+            if (fc.allOk()) {
+                emit statusMessage("Функциональный контроль: всё оборудование исправно");
+            } else {
+                QStringList all = fc.faults + fc.errors;
+                emit errorOccurred("Функциональный контроль АМС: " + all.join("; "));
+            }
             emit functionalControlDataReceived(bitMask, powerOnCount);
         }
         break;

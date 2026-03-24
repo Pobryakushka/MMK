@@ -71,7 +71,7 @@ enum RotateStatus : quint8 {
 };
 
 // Биты неисправностей из функционального контроля (0xA7, Таблица 2)
-// Бит=0 → устройство неисправно, бит=1 → устройство исправно
+// Бит=1 → устройство неисправно, бит=0 → устройство исправно
 enum FuncControlBit : quint32 {
     FC_BIT_ROTATION_TIMEOUT   = (1u << 0), // Бит 1: Превышено время ожидания вращения
     FC_BIT_ANTENNA_FAULT      = (1u << 1), // Бит 2: Аварийная остановка открытия/закрытия антенны
@@ -81,7 +81,29 @@ enum FuncControlBit : quint32 {
     FC_BIT_CLOCK_FAIL         = (1u << 5), // Бит 6: СЧ не пошёл контроль
     FC_BIT_TRANSMITTER_FAIL   = (1u << 6), // Бит 7: Не готов передатчик
     FC_BIT_SOFTWARE_ERROR     = (1u << 7), // Бит 8: Ошибка ПО
-    FC_BIT_DATETIME_INVALID   = (1u << 8)  // Бит 9: Неверное значение даты и времени
+    FC_BIT_DATETIME_INVALID   = (1u << 8), // Бит 9: Неверное значение даты и времени
+    FC_BIT_EXCH_TRANSMITTER      = (1u <<  9), // Ошибка обмена с УМ
+    FC_BIT_EXCH_SCH              = (1u << 10), // Ошибка обмена с СЧ
+    FC_BIT_EXCH_BEKU             = (1u << 11), // Ошибка обмена с БЭКУ
+    FC_BIT_FAIL_TRANSMITTER      = (1u << 12), // Не готов УМ
+    FC_BIT_FAIL_SCH              = (1u << 13), // Не готов СЧ
+    FC_BIT_FAIL_BEKU             = (1u << 14), // Не готов БЭКУ
+    FC_BIT_BEKU_POWER            = (1u << 15), // Неисправность модуля питания БЭКУ
+    FC_BIT_BEKU_POWER_MHN        = (1u << 16), // Отказ по питанию блока ЗМЛ
+    FC_BIT_BEKU_POWER_UM         = (1u << 17), // Отказ по питанию УМ
+    FC_BIT_BEKU_POWER_SCH        = (1u << 18), // Отказ по питанию СЧ
+    FC_BIT_BEKU_POWER_PM         = (1u << 19), // Отказ по питанию ПМ
+    FC_BIT_BEKU_POWER_MSHU       = (1u << 20), // Отказ по питанию МШУ
+    FC_BIT_ROTATION_ANGLE        = (1u << 21), // Текущий угол не совпадает с заданным
+    FC_BIT_ROTATION_ESTOP        = (1u << 22), // Аварийная остановка привода вращения
+    FC_BIT_ANGLE_SENSOR          = (1u << 23), // Отказ датчика угла привода вращения
+    FC_BIT_LITERA_ERROR          = (1u << 24), // Ошибка задания литеры
+    FC_BIT_STOPPER_LOCK          = (1u << 25), // Ошибка блокировки стопора
+    FC_BIT_STOPPER_UNLOCK        = (1u << 26), // Ошибка разблокировки стопора
+    FC_BIT_KV_OPEN               = (1u << 27), // Ошибка состояния концевиков антенны РП
+    FC_BIT_KV_CLOSE              = (1u << 28), // Ошибка состояния концевиков антенны ПП
+    FC_BIT_PILOT_FAIL            = (1u << 29), // Отказ при проверке пилот-сигнала
+    FC_BIT_TX_POWER              = (1u << 30), // Отсутствует выходная импульсная мощность
 };
 
 // Коды команд протокола АМС
@@ -121,6 +143,12 @@ enum AveragingTime : quint8 {
     AVERAGING_3_MIN = 0x01,   // 3 минуты
     AVERAGING_6_MIN = 0x02,   // 6 минут
     AVERAGING_9_MIN = 0x03    // 9 минут
+};
+
+struct FuncControlResult {
+    QStringList faults;
+    QStringList errors;
+    bool allOk() const { return faults.isEmpty() && errors.isEmpty(); }
 };
 
 class AMSProtocol : public QObject
@@ -176,6 +204,7 @@ public:
     static QString antennaStatusString(quint8 status);
     static QString rotateStatusString(quint8 status);
     static QStringList funcControlFaults(quint32 bitMask);
+    static FuncControlResult funcControlDetails(quint32 bitMask);
 
     // Генерация стандартных высот для профилей ветра (публичные статические методы)
     static QVector<float> getAverageWindHeights(int count = 16);    // Высоты для среднего ветра

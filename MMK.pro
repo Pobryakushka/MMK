@@ -34,7 +34,8 @@ SOURCES += \
     zoom/zoomscontainer.cpp \
     autoconnector.cpp \
     WindShearCalculator.cpp \
-    surfacemeteosaver.cpp
+    surfacemeteosaver.cpp \
+    workregulationdialog.cpp
 
 HEADERS += \
     AlgorithmsCalc.h \
@@ -64,7 +65,8 @@ HEADERS += \
     zoom/zoomscontainer.h \
     autoconnector.h \
     WindShearCalculator.h \
-    surfacemeteosaver.h
+    surfacemeteosaver.h \
+    workregulationdialog.h
 
 
 # Default rules for deployment.
