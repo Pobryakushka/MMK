@@ -107,6 +107,7 @@ signals:
     void measurementStatusChanged(MeasurementStatus status);
     void measurementCompleted(int recordId);
     void measurementFailed(const QString &reason);
+    void functionalControlRequested();
 
     // Сигнал для запроса промежуточных данных
     void needIntermediateData(int progress); // progress = 80 или 72

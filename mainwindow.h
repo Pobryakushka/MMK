@@ -16,6 +16,8 @@
 #include "Map/FormMapView.h"
 #include "sensorsettings.h"
 #include "surfacemeteosaver.h"
+#include "functionalcontroldialog.h"
+#include "workregulationdialog.h"
 
 // Forward declaration
 class SourceData;
@@ -148,6 +150,9 @@ private:
     AMSHandler *m_amsHandler;
     QString m_amsComPort;
     int m_amsBaudRate;
+
+    FunctionalControlDialog *m_functionalControlDialog;
+    QTimer *m_functionalControlPollTimer;
 
     // БИНС
     BINSHandler *m_binsHandler;

@@ -19,6 +19,7 @@ SOURCES += \
     SourceData.cpp \
     binshandler.cpp \
     databasemanager.cpp \
+    functionalcontroldialog.cpp \
     gnsshandler.cpp \
     main.cpp \
     mainwindow.cpp \
@@ -33,7 +34,8 @@ SOURCES += \
     zoom/zoomscontainer.cpp \
     autoconnector.cpp \
     WindShearCalculator.cpp \
-    surfacemeteosaver.cpp
+    surfacemeteosaver.cpp \
+    workregulationdialog.cpp
 
 HEADERS += \
     AlgorithmsCalc.h \
@@ -48,6 +50,7 @@ HEADERS += \
     SourceData.h \
     binshandler.h \
     databasemanager.h \
+    functionalcontroldialog.h \
     gnsshandler.h \
     mainwindow.h \
     qmlcoordinateproxy.h \
@@ -62,7 +65,8 @@ HEADERS += \
     zoom/zoomscontainer.h \
     autoconnector.h \
     WindShearCalculator.h \
-    surfacemeteosaver.h
+    surfacemeteosaver.h \
+    workregulationdialog.h
 
 
 # Default rules for deployment.
@@ -78,6 +82,7 @@ FORMS += \
     MeasurementResults.ui \
     Meteo11.ui \
     SourceData.ui \
+    functionalcontroldialog.ui \
     mainwindow.ui \
     sensorsettings.ui
 
