@@ -172,8 +172,6 @@ private:
     // Сохранение приземных данных ИВС в БД
     SurfaceMeteoSaver *m_surfaceMeteoSaver;
 
-    FunctionalControlDialog *m_functionalControlDialog;
-
     void createMapComponent(const QString &pluginName);
     void setupMapItems(QQuickItem *item);
     void setupMapCoordinatesButton();
