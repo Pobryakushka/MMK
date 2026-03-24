@@ -101,16 +101,7 @@
           <property name="spacing">
            <number>5</number>
           </property>
-          <item row="3" column="1">
-           <widget class="QLabel" name="lblLatitudeType">
-            <property name="styleSheet">
-             <string notr="true">color: #666; font-size: 9pt;</string>
-            </property>
-            <property name="text">
-             <string>Северная</string>
-            </property>
-           </widget>
-          </item>
+
           <item row="7" column="1">
            <widget class="QLineEdit" name="editDirectionAngle">
             <property name="text">
@@ -139,14 +130,31 @@
            </widget>
           </item>
           <item row="4" column="1">
-           <widget class="QLineEdit" name="editLongitude">
-            <property name="text">
-             <string>37.6173</string>
+           <layout class="QHBoxLayout" name="longitudeLayout">
+            <property name="spacing">
+             <number>4</number>
             </property>
-            <property name="placeholderText">
-             <string>Введите долготу</string>
-            </property>
-           </widget>
+            <item>
+             <widget class="QLineEdit" name="editLongitude">
+              <property name="text">
+               <string>37.6173</string>
+              </property>
+              <property name="placeholderText">
+               <string>Введите долготу</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="lblLongitudeType">
+              <property name="styleSheet">
+               <string notr="true">color: #666; font-size: 9pt;</string>
+              </property>
+              <property name="text">
+               <string>ВД</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </item>
           <item row="2" column="0">
            <widget class="QLabel" name="lblLatitudeLabel">
@@ -252,16 +260,8 @@
             </property>
            </widget>
           </item>
-          <item row="5" column="1">
-           <widget class="QLabel" name="lblLongitudeType">
-            <property name="styleSheet">
-             <string notr="true">color: #666; font-size: 9pt;</string>
-            </property>
-            <property name="text">
-             <string>Восточная</string>
-            </property>
-           </widget>
-          </item>
+
+
           <item row="6" column="0">
            <widget class="QLabel" name="lblAltitudeLabel">
             <property name="text">
@@ -280,14 +280,31 @@
            </widget>
           </item>
           <item row="2" column="1">
-           <widget class="QLineEdit" name="editLatitude">
-            <property name="text">
-             <string>55.7558</string>
+           <layout class="QHBoxLayout" name="latitudeLayout">
+            <property name="spacing">
+             <number>4</number>
             </property>
-            <property name="placeholderText">
-             <string>Введите широту</string>
-            </property>
-           </widget>
+            <item>
+             <widget class="QLineEdit" name="editLatitude">
+              <property name="text">
+               <string>55.7558</string>
+              </property>
+              <property name="placeholderText">
+               <string>Введите широту</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="lblLatitudeType">
+              <property name="styleSheet">
+               <string notr="true">color: #666; font-size: 9pt;</string>
+              </property>
+              <property name="text">
+               <string>СШ</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </item>
           <item row="11" column="0" colspan="2">
            <widget class="QPushButton" name="btnNavigation">
