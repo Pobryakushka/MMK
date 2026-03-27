@@ -20,6 +20,7 @@ AMSHandler::AMSHandler(QObject *parent)
     , m_lastProgress(0)
     , m_lastAngle(0.0f)
     , m_intermediateDataSent(false)
+    , m_funcControlAfterFailure(false)
 {
     connect(m_serialPort, &QSerialPort::readyRead, this, &AMSHandler::onDataReceived);
 
@@ -28,8 +29,18 @@ AMSHandler::AMSHandler(QObject *parent)
     connect(m_responseTimer, &QTimer::timeout, this, &AMSHandler::onResponseTimeout);
 
     // Таймер для периодического опроса процесса измерения (0xA4)
-    m_exchangeDataTimer->setInterval(2000); // Опрос каждые 2 секунды
+    m_exchangeDataTimer->setInterval(500); // Опрос каждые 2 секунды
     connect(m_exchangeDataTimer, &QTimer::timeout, this, &AMSHandler::onExchangeDataTimer);
+
+    // Таймер опроса статуса открытия/закрытия антенны (0xAD) — каждые 1 с
+    m_antennaPollTimer = new QTimer(this);
+    m_antennaPollTimer->setInterval(1000);
+    connect(m_antennaPollTimer, &QTimer::timeout, this, &AMSHandler::onAntennaPollTimer);
+
+    // Таймер опроса статуса поворота антенны (0xAF) — каждые 1 с
+    m_rotatePollTimer = new QTimer(this);
+    m_rotatePollTimer->setInterval(1000);
+    connect(m_rotatePollTimer, &QTimer::timeout, this, &AMSHandler::onRotatePollTimer);
 }
 
 AMSHandler::~AMSHandler()
@@ -97,6 +108,8 @@ void AMSHandler::disconnectFromAMS()
     m_isConnecting = false;
     m_responseTimer->stop();
     m_exchangeDataTimer->stop();
+    m_antennaPollTimer->stop();
+    m_rotatePollTimer->stop();
     m_receiveBuffer.clear();
 
     // Сброс состояния измерения
@@ -303,14 +316,16 @@ void AMSHandler::processExchangeDataResponse(int progress, float angle)
         advanceMeasurementStage();
 
     } else if (progress == -2) {
-        // Case: -2 → Ошибка
-        qWarning() << "AMSHandler: Ошибка измерения (progress = -2), запрос функционального контроля";
+        // Case: -2 → АМС сообщил об ошибке измерения.
+        // Останавливаем таймер опроса и запрашиваем функциональный контроль (0xA7),
+        // чтобы выяснить причину отказа. failMeasurement() будет вызван после
+        // получения ответа на 0xA7 — это гарантирует, что m_currentRecordId
+        // ещё валиден и детали неисправностей попадут в БД.
+        qWarning() << "AMSHandler: Ошибка измерения (progress = -2), запрашиваем функциональный контроль";
+
         m_exchangeDataTimer->stop();
-
-        emit functionalControlRequested();
+        m_funcControlAfterFailure = true;  // Флаг: ответ 0xA7 завершит failMeasurement
         requestFunctionalControl();
-
-        failMeasurement("АМС сообщил об ошибке измерения");
 
     } else if (progress == 80 || progress == 72) {
         if (!m_intermediateDataSent){
@@ -401,6 +416,7 @@ void AMSHandler::completeMeasurement()
 void AMSHandler::failMeasurement(const QString &reason)
 {
     m_intermediateDataSent = false;
+    m_funcControlAfterFailure = false;  // На случай нестандартного пути завершения
     setMeasurementStatus(STATUS_FAILURE);
 
     if (m_currentRecordId > 0) {
@@ -483,14 +499,22 @@ bool AMSHandler::setDateTime(const QDateTime &dateTime)
 
 bool AMSHandler::openAntenna()
 {
-    QByteArray packet = m_protocol->createAntennaControlPacket(0x01);
-    return sendPacket(packet, CMD_ANTENNA_CONTROL);
+    m_rotatePollTimer->stop();
+    QByteArray packet = m_protocol->createAntennaControlPacket(0x00);
+    bool ok = sendPacket(packet, CMD_ANTENNA_CONTROL);
+    if (ok)
+        m_antennaPollTimer->start();
+    return ok;
 }
 
 bool AMSHandler::closeAntenna()
 {
-    QByteArray packet = m_protocol->createAntennaControlPacket(0x00);
-    return sendPacket(packet, CMD_ANTENNA_CONTROL);
+    m_rotatePollTimer->stop();
+    QByteArray packet = m_protocol->createAntennaControlPacket(0x01);
+    bool ok = sendPacket(packet, CMD_ANTENNA_CONTROL);
+    if (ok)
+        m_antennaPollTimer->start();
+    return ok;
 }
 
 bool AMSHandler::getAntennaStatus()
@@ -501,13 +525,18 @@ bool AMSHandler::getAntennaStatus()
 
 bool AMSHandler::rotateAntenna(float angle)
 {
-    QByteArray packet = m_protocol->createRotateAntennaPacket(0x01, angle);
-    return sendPacket(packet, CMD_ROTATE_ANTENNA);
+    m_antennaPollTimer->stop();
+    QByteArray packet = m_protocol->createRotateAntennaPacket(0x00, angle);
+    bool ok = sendPacket(packet, CMD_ROTATE_ANTENNA);
+    if (ok)
+        m_rotatePollTimer->start();
+    return ok;
 }
 
 bool AMSHandler::stopAntennaRotation()
 {
-    QByteArray packet = m_protocol->createRotateAntennaPacket(0x00, 0.0f);
+    m_rotatePollTimer->stop();
+    QByteArray packet = m_protocol->createRotateAntennaPacket(0x02, 0.0f);
     return sendPacket(packet, CMD_ROTATE_ANTENNA);
 }
 
@@ -520,7 +549,10 @@ bool AMSHandler::sendPacket(const QByteArray &packet, AMSCommand command)
         return false;
     }
 
-    if (m_waitingForResponse && command != CMD_DATA_EXCHANGE) {
+    if (m_waitingForResponse &&
+        command != CMD_DATA_EXCHANGE &&
+        command != CMD_ANTENNA_CONTROL &&
+        command != CMD_ROTATE_ANTENNA) {
         qWarning() << "AMSHandler: Ожидается ответ на предыдущую команду";
         return false;
     }
@@ -735,13 +767,46 @@ void AMSHandler::processReceivedPacket(const QByteArray &packet)
         bool ok = m_protocol->parseFuncControlResponse(packet, bitMask, powerOnCount);
         if (ok) {
             FuncControlResult fc = AMSProtocol::funcControlDetails(bitMask);
-            if (fc.allOk()) {
-                emit statusMessage("Функциональный контроль: всё оборудование исправно");
+
+            if (m_funcControlAfterFailure) {
+                // Ответ пришёл как реакция на ошибку измерения (progress == -2).
+                // Составляем подробное сообщение о неисправностях и завершаем процесс.
+                m_funcControlAfterFailure = false;
+
+                QString reason;
+                if (fc.allOk()) {
+                    // Битовая маска чистая — оборудование исправно, причина в другом
+                    reason = "АМС сообщил об ошибке измерения (функциональный контроль: всё исправно)";
+                    qWarning() << "AMSHandler: progress=-2, но ФК не выявил неисправностей";
+                } else {
+                    // Бит=1 → устройство неисправно; формируем список
+                    QStringList parts;
+                    if (!fc.faults.isEmpty())
+                        parts << "Неисправности: " + fc.faults.join("; ");
+                    if (!fc.errors.isEmpty())
+                        parts << "Ошибки: " + fc.errors.join("; ");
+                    reason = "АМС: ошибка измерения — " + parts.join(" | ");
+                    qCritical() << "AMSHandler: Функциональный контроль после ошибки:" << reason;
+                }
+
+                // Сохраняем детали в БД (пока m_currentRecordId ещё валиден)
+                if (m_currentRecordId > 0) {
+                    saveCriticalMessage(m_currentRecordId, reason, "ERROR");
+                }
+
+                emit functionalControlDataReceived(bitMask, powerOnCount);
+                failMeasurement(reason);
+
             } else {
-                QStringList all = fc.faults + fc.errors;
-                emit errorOccurred("Функциональный контроль АМС: " + all.join("; "));
+                // Плановый запрос функционального контроля (не связан с ошибкой)
+                if (fc.allOk()) {
+                    emit statusMessage("Функциональный контроль: всё оборудование исправно");
+                } else {
+                    QStringList all = fc.faults + fc.errors;
+                    emit errorOccurred("Функциональный контроль АМС: " + all.join("; "));
+                }
+                emit functionalControlDataReceived(bitMask, powerOnCount);
             }
-            emit functionalControlDataReceived(bitMask, powerOnCount);
         }
         break;
     }
@@ -750,7 +815,13 @@ void AMSHandler::processReceivedPacket(const QByteArray &packet)
         bool ok;
         quint8 status = m_protocol->parseAntennaControlResponse(packet, ok);
         if (ok) {
-            qInfo() << "AMSHandler: Статус антенны:" << status;
+            qInfo() << "AMSHandler: Антенна —" << AMSProtocol::antennaStatusString(status);
+            // Останавливаем опрос при финальном статусе
+            if (status == ANTENNA_SUCCESS || status == ANTENNA_FAULT) {
+                m_antennaPollTimer->stop();
+                if (status == ANTENNA_FAULT)
+                    emit errorOccurred("Антенна: аварийная остановка открытия/закрытия");
+            }
             emit antennaStatusReceived(status);
         }
         break;
@@ -761,8 +832,15 @@ void AMSHandler::processReceivedPacket(const QByteArray &packet)
         float currentAngle;
         bool ok = m_protocol->parseRotateAntennaResponse(packet, status, currentAngle);
         if (ok) {
-            qInfo() << "AMSHandler: Поворот антенны: статус =" << status << ", угол =" << currentAngle;
-            emit antennaStatusReceived(status);
+            qInfo() << "AMSHandler: Поворот —" << AMSProtocol::rotateStatusString(status)
+                    << "угол:" << currentAngle;
+            // Останавливаем опрос при финальном статусе
+            if (status == ROTATE_IDLE_OK || status == ROTATE_FAULT) {
+                m_rotatePollTimer->stop();
+                if (status == ROTATE_FAULT)
+                    emit errorOccurred("Поворот антенны: аварийная остановка");
+            }
+            emit rotateStatusReceived(status, currentAngle);
         }
         break;
     }
@@ -771,6 +849,28 @@ void AMSHandler::processReceivedPacket(const QByteArray &packet)
         qWarning() << "AMSHandler: Неизвестная команда в ответе:" << Qt::hex << static_cast<int>(command);
         break;
     }
+}
+
+void AMSHandler::onAntennaPollTimer()
+{
+    if (!isConnected()) {
+        m_antennaPollTimer->stop();
+        return;
+    }
+    qDebug() << "AMSHandler: Опрос статуса антенны (0xAD, cmd=0x02)";
+    getAntennaStatus();
+}
+
+void AMSHandler::onRotatePollTimer()
+{
+    if (!isConnected()) {
+        m_rotatePollTimer->stop();
+        return;
+    }
+    // Запрос текущего статуса поворота (0xAF, cmd=0x01 — запрос состояния)
+    qDebug() << "AMSHandler: Опрос статуса поворота антенны (0xAF, cmd=0x01)";
+    QByteArray packet = m_protocol->createRotateAntennaPacket(0x01, 0.0f);
+    sendPacket(packet, CMD_ROTATE_ANTENNA);
 }
 
 void AMSHandler::onResponseTimeout()

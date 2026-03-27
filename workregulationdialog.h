@@ -45,6 +45,7 @@ public:
 private slots:
     void onStart();
     void onStop();
+    void onRotateStatus(quint8 status, float angle);
 
 private:
     AMSHandler  *m_amsHandler;
@@ -52,6 +53,7 @@ private:
     QPushButton *m_btnStart;
     QPushButton *m_btnStop;
     QLabel      *m_lblStatus;
+    bool         m_rotating;    // true — команда запуска отправлена, ждём завершения
 
     void showStatus(const QString &text, bool error = false);
 };

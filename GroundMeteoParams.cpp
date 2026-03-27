@@ -41,6 +41,7 @@ GroundMeteoParams::GroundMeteoParams(QWidget *parent)
 
 GroundMeteoParams::~GroundMeteoParams()
 {
+    qDebug() << "GroundMeteoParams destructor";
     if (s_instance == this) {
         s_instance = nullptr;
     }

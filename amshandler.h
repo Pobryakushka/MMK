@@ -100,14 +100,14 @@ signals:
     void actualWindDataReceived(const QVector<WindProfileData> &data);
     void measuredWindDataReceived(const QVector<MeasuredWindData> &data);
     void functionalControlDataReceived(quint32 bitMask, quint32 powerOnCount);
-    void antennaStatusReceived(quint8 status);
+    void antennaStatusReceived(quint8 status);       // 0xAD: открытие/закрытие
+    void rotateStatusReceived(quint8 status, float angle); // 0xAF: поворот
 
     // Новые сигналы для этапов измерения
     void measurementStageChanged(MeasurementStage stage, const QString &description);
     void measurementStatusChanged(MeasurementStatus status);
     void measurementCompleted(int recordId);
     void measurementFailed(const QString &reason);
-    void functionalControlRequested();
 
     // Сигнал для запроса промежуточных данных
     void needIntermediateData(int progress); // progress = 80 или 72
@@ -120,13 +120,17 @@ private slots:
     void onDataReceived();
     void onSerialError(QSerialPort::SerialPortError error);
     void onResponseTimeout();
-    void onExchangeDataTimer(); // Новый таймер для опроса (0xA4)
+    void onExchangeDataTimer();       // Таймер опроса процесса измерения (0xA4)
+    void onAntennaPollTimer();        // Таймер опроса статуса антенны (0xAD)
+    void onRotatePollTimer();         // Таймер опроса статуса поворота (0xAF)
 
 private:
     QSerialPort *m_serialPort;
     AMSProtocol *m_protocol;
     QTimer *m_responseTimer;
-    QTimer *m_exchangeDataTimer; // Таймер для периодического опроса
+    QTimer *m_exchangeDataTimer;  // Таймер для периодического опроса процесса измерения
+    QTimer *m_antennaPollTimer;   // Таймер опроса статуса открытия/закрытия антенны
+    QTimer *m_rotatePollTimer;    // Таймер опроса статуса поворота антенны
     QByteArray m_receiveBuffer;
 
     // Состояние
@@ -171,6 +175,11 @@ private:
     bool saveCriticalMessage(int recordId, const QString &message,
                             const QString &severity);
     bool m_intermediateDataSent;
+
+    // Флаг: функциональный контроль запрошен после ошибки измерения (progress == -2)
+    // Пока флаг установлен, failMeasurement откладывается до прихода ответа 0xA7,
+    // чтобы детали неисправностей попали в сообщение об ошибке и в БД.
+    bool m_funcControlAfterFailure;
 };
 
 #endif // AMSHANDLER_H
