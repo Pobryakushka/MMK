@@ -152,7 +152,6 @@ private:
     int m_amsBaudRate;
 
     FunctionalControlDialog *m_functionalControlDialog;
-    QTimer *m_functionalControlPollTimer;
 
     // БИНС
     BINSHandler *m_binsHandler;

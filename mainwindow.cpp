@@ -162,17 +162,6 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_functionalControlDialog, &FunctionalControlDialog::refreshRequested,
             this, &MainWindow::onFunctionalControlClicked);
 
-    // Таймер периодического опроса АМС — каждые 5 минут
-    m_functionalControlPollTimer = new QTimer(this);
-    m_functionalControlPollTimer->setInterval(5 * 60 * 1000);
-    connect(m_functionalControlPollTimer, &QTimer::timeout, this, [this]() {
-        if (m_amsHandler && m_amsHandler->isConnected()
-            && m_amsHandler->getMeasurementStatus() != STATUS_RUNNING) {
-            qDebug() << "MainWindow: Плановый опрос функционального контроля АМС";
-            m_amsHandler->requestFunctionalControl();
-        }
-    });
-
     // Создаём постоянный экземпляр SourceData (внутри создастся GroundMeteoParams)
     // Не показываем его, просто держим в памяти для доступа к данным
     sourceDataInstance = new SourceData(this);
@@ -398,13 +387,13 @@ void MainWindow::updateMapCoordinatesButtonStyle()
     if (m_mapCoordinatesEnabled) {
         ui->btnMapCoordinates->setStyleSheet(
             "QPushButton {"
-            "   background-color: #BBBBBB;"
-            "   border: 2px solid #555;"
+            "   background-color: #4CAF50;"
+            "   border: 3px solid #2E7D32;"
             "   border-radius: 20px;"
             "}"
             "QPushButton:hover {"
-            "   background-color: #AAAAAA;"
-            "   border: 2px solid #444;"
+            "   background-color: #45a049;"
+            "   border: 3px solid #1B5E20;"
             "}"
         );
         ui->btnMapCoordinates->setToolTip("Режим координат с карты активен (нажмите для отключения)");
@@ -553,7 +542,12 @@ void MainWindow::onGnssConnected()
 {
     qDebug() << "GNSS приемник подключен";
     ui->checkboxGnss->setStyleSheet(
-        "QCheckBox { background-color: #DCDCDC; padding: 5px 10px; border: 2px solid #666; border-radius: 5px; }"
+        "QCheckBox {"
+        "   background-color: #E8F5E9;"
+        "   padding: 5px 10px;"
+        "   border: 2px solid #4CAF50;"
+        "   border-radius: 5px;"
+        "}"
     );
     statusBar()->showMessage("GNSS приемник подключен успешно", 5000);
     updateGnssStatusLabel(true);
@@ -570,7 +564,12 @@ void MainWindow::onGnssDisconnected()
     }
 
     ui->checkboxGnss->setStyleSheet(
-        "QCheckBox { background-color: #F0F0F0; padding: 5px 10px; border: 1px solid #AAAAAA; border-radius: 5px; }"
+        "QCheckBox {"
+        "   background-color: white;"
+        "   padding: 5px 10px;"
+        "   border: 2px solid gray;"
+        "   border-radius: 5px;"
+        "}"
     );
     updateFieldsEditability();
     updateGnssStatusLabel(false);
@@ -650,15 +649,15 @@ void MainWindow::setupAmsHandler()
     connect(m_amsHandler, &AMSHandler::functionalControlDataReceived,
             this, [this](quint32 bitMask, quint32 powerOnCount) {
         m_functionalControlDialog->setAmsData(bitMask, powerOnCount);
-    });
 
-    connect(m_amsHandler, &AMSHandler::functionalControlRequested,
-            this, [this]() {
-        // При progress==-2 показываем окно ФК
-        // showEvent внутри диалога сам инициирует запрос
-        m_functionalControlDialog->show();
-        m_functionalControlDialog->raise();
-        m_functionalControlDialog->activateWindow();
+        FuncControlResult fc = AMSProtocol::funcControlDetails(bitMask);
+        if (!fc.allOk()) {
+            int total = fc.faults.size() + fc.errors.size();
+            statusBar()->showMessage(
+                        QString("Функциональный контроль АМС: обнаружено проблем - %1. "
+                                "Зайдите в 'Функциональный контроль' для просмотра.").arg(total),
+                        30000);
+        }
     });
 
     connect(m_functionalControlDialog, &FunctionalControlDialog::refreshRequested,
@@ -763,16 +762,6 @@ void MainWindow::onAmsConnected()
 
     statusBar()->showMessage("АМС подключена успешно", 5000);
     updateAmsStatusLabel(true);
-
-    // Запускаем периодический опрос функционального контроля
-    m_functionalControlPollTimer->start();
-
-    // Сразу выполняем первый опрос через 2 секунды после подключения
-    QTimer::singleShot(2000, this, [this]() {
-        if (m_amsHandler && m_amsHandler->isConnected()) {
-            m_amsHandler->requestFunctionalControl();
-        }
-    });
 }
 
 void MainWindow::onAmsDisconnected()
@@ -787,7 +776,6 @@ void MainWindow::onAmsDisconnected()
     statusBar()->showMessage("АМС отключена", 3000);
     updateAmsStatusLabel(false);
 
-    m_functionalControlPollTimer->stop();
     if (m_functionalControlDialog->isVisible()) {
         m_functionalControlDialog->setDisconnectedState();
     }
@@ -1012,7 +1000,8 @@ void MainWindow::onAmsMeasurementCompleted(int recordId)
 
     // Обновляем UI
     ui->lblStatus->setText("ГОТОВ");
-    ui->lblStatus->setStyleSheet("font-weight: bold; font-size: 14pt; border: 2px solid #888; padding: 5px; border-radius: 4px; background-color: #E8E8E8; color: #222;");
+    ui->lblStatus->setStyleSheet("color: green; font-weight: bold; font-size: 14pt; "
+                                  "border: 2px solid green; padding: 5px; border-radius: 5px;");
 
     ui->btnStart->setEnabled(true);
     ui->btnStop->setEnabled(false);
@@ -1035,11 +1024,15 @@ void MainWindow::onAmsMeasurementFailed(const QString &reason)
     qWarning() << "MainWindow: Измерение не удалось:" << reason;
 
     QMessageBox::critical(this, "Ошибка измерения",
-        QString("Измерение не было завершено:\n\n%1").arg(reason));
+        QString("Измерение не было завершено:\n\n%1\n\n"
+                "Данные о неисправностях сохранены.\n"
+                "Откройте 'Функциональный контроль' для просмотра")
+                          .arg(reason));
 
     // Обновляем UI
     ui->lblStatus->setText("ОШИБКА");
-    ui->lblStatus->setStyleSheet("font-weight: bold; font-size: 14pt; border: 2px solid #333; padding: 5px; border-radius: 4px; background-color: #CCCCCC; color: #000;");
+    ui->lblStatus->setStyleSheet("color: red; font-weight: bold; font-size: 14pt; "
+                                  "border: 2px solid red; padding: 5px; border-radius: 5px;");
 
     ui->btnStart->setEnabled(true);
     ui->btnStop->setEnabled(false);
@@ -1048,7 +1041,7 @@ void MainWindow::onAmsMeasurementFailed(const QString &reason)
     ui->measurementProgressWidget->setVisible(false);
     ui->progressBarMeasurement->setValue(0);
 
-    statusBar()->showMessage("Ошибка: " + reason, 10000);
+    statusBar()->showMessage("Ошибка измерения АМС: " + reason, 10000);
 }
 
 void MainWindow::onAmsNeedIntermediateData(int progress)
@@ -1612,7 +1605,7 @@ void MainWindow::onSyncTimeClicked()
     statusBar()->showMessage("Время синхронизировано с системным", 3000);
 
     if (!m_manualInputEnabled) {
-        ui->editDateTime->setStyleSheet("font-weight: bold; font-size: 11pt; background-color: #E0E0E0;");
+        ui->editDateTime->setStyleSheet("font-weight: bold; font-size: 11pt; background-color: #E8F5E9;");
     }
 }
 
@@ -1631,7 +1624,7 @@ void MainWindow::onDateTimeEditingFinished()
         // Время корректно введено
         m_manualDateTime = newDateTime;
         m_manualDateTimeSet = true;
-        ui->editDateTime->setStyleSheet("font-weight: bold; font-size: 10pt; background-color: #E0E0E0;");
+        ui->editDateTime->setStyleSheet("font-weight: bold; font-size: 11pt; background-color: #FFFACD;");
     } else {
         // Время введено некоррктно - возвращаем предыдущее значение
         ui->editDateTime->setText(m_manualDateTime.toString("dd.MM.yyyy hh:mm:ss"));
@@ -1639,7 +1632,7 @@ void MainWindow::onDateTimeEditingFinished()
         // Кратковременная визуальная индикация ошибки
         ui->editDateTime->setStyleSheet("font-weight: bold; font-size: 11pt; background-color: #FFB6C1;");
         QTimer::singleShot(500, this, [this]() {
-            ui->editDateTime->setStyleSheet("font-weight: bold; font-size: 10pt; background-color: #E0E0E0;");
+            ui->editDateTime->setStyleSheet("font-weight: bold; font-size: 11pt; background-color: #FFFACD;");
         });
     }
 }
@@ -1658,7 +1651,8 @@ void MainWindow::onDateTimeEditingStarted()
 
 void MainWindow::onWorkRegulationClicked()
 {
-    // Здесь будет логика регламента работы
+    WorkRegulationDialog dlg(m_amsHandler, this);
+    dlg.exec();
 }
 
 void MainWindow::onManualInputClicked()
@@ -1697,12 +1691,12 @@ void MainWindow::onManualInputClicked()
             }
         }
         // Визуальная индикация редактируемого поля
-        ui->editDateTime->setStyleSheet("font-weight: bold; font-size: 10pt; background-color: #E0E0E0;");
+        ui->editDateTime->setStyleSheet("font-weight: bold; font-size: 11pt; background-color: #FFFACD;");
     } else {
         // При выходе из режима ручного ввода возвращаемся к автоматическому времени
         m_manualDateTimeSet = true;
         m_isEditingDateTime = false;
-        ui->editDateTime->setStyleSheet("font-weight: bold; font-size: 10pt;");
+        ui->editDateTime->setStyleSheet("font-weight: bold; font-size: 11pt;");
 
         QDateTime currentDisplayed = QDateTime::fromString(ui->editDateTime->text(), "dd.MM.yyyy hh:mm:ss");
         if (currentDisplayed.isValid()) {
@@ -1715,8 +1709,9 @@ void MainWindow::onManualInputClicked()
 
 void MainWindow::onInitialDataClicked()
 {
-    SourceData dialog(this);
-    dialog.exec();
+//    SourceData dialog(this);
+    sourceDataInstance->show();
+//    dialog.exec();
 }
 
 void MainWindow::onCalculationsClicked()
@@ -1773,7 +1768,8 @@ void MainWindow::onStartClicked()
 
     // Обновляем UI
     ui->lblStatus->setText("РАБОТА");
-    ui->lblStatus->setStyleSheet("font-weight: bold; font-size: 14pt; border: 2px solid #555; padding: 5px; border-radius: 4px; background-color: #D0D0D0; color: #111;");
+    ui->lblStatus->setStyleSheet("color: blue; font-weight: bold; font-size: 14pt; "
+                                  "border: 2px solid blue; padding: 5px; border-radius: 5px;");
 
     // Получаем параметры для запуска измерения
     WorkMode mode = ui->cbWorkMode->isChecked() ? MODE_WORKING : MODE_STANDBY;
@@ -1830,7 +1826,8 @@ void MainWindow::onStartClicked()
 
         // Возвращаем статус в ГОТОВ
         ui->lblStatus->setText("ГОТОВ");
-    ui->lblStatus->setStyleSheet("font-weight: bold; font-size: 14pt; border: 2px solid #888; padding: 5px; border-radius: 4px; background-color: #E8E8E8; color: #222;");
+        ui->lblStatus->setStyleSheet("color: green; font-weight: bold; font-size: 14pt; "
+                                      "border: 2px solid green; padding: 5px; border-radius: 5px;");
         return;
     }
 
@@ -1863,7 +1860,8 @@ void MainWindow::onStopClicked()
 
     // Обновляем UI
     ui->lblStatus->setText("ГОТОВ");
-    ui->lblStatus->setStyleSheet("font-weight: bold; font-size: 14pt; border: 2px solid #888; padding: 5px; border-radius: 4px; background-color: #E8E8E8; color: #222;");
+    ui->lblStatus->setStyleSheet("color: green; font-weight: bold; font-size: 14pt; "
+                                  "border: 2px solid green; padding: 5px; border-radius: 5px;");
 
     // Разблокируем кнопку старта, блокируем стоп
     ui->btnStart->setEnabled(true);
@@ -1903,12 +1901,12 @@ void MainWindow::updateGnssStatusLabel(bool connected)
     if (connected) {
         ui->lblGnssStatus->setText("GNSS: подключен");
         ui->lblGnssStatus->setStyleSheet(
-            "background-color: #D8D8D8; color: #111; border: 1px solid #888; font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;"
+            "background-color: #E8F5E9; color: #1B5E20; border: 1px solid #A5D6A7; "
             "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
     } else {
         ui->lblGnssStatus->setText("GNSS: отключен");
         ui->lblGnssStatus->setStyleSheet(
-            "background-color: #EBEBEB; color: #555; border: 1px solid #AAAAAA; font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;"
+            "background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2; "
             "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
     }
 }
@@ -1918,12 +1916,12 @@ void MainWindow::updateAmsStatusLabel(bool connected)
     if (connected) {
         ui->lblAmsStatus->setText("АМС: подключен");
         ui->lblAmsStatus->setStyleSheet(
-            "background-color: #D8D8D8; color: #111; border: 1px solid #888; font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;"
+            "background-color: #E8F5E9; color: #1B5E20; border: 1px solid #A5D6A7; "
             "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
     } else {
         ui->lblAmsStatus->setText("АМС: отключен");
         ui->lblAmsStatus->setStyleSheet(
-            "background-color: #EBEBEB; color: #555; border: 1px solid #AAAAAA; font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;"
+            "background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2; "
             "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
     }
 }
@@ -1933,12 +1931,12 @@ void MainWindow::updateBinsStatusLabel(bool connected)
     if (connected) {
         ui->lblBinsStatus->setText("БИНС: подключен");
         ui->lblBinsStatus->setStyleSheet(
-            "background-color: #D8D8D8; color: #111; border: 1px solid #888; font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;"
+            "background-color: #E8F5E9; color: #1B5E20; border: 1px solid #A5D6A7; "
             "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
     } else {
         ui->lblBinsStatus->setText("БИНС: отключен");
         ui->lblBinsStatus->setStyleSheet(
-            "background-color: #EBEBEB; color: #555; border: 1px solid #AAAAAA; font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;"
+            "background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2; "
             "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
     }
 }
@@ -1948,12 +1946,12 @@ void MainWindow::updateIwsStatusLabel(bool connected)
     if (connected) {
         ui->lblIwsStatus->setText("ИВС: подключен");
         ui->lblIwsStatus->setStyleSheet(
-            "background-color: #D8D8D8; color: #111; border: 1px solid #888; font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;"
+            "background-color: #E8F5E9; color: #1B5E20; border: 1px solid #A5D6A7; "
             "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
     } else {
         ui->lblIwsStatus->setText("ИВС: отключен");
         ui->lblIwsStatus->setStyleSheet(
-            "background-color: #EBEBEB; color: #555; border: 1px solid #AAAAAA; font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;"
+            "background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2; "
             "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
     }
 }

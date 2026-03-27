@@ -122,31 +122,6 @@ QString AMSProtocol::rotateStatusString(quint8 status)
     return QString("Поворот: неизвестный статус 0x%1").arg(status, 2, 16, QChar('0'));
 }
 
-// Возвращает список текстов неисправностей из битовой маски 0xA7
-// Бит=0 → неисправность, бит=1 → исправно (согласно протоколу)
-QStringList AMSProtocol::funcControlFaults(quint32 bitMask)
-{
-    static const struct { quint32 bit; const char *desc; } kBits[] = {
-        { FC_BIT_ROTATION_TIMEOUT,  "Превышено время ожидания завершения вращения" },
-        { FC_BIT_ANTENNA_FAULT,     "Аварийная остановка открытия/закрытия антенны" },
-        { FC_BIT_OPEN_TIMEOUT,      "Превышено время ожидания открытия антенны" },
-        { FC_BIT_CLOSE_TIMEOUT,     "Превышено время ожидания закрытия антенны" },
-        { FC_BIT_NO_DATA,           "Нет сбора данных" },
-        { FC_BIT_CLOCK_FAIL,        "СЧ не пошёл контроль" },
-        { FC_BIT_TRANSMITTER_FAIL,  "Не готов передатчик" },
-        { FC_BIT_SOFTWARE_ERROR,    "Ошибка программного обеспечения" },
-        { FC_BIT_DATETIME_INVALID,  "Неверное значение даты и времени" },
-    };
-
-    QStringList faults;
-    for (const auto &entry : kBits) {
-        if (bitMask & entry.bit) {   // бит=1 → неисправность
-            faults << QString::fromUtf8(entry.desc);
-        }
-    }
-    return faults;
-}
-
 FuncControlResult AMSProtocol::funcControlDetails(quint32 bitMask)
 {
     // Таблица: {бит, описание, isFault}
@@ -157,39 +132,36 @@ FuncControlResult AMSProtocol::funcControlDetails(quint32 bitMask)
             const char *desc;
             bool       isFault;
         } kTable[] = {
-            // ===== Из Таблицы 2 протокола (биты 0-8) =====
-            { FC_BIT_ROTATION_TIMEOUT,  "Превышено время ожидания завершения вращения",    false },
-            { FC_BIT_ANTENNA_FAULT,     "Аварийная остановка открытия/закрытия антенны",   true  },
-            { FC_BIT_OPEN_TIMEOUT,      "Превышено время ожидания открытия антенны",       false },
-            { FC_BIT_CLOSE_TIMEOUT,     "Превышено время ожидания закрытия антенны",       false },
-            { FC_BIT_NO_DATA,           "Нет сбора данных",                                false },
-            { FC_BIT_CLOCK_FAIL,        "СЧ не пошёл контроль",                            true  },
-            { FC_BIT_TRANSMITTER_FAIL,  "Не готов передатчик",                             true  },
-            { FC_BIT_SOFTWARE_ERROR,    "Ошибка программного обеспечения",                 false },
-            { FC_BIT_DATETIME_INVALID,  "Неверное значение даты и времени",                false },
-            // ===== Расширенный список (биты 9-30) =====
-            { FC_BIT_EXCH_TRANSMITTER,  "Ошибка обмена с УМ",                              false },
-            { FC_BIT_EXCH_SCH,          "Ошибка обмена с СЧ",                              false },
-            { FC_BIT_EXCH_BEKU,         "Ошибка обмена с БЭКУ",                            false },
-            { FC_BIT_FAIL_TRANSMITTER,  "Не готов УМ",                                     true  },
-            { FC_BIT_FAIL_SCH,          "Не готов СЧ",                                     true  },
-            { FC_BIT_FAIL_BEKU,         "Не готов БЭКУ",                                   true  },
-            { FC_BIT_BEKU_POWER,        "Неисправность модуля питания БЭКУ",               true  },
-            { FC_BIT_BEKU_POWER_MHN,    "Отказ по питанию блока ЗМЛ",                      true  },
-            { FC_BIT_BEKU_POWER_UM,     "Отказ по питанию УМ",                             true  },
-            { FC_BIT_BEKU_POWER_SCH,    "Отказ по питанию СЧ",                             true  },
-            { FC_BIT_BEKU_POWER_PM,     "Отказ по питанию ПМ",                             true  },
-            { FC_BIT_BEKU_POWER_MSHU,   "Отказ по питанию МШУ",                            true  },
-            { FC_BIT_ROTATION_ANGLE,    "Текущий угол не совпадает с заданным",            false },
-            { FC_BIT_ROTATION_ESTOP,    "Аварийная остановка привода вращения",             true  },
-            { FC_BIT_ANGLE_SENSOR,      "Отказ датчика угла привода вращения",             true  },
-            { FC_BIT_LITERA_ERROR,      "Ошибка задания литеры",                           false },
-            { FC_BIT_STOPPER_LOCK,      "Ошибка блокировки стопора",                       false },
-            { FC_BIT_STOPPER_UNLOCK,    "Ошибка разблокировки стопора",                    false },
-            { FC_BIT_KV_OPEN,           "Ошибка состояния концевиков антенны РП",          false },
-            { FC_BIT_KV_CLOSE,          "Ошибка состояния концевиков антенны ПП",          false },
-            { FC_BIT_PILOT_FAIL,        "Отказ при проверке пилот-сигнала",                true  },
-            { FC_BIT_TX_POWER,          "Отсутствует выходная импульсная мощность",         true  },
+            { FAILURE_EXCHANGE_TRANSMITTER,   "Ошибка обмена с УМ", false },
+            { FAILURE_EXCHANGE_SCH        ,   "Ошибка обмена с СЧ", true  },
+            { FAILURE_EXCHANGE_BEKU       ,   "Ошибка обмена с БЭКУ", false },
+            { FAILURE_TRANSMITTER         ,   "Не готов УМ", false },
+            { FAILURE_SCH                 ,   "Не готов СЧ", false },
+            { FAILURE_BEKU                ,   "Не готов БЭКУ", true  },
+            { FAILURE_BEKU_POWER          ,   "Неисправность модуля питания БЭКУ", true  },
+            { FAILURE_BEKU_POWER_MHN      ,   "Отказ по питанию блока ЗМЛ", false },
+            { FAILURE_BEKU_POWER_UM       ,   "Отказ по питанию УМ", false },
+            { FAILURE_BEKU_POWER_SCH      ,   "Отказ по питанию СЧ", false },
+            { FAILURE_BEKU_POWER_PM       ,   "Отказ по питанию ПМ", false },
+            { FAILURE_BEKU_POWER_MSHU     ,   "Отказ по питанию МШУ", false },
+            { ROTATION_TIMEOUT            ,   "Превышено время ожидания завершения вращения", true  },
+            { ROTATION_FAILURE_ANGLE      ,   "Текущий угол не совпадает с заданным", true  },
+            { ROTATION_EMERGENCY_STOP     ,   "Аварийная остановка привода вращения", true  },
+            { ANGLE_SENSOR_FAILURE        ,   "Отказ датчика угла привода вращения", true  },
+            { FAILURE_LITERA              ,   "Ошибка задания литеры", true  },
+            { ANTENNA_EMERGENCY_STOP      ,   "Аварийная остановка открытия/закрытия антенны", true  },
+            { ANTENNA_OPEN_TIMEOUT        ,   "Превышено время ожидания открытия антенны", true  },
+            { ANTENNA_CLOSE_TIMEOUT       ,   "Превышено время ожидания закрытия антенны", true  },
+            { NO_SOUNDING                 ,   "Нет сбора данных", true  },
+            { FAILURE_STOPPER_LOCK        ,   "Ошибка блокировки стопора", false },
+            { FAILURE_STOPPER_UNLOCK      ,   "Ошибка разблокировки стопора",  true  },
+            { FAILURE_SOFTWARE_EXCHANGE   ,   "Ошибка обмена с БОУ", true  },
+            { FAILURE_KV_OPEN_STATE       ,   "Ошибка сотсояния концевиков антенны РП", false },
+            { FAILURE_KV_CLOSE_STATE      ,   "Ошибка состояния концевиков антенны ПП", false },
+            { FAILURE_PILOT               ,   "Отказ при проверке пилот-синала", false },
+            { FAILURE_TRANSMITTER_POWER   ,   "Отcутствует выходная импульная мощность", false },
+            { SCH_MODE_SETTER_ERROR       ,   "Ошибка установки режимов в СЧ", false },
+            { UM_MODE_SETTER_ERROR        ,   "Ошибка установки режимов в УМ", true  },
         };
 
         FuncControlResult result;
@@ -508,6 +480,7 @@ bool AMSProtocol::parseFuncControlResponse(const QByteArray &data, quint32 &bitM
     }
 
     bitMask      = static_cast<quint32>(bytesToInt(data, 1));
+    qDebug() << "BitMask: " << bitMask;
     powerOnCount = static_cast<quint32>(bytesToInt(data, 5));
 
     // Декодируем неисправности и логируем

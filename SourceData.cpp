@@ -16,7 +16,7 @@ SourceData::SourceData(QWidget *parent)
     qDebug() << "GroundMeteoParams instance created in SourceData";
 
     connect(ui->btnCloseSourceData, &QPushButton::clicked, this, [this](){
-        close();
+        hide();
     });
 
     connect(ui->btnMeteo11, &QPushButton::clicked, this, [this](){

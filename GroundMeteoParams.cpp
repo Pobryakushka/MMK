@@ -19,13 +19,14 @@ GroundMeteoParams::GroundMeteoParams(QWidget *parent)
     qDebug() << "GroundMeteoParams initialized with Modbus RTU protocol, device address 0x01";
 
     connect(ui->btnGroundParamsClose, &QPushButton::clicked, this, [this](){
-        close();
+        hide();
     });
     connect(ui->btnGroundParamsClear, &QPushButton::clicked, this, &GroundMeteoParams::deleteDataFromTable);
 }
 
 GroundMeteoParams::~GroundMeteoParams()
 {
+    qDebug() << "GroundMeteoParams destructor";
     if (s_instance == this) {
         s_instance = nullptr;
     }

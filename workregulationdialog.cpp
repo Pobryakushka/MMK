@@ -105,7 +105,7 @@ void InspectionDialog::onOpenAntenna()
         return;
     }
 
-    qDebug() << "InspectionDialog: Команда — открыть антенну (0xAD, cmd=0x01)";
+    qDebug() << "InspectionDialog: Команда — открыть антенну (0xAD, cmd=0x00)";
     setControlsEnabled(false);
     showStatus("Отправка команды открытия антенны…");
 
@@ -122,7 +122,7 @@ void InspectionDialog::onCloseAntenna()
         return;
     }
 
-    qDebug() << "InspectionDialog: Команда — закрыть антенну (0xAD, cmd=0x02)";
+    qDebug() << "InspectionDialog: Команда — закрыть антенну (0xAD, cmd=0x01)";
     setControlsEnabled(false);
     showStatus("Отправка команды закрытия антенны…");
 
@@ -134,20 +134,22 @@ void InspectionDialog::onCloseAntenna()
 
 void InspectionDialog::onAntennaStatus(quint8 status)
 {
-    setControlsEnabled(true);
-
     switch (status) {
     case ANTENNA_IN_PROGRESS:
+        // Операция ещё идёт — держим кнопки заблокированными, обновляем текст
         showStatus("Выполняется…");
-        setControlsEnabled(false); // ещё идёт процесс
+        setControlsEnabled(false);
         break;
     case ANTENNA_SUCCESS:
+        setControlsEnabled(true);
         showStatus("Операция выполнена успешно");
         break;
     case ANTENNA_FAULT:
+        setControlsEnabled(true);
         showStatus("Аварийная остановка антенны!", true);
         break;
     default:
+        setControlsEnabled(true);
         showStatus(QString("Неизвестный статус: 0x%1").arg(status, 2, 16, QChar('0')), true);
         break;
     }
@@ -260,6 +262,12 @@ AngleCheckDialog::AngleCheckDialog(AMSHandler *amsHandler, QWidget *parent)
     connect(m_btnStart, &QPushButton::clicked, this, &AngleCheckDialog::onStart);
     connect(m_btnStop,  &QPushButton::clicked, this, &AngleCheckDialog::onStop);
 
+    // Слушаем статус поворота от AMSHandler
+    if (m_amsHandler) {
+        connect(m_amsHandler, &AMSHandler::rotateStatusReceived,
+                this, &AngleCheckDialog::onRotateStatus);
+    }
+
     // Стоп изначально неактивен
     m_btnStop->setEnabled(false);
 
@@ -314,6 +322,35 @@ void AngleCheckDialog::onStop()
 
     m_btnStart->setEnabled(true);
     m_btnStop->setEnabled(false);
+}
+
+void AngleCheckDialog::onRotateStatus(quint8 status, float angle)
+{
+    switch (status) {
+    case ROTATE_RUNNING:
+        // Вращение продолжается — держим Стоп активным, обновляем угол
+        showStatus(QString("Вращение… текущий угол: %1°")
+                   .arg(angle, 0, 'f', 1));
+        m_btnStart->setEnabled(false);
+        m_btnStop->setEnabled(true);
+        break;
+    case ROTATE_IDLE_OK:
+        // Завершено успешно (или ответ на команду Стоп)
+        showStatus(QString("Завершено. Угол: %1°").arg(angle, 0, 'f', 1));
+        m_btnStart->setEnabled(true);
+        m_btnStop->setEnabled(false);
+        break;
+    case ROTATE_FAULT:
+        showStatus("Аварийная остановка привода вращения!", true);
+        m_btnStart->setEnabled(true);
+        m_btnStop->setEnabled(false);
+        break;
+    default:
+        showStatus(QString("Неизвестный статус: 0x%1").arg(status, 2, 16, QChar('0')), true);
+        m_btnStart->setEnabled(true);
+        m_btnStop->setEnabled(false);
+        break;
+    }
 }
 
 void AngleCheckDialog::showStatus(const QString &text, bool error)
