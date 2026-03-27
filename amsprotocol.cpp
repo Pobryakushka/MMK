@@ -73,7 +73,7 @@ bool AMSProtocol::isPacketValid(const QByteArray &data)
     return receivedChecksum == calculatedChecksum;
 }
 
-AMSCommand AMSProtocol::getPacketCommand(const QByteArray &data)
+ParseError AMSProtocol::checkPacket(const QByteArray &data, AMSCommand expectedCmd, int minSize)
 {
     if (data.size() < 3) return PARSE_ERR_TOO_SHORT;
     if (static_cast<quint8>(data.back()) != 0xFF) return PARSE_ERR_BAD_STOP;
@@ -155,10 +155,10 @@ FuncControlResult AMSProtocol::funcControlDetails(quint32 bitMask)
             { FAILURE_STOPPER_LOCK        ,   "Ошибка блокировки стопора", false },
             { FAILURE_STOPPER_UNLOCK      ,   "Ошибка разблокировки стопора",  true  },
             { FAILURE_SOFTWARE_EXCHANGE   ,   "Ошибка обмена с БОУ", true  },
-            { FAILURE_KV_OPEN_STATE       ,   "Ошибка сотсояния концевиков антенны РП", false },
+            { FAILURE_KV_OPEN_STATE       ,   "Ошибка состояния концевиков антенны РП", false },
             { FAILURE_KV_CLOSE_STATE      ,   "Ошибка состояния концевиков антенны ПП", false },
-            { FAILURE_PILOT               ,   "Отказ при проверке пилот-синала", false },
-            { FAILURE_TRANSMITTER_POWER   ,   "Отcутствует выходная импульная мощность", false },
+            { FAILURE_PILOT               ,   "Отказ при проверке пилот-сигнала", false },
+            { FAILURE_TRANSMITTER_POWER   ,   "Отcутствует выходная импульсная мощность", false },
             { SCH_MODE_SETTER_ERROR       ,   "Ошибка установки режимов в СЧ", false },
             { UM_MODE_SETTER_ERROR        ,   "Ошибка установки режимов в УМ", true  },
         };
