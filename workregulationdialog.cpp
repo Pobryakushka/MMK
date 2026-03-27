@@ -197,7 +197,7 @@ AngleCheckDialog::AngleCheckDialog(AMSHandler *amsHandler, QWidget *parent)
     m_editAngle->setMinimumWidth(70);
     m_editAngle->setMaximumWidth(90);
     // Разрешаем ввод от 0.0 до 360.0 градусов
-    m_editAngle->setValidator(new QDoubleValidator(0.0, 360.0, 1, this));
+    m_editAngle->setValidator(new QDoubleValidator(0.0, 330.0, 1, this));
     m_editAngle->setStyleSheet("font-size: 11pt; padding: 3px;");
 
     auto *lblDeg = new QLabel("°", this);
@@ -287,8 +287,8 @@ void AngleCheckDialog::onStart()
 
     bool ok = false;
     float angle = m_editAngle->text().replace(',', '.').toFloat(&ok);
-    if (!ok || angle < 0.0f || angle > 360.0f) {
-        showStatus("Введите корректный угол (0–360°)", true);
+    if (!ok || angle < 0.0f || angle > 330.0f) {
+        showStatus("Введите корректный угол (0–330°)", true);
         return;
     }
 

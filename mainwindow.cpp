@@ -1044,6 +1044,8 @@ void MainWindow::onAmsMeasurementFailed(const QString &reason)
     statusBar()->showMessage("Ошибка измерения АМС: " + reason, 10000);
 }
 
+//TODO Убрать хардкодные данные от приземки. Сделать отправку реальных данных из GroundMeteoParams.
+
 void MainWindow::onAmsNeedIntermediateData(int progress)
 {
     qDebug() << "MainWindow: Требуются промежуточные данные на" << progress << "%";
@@ -1065,16 +1067,16 @@ void MainWindow::onAmsNeedIntermediateData(int progress)
     float stationAltitude = ui->editAltitude->text().toFloat();
 
     // Заполняем векторы нулями (в реальности здесь данные от 1Б65 и ЭВМ)
-    QVector<float> avgWindDir(23, 0.0f);
-    QVector<float> avgWindSpeed(23, 0.0f);
+    QVector<float> avgWindDir(33, 0.0f);
+    QVector<float> avgWindSpeed(33, 0.0f);
 
     // Для теста заполним какими-то значениями
-    for (int i = 0; i < 23; i++) {
-        avgWindDir[i] = 180.0f + i * 5.0f;
-        avgWindSpeed[i] = 5.0f + i * 0.5f;
+    for (int i = 0; i < 33; i++) {
+        avgWindDir[i] = 0.0f;
+        avgWindSpeed[i] = 0.0f;
     }
 
-    float reachedHeight = 3000.0f;
+    float reachedHeight = 0.0f;
     float surfaceWindDir = 270.0f;
     float surfaceWindSpeed = 5.0f;
     QDateTime currentDateTime = QDateTime::currentDateTime();
