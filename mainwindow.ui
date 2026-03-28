@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1200</width>
+    <width>1247</width>
     <height>1487</height>
    </rect>
   </property>
@@ -85,7 +85,7 @@
           </size>
          </property>
          <property name="text">
-          <string>Регламент работы</string>
+          <string>Регламентные работы</string>
          </property>
         </widget>
        </item>
@@ -101,7 +101,6 @@
           <property name="spacing">
            <number>5</number>
           </property>
-
           <item row="7" column="1">
            <widget class="QLineEdit" name="editDirectionAngle">
             <property name="text">
@@ -260,8 +259,6 @@
             </property>
            </widget>
           </item>
-
-
           <item row="6" column="0">
            <widget class="QLabel" name="lblAltitudeLabel">
             <property name="text">
@@ -559,7 +556,7 @@
                   <string>0%</string>
                  </property>
                  <property name="alignment">
-                  <set>Qt::AlignRight|Qt::AlignVCenter</set>
+                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                  </property>
                 </widget>
                </item>
@@ -634,7 +631,7 @@ QProgressBar::chunk {
                   <string>0.0°</string>
                  </property>
                  <property name="alignment">
-                  <set>Qt::AlignRight|Qt::AlignVCenter</set>
+                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                  </property>
                 </widget>
                </item>
