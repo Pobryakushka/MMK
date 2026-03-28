@@ -193,6 +193,8 @@ private:
 
     void setupBinsHandler();
 
+    void openMeasurementResults(int recordId = -1); // -1 = просто открыть, >0 = перейти к записи
+
     void resizeEvent(QResizeEvent *event);
     QList<quint16> getRequestParameters();
 

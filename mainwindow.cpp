@@ -995,7 +995,7 @@ void MainWindow::onAmsMeasurementCompleted(int recordId)
 
     QMessageBox::information(this, "Успех",
         QString("Измерение завершено успешно!\n\nID записи в БД: %1\n\n"
-                "Результаты сохранеRны и доступны в разделе 'Результаты измерений'.")
+                "Результаты сохранены и доступны в разделе 'Результаты измерений'.")
         .arg(recordId));
 
     // Обновляем UI
@@ -1017,6 +1017,9 @@ void MainWindow::onAmsMeasurementCompleted(int recordId)
     } else {
         qDebug() << "MainWindow: GNSS недоступен - в БД записываются координаты из UI-полей";
     }
+
+    // Открываем архив и переходим к только что сохранённой записи
+    openMeasurementResults(recordId);
 }
 
 void MainWindow::onAmsMeasurementFailed(const QString &reason)
@@ -1731,12 +1734,13 @@ void MainWindow::onCalculationsClicked()
 
 void MainWindow::onMeasurementResultsClicked()
 {
+    openMeasurementResults(-1);
+}
+
+void MainWindow::openMeasurementResults(int recordId)
+{
     MeasurementResults *dialog = new MeasurementResults(this);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
-
-//    if (!DatabaseManager::instance()->isConnected()){
-//        DatabaseManager::instance()->connect();
-//    }
 
     connect(this, &MainWindow::coordinatesUpdatedFromMap,
             dialog, &MeasurementResults::updateCoordinatesFromMainWindow);
@@ -1757,6 +1761,11 @@ void MainWindow::onMeasurementResultsClicked()
     }
 
     dialog->show();
+
+    // Если указан конкретный record_id — переходим к нему
+    if (recordId > 0) {
+        dialog->navigateToRecord(recordId);
+    }
 }
 
 void MainWindow::onStartClicked()

@@ -640,6 +640,42 @@ void MeasurementResults::onTableFormatClicked()
     switchMeteo11Display();
 }
 
+void MeasurementResults::navigateToRecord(int recordId)
+{
+    if (recordId <= 0) return;
+
+    // Ищем запись по recordId во всех загруженных датах
+    for (auto it = availableMeasurements.constBegin(); it != availableMeasurements.constEnd(); ++it) {
+        for (const MeasurementRecord &record : it.value()) {
+            if (record.recordId == recordId) {
+                currentDateTime = record.measurementTime;
+                updateDisplay();
+                qDebug() << "MeasurementResults: Переход к записи" << recordId
+                         << "время" << currentDateTime.toString("dd.MM.yyyy hh:mm:ss");
+                return;
+            }
+        }
+    }
+
+    // Если запись ещё не загружена (например, только что добавлена) — перезагружаем список
+    qDebug() << "MeasurementResults: Запись" << recordId << "не найдена, перезагружаем список...";
+    loadMeasurementsFromDatabase();
+
+    for (auto it = availableMeasurements.constBegin(); it != availableMeasurements.constEnd(); ++it) {
+        for (const MeasurementRecord &record : it.value()) {
+            if (record.recordId == recordId) {
+                currentDateTime = record.measurementTime;
+                updateDisplay();
+                qDebug() << "MeasurementResults: Переход к записи" << recordId
+                         << "после перезагрузки, время" << currentDateTime.toString("dd.MM.yyyy hh:mm:ss");
+                return;
+            }
+        }
+    }
+
+    qWarning() << "MeasurementResults: Запись" << recordId << "не найдена даже после перезагрузки";
+}
+
 void MeasurementResults::loadAvailableMeasurements()
 {
     loadMeasurementsFromDatabase();

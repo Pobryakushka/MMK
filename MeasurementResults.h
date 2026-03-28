@@ -66,6 +66,7 @@ private slots:
 public slots:
     void updateCoordinatesFromMainWindow(double latitude, double longitude);
     void setMapCoordinatesMode(bool enabled);
+    void navigateToRecord(int recordId); // Перейти к записи по record_id
 
 private:
     Ui::MeasurementResults *ui;
