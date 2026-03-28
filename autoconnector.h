@@ -117,8 +117,15 @@ private:
     QByteArray createAmsLineTestCommand();
     QByteArray createIwsTestCommand();
 
-    quint16 calculateAmsCrc(const QByteArray &data);
+    // Вычисление контрольной суммы
+    quint8 calculateChecksumAuto(const QByteArray &data);
+
+    // Добавление контрольной суммы и стопового байта
+    QByteArray finalizePacketAuto(const QByteArray &data);
+
     quint16 calculateUmbCrc(const QByteArray &data);
+
+    int baudRateForPhase(TestPhase phase); // Скорость порта для каждой фазы
 };
 
 #endif // AUTOCONNECTOR_H

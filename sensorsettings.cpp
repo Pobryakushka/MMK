@@ -301,6 +301,16 @@ void SensorSettings::onConnectAmsClicked()
     ui->lblAmsStatus->setStyleSheet("color: orange; font-size: 10pt; padding: 5px; font-weight: bold;");
 
     emit amsConnectRequested();
+
+    // Защитный таймаут: если через 8 секунд статус не изменился —
+    // возвращаем кнопки в рабочее состояние самостоятельно
+    QTimer::singleShot(8000, this, [this]() {
+        // Проверяем: если всё ещё в состоянии "Подключение..." — сбрасываем
+        if (ui->lblAmsStatus->text() == "Подключение...") {
+            setAmsConnectionStatus("Нет ответа от АМС", false);
+            setAmsConnectionEnabled(true);
+        }
+    });
 }
 
 void SensorSettings::onDisconnectAmsClicked()

@@ -3,6 +3,7 @@
 #include <QDebug>
 #include <QtEndian>
 #include <QDir>
+#include "amsprotocol.h"
 
 //TODO Сделать поиск для каждой системы со своей скоростью. Если система была найдена убрать систему из поиска.
 
@@ -118,6 +119,17 @@ void AutoConnector::stopDetection()
     emit logMessage("Автоопределение остановлено");
 }
 
+// Возвращает правильную скорость для каждого типа устройства
+int AutoConnector::baudRateForPhase(TestPhase phase)
+{
+    switch (phase) {
+        case PHASE_AMS_TEST:    return 115200; // АМС: 115200
+        case PHASE_GNSS_LISTEN: return 9600;  // GNSS: 19200
+        case PHASE_IWS_TEST:    return 19200;  // ИВС: 19200
+        default:                return 9600;
+    }
+}
+
 void AutoConnector::processNextPort()
 {
     // Закрываем предыдущий порт если был открыт
@@ -135,7 +147,24 @@ void AutoConnector::processNextPort()
 
     m_currentPortName = m_portsToCheck[m_currentPortIndex];
     m_deviceFoundOnCurrentPort = false;
-    m_currentPhase = PHASE_AMS_TEST;
+
+    // Определяем с какой фазы начинать — пропускаем уже найденные типы
+    m_currentPhase = PHASE_DONE; // будет перезаписано ниже
+
+    if (!m_detectedDevices.contains(DEVICE_AMS))
+        m_currentPhase = PHASE_AMS_TEST;
+    else if (!m_detectedDevices.contains(DEVICE_GNSS))
+        m_currentPhase = PHASE_GNSS_LISTEN;
+    else if (!m_detectedDevices.contains(DEVICE_IWS))
+        m_currentPhase = PHASE_IWS_TEST;
+
+    // Все устройства уже найдены — останавливаемся
+    if (m_currentPhase == PHASE_DONE) {
+        m_isDetecting = false;
+        emit logMessage("=== ВСЕ УСТРОЙСТВА НАЙДЕНЫ, ПОИСК ЗАВЕРШЁН ===");
+        emit detectionFinished();
+        return;
+    }
 
     emit progressUpdated(m_currentPortIndex + 1, m_portsToCheck.size());
     emit logMessage(QString("\n--- Проверка порта %1 (%2/%3) ---")
@@ -143,12 +172,9 @@ void AutoConnector::processNextPort()
                    .arg(m_currentPortIndex + 1)
                    .arg(m_portsToCheck.size()));
 
-    // Пробуем разные скорости
-    // АМС обычно 9600, GNSS 19200 или 38400, ИВС 19200
-    QList<int> baudRates = {9600, 19200, 38400};
-
-    // Начинаем с первой скорости
-    openPortAndTest(m_currentPortName, baudRates[0]);
+    // Скорость выбирается под первую фазу которую будем тестировать
+    int startBaudRate = baudRateForPhase(m_currentPhase);
+    openPortAndTest(m_currentPortName, startBaudRate);
 }
 
 void AutoConnector::openPortAndTest(const QString &portName, int baudRate)
@@ -182,10 +208,14 @@ void AutoConnector::openPortAndTest(const QString &portName, int baudRate)
     emit logMessage(QString("  Порт открыт: %1 бод").arg(baudRate));
 
     m_receiveBuffer.clear();
-    m_currentPhase = PHASE_AMS_TEST;
 
-    // Начинаем с теста АМС
-    testAMS();
+    // Запускаем тест для текущей фазы
+    switch (m_currentPhase) {
+        case PHASE_AMS_TEST:    testAMS();  break;
+        case PHASE_GNSS_LISTEN: testGNSS(); break;
+        case PHASE_IWS_TEST:    testIWS();  break;
+        default: moveToNextPhase(); break;
+    }
 }
 
 void AutoConnector::closeCurrentPort()
@@ -211,7 +241,7 @@ void AutoConnector::testAMS()
         m_testPort->flush();
 
         // Ждем ответ 1 секунду
-        m_timeoutTimer->start(1000);
+        m_timeoutTimer->start(5000);
     } else {
         moveToNextPhase();
     }
@@ -300,26 +330,46 @@ void AutoConnector::moveToNextPhase()
         return;
     }
 
-    // Переходим к следующей фазе тестирования
-    switch (m_currentPhase) {
-        case PHASE_AMS_TEST:
-            m_currentPhase = PHASE_GNSS_LISTEN;
-            m_receiveBuffer.clear();
-            testGNSS();
-            break;
+    // Переходим к следующей незайденной фазе
+    TestPhase nextPhase = PHASE_DONE;
 
-        case PHASE_GNSS_LISTEN:
-            m_currentPhase = PHASE_IWS_TEST;
-            m_receiveBuffer.clear();
-            testIWS();
-            break;
+    if (m_currentPhase == PHASE_AMS_TEST) {
+        // Ищем следующую фазу после AMS
+        if (!m_detectedDevices.contains(DEVICE_GNSS))
+            nextPhase = PHASE_GNSS_LISTEN;
+        else if (!m_detectedDevices.contains(DEVICE_IWS))
+            nextPhase = PHASE_IWS_TEST;
+    } else if (m_currentPhase == PHASE_GNSS_LISTEN) {
+        if (!m_detectedDevices.contains(DEVICE_IWS))
+            nextPhase = PHASE_IWS_TEST;
+    }
+    // PHASE_IWS_TEST и PHASE_DONE → всегда переходим к следующему порту
 
-        case PHASE_IWS_TEST:
-        case PHASE_DONE:
-            // Все тесты пройдены, переходим к следующему порту
-            m_currentPortIndex++;
-            processNextPort();
-            break;
+    if (nextPhase == PHASE_DONE) {
+        // Все нужные фазы на этом порту пройдены — следующий порт
+        m_currentPortIndex++;
+        processNextPort();
+        return;
+    }
+
+    // Переключаем фазу и переоткрываем порт с нужной скоростью
+    m_currentPhase = nextPhase;
+    m_receiveBuffer.clear();
+
+    int newBaudRate = baudRateForPhase(nextPhase);
+
+    // Если скорость не изменилась — не нужно переоткрывать порт
+    if (newBaudRate == m_currentBaudRate) {
+        switch (nextPhase) {
+            case PHASE_GNSS_LISTEN: testGNSS(); break;
+            case PHASE_IWS_TEST:    testIWS();  break;
+            default: break;
+        }
+    } else {
+        // Переоткрываем порт с новой скоростью
+        closeCurrentPort();
+        emit logMessage(QString("  Смена скорости: %1 → %2 бод").arg(m_currentBaudRate).arg(newBaudRate));
+        openPortAndTest(m_currentPortName, newBaudRate);
     }
 }
 
@@ -406,18 +456,27 @@ bool AutoConnector::isUmbResponse(const QByteArray &data)
 QByteArray AutoConnector::createAmsLineTestCommand()
 {
     // Команда LINE_TEST: [0xA0] [0x00] [CRC_L] [CRC_H] [0xFF]
+//    QByteArray command;
+//    command.append(static_cast<char>(0xA0));  // Команда
+//    command.append(static_cast<char>(0x00));  // Длина данных = 0
+
+//    // Вычисляем CRC
+//    quint16 crc = calculateAmsCrc(command);
+//    command.append(static_cast<char>(crc & 0xFF));
+//    command.append(static_cast<char>((crc >> 8) & 0xFF));
+
+//    command.append(static_cast<char>(0xFF));  // Стоп-байт
+
+//    qDebug() << "Packet: " << command;
+//    return command;
+
     QByteArray command;
-    command.append(static_cast<char>(0xA0));  // Команда
-    command.append(static_cast<char>(0x00));  // Длина данных = 0
-
-    // Вычисляем CRC
-    quint16 crc = calculateAmsCrc(command);
-    command.append(static_cast<char>(crc & 0xFF));
-    command.append(static_cast<char>((crc >> 8) & 0xFF));
-
-    command.append(static_cast<char>(0xFF));  // Стоп-байт
-
-    return command;
+    command.append(static_cast<char>(CMD_LINE_TEST));
+    command.append(QByteArray::fromHex("FFFFFFFF"));
+    command.append(QByteArray::fromHex("EEEEEEEE"));
+    command.append(QByteArray::fromHex("DDDDDDDD"));
+    command.append(QByteArray::fromHex("CCCCCC00"));
+    return finalizePacketAuto(command);
 }
 
 QByteArray AutoConnector::createIwsTestCommand()
@@ -452,24 +511,23 @@ QByteArray AutoConnector::createIwsTestCommand()
 
 // ===== CRC АЛГОРИТМЫ =====
 
-quint16 AutoConnector::calculateAmsCrc(const QByteArray &data)
+quint8 AutoConnector::calculateChecksumAuto(const QByteArray &data)
 {
-    // CRC-16 CCITT (0xFFFF, полином 0x1021)
-    quint16 crc = 0xFFFF;
-
+    // Контрольная сумма = сумма по модулю 2 всех байтов кроме номера команды
+    quint8 checksum = 0;
     for (int i = 0; i < data.size(); i++) {
-        crc ^= static_cast<quint8>(data[i]) << 8;
-
-        for (int j = 0; j < 8; j++) {
-            if (crc & 0x8000) {
-                crc = (crc << 1) ^ 0x1021;
-            } else {
-                crc = crc << 1;
-            }
-        }
+        checksum ^= static_cast<quint8>(data[i]);
     }
+    return checksum;
+}
 
-    return crc;
+QByteArray AutoConnector::finalizePacketAuto(const QByteArray &data)
+{
+    QByteArray command = data;
+    command.append(calculateChecksumAuto(data));
+    command.append(static_cast<char>(0xFF)); // Стоповый байт
+    qDebug() << "Final packet: " << command;
+    return command;
 }
 
 quint16 AutoConnector::calculateUmbCrc(const QByteArray &data)

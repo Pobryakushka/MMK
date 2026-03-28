@@ -83,6 +83,7 @@ bool AMSHandler::connectToAMS(const QString &portName, qint32 baudRate,
     // Выполняем тест линии
     QTimer::singleShot(500, this, [this]() {
         QByteArray testPacket = m_protocol->createLineTestPacket();
+        qDebug() << "TestPacket: " << testPacket;
         if (sendPacket(testPacket, CMD_LINE_TEST)) {
             qInfo() << "AMSHandler: Отправлен тест линии";
         } else {
