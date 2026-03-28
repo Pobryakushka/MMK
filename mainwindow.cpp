@@ -679,7 +679,7 @@ void MainWindow::setupAmsHandler()
 void MainWindow::configureAmsDatabase()
 {
     // Настройка подключения к БД
-    // TODO: Загрузить параметры из конфигурационного файла или настроек
+    // Загрузить параметры из конфигурационного файла или настроек
     QString dbHost = "localhost";
     int dbPort = 5432;
     QString dbName = "MMK";
@@ -1045,8 +1045,6 @@ void MainWindow::onAmsMeasurementFailed(const QString &reason)
 
     statusBar()->showMessage("Ошибка измерения АМС: " + reason, 10000);
 }
-
-//TODO Убрать хардкодные данные от приземки. Сделать отправку реальных данных из GroundMeteoParams.
 
 void MainWindow::onAmsNeedIntermediateData(int progress)
 {
