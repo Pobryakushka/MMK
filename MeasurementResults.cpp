@@ -614,6 +614,7 @@ void MeasurementResults::onUpdatedButtonClicked()
 void MeasurementResults::onApproximateButtonClicked()
 {
     currentButtelinType = Approximate;
+    currentOutputFormat = Table; // Для приближённого строка недоступна — переключаем на таблицу
     switchMeteo11Display();
     updateWindShearDisplay();
 }
@@ -1288,21 +1289,32 @@ int MeasurementResults::encodeTempDev(double deltaCelsius)
  */
 QString MeasurementResults::formatMeteo11Group(int heightCode, int dir, int speed, bool above10km)
 {
-    // heightCode: для <10 км — четырёхзначный (например 0200, 0400, ...);
-    //             для ≥10 км — двузначный км (10, 12, 14, 18, 22, 26, 30).
-    QString hPart, dataPart;
+    // Формат строки:
+    //  ≤8000 м:  ВВПП-ТТННСС  где ВВ = высота в сотнях метров (02,04,...,80), ПП = // (не измеряется)
+    //  ≥10 км:   ВВ//-ТТННСС  где ВВ = высота в км (10,12,...,30), ПП = // (не измеряется)
+    // СС = // если нет данных (speed >= 99)
+    QString hPart;
 
     if (!above10km) {
-        hPart = QString("%1").arg(heightCode, 4, 10, QChar('0'));
+        // heightCode хранится в метрах (200, 400, ..., 8000)
+        // ВВ = высота / 100 (двузначное), ПП = //
+        int hHundreds = heightCode / 100;
+        hPart = QString("%1//").arg(hHundreds, 2, 10, QChar('0'));
     } else {
-        hPart = QString("%1").arg(heightCode, 2, 10, QChar('0'));
+        // heightCode хранится в км (10, 12, 14, 18, 22, 26, 30)
+        hPart = QString("%1//").arg(heightCode, 2, 10, QChar('0'));
     }
 
-    // ТТННСС: dir в делениях угломера (00-60), speed м/с
-    dataPart = QString("%1%2%3")
-        .arg(0, 2, 10, QChar('0'))       // ТТ — отклонение температуры (0 = нет данных)
-        .arg(dir, 2, 10, QChar('0'))     // НН
-        .arg(speed, 2, 10, QChar('0'));  // СС
+    // СС: если >= 99 — нет данных → //
+    QString ssStr = (speed >= 99)
+        ? "//"
+        : QString("%1").arg(speed, 2, 10, QChar('0'));
+
+    // ТТННСС: ТТ=00 (нет данных), НН=направление, СС=скорость или //
+    QString dataPart = QString("%1%2%3")
+        .arg(0,   2, 10, QChar('0'))   // ТТ
+        .arg(dir, 2, 10, QChar('0'))   // НН
+        .arg(ssStr);                   // СС
 
     return hPart + "-" + dataPart;
 }
@@ -1408,8 +1420,8 @@ MeasurementResults::Meteo11Data MeasurementResults::buildMeteo11(
     d.tenMinutes     = sondingTime.time().minute() / 10;
     d.bulletinTime   = sondingTime;
 
-    // BBBB: высота станции (+60 м), в метрах
-    int altEncoded = qRound(stationAltitudeM + 60.0);
+    // BBBB: высота станции над уровнем моря, в метрах
+    int altEncoded = qRound(stationAltitudeM);
     d.stationAltitude = qBound(0, altEncoded, 9999);
 
     // БББ: отклонение наземного давления от табличного на высоте станции
@@ -1503,23 +1515,12 @@ void MeasurementResults::computeMeteo11(int recordId,
     //  как наилучшее приближение; в будущем можно добавить отдельную таблицу)
     m_meteo11FromStation = m_meteo11Approximate;
 
-    // Автовыбор: если уточнённый есть — показываем его, иначе приближённый
-    if (m_meteo11Updated.isValid) {
-        currentButtelinType = Updated;
-    } else if (m_meteo11Approximate.isValid) {
-        currentButtelinType = Approximate;
-    }
-
-    // Проверка актуальности: если данные старше 12 часов — принудительно «Приближённый»
-    // (бюллетень от метеостанции считается устаревшим)
-    if (m_currentSondingTime.isValid()) {
-        qint64 ageHours = m_currentSondingTime.secsTo(QDateTime::currentDateTime()) / 3600;
-        if (ageHours > 12 && currentButtelinType == Updated) {
-            // Данные устарели — переключаемся на приближённый
+    // Текущий выбор пользователя (currentButtelinType) НЕ меняем —
+    // пользователь сам выбирает тип бюллетеня кнопками.
+    // Исключение: если текущий тип недоступен — переключаем на доступный.
+    if (currentButtelinType == Updated && !m_meteo11Updated.isValid) {
+        if (m_meteo11Approximate.isValid)
             currentButtelinType = Approximate;
-            qInfo() << "MeasurementResults: Бюллетень устарел ("
-                    << ageHours << "ч > 12 ч), переключаем на «Приближённый»";
-        }
     }
 
     updateMeteo11Display();
@@ -1707,10 +1708,11 @@ void MeasurementResults::fillMeteo11TableView(const Meteo11Data &d)
     }
 
     // Сопоставляем слои с позициями таблицы
-    // Таблица имеет 19 строк с высотами: 200,400,800,1200,1600,2000,2400,3000,4000,5000,6000,8000,10000,12000,14000,16000,18000,22000,30000
+    // Таблица имеет 18 строк с высотами (без 16000, с 26000):
+    // 200,400,800,1200,1600,2000,2400,3000,4000,5000,6000,8000,10000,12000,14000,18000,22000,26000,30000
     static const float kTableHeights[] = {
         200, 400, 800, 1200, 1600, 2000, 2400, 3000, 4000,
-        5000, 6000, 8000, 10000, 12000, 14000, 16000, 18000, 22000, 30000
+        5000, 6000, 8000, 10000, 12000, 14000, 18000, 22000, 26000, 30000
     };
     static const int kTableRowCount = static_cast<int>(sizeof(kTableHeights)/sizeof(kTableHeights[0]));
 
@@ -1723,19 +1725,20 @@ void MeasurementResults::fillMeteo11TableView(const Meteo11Data &d)
         // Ищем строку таблицы для этой высоты
         for (int r = 0; r < kTableRowCount; ++r) {
             if (qAbs(kTableHeights[r] - heightM) < 1.f) {
-                // Столбец 0: код высоты (ПП)
-                QString ppStr = layer.isAbove10km
-                    ? QString("%1").arg(layer.heightCode, 2, 10, QChar('0'))
-                    : QString("%1").arg(layer.heightCode, 4, 10, QChar('0'));
-                auto *itemPP = new QTableWidgetItem(ppStr);
+                // Столбец 0: ПП — всегда // (не измеряется нормально)
+                auto *itemPP = new QTableWidgetItem("//");
                 itemPP->setTextAlignment(Qt::AlignCenter);
                 table->setItem(r, 0, itemPP);
 
-                // Столбец 1: ТТННСС
+                // Столбец 1: ТТНН (без СС — скорость отдельно)
+                // СС: если 99 (нет данных) — заменяем на //
+                QString ssStr = (layer.windSpeed >= 99)
+                    ? "//"
+                    : QString("%1").arg(layer.windSpeed, 2, 10, QChar('0'));
                 QString ttnnss = QString("%1%2%3")
                     .arg(0, 2, 10, QChar('0'))
                     .arg(layer.windDir,   2, 10, QChar('0'))
-                    .arg(layer.windSpeed, 2, 10, QChar('0'));
+                    .arg(ssStr);
                 auto *itemData = new QTableWidgetItem(ttnnss);
                 itemData->setTextAlignment(Qt::AlignCenter);
                 table->setItem(r, 1, itemData);
