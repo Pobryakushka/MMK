@@ -2,6 +2,16 @@
 #include "ui_MeasurementResults.h"
 #include "databasemanager.h"
 #include "amsprotocol.h"
+#include "MeasurementExporter.h"
+#include <QFileDialog>
+#include <QCheckBox>
+#include <QRadioButton>
+#include <QGroupBox>
+#include <QFile>
+#include <QTextStream>
+#include <QDesktopServices>
+#include <QDir>
+#include <QFileInfo>
 #include <QCalendarWidget>
 #include <QMessageBox>
 #include <QVBoxLayout>
@@ -45,6 +55,8 @@ MeasurementResults::MeasurementResults(QWidget *parent)
 
     connect(ui->pushButton_string, &QPushButton::clicked, this, &MeasurementResults::onStringFormatClicked);
     connect(ui->pushButton_table, &QPushButton::clicked, this, &MeasurementResults::onTableFormatClicked);
+
+    connect(ui->btnExport, &QPushButton::clicked, this, &MeasurementResults::onExportClicked);
 
     switchMeteo11Display();
 
@@ -2124,4 +2136,261 @@ void MeasurementResults::clearWindShearDisplay()
         ui->table_windShear->setRowCount(0);
 
     m_currentShearData.clear();
+}
+
+MeasurementSnapshot MeasurementResults::buildSnapshot() const
+{
+    MeasurementSnapshot snap;
+
+        // Ищем текущую запись точно так же, как в loadMeasurementData
+        MeasurementRecord record;
+    QDate date = currentDateTime.date();
+    if (availableMeasurements.contains(date)) {
+        for (const MeasurementRecord &r : availableMeasurements[date]) {
+            if (r.measurementTime == currentDateTime) { record = r; break; }
+        }
+    }
+    if (record.recordId <= 0)
+        record = const_cast<MeasurementResults*>(this)
+                     ->findClosestRecord(date, currentDateTime.time().hour());
+
+    snap.recordId       = record.recordId;
+    snap.measurementTime= record.recordId > 0 ? record.measurementTime : currentDateTime;
+    snap.stationNumber  = ui->lineEdit_numStation->text().trimmed();
+
+    if (snap.recordId <= 0) return snap; // Пустой снимок — нет загруженных данных
+
+    // ── Координаты ───────────────────────────────────────────────────────────
+    {
+        QString latStr = ui->editLatitude->text().trimmed();
+        QString lonStr = ui->editLongitude->text().trimmed();
+        QString altStr = ui->editAltitude->text().trimmed();
+        snap.coordinatesValid = !latStr.isEmpty() && !lonStr.isEmpty();
+        if (snap.coordinatesValid) {
+            // Координаты хранятся в виде DMS-строки; для экспорта сохраняем
+            // числовые значения из кеша m_currentStationAltitude и пересчитанных
+            // значений через CoordHelper (или берём из m_current* полей)
+            snap.altitude  = m_currentStationAltitude;
+            // Широта/долгота: восстанавливаем знак по combo
+            // double latDeg = CoordHelper::toDisplayDMS(latStr);
+            // double lonDeg = CoordHelper::toDisplayDMS(lonStr);
+            //snap.latitude  = (ui->cmbLatitudeType->currentIndex()  == 0) ?  latDeg : -latDeg;
+            //snap.longitude = (ui->cmbLongitudeType->currentIndex() == 0) ?  lonDeg : -lonDeg;
+        }
+    }
+
+    // ── Наземные метеоусловия ────────────────────────────────────────────────
+    {
+        QTableWidget *t = ui->tableWidget_parm1b65;
+        snap.surfaceMeteoValid = (t->item(0, 0) != nullptr &&
+                                  !t->item(0, 0)->text().isEmpty());
+        if (snap.surfaceMeteoValid) {
+            snap.pressureHpa      = t->item(0, 0) ? t->item(0, 0)->text().toDouble() : 0.0;
+            snap.temperatureC     = t->item(1, 0) ? t->item(1, 0)->text().toDouble() : 0.0;
+            snap.humidityPct      = t->item(2, 0) ? t->item(2, 0)->text().toDouble() : 0.0;
+            snap.surfaceWindDir   = t->item(3, 0) ? t->item(3, 0)->text().toDouble() : 0.0;
+            snap.surfaceWindSpeed = t->item(4, 0) ? t->item(4, 0)->text().toDouble() : 0.0;
+        }
+    }
+
+    // ── Профили ветра ────────────────────────────────────────────────────────
+    // Перезагружаем из БД (данные могли уже быть загружены, но у нас нет кеша)
+    // При этом флаг hasMeasuredWind / hasAvgWind / hasActualWind уже проверен.
+    snap.avgWind      = const_cast<MeasurementResults*>(this)->loadAvgWindProfile(snap.recordId);
+    snap.actualWind   = const_cast<MeasurementResults*>(this)->loadActualWindProfile(snap.recordId);
+    snap.measuredWind = const_cast<MeasurementResults*>(this)->loadMeasuredWindProfile(snap.recordId);
+
+    // ── Сдвиг ветра ──────────────────────────────────────────────────────────
+    snap.windShear = m_currentShearData;
+
+    // ── Метео-11 ─────────────────────────────────────────────────────────────
+    auto copyM11 = [](const MeasurementResults::Meteo11Data &src,
+                      MeasurementSnapshot::Meteo11Export   &dst) {
+        dst.valid            = src.isValid;
+        dst.bulletinString   = src.isValid ? MeasurementResults::buildMeteo11String(src) : QString();
+        dst.stationNumber    = src.stationNumber;
+        dst.day              = src.day;
+        dst.hour             = src.hour;
+        dst.tenMinutes       = src.tenMinutes;
+        dst.stationAltitude  = src.stationAltitude;
+        dst.pressureDev      = src.pressureDeviation;
+        dst.tempVirtDev      = src.tempVirtualDev;
+        dst.reachedTempKm    = src.reachedTempHeightKm;
+        dst.reachedWindKm    = src.reachedWindHeightKm;
+    };
+    copyM11(m_meteo11Updated,     snap.meteo11Updated);
+    copyM11(m_meteo11Approximate, snap.meteo11Approximate);
+    copyM11(m_meteo11FromStation, snap.meteo11FromStation);
+
+    return snap;
+
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Диалог экспорта
+// ─────────────────────────────────────────────────────────────────────────────
+void MeasurementResults::runExportDialog(const MeasurementSnapshot &snap)
+{
+    QDialog dlg(this);
+    dlg.setWindowTitle("Экспорт данных измерений");
+    dlg.setMinimumWidth(480);
+
+        QVBoxLayout *root = new QVBoxLayout(&dlg);
+
+    // ── Информация о записи ──────────────────────────────────────────────────
+    QLabel *lblInfo = new QLabel(
+        QString("<b>Запись ID %1</b> — %2")
+            .arg(snap.recordId)
+            .arg(snap.measurementTime.toString("dd.MM.yyyy hh:mm:ss")), &dlg);
+    lblInfo->setStyleSheet("background:#E3F2FD; padding:6px; border-radius:4px;");
+    root->addWidget(lblInfo);
+
+    // ── Формат файла ─────────────────────────────────────────────────────────
+    QGroupBox *fmtGroup = new QGroupBox("Формат файла", &dlg);
+    QHBoxLayout *fmtLay = new QHBoxLayout(fmtGroup);
+    QRadioButton *rbTxt  = new QRadioButton("TXT  (отчёт)",  fmtGroup);
+    QRadioButton *rbCsv  = new QRadioButton("CSV  (таблица)",fmtGroup);
+    QRadioButton *rbJson = new QRadioButton("JSON (данные)", fmtGroup);
+    rbTxt->setChecked(true);
+    fmtLay->addWidget(rbTxt);
+    fmtLay->addWidget(rbCsv);
+    fmtLay->addWidget(rbJson);
+    root->addWidget(fmtGroup);
+
+    // ── Разделы ──────────────────────────────────────────────────────────────
+    QGroupBox *secGroup = new QGroupBox("Включить разделы", &dlg);
+    QGridLayout *secLay = new QGridLayout(secGroup);
+
+    auto makeChk = [&](const QString &label, bool checked, int row, int col) {
+        QCheckBox *cb = new QCheckBox(label, secGroup);
+        cb->setChecked(checked);
+        secLay->addWidget(cb, row, col);
+        return cb;
+    };
+
+    QCheckBox *cbCoords   = makeChk("Координаты станции",        true,  0, 0);
+    QCheckBox *cbSurface  = makeChk("Наземные метеоусловия",      true,  0, 1);
+    QCheckBox *cbAvg      = makeChk("Средний ветер",              snap.avgWind.size()      > 0, 1, 0);
+    QCheckBox *cbActual   = makeChk("Действительный ветер",       snap.actualWind.size()   > 0, 1, 1);
+    QCheckBox *cbMeas     = makeChk("Измеренный ветер",           snap.measuredWind.size() > 0, 2, 0);
+    QCheckBox *cbShear    = makeChk("Сдвиг ветра",                snap.windShear.size()    > 0, 2, 1);
+    QCheckBox *cbM11Upd   = makeChk("Метео-11 (уточнённый)",      snap.meteo11Updated.valid,     3, 0);
+    QCheckBox *cbM11App   = makeChk("Метео-11 (приближённый)",    snap.meteo11Approximate.valid, 3, 1);
+    QCheckBox *cbM11Stat  = makeChk("Метео-11 (от метеостанции)", snap.meteo11FromStation.valid,  4, 0);
+
+    // Отключаем чекбоксы для пустых данных
+    if (snap.avgWind.isEmpty())            cbAvg->setEnabled(false);
+    if (snap.actualWind.isEmpty())         cbActual->setEnabled(false);
+    if (snap.measuredWind.isEmpty())       cbMeas->setEnabled(false);
+    if (snap.windShear.isEmpty())          cbShear->setEnabled(false);
+    if (!snap.meteo11Updated.valid)        cbM11Upd->setEnabled(false);
+    if (!snap.meteo11Approximate.valid)    cbM11App->setEnabled(false);
+    if (!snap.meteo11FromStation.valid)    cbM11Stat->setEnabled(false);
+
+    root->addWidget(secGroup);
+
+    // ── Кнопки ───────────────────────────────────────────────────────────────
+    QDialogButtonBox *bbox = new QDialogButtonBox(
+        QDialogButtonBox::Save | QDialogButtonBox::Cancel, &dlg);
+    bbox->button(QDialogButtonBox::Save)->setText("Сохранить...");
+    root->addWidget(bbox);
+
+    connect(bbox, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    connect(bbox, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+
+    if (dlg.exec() != QDialog::Accepted) return;
+
+    // ── Собираем опции ────────────────────────────────────────────────────────
+    ExportOptions opts;
+    if      (rbCsv->isChecked())  opts.format = ExportOptions::CSV;
+    else if (rbJson->isChecked()) opts.format = ExportOptions::JSON;
+    else                          opts.format = ExportOptions::TXT;
+
+    opts.includeCoordinates    = cbCoords->isChecked();
+    opts.includeSurfaceMeteo   = cbSurface->isChecked();
+    opts.includeAvgWind        = cbAvg->isChecked();
+    opts.includeActualWind     = cbActual->isChecked();
+    opts.includeMeasuredWind   = cbMeas->isChecked();
+    opts.includeWindShear      = cbShear->isChecked();
+    opts.includeMeteo11Updated = cbM11Upd->isChecked();
+    opts.includeMeteo11Approx  = cbM11App->isChecked();
+    opts.includeMeteo11Station = cbM11Stat->isChecked();
+
+    // ── Генерируем контент ────────────────────────────────────────────────────
+    QString errorMsg;
+    QString content = MeasurementExporter::generate(snap, opts, errorMsg);
+
+    if (!errorMsg.isEmpty()) {
+        QMessageBox::warning(this, "Экспорт невозможен", errorMsg);
+        return;
+    }
+
+    // ── Диалог выбора пути ────────────────────────────────────────────────────
+    QString defaultName = MeasurementExporter::suggestedFileName(snap, opts.format);
+
+    QString filter;
+    switch (opts.format) {
+    case ExportOptions::TXT:  filter = "Текстовый файл (*.txt);;Все файлы (*)"; break;
+    case ExportOptions::CSV:  filter = "CSV файл (*.csv);;Все файлы (*)";       break;
+    case ExportOptions::JSON: filter = "JSON файл (*.json);;Все файлы (*)";     break;
+    }
+
+    QString path = QFileDialog::getSaveFileName(
+        this,
+        "Сохранить результаты измерений",
+        QDir::homePath() + "/" + defaultName,
+        filter);
+
+    if (path.isEmpty()) return;
+
+    // ── Запись файла ──────────────────────────────────────────────────────────
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QMessageBox::critical(this, "Ошибка записи",
+                              QString("Не удалось открыть файл для записи:\n%1\n\nОшибка: %2")
+                                  .arg(path)
+                                  .arg(file.errorString()));
+        return;
+    }
+
+    QTextStream stream(&file);
+    //stream.setEncoding(QStringConverter::Utf8);
+    stream << content;
+    file.close();
+
+    // ── Подтверждение ─────────────────────────────────────────────────────────
+    QMessageBox msgBox(this);
+    msgBox.setWindowTitle("Экспорт выполнен");
+    msgBox.setText(QString("Данные успешно сохранены в файл:\n<b>%1</b>").arg(
+        QFileInfo(path).fileName()));
+    msgBox.setInformativeText(path);
+    msgBox.setIcon(QMessageBox::Information);
+    msgBox.setStandardButtons(QMessageBox::Ok);
+    QPushButton *openBtn = msgBox.addButton("Открыть папку", QMessageBox::ActionRole);
+    msgBox.exec();
+
+    if (msgBox.clickedButton() == openBtn) {
+        QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(path).absolutePath()));
+    }
+
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Слот кнопки «Экспорт»
+// ─────────────────────────────────────────────────────────────────────────────
+void MeasurementResults::onExportClicked()
+{
+    // Собираем снимок текущих данных
+    MeasurementSnapshot snap = buildSnapshot();
+
+        // Если вообще нет загруженной записи — сразу сообщаем
+        if (snap.recordId <= 0) {
+        QMessageBox::information(this, "Нет данных для экспорта",
+                                 "Выберите дату и время с доступными измерениями,\n"
+                                 "чтобы данные были загружены из архива.");
+        return;
+    }
+
+    runExportDialog(snap);
+
 }

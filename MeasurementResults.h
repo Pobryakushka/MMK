@@ -13,6 +13,7 @@
 #include "amsprotocol.h"
 #include "zoom/zoomscontainer.h"
 #include "CoordHelper.h"
+#include "MeasurementExporter.h"
 #include <qwt_plot.h>
 #include <qwt_plot_curve.h>
 #include <qwt_plot_grid.h>
@@ -67,6 +68,7 @@ public slots:
     void updateCoordinatesFromMainWindow(double latitude, double longitude);
     void setMapCoordinatesMode(bool enabled);
     void navigateToRecord(int recordId); // Перейти к записи по record_id
+    void onExportClicked();
 
 private:
     Ui::MeasurementResults *ui;
@@ -216,6 +218,9 @@ private:
     void fillMeteo11TableView(const Meteo11Data &d);    // Заполнить tableWidget_meteo11Formalize
     void fillMeteo11InfoFields(const Meteo11Data &d);   // Заполнить lineEdit_dt, _h, _p, _t, _ht, _hw
     void clearMeteo11Display();
+
+    MeasurementSnapshot buildSnapshot() const;
+    void runExportDialog(const MeasurementSnapshot &snap);
 
     // Кодирование по протоколу
     static int  encodeWindDir(int degrees);             // градусы → делители угломера (0-60)

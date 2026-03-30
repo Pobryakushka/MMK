@@ -14,6 +14,7 @@ SOURCES += \
     GroundMeteoParams.cpp \
     LandingCalculation.cpp \
     Map/FormMapView.cpp \
+    MeasurementExporter.cpp \
     MeasurementResults.cpp \
     Meteo11.cpp \
     SourceData.cpp \
@@ -45,6 +46,7 @@ HEADERS += \
     LandingCalculationState.h \
     Map/FormMapView.h \
     Map/InitialParameters.h \
+    MeasurementExporter.h \
     MeasurementResults.h \
     Meteo11.h \
     SourceData.h \
