@@ -144,6 +144,10 @@ MainWindow::MainWindow(QWidget *parent)
 
     // Создаём окно настроек датчиков
     sensorSettingsDialog = new SensorSettings(this);
+    // Подгоняем размер под содержимое и фиксируем минимум
+    sensorSettingsDialog->adjustSize();
+    sensorSettingsDialog->setMinimumSize(sensorSettingsDialog->sizeHint());
+    sensorSettingsDialog->setSizeGripEnabled(true);
     connect(sensorSettingsDialog, &SensorSettings::connectRequested, this, &MainWindow::onConnectRequested);
     connect(sensorSettingsDialog, &SensorSettings::disconnectRequested, this, &MainWindow::onDisconnectRequested);
 
@@ -158,6 +162,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     m_functionalControlDialog = new FunctionalControlDialog(this);
     m_functionalControlDialog->setSensorType(FunctionalControlDialog::AMS);
+    m_functionalControlDialog->adjustSize();
+    m_functionalControlDialog->setMinimumSize(m_functionalControlDialog->sizeHint());
+    m_functionalControlDialog->setSizeGripEnabled(true);
 
     connect(m_functionalControlDialog, &FunctionalControlDialog::refreshRequested,
             this, &MainWindow::onFunctionalControlClicked);
@@ -179,10 +186,10 @@ MainWindow::MainWindow(QWidget *parent)
     m_iwsWarmupTimer->setSingleShot(true);
     connect(m_iwsWarmupTimer, &QTimer::timeout, this, &MainWindow::onIwsWarmupFinished);
 
-    // rbAvg3 доступен по умолчанию; блокируется только после подключения ИВС
+    // 3 мин доступны по умолчанию; блокируется только после подключения ИВС
     // на 3 минуты прогрева (см. onConnectRequested / onDisconnectRequested)
-    ui->rbAvg3->setEnabled(true);
-    ui->rbAvg3->setToolTip("");
+    ui->comboAvgTime->setEnabled(true);
+    ui->comboAvgTime->setToolTip("");
 
     // Инициализация панели статуса датчиков
     updateSensorStatusPanel();
@@ -1331,11 +1338,13 @@ void MainWindow::onConnectRequested()
 
         // Запускаем таймер прогрева ИВС (3 минуты)
         m_iwsWarmupDone = false;
-        ui->rbAvg3->setEnabled(false);
-        ui->rbAvg3->setToolTip("Режим 3 мин. станет доступен через 3 минуты после подключения ИВС");
-        if (ui->rbAvg3->isChecked()) {
-            ui->rbAvg6->setChecked(true);
-        }
+        // Блокируем выбор 3 мин. в combobox до окончания прогрева
+        // Переключаемся на 6 мин., если сейчас выбрано 3 мин.
+        if (ui->comboAvgTime->currentIndex() == 0)
+            ui->comboAvgTime->setCurrentIndex(1);
+        // Удаляем пункт "3 мин" из combobox на время прогрева
+        ui->comboAvgTime->removeItem(0);
+        ui->comboAvgTime->setToolTip("Режим 3 мин. станет доступен через 3 минуты после подключения ИВС");
         m_iwsWarmupTimer->start(3 * 60 * 1000);
         statusBar()->showMessage("ИВС подключён. Режим усреднения 3 мин. станет доступен через 3 минуты.", 8000);
 
@@ -1385,21 +1394,24 @@ void MainWindow::onConnectRequested()
 void MainWindow::onIwsWarmupFinished()
 {
     m_iwsWarmupDone = true;
-    ui->rbAvg3->setEnabled(true);
-    ui->rbAvg3->setToolTip("");
+    // Возвращаем пункт "3 мин" в combobox (если его ещё нет)
+    if (ui->comboAvgTime->itemText(0) != "3 мин")
+        ui->comboAvgTime->insertItem(0, "3 мин");
+    ui->comboAvgTime->setToolTip("");
     statusBar()->showMessage("ИВС: режим усреднения 3 минуты теперь доступен", 5000);
-    qDebug() << "MainWindow: ИВС прогрев завершён, rbAvg3 разблокирован";
+    qDebug() << "MainWindow: ИВС прогрев завершён, пункт '3 мин' разблокирован";
 }
 
 void MainWindow::onDisconnectRequested()
 {
-    // Сбрасываем прогрев ИВС; ИВС отключён — разблокируем rbAvg3
+    // Сбрасываем прогрев ИВС; ИВС отключён — восстанавливаем comboAvgTime
     if (m_iwsWarmupTimer) {
         m_iwsWarmupTimer->stop();
     }
     m_iwsWarmupDone = false;
-    ui->rbAvg3->setEnabled(true);
-    ui->rbAvg3->setToolTip("");
+    if (ui->comboAvgTime->itemText(0) != "3 мин")
+        ui->comboAvgTime->insertItem(0, "3 мин");
+    ui->comboAvgTime->setToolTip("");
 
     if (pollTimer) {
         pollTimer->stop();
@@ -1661,6 +1673,9 @@ void MainWindow::onDateTimeEditingStarted()
 void MainWindow::onWorkRegulationClicked()
 {
     WorkRegulationDialog dlg(m_amsHandler, this);
+    dlg.adjustSize();
+    dlg.setMinimumSize(dlg.sizeHint());
+    dlg.setSizeGripEnabled(true);
     dlg.exec();
 }
 
@@ -1719,6 +1734,9 @@ void MainWindow::onManualInputClicked()
 void MainWindow::onInitialDataClicked()
 {
 //    SourceData dialog(this);
+    sourceDataInstance->adjustSize();
+    sourceDataInstance->setMinimumSize(sourceDataInstance->sizeHint());
+    sourceDataInstance->setSizeGripEnabled(true);
     sourceDataInstance->show();
 //    dialog.exec();
 }
@@ -1726,6 +1744,9 @@ void MainWindow::onInitialDataClicked()
 void MainWindow::onCalculationsClicked()
 {
     AlgorithmsCalculation dialog(this);
+    dialog.adjustSize();
+    dialog.setMinimumSize(dialog.sizeHint());
+    dialog.setSizeGripEnabled(true);
     dialog.exec();
 }
 
@@ -1756,7 +1777,9 @@ void MainWindow::onMeasurementResultsClicked()
         }
     }
 
-    dialog->show();
+    dialog->adjustSize();
+    dialog->setMinimumSize(800, 600);
+    dialog->showMaximized();
 }
 
 void MainWindow::onStartClicked()
@@ -1782,14 +1805,16 @@ void MainWindow::onStartClicked()
 
     // Получаем параметры для запуска измерения
     WorkMode mode = ui->cbWorkMode->isChecked() ? MODE_WORKING : MODE_STANDBY;
-    Litera litera = LITERA_1; // Можно добавить выбор в UI
+    // Литера из combobox (индекс 0→LITERA_1, 1→LITERA_2, 2→LITERA_3)
+    Litera litera = static_cast<Litera>(ui->comboLitera->currentIndex());
 
-    // Определяем время усреднения из радиокнопок
+    // Время усреднения из combobox (индекс 0→3 мин, 1→6 мин, 2→9 мин)
     AveragingTime avgTime = AVERAGING_3_MIN;
-    if (ui->rbAvg6->isChecked())
-        avgTime = AVERAGING_6_MIN;
-    else if (ui->rbAvg9->isChecked())
-        avgTime = AVERAGING_9_MIN;
+    switch (ui->comboAvgTime->currentIndex()) {
+        case 1: avgTime = AVERAGING_6_MIN; break;
+        case 2: avgTime = AVERAGING_9_MIN; break;
+        default: avgTime = AVERAGING_3_MIN; break;
+    }
 
     // Собираем координаты станции
     StationCoordinates coords;
