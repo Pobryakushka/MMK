@@ -1873,7 +1873,16 @@ p, li { white-space: pre-wrap; }
               <property name="editTriggers">
                <set>QAbstractItemView::NoEditTriggers</set>
               </property>
-
+              <column>
+               <property name="text">
+                <string>Скорость</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Направление</string>
+               </property>
+              </column>
             </widget>
            </item>
           </layout>
@@ -1948,7 +1957,16 @@ p, li { white-space: pre-wrap; }
               <property name="editTriggers">
                <set>QAbstractItemView::NoEditTriggers</set>
               </property>
-
+              <column>
+               <property name="text">
+                <string>Скорость</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Направление</string>
+               </property>
+              </column>
             </widget>
            </item>
           </layout>
