@@ -1,6 +1,6 @@
 PATH_TO_REFERENCES = ../../references
 
-QT       += core gui quick quickwidgets qml positioning serialport sql printsupport
+QT       += core gui quick quickwidgets qml positioning serialport sql printsupport core-private
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 CONFIG += c++17
@@ -11,6 +11,7 @@ CONFIG += c++17
 
 SOURCES += \
     AlgorithmsCalc.cpp \
+    ExportDialog.cpp \
     GroundMeteoParams.cpp \
     LandingCalculation.cpp \
     Map/FormMapView.cpp \
@@ -41,6 +42,7 @@ SOURCES += \
 HEADERS += \
     AlgorithmsCalc.h \
     CoordHelper.h \
+    ExportDialog.h \
     GroundMeteoParams.h \
     LandingCalculation.h \
     LandingCalculationState.h \
@@ -86,12 +88,14 @@ FORMS += \
     SourceData.ui \
     functionalcontroldialog.ui \
     mainwindow.ui \
-    sensorsettings.ui
+    sensorsettings.ui \
+    ExportDialog.ui
 
 RESOURCES += \
     Resources.qrc
 
 include(qwt.pri)
+include(QXlsx/QXlsx.pri)
 
 
 DISTFILES +=

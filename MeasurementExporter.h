@@ -4,6 +4,9 @@
 #include <QString>
 #include <QVector>
 #include <QDateTime>
+#include <QImage>
+#include <QMap>
+#include <QPageSize>
 
 struct WindProfileData;
 struct MeasuredWindData;
@@ -32,8 +35,9 @@ struct MeasurementSnapshot
     QVector<WindProfileData> avgWind;
     QVector<WindProfileData> actualWind;
     QVector<MeasuredWindData> measuredWind;
-
     QVector<WindShearData> windShear;
+
+    QMap<QString, QImage> charts;
 
     struct Meteo11Export {
         bool valid = false;
@@ -56,7 +60,7 @@ struct MeasurementSnapshot
 
 struct ExportOptions
 {
-    enum Format { TXT, CSV, JSON };
+    enum Format { TXT, CSV, JSON, PDF, XLSX };
 
     Format format = TXT;
 
@@ -71,21 +75,33 @@ struct ExportOptions
     bool includeMeteo11Station = false;
 
     QChar csvSeparator = ';';
+
+    QPageSize::PageSizeId pdfPageSize = QPageSize::A4;
+    bool pdfLandscape = false;
+    bool pdfCharts = true;
 };
 
 class MeasurementExporter
 {
 public:
     static QString generate(const MeasurementSnapshot &snap, const ExportOptions &opts, QString &errorMsg);
+    static bool generatePdf(const MeasurementSnapshot &snap, const ExportOptions &opts, const QString &filePath, QString &errorMsg);
+    static bool generateXlsx(const MeasurementSnapshot &snap, const ExportOptions &opts, const QString &filePath, QString &errorMsg);
     static QString suggestedFileName(const MeasurementSnapshot &snap, ExportOptions::Format format);
 
 private:
-    static QString generateTxt(const MeasurementSnapshot &snap, const ExportOptions &opts);
-    static QString generateCsv(const MeasurementSnapshot &snap, const ExportOptions &opts);
-    static QString generateJson(const MeasurementSnapshot &snap, const ExportOptions &opts);
+    static QString generateTxt(const MeasurementSnapshot &s, const ExportOptions &o);
+    static QString generateCsv(const MeasurementSnapshot &s, const ExportOptions &o);
+    static QString generateJson(const MeasurementSnapshot &s, const ExportOptions &o);
 
-    static QString latToString(double lat);
-    static QString lonToString(double lon);
+    static QString buildHtmlReport(const MeasurementSnapshot &s, const ExportOptions &o);
+    static QString htmlWindTable(const QVector<WindProfileData> &data);
+    static QString htmlMeasTable(const QVector<MeasuredWindData> &data);
+    static QString htmlShearTable(const QVector<WindShearData> &data);
+    static QString htmlMeteo11Block(const MeasurementSnapshot::Meteo11Export &m, const QString &title);
+
+    static QString latToStr(double lat);
+    static QString lonToStr(double lon);
     static QString formatExt(ExportOptions::Format fmt);
 };
 

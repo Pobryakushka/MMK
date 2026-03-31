@@ -12,8 +12,8 @@
 #include <QSqlError>
 #include "amsprotocol.h"
 #include "zoom/zoomscontainer.h"
-#include "CoordHelper.h"
 #include "MeasurementExporter.h"
+#include "ExportDialog.h"
 #include <qwt_plot.h>
 #include <qwt_plot_curve.h>
 #include <qwt_plot_grid.h>
@@ -220,7 +220,6 @@ private:
     void clearMeteo11Display();
 
     MeasurementSnapshot buildSnapshot() const;
-    void runExportDialog(const MeasurementSnapshot &snap);
 
     // Кодирование по протоколу
     static int  encodeWindDir(int degrees);             // градусы → делители угломера (0-60)
@@ -239,6 +238,8 @@ private:
     double m_currentTempC;
     double m_currentWindDirSurface;
     double m_currentWindSpeedSurface;
+    double m_currentLatitude;
+    double m_currentLongitude;
     QDateTime m_currentSondingTime;
 };
 
