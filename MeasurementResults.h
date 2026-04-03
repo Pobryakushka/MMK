@@ -147,6 +147,11 @@ private:
     // Данные сдвига ветра
     QVector<WindShearData> m_currentShearData;
 
+    // Кеш профилей ветра текущей записи
+    QVector<WindProfileData> m_currentAvgWind;
+    QVector<WindProfileData> m_currentActualWind;
+    QVector<MeasuredWindData> m_currentMeasuredWind;
+
     // Методы для работы со сдвигом ветра
     void setupWindShearTab();           // Настройка вкладки сдвига
     void updateWindShearDisplay();      // Обновление отображения сдвига
