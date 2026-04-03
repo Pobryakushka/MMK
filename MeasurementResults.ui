@@ -2,6 +2,14 @@
 <ui version="4.0">
  <class>MeasurementResults</class>
  <widget class="QDialog" name="MeasurementResults">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1757</width>
+    <height>1345</height>
+   </rect>
+  </property>
   <property name="minimumSize">
    <size>
     <width>1024</width>
@@ -50,75 +58,129 @@
         <string>Параметры</string>
        </property>
        <layout class="QFormLayout" name="formLayout_params">
-        <property name="leftMargin"><number>10</number></property>
-        <property name="topMargin"><number>10</number></property>
-        <property name="rightMargin"><number>10</number></property>
-        <property name="bottomMargin"><number>10</number></property>
-        <property name="verticalSpacing"><number>8</number></property>
+        <property name="verticalSpacing">
+         <number>8</number>
+        </property>
+        <property name="leftMargin">
+         <number>10</number>
+        </property>
+        <property name="topMargin">
+         <number>10</number>
+        </property>
+        <property name="rightMargin">
+         <number>10</number>
+        </property>
+        <property name="bottomMargin">
+         <number>10</number>
+        </property>
         <item row="0" column="0">
          <widget class="QLabel" name="lblLatitude">
-          <property name="text"><string>Широта:</string></property>
+          <property name="text">
+           <string>Широта:</string>
+          </property>
          </widget>
         </item>
         <item row="0" column="1">
          <layout class="QHBoxLayout" name="latLayout">
-          <property name="spacing"><number>4</number></property>
+          <property name="spacing">
+           <number>4</number>
+          </property>
           <item>
            <widget class="QLineEdit" name="editLatitude">
-            <property name="readOnly"><bool>true</bool></property>
-            <property name="placeholderText"><string>55°45'21&quot;</string></property>
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+            <property name="placeholderText">
+             <string>55°45'21&quot;</string>
+            </property>
            </widget>
           </item>
           <item>
            <widget class="QComboBox" name="cmbLatitudeType">
-            <item><property name="text"><string>Северная</string></property></item>
-            <item><property name="text"><string>Южная</string></property></item>
+            <item>
+             <property name="text">
+              <string>Северная</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Южная</string>
+             </property>
+            </item>
            </widget>
           </item>
          </layout>
         </item>
         <item row="1" column="0">
          <widget class="QLabel" name="lblLongitude">
-          <property name="text"><string>Долгота:</string></property>
+          <property name="text">
+           <string>Долгота:</string>
+          </property>
          </widget>
         </item>
         <item row="1" column="1">
          <layout class="QHBoxLayout" name="lonLayout">
-          <property name="spacing"><number>4</number></property>
+          <property name="spacing">
+           <number>4</number>
+          </property>
           <item>
            <widget class="QLineEdit" name="editLongitude">
-            <property name="readOnly"><bool>true</bool></property>
-            <property name="placeholderText"><string>37°37'02&quot;</string></property>
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+            <property name="placeholderText">
+             <string>37°37'02&quot;</string>
+            </property>
            </widget>
           </item>
           <item>
            <widget class="QComboBox" name="cmbLongitudeType">
-            <item><property name="text"><string>Восточная</string></property></item>
-            <item><property name="text"><string>Западная</string></property></item>
+            <item>
+             <property name="text">
+              <string>Восточная</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Западная</string>
+             </property>
+            </item>
            </widget>
           </item>
          </layout>
         </item>
         <item row="2" column="0">
          <widget class="QLabel" name="lblAltitude">
-          <property name="text"><string>Высота над УМ:</string></property>
+          <property name="text">
+           <string>Высота над УМ:</string>
+          </property>
          </widget>
         </item>
         <item row="2" column="1">
          <widget class="QLineEdit" name="editAltitude">
-          <property name="readOnly"><bool>true</bool></property>
-          <property name="placeholderText"><string>156 м</string></property>
+          <property name="readOnly">
+           <bool>true</bool>
+          </property>
+          <property name="placeholderText">
+           <string>156 м</string>
+          </property>
          </widget>
         </item>
         <item row="3" column="0">
          <widget class="QLabel" name="lblDirectionAngle">
-          <property name="text"><string>Дирекц. угол:</string></property>
+          <property name="text">
+           <string>Дирекц. угол:</string>
+          </property>
          </widget>
         </item>
         <item row="3" column="1">
          <widget class="QLineEdit" name="editDirectionAngle">
-          <property name="readOnly"><bool>true</bool></property>
-          <property name="placeholderText"><string>0.0 град.</string></property>
+          <property name="readOnly">
+           <bool>true</bool>
+          </property>
+          <property name="placeholderText">
+           <string>0.0 град.</string>
+          </property>
          </widget>
         </item>
        </layout>
@@ -186,7 +248,6 @@
                <property name="font">
                 <font>
                  <pointsize>12</pointsize>
-                 <weight>75</weight>
                  <bold>true</bold>
                 </font>
                </property>
@@ -228,7 +289,6 @@
                <property name="font">
                 <font>
                  <pointsize>12</pointsize>
-                 <weight>75</weight>
                  <bold>true</bold>
                 </font>
                </property>
@@ -502,7 +562,7 @@
                <item>
                 <widget class="QPushButton" name="pushButton_fromMeteoStat">
                  <property name="text">
-                  <string>От метеостанции</string>
+                  <string>Исходный (принятый)</string>
                  </property>
                 </widget>
                </item>
@@ -609,15 +669,18 @@
                 </property>
                 <property name="html">
                  <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
-&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Ubuntu'; font-size:11pt; font-weight:600; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Segoe UI','Tahoma'; font-size:9pt; font-weight:400;&quot;&gt;        &lt;/span&gt;&lt;/p&gt;
-&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Tahoma'; font-size:14pt; font-weight:400;&quot;&gt;Метео 11000000-00000-0000-00000-0200-000000-0400-000000-&lt;/span&gt;&lt;span style=&quot; font-family:'Segoe UI','Tahoma'; font-size:9pt; font-weight:400;&quot;&gt;        &lt;/span&gt;&lt;/p&gt;
-&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Tahoma'; font-size:14pt; font-weight:400;&quot;&gt;0800-000000-1200-000000-1600-000000-2000-000000-2400-000000-&lt;/span&gt;&lt;span style=&quot; font-family:'Segoe UI','Tahoma'; font-size:9pt; font-weight:400;&quot;&gt;        &lt;/span&gt;&lt;/p&gt;
-&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Tahoma'; font-size:14pt; font-weight:400;&quot;&gt;3000-000000-4000-000000-5000-000000-6000-000000-8000-000000-&lt;/span&gt;&lt;span style=&quot; font-family:'Segoe UI','Tahoma'; font-size:9pt; font-weight:400;&quot;&gt;        &lt;/span&gt;&lt;/p&gt;
-&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Tahoma'; font-size:14pt; font-weight:400;&quot;&gt;1000-000000-12-000000-14-000000-18-000000-22-000000-26-000000-&lt;/span&gt;&lt;span style=&quot; font-family:'Segoe UI','Tahoma'; font-size:9pt; font-weight:400;&quot;&gt;        &lt;/span&gt;&lt;/p&gt;
-&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Tahoma'; font-size:14pt; font-weight:400;&quot;&gt;30-000000-0000&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+hr { height: 1px; border-width: 0; }
+li.unchecked::marker { content: &quot;\2610&quot;; }
+li.checked::marker { content: &quot;\2612&quot;; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans Serif'; font-size:9pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Segoe UI','Tahoma';&quot;&gt;        &lt;/span&gt;&lt;/p&gt;
+&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Tahoma'; font-size:14pt;&quot;&gt;Метео 11000000-00000-0000-00000-0200-000000-0400-000000-&lt;/span&gt;&lt;span style=&quot; font-family:'Segoe UI','Tahoma';&quot;&gt;        &lt;/span&gt;&lt;/p&gt;
+&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Tahoma'; font-size:14pt;&quot;&gt;0800-000000-1200-000000-1600-000000-2000-000000-2400-000000-&lt;/span&gt;&lt;span style=&quot; font-family:'Segoe UI','Tahoma';&quot;&gt;        &lt;/span&gt;&lt;/p&gt;
+&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Tahoma'; font-size:14pt;&quot;&gt;3000-000000-4000-000000-5000-000000-6000-000000-8000-000000-&lt;/span&gt;&lt;span style=&quot; font-family:'Segoe UI','Tahoma';&quot;&gt;        &lt;/span&gt;&lt;/p&gt;
+&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Tahoma'; font-size:14pt;&quot;&gt;1000-000000-12-000000-14-000000-18-000000-22-000000-26-000000-&lt;/span&gt;&lt;span style=&quot; font-family:'Segoe UI','Tahoma';&quot;&gt;        &lt;/span&gt;&lt;/p&gt;
+&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Tahoma'; font-size:14pt;&quot;&gt;30-000000-0000&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </widget>
               </item>
@@ -900,15 +963,18 @@ p, li { white-space: pre-wrap; }
                 </property>
                 <property name="html">
                  <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
-&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Ubuntu'; font-size:11pt; font-weight:600; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Segoe UI','Tahoma'; font-size:9pt; font-weight:400;&quot;&gt;         &lt;/span&gt;&lt;/p&gt;
-&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Tahoma'; font-size:10pt; font-weight:400;&quot;&gt;Метео 11000000-00000-0000-00000-0200-000000-0400-000000-&lt;/span&gt;&lt;span style=&quot; font-family:'Segoe UI','Tahoma'; font-size:9pt; font-weight:400;&quot;&gt;         &lt;/span&gt;&lt;/p&gt;
-&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Tahoma'; font-size:10pt; font-weight:400;&quot;&gt;0800-000000-1200-000000-1600-000000-2000-000000-2400-000000-&lt;/span&gt;&lt;span style=&quot; font-family:'Segoe UI','Tahoma'; font-size:9pt; font-weight:400;&quot;&gt;         &lt;/span&gt;&lt;/p&gt;
-&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Tahoma'; font-size:10pt; font-weight:400;&quot;&gt;3000-000000-4000-000000-5000-000000-6000-000000-8000-000000-&lt;/span&gt;&lt;span style=&quot; font-family:'Segoe UI','Tahoma'; font-size:9pt; font-weight:400;&quot;&gt;         &lt;/span&gt;&lt;/p&gt;
-&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Tahoma'; font-size:10pt; font-weight:400;&quot;&gt;1000-000000-12-000000-14-000000-18-000000-22-000000-26-000000-&lt;/span&gt;&lt;span style=&quot; font-family:'Segoe UI','Tahoma'; font-size:9pt; font-weight:400;&quot;&gt;         &lt;/span&gt;&lt;/p&gt;
-&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Tahoma'; font-size:10pt; font-weight:400;&quot;&gt;30-000000-0000&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+hr { height: 1px; border-width: 0; }
+li.unchecked::marker { content: &quot;\2610&quot;; }
+li.checked::marker { content: &quot;\2612&quot;; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans Serif'; font-size:9pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Segoe UI','Tahoma';&quot;&gt;         &lt;/span&gt;&lt;/p&gt;
+&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Tahoma'; font-size:10pt;&quot;&gt;Метео 11000000-00000-0000-00000-0200-000000-0400-000000-&lt;/span&gt;&lt;span style=&quot; font-family:'Segoe UI','Tahoma';&quot;&gt;         &lt;/span&gt;&lt;/p&gt;
+&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Tahoma'; font-size:10pt;&quot;&gt;0800-000000-1200-000000-1600-000000-2000-000000-2400-000000-&lt;/span&gt;&lt;span style=&quot; font-family:'Segoe UI','Tahoma';&quot;&gt;         &lt;/span&gt;&lt;/p&gt;
+&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Tahoma'; font-size:10pt;&quot;&gt;3000-000000-4000-000000-5000-000000-6000-000000-8000-000000-&lt;/span&gt;&lt;span style=&quot; font-family:'Segoe UI','Tahoma';&quot;&gt;         &lt;/span&gt;&lt;/p&gt;
+&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Tahoma'; font-size:10pt;&quot;&gt;1000-000000-12-000000-14-000000-18-000000-22-000000-26-000000-&lt;/span&gt;&lt;span style=&quot; font-family:'Segoe UI','Tahoma';&quot;&gt;         &lt;/span&gt;&lt;/p&gt;
+&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Tahoma'; font-size:10pt;&quot;&gt;30-000000-0000&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                </widget>
               </item>
@@ -1118,7 +1184,6 @@ p, li { white-space: pre-wrap; }
                 <property name="font">
                  <font>
                   <pointsize>10</pointsize>
-                  <weight>75</weight>
                   <bold>true</bold>
                  </font>
                 </property>
@@ -1556,7 +1621,6 @@ p, li { white-space: pre-wrap; }
                 <property name="font">
                  <font>
                   <pointsize>10</pointsize>
-                  <weight>75</weight>
                   <bold>true</bold>
                  </font>
                 </property>
@@ -1576,300 +1640,386 @@ p, li { white-space: pre-wrap; }
           <string>Средн. ветер</string>
          </attribute>
          <layout class="QVBoxLayout" name="vLayout_avgWind">
-          <property name="spacing"><number>4</number></property>
-          <property name="leftMargin"><number>4</number></property>
-          <property name="topMargin"><number>4</number></property>
-          <property name="rightMargin"><number>4</number></property>
-          <property name="bottomMargin"><number>4</number></property>
+          <property name="spacing">
+           <number>4</number>
+          </property>
+          <property name="leftMargin">
+           <number>4</number>
+          </property>
+          <property name="topMargin">
+           <number>4</number>
+          </property>
+          <property name="rightMargin">
+           <number>4</number>
+          </property>
+          <property name="bottomMargin">
+           <number>4</number>
+          </property>
           <item>
            <layout class="QHBoxLayout" name="hLayout_avgWind_labels">
             <item>
              <widget class="QLabel" name="label_avgWindSpeed">
-              <property name="text"><string>Скорость ветра</string></property>
-              <property name="alignment"><set>Qt::AlignCenter</set></property>
+              <property name="text">
+               <string>Скорость ветра</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
              </widget>
             </item>
             <item>
              <widget class="QLabel" name="label_avgWindDirection">
-              <property name="text"><string>Направление ветра</string></property>
-              <property name="alignment"><set>Qt::AlignCenter</set></property>
+              <property name="text">
+               <string>Направление ветра</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
              </widget>
             </item>
             <item>
              <spacer name="spacer_avgWind_label">
-              <property name="orientation"><enum>Qt::Horizontal</enum></property>
-              <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
              </spacer>
             </item>
            </layout>
           </item>
           <item>
            <layout class="QHBoxLayout" name="hLayout_avgWind_content">
-            <property name="spacing"><number>6</number></property>
+            <property name="spacing">
+             <number>6</number>
+            </property>
             <item>
              <widget class="QwtPlot" name="plot_midWindSpeed">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                <horstretch>2</horstretch><verstretch>0</verstretch>
+                <horstretch>2</horstretch>
+                <verstretch>0</verstretch>
                </sizepolicy>
               </property>
-              <property name="frameShape"><enum>QFrame::StyledPanel</enum></property>
-              <property name="frameShadow"><enum>QFrame::Raised</enum></property>
+              <property name="frameShape">
+               <enum>QFrame::StyledPanel</enum>
+              </property>
+              <property name="frameShadow">
+               <enum>QFrame::Raised</enum>
+              </property>
              </widget>
             </item>
             <item>
              <widget class="QwtPlot" name="plot_midWindAzimut">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                <horstretch>2</horstretch><verstretch>0</verstretch>
+                <horstretch>2</horstretch>
+                <verstretch>0</verstretch>
                </sizepolicy>
               </property>
-              <property name="frameShape"><enum>QFrame::StyledPanel</enum></property>
-              <property name="frameShadow"><enum>QFrame::Raised</enum></property>
+              <property name="frameShape">
+               <enum>QFrame::StyledPanel</enum>
+              </property>
+              <property name="frameShadow">
+               <enum>QFrame::Raised</enum>
+              </property>
              </widget>
             </item>
             <item>
              <widget class="QTableWidget" name="tableWidget_AverageWind">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                <horstretch>1</horstretch><verstretch>0</verstretch>
+                <horstretch>1</horstretch>
+                <verstretch>0</verstretch>
                </sizepolicy>
               </property>
-              <property name="minimumSize"><size><width>200</width><height>0</height></size></property>
+              <property name="minimumSize">
+               <size>
+                <width>200</width>
+                <height>0</height>
+               </size>
+              </property>
               <property name="editTriggers">
                <set>QAbstractItemView::NoEditTriggers</set>
               </property>
-          <row>
-           <property name="text">
-            <string>0-50</string>
-           </property>
-          </row>
-          <row>
-           <property name="text">
-            <string>0-100</string>
-           </property>
-          </row>
-          <row>
-           <property name="text">
-            <string>0-200</string>
-           </property>
-          </row>
-          <row>
-           <property name="text">
-            <string>0-400</string>
-           </property>
-          </row>
-          <row>
-           <property name="text">
-            <string>0-600</string>
-           </property>
-          </row>
-          <row>
-           <property name="text">
-            <string>0-800</string>
-           </property>
-          </row>
-          <row>
-           <property name="text">
-            <string>0-1200</string>
-           </property>
-          </row>
-          <row>
-           <property name="text">
-            <string>0-1600</string>
-           </property>
-          </row>
-          <row>
-           <property name="text">
-            <string>0-2000</string>
-           </property>
-          </row>
-          <row>
-           <property name="text">
-            <string>0-2400</string>
-           </property>
-          </row>
-          <row>
-           <property name="text">
-            <string>0-2600</string>
-           </property>
-          </row>
-          <row>
-           <property name="text">
-            <string>0-3000</string>
-           </property>
-          </row>
-          <row>
-           <property name="text">
-            <string>0-4000</string>
-           </property>
-          </row>
-          <row>
-           <property name="text">
-            <string>0-5000</string>
-           </property>
-          </row>
-          <row>
-           <property name="text">
-            <string>0-6000</string>
-           </property>
-          </row>
-          <row>
-           <property name="text">
-            <string>0-8000</string>
-           </property>
-          </row>
-          <column>
-           <property name="text">
-            <string>Скорость</string>
-           </property>
-          </column>
-          <column>
-           <property name="text">
-            <string>Направление</string>
-           </property>
-          </column>
-          <item row="3" column="0">
-           <property name="text">
-            <string/>
-           </property>
+              <row>
+               <property name="text">
+                <string>0-50</string>
+               </property>
+              </row>
+              <row>
+               <property name="text">
+                <string>0-100</string>
+               </property>
+              </row>
+              <row>
+               <property name="text">
+                <string>0-200</string>
+               </property>
+              </row>
+              <row>
+               <property name="text">
+                <string>0-400</string>
+               </property>
+              </row>
+              <row>
+               <property name="text">
+                <string>0-600</string>
+               </property>
+              </row>
+              <row>
+               <property name="text">
+                <string>0-800</string>
+               </property>
+              </row>
+              <row>
+               <property name="text">
+                <string>0-1200</string>
+               </property>
+              </row>
+              <row>
+               <property name="text">
+                <string>0-1600</string>
+               </property>
+              </row>
+              <row>
+               <property name="text">
+                <string>0-2000</string>
+               </property>
+              </row>
+              <row>
+               <property name="text">
+                <string>0-2400</string>
+               </property>
+              </row>
+              <row>
+               <property name="text">
+                <string>0-2600</string>
+               </property>
+              </row>
+              <row>
+               <property name="text">
+                <string>0-3000</string>
+               </property>
+              </row>
+              <row>
+               <property name="text">
+                <string>0-4000</string>
+               </property>
+              </row>
+              <row>
+               <property name="text">
+                <string>0-5000</string>
+               </property>
+              </row>
+              <row>
+               <property name="text">
+                <string>0-6000</string>
+               </property>
+              </row>
+              <row>
+               <property name="text">
+                <string>0-8000</string>
+               </property>
+              </row>
+              <column>
+               <property name="text">
+                <string>Скорость</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Направление</string>
+               </property>
+              </column>
+              <item row="3" column="0">
+               <property name="text">
+                <string/>
+               </property>
+              </item>
+              <item row="3" column="1">
+               <property name="text">
+                <string/>
+               </property>
+              </item>
+              <item row="5" column="0">
+               <property name="text">
+                <string/>
+               </property>
+              </item>
+              <item row="5" column="1">
+               <property name="text">
+                <string/>
+               </property>
+              </item>
+              <item row="6" column="0">
+               <property name="text">
+                <string/>
+               </property>
+              </item>
+              <item row="6" column="1">
+               <property name="text">
+                <string/>
+               </property>
+              </item>
+              <item row="7" column="0">
+               <property name="text">
+                <string/>
+               </property>
+              </item>
+              <item row="7" column="1">
+               <property name="text">
+                <string/>
+               </property>
+              </item>
+              <item row="8" column="0">
+               <property name="text">
+                <string/>
+               </property>
+              </item>
+              <item row="8" column="1">
+               <property name="text">
+                <string/>
+               </property>
+              </item>
+              <item row="9" column="0">
+               <property name="text">
+                <string/>
+               </property>
+              </item>
+              <item row="9" column="1">
+               <property name="text">
+                <string/>
+               </property>
+              </item>
+              <item row="11" column="0">
+               <property name="text">
+                <string/>
+               </property>
+              </item>
+              <item row="11" column="1">
+               <property name="text">
+                <string/>
+               </property>
+              </item>
+             </widget>
+            </item>
+           </layout>
           </item>
-          <item row="3" column="1">
-           <property name="text">
-            <string/>
-           </property>
-          </item>
-          <item row="5" column="0">
-           <property name="text">
-            <string/>
-           </property>
-          </item>
-          <item row="5" column="1">
-           <property name="text">
-            <string/>
-           </property>
-          </item>
-          <item row="6" column="0">
-           <property name="text">
-            <string/>
-           </property>
-          </item>
-          <item row="6" column="1">
-           <property name="text">
-            <string/>
-           </property>
-          </item>
-          <item row="7" column="0">
-           <property name="text">
-            <string/>
-           </property>
-          </item>
-          <item row="7" column="1">
-           <property name="text">
-            <string/>
-           </property>
-          </item>
-          <item row="8" column="0">
-           <property name="text">
-            <string/>
-           </property>
-          </item>
-          <item row="8" column="1">
-           <property name="text">
-            <string/>
-           </property>
-          </item>
-          <item row="9" column="0">
-           <property name="text">
-            <string/>
-           </property>
-          </item>
-          <item row="9" column="1">
-           <property name="text">
-            <string/>
-           </property>
-          </item>
-          <item row="11" column="0">
-           <property name="text">
-            <string/>
-           </property>
-          </item>
-          <item row="11" column="1">
-           <property name="text">
-            <string/>
-           </property>
-          </item>
-         </widget>
-           </item>
-          </layout>
-         </item>
-        </layout>
-       </widget>
+         </layout>
+        </widget>
         <widget class="QWidget" name="tab_realWind">
          <attribute name="title">
           <string>Действ. ветер</string>
          </attribute>
          <layout class="QVBoxLayout" name="vLayout_realWind">
-          <property name="spacing"><number>4</number></property>
-          <property name="leftMargin"><number>4</number></property>
-          <property name="topMargin"><number>4</number></property>
-          <property name="rightMargin"><number>4</number></property>
-          <property name="bottomMargin"><number>4</number></property>
+          <property name="spacing">
+           <number>4</number>
+          </property>
+          <property name="leftMargin">
+           <number>4</number>
+          </property>
+          <property name="topMargin">
+           <number>4</number>
+          </property>
+          <property name="rightMargin">
+           <number>4</number>
+          </property>
+          <property name="bottomMargin">
+           <number>4</number>
+          </property>
           <item>
            <layout class="QHBoxLayout" name="hLayout_realWind_labels">
             <item>
              <widget class="QLabel" name="label_realWindSpeed">
-              <property name="text"><string>Скорость ветра</string></property>
-              <property name="alignment"><set>Qt::AlignCenter</set></property>
+              <property name="text">
+               <string>Скорость ветра</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
              </widget>
             </item>
             <item>
              <widget class="QLabel" name="label_realWindDirection">
-              <property name="text"><string>Направление ветра</string></property>
-              <property name="alignment"><set>Qt::AlignCenter</set></property>
+              <property name="text">
+               <string>Направление ветра</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
              </widget>
             </item>
             <item>
              <spacer name="spacer_realWind_label">
-              <property name="orientation"><enum>Qt::Horizontal</enum></property>
-              <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
              </spacer>
             </item>
            </layout>
           </item>
           <item>
            <layout class="QHBoxLayout" name="hLayout_realWind_content">
-            <property name="spacing"><number>6</number></property>
+            <property name="spacing">
+             <number>6</number>
+            </property>
             <item>
              <widget class="QwtPlot" name="plot_realWindSpeed">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                <horstretch>2</horstretch><verstretch>0</verstretch>
+                <horstretch>2</horstretch>
+                <verstretch>0</verstretch>
                </sizepolicy>
               </property>
-              <property name="frameShape"><enum>QFrame::StyledPanel</enum></property>
-              <property name="frameShadow"><enum>QFrame::Raised</enum></property>
+              <property name="frameShape">
+               <enum>QFrame::StyledPanel</enum>
+              </property>
+              <property name="frameShadow">
+               <enum>QFrame::Raised</enum>
+              </property>
              </widget>
             </item>
             <item>
              <widget class="QwtPlot" name="plot_realWindAzimut">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                <horstretch>2</horstretch><verstretch>0</verstretch>
+                <horstretch>2</horstretch>
+                <verstretch>0</verstretch>
                </sizepolicy>
               </property>
-              <property name="frameShape"><enum>QFrame::StyledPanel</enum></property>
-              <property name="frameShadow"><enum>QFrame::Raised</enum></property>
+              <property name="frameShape">
+               <enum>QFrame::StyledPanel</enum>
+              </property>
+              <property name="frameShadow">
+               <enum>QFrame::Raised</enum>
+              </property>
              </widget>
             </item>
             <item>
              <widget class="QTableWidget" name="tableWidget_realWind">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                <horstretch>1</horstretch><verstretch>0</verstretch>
+                <horstretch>1</horstretch>
+                <verstretch>0</verstretch>
                </sizepolicy>
               </property>
-              <property name="minimumSize"><size><width>200</width><height>0</height></size></property>
+              <property name="minimumSize">
+               <size>
+                <width>200</width>
+                <height>0</height>
+               </size>
+              </property>
               <property name="editTriggers">
                <set>QAbstractItemView::NoEditTriggers</set>
               </property>
@@ -1883,77 +2033,120 @@ p, li { white-space: pre-wrap; }
                 <string>Направление</string>
                </property>
               </column>
-            </widget>
-           </item>
-          </layout>
-         </item>
-        </layout>
-       </widget>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
         <widget class="QWidget" name="tab_measuredWind">
          <attribute name="title">
           <string>Измер. ветер</string>
          </attribute>
          <layout class="QVBoxLayout" name="vLayout_measWind">
-          <property name="spacing"><number>4</number></property>
-          <property name="leftMargin"><number>4</number></property>
-          <property name="topMargin"><number>4</number></property>
-          <property name="rightMargin"><number>4</number></property>
-          <property name="bottomMargin"><number>4</number></property>
+          <property name="spacing">
+           <number>4</number>
+          </property>
+          <property name="leftMargin">
+           <number>4</number>
+          </property>
+          <property name="topMargin">
+           <number>4</number>
+          </property>
+          <property name="rightMargin">
+           <number>4</number>
+          </property>
+          <property name="bottomMargin">
+           <number>4</number>
+          </property>
           <item>
            <layout class="QHBoxLayout" name="hLayout_measWind_labels">
             <item>
              <widget class="QLabel" name="label_measuredWindSpeed">
-              <property name="text"><string>Скорость ветра</string></property>
-              <property name="alignment"><set>Qt::AlignCenter</set></property>
+              <property name="text">
+               <string>Скорость ветра</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
              </widget>
             </item>
             <item>
              <widget class="QLabel" name="label_measuredWindDirection">
-              <property name="text"><string>Направление ветра</string></property>
-              <property name="alignment"><set>Qt::AlignCenter</set></property>
+              <property name="text">
+               <string>Направление ветра</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
              </widget>
             </item>
             <item>
              <spacer name="spacer_measWind_label">
-              <property name="orientation"><enum>Qt::Horizontal</enum></property>
-              <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
              </spacer>
             </item>
            </layout>
           </item>
           <item>
            <layout class="QHBoxLayout" name="hLayout_measWind_content">
-            <property name="spacing"><number>6</number></property>
+            <property name="spacing">
+             <number>6</number>
+            </property>
             <item>
              <widget class="QwtPlot" name="plot_izmWindSpeed_2">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                <horstretch>2</horstretch><verstretch>0</verstretch>
+                <horstretch>2</horstretch>
+                <verstretch>0</verstretch>
                </sizepolicy>
               </property>
-              <property name="frameShape"><enum>QFrame::StyledPanel</enum></property>
-              <property name="frameShadow"><enum>QFrame::Raised</enum></property>
+              <property name="frameShape">
+               <enum>QFrame::StyledPanel</enum>
+              </property>
+              <property name="frameShadow">
+               <enum>QFrame::Raised</enum>
+              </property>
              </widget>
             </item>
             <item>
              <widget class="QwtPlot" name="plot_izmWindAzimut_2">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                <horstretch>2</horstretch><verstretch>0</verstretch>
+                <horstretch>2</horstretch>
+                <verstretch>0</verstretch>
                </sizepolicy>
               </property>
-              <property name="frameShape"><enum>QFrame::StyledPanel</enum></property>
-              <property name="frameShadow"><enum>QFrame::Raised</enum></property>
+              <property name="frameShape">
+               <enum>QFrame::StyledPanel</enum>
+              </property>
+              <property name="frameShadow">
+               <enum>QFrame::Raised</enum>
+              </property>
              </widget>
             </item>
             <item>
              <widget class="QTableWidget" name="tableWidget_izmWind_2">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                <horstretch>1</horstretch><verstretch>0</verstretch>
+                <horstretch>1</horstretch>
+                <verstretch>0</verstretch>
                </sizepolicy>
               </property>
-              <property name="minimumSize"><size><width>200</width><height>0</height></size></property>
+              <property name="minimumSize">
+               <size>
+                <width>200</width>
+                <height>0</height>
+               </size>
+              </property>
               <property name="editTriggers">
                <set>QAbstractItemView::NoEditTriggers</set>
               </property>
@@ -1967,12 +2160,12 @@ p, li { white-space: pre-wrap; }
                 <string>Направление</string>
                </property>
               </column>
-            </widget>
-           </item>
-          </layout>
-         </item>
-        </layout>
-       </widget>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
         <widget class="QWidget" name="tab_windSwig">
          <attribute name="title">
           <string>Сдвиг ветра</string>

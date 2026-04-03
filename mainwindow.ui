@@ -2,6 +2,14 @@
 <ui version="4.0">
  <class>MainWindow</class>
  <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1207</width>
+    <height>680</height>
+   </rect>
+  </property>
   <property name="minimumSize">
    <size>
     <width>960</width>
@@ -66,25 +74,40 @@
          <property name="frameShape">
           <enum>QFrame::NoFrame</enum>
          </property>
-         <property name="horizontalScrollBarPolicy">
-          <enum>Qt::ScrollBarAlwaysOff</enum>
-         </property>
          <property name="verticalScrollBarPolicy">
           <enum>Qt::ScrollBarAsNeeded</enum>
+         </property>
+         <property name="horizontalScrollBarPolicy">
+          <enum>Qt::ScrollBarAlwaysOff</enum>
          </property>
          <property name="widgetResizable">
           <bool>true</bool>
          </property>
          <widget class="QWidget" name="leftScrollContents">
           <property name="geometry">
-           <rect><x>0</x><y>0</y><width>270</width><height>600</height></rect>
+           <rect>
+            <x>0</x>
+            <y>0</y>
+            <width>297</width>
+            <height>934</height>
+           </rect>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_scroll">
-           <property name="spacing"><number>6</number></property>
-           <property name="leftMargin"><number>0</number></property>
-           <property name="topMargin"><number>0</number></property>
-           <property name="rightMargin"><number>0</number></property>
-           <property name="bottomMargin"><number>0</number></property>
+           <property name="spacing">
+            <number>6</number>
+           </property>
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
            <item>
             <widget class="QPushButton" name="btnFunctionalControl">
              <property name="minimumSize">
@@ -370,7 +393,7 @@
               </size>
              </property>
              <property name="text">
-              <string>Результаты измерений</string>
+              <string>Архив измерений</string>
              </property>
             </widget>
            </item>
@@ -1159,7 +1182,6 @@
            <item>
             <widget class="QComboBox" name="comboBox_mapTypes"/>
            </item>
-
           </layout>
          </widget>
         </widget>
