@@ -803,6 +803,10 @@ void MeasurementResults::loadMeasurementData(const QDateTime &dateTime)
         QVector<WindProfileData>  actualWind   = loadActualWindProfile(record.recordId);
         QVector<MeasuredWindData> measuredWind = loadMeasuredWindProfile(record.recordId);
 
+        m_currentAvgWind = avgWind;
+        m_currentActualWind = actualWind;
+        m_currentMeasuredWind = measuredWind;
+
         loadSurfaceMeteoData(record.recordId);
         loadStationCoordinates(record.recordId);
 
@@ -2203,9 +2207,9 @@ MeasurementSnapshot MeasurementResults::buildSnapshot() const
 
     // ── Профили ветра ────────────────────────────────────────────────────────
     // Загружаем из БД (лёгкий повторный запрос — данные кешируются на уровне БД)
-    snap.avgWind      = const_cast<MeasurementResults*>(this)->loadAvgWindProfile(snap.recordId);
-    snap.actualWind   = const_cast<MeasurementResults*>(this)->loadActualWindProfile(snap.recordId);
-    snap.measuredWind = const_cast<MeasurementResults*>(this)->loadMeasuredWindProfile(snap.recordId);
+    snap.avgWind      = m_currentAvgWind;
+    snap.actualWind   = m_currentActualWind;
+    snap.measuredWind = m_currentMeasuredWind;
 
     // ── Сдвиг ветра ──────────────────────────────────────────────────────────
     snap.windShear = m_currentShearData;
