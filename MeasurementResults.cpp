@@ -40,6 +40,9 @@ MeasurementResults::MeasurementResults(QWidget *parent)
     , m_currentWindSpeedSurface(0.0)
     , m_currentLatitude(0.0)
     , m_currentLongitude(0.0)
+    , m_currentAvgWind()
+    , m_currentActualWind()
+    , m_currentMeasuredWind()
 //    , m_dbPort(5432)
 //    , m_dbConfigured(false)
 {
@@ -776,6 +779,10 @@ void MeasurementResults::loadMeasurementData(const QDateTime &dateTime)
 {
     QDate date = dateTime.date();
     int hour = dateTime.time().hour();
+
+    m_currentAvgWind.clear();
+    m_currentActualWind.clear();
+    m_currentMeasuredWind.clear();
 
     // Сначала ищем точное совпадение по времени
     MeasurementRecord record;
