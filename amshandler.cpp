@@ -920,22 +920,15 @@ bool AMSHandler::saveMeteo11Bulletin(const QJsonObject &bulletinJson,
     }
 
     QSqlDatabase db = DatabaseManager::instance()->database();
-
-    // Удаляем старую запись для этого record_id (если вдруг есть), затем вставляем новую.
-    // ON CONFLICT требует UNIQUE-ограничения на record_id в таблице; если его нет —
-    // используем DELETE + INSERT как совместимую альтернативу.
-    {
-        QSqlQuery del(db);
-        del.prepare("DELETE FROM meteo_11_bulletin WHERE record_id = :record_id");
-        del.bindValue(":record_id", m_currentRecordId);
-        del.exec(); // ошибку игнорируем — записи может не быть
-    }
-
     QSqlQuery query(db);
     query.prepare(
         "INSERT INTO meteo_11_bulletin "
         "  (record_id, bulletin_data, bulletin_time, validity_period) "
-        "VALUES (:record_id, :data::jsonb, :time, :period)"
+        "VALUES (:record_id, :data::jsonb, :time, :period) "
+        "ON CONFLICT (record_id) DO UPDATE SET "
+        "  bulletin_data   = EXCLUDED.bulletin_data, "
+        "  bulletin_time   = EXCLUDED.bulletin_time, "
+        "  validity_period = EXCLUDED.validity_period"
         );
     query.bindValue(":record_id", m_currentRecordId);
     query.bindValue(":data",      QString::fromUtf8(
