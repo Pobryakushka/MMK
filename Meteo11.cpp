@@ -31,11 +31,10 @@ Meteo11::Meteo11(QWidget *parent)
     ui->tableWidget_meteo11->horizontalHeader()->setStretchLastSection(true);
     ui->tableWidget_meteo11->setEditTriggers(QAbstractItemView::AllEditTriggers);
 
-    // Заполняем колонку ПП кодами высот (только для отображения, не редактируется)
-    for (int r = 0; r < kHeightCodes.size() && r < ui->tableWidget_meteo11->rowCount(); ++r) {
-        auto *item = new QTableWidgetItem(kHeightCodes[r]);
-        item->setFlags(item->flags() & ~Qt::ItemIsEditable);
-        item->setBackground(QColor("#F5F5F5"));
+    // Колонка ПП — поправка за плотность воздуха.
+    // По умолчанию "//" (не измерялась); оператор может вписать значение вручную.
+    for (int r = 0; r < ui->tableWidget_meteo11->rowCount(); ++r) {
+        auto *item = new QTableWidgetItem("//");
         item->setTextAlignment(Qt::AlignCenter);
         ui->tableWidget_meteo11->setItem(r, 0, item);
     }
@@ -103,16 +102,20 @@ void Meteo11::onApplyClicked()
     json["raw_string"]           = ui->plainEdit_rawBulletin->toPlainText().trimmed();
 
     // Считываем слои из таблицы (колонки: 0=ПП, 1=НН, 2=СС)
+    // Код высоты берётся по позиции строки из kHeightCodes
     QJsonArray layers;
     for (int r = 0; r < ui->tableWidget_meteo11->rowCount(); ++r) {
         const QString hCode = kHeightCodes.value(r);
+        QTableWidgetItem *itPP = ui->tableWidget_meteo11->item(r, 0);
         QTableWidgetItem *itNN = ui->tableWidget_meteo11->item(r, 1);
         QTableWidgetItem *itSS = ui->tableWidget_meteo11->item(r, 2);
+        const QString pp = itPP ? itPP->text().trimmed() : "//";
         const QString nn = itNN ? itNN->text().trimmed() : QString();
         const QString ss = itSS ? itSS->text().trimmed() : QString();
         if (!nn.isEmpty() || !ss.isEmpty()) {
             QJsonObject layer;
             layer["height_code"] = hCode;
+            layer["pp"]          = pp;
             layer["nn"]          = nn;
             layer["ss"]          = ss;
             layers.append(layer);
@@ -242,8 +245,11 @@ void Meteo11::onClearClicked()
     ui->lblStatus->clear();
     ui->lblStatus->setStyleSheet("color: #2E7D32; font-weight: bold;");
 
-    // Очищаем только редактируемые колонки (НН и СС), оставляем ПП
+    // Сбрасываем все три колонки: ПП → "//" (default), НН и СС → ""
     for (int r = 0; r < ui->tableWidget_meteo11->rowCount(); ++r) {
+        auto *pp = new QTableWidgetItem("//");
+        pp->setTextAlignment(Qt::AlignCenter);
+        ui->tableWidget_meteo11->setItem(r, 0, pp);
         ui->tableWidget_meteo11->setItem(r, 1, new QTableWidgetItem(""));
         ui->tableWidget_meteo11->setItem(r, 2, new QTableWidgetItem(""));
     }

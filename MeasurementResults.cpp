@@ -20,6 +20,9 @@
 #include <QVBoxLayout>
 #include <QStackedWidget>
 #include <QDebug>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
 #include <limits>
 #include <algorithm>  // Для std::sort
 #include <cmath>       // Для std::pow (расчёт давления МСА в Метео-11)
@@ -495,15 +498,62 @@ void MeasurementResults::loadMeteo11FromStation(int recordId)
         return; // нормально — бюллетень мог не вводиться
     }
 
-    const QString  jsonStr = query.value(0).toString();
-    const QDateTime dt     = query.value(1).toDateTime();
+    const QString   jsonStr = query.value(0).toString();
+    const QDateTime dt      = query.value(1).toDateTime();
+
+    QJsonObject obj = QJsonDocument::fromJson(jsonStr.toUtf8()).object();
 
     m_meteo11FromStation.isValid       = true;
     m_meteo11FromStation.bulletinTime  = dt;
-    m_meteo11FromStation.stationNumber = jsonStr; // JSON-строка хранится здесь для отображения
+    m_meteo11FromStation.rawString     = obj["raw_string"].toString();
+    m_meteo11FromStation.stationNumber = obj["station_num"].toString();
+    m_meteo11FromStation.stationAltitude =
+        obj["station_height"].toString().toInt();
+    m_meteo11FromStation.pressureDeviation =
+        obj["ground_pres_dev"].toString().toInt();
+    m_meteo11FromStation.tempVirtualDev =
+        obj["ground_virt_temp_dev"].toString().toInt();
+
+    // Парсим дату/время из поля "datetime" (формат ДДЧЧМ)
+    {
+        const QString dtStr = obj["datetime"].toString();
+        if (dtStr.length() == 5) {
+            m_meteo11FromStation.day        = dtStr.left(2).toInt();
+            m_meteo11FromStation.hour       = dtStr.mid(2, 2).toInt();
+            m_meteo11FromStation.tenMinutes = dtStr.right(1).toInt();
+        }
+    }
+
+    // Парсим слои из массива layers — используем позиционное сопоставление
+    // с kMeteo11Heights, чтобы корректно разделить "12" (1200м) от "12" (12км)
+    {
+        QJsonArray layersArr = obj["layers"].toArray();
+        int scanFrom = 0;
+        for (const QJsonValue &v : layersArr) {
+            QJsonObject lo = v.toObject();
+            int hc = lo["height_code"].toString().toInt();
+
+            // Ищем соответствие в kMeteo11Heights начиная с scanFrom
+            for (int i = scanFrom; i < kMeteo11HeightCount; ++i) {
+                const Meteo11Height &h = kMeteo11Heights[i];
+                int codeAsInt = h.above10km ? h.codeValue : (h.codeValue / 100);
+                if (codeAsInt == hc) {
+                    Meteo11Data::LayerData layer;
+                    layer.heightCode  = h.codeValue;
+                    layer.isAbove10km = h.above10km;
+                    layer.windDir     = lo["nn"].toString().toInt();
+                    layer.windSpeed   = lo["ss"].toString().toInt();
+                    m_meteo11FromStation.layers.append(layer);
+                    scanFrom = i + 1;
+                    break;
+                }
+            }
+        }
+    }
 
     qDebug() << "MeasurementResults: бюллетень МС загружен для record_id=" << recordId
-             << "время составления:" << dt.toString("dd.MM.yyyy HH:mm");
+             << "время:" << dt.toString("dd.MM.yyyy HH:mm")
+             << "слоёв:" << m_meteo11FromStation.layers.size();
 }
 
 // ===== ОТОБРАЖЕНИЕ ДАННЫХ =====
@@ -645,8 +695,8 @@ void MeasurementResults::switchMeteo11Display()
         ui->pushButton_string->setEnabled(false);
         ui->pushButton_table->setEnabled(true);
     } else if (currentButtelinType == FromMeteoStat) {
-        // От метеостанции — данные внешние, показываем страницу строки
-        // с сообщением об отсутствии данных
+        // От метеостанции — всегда строковый вид (сырая строка из БД)
+        currentOutputFormat = String;
         stackedWidget->setCurrentIndex(0);
         ui->pushButton_string->setEnabled(false);
         ui->pushButton_table->setEnabled(false);
@@ -1833,7 +1883,10 @@ void MeasurementResults::fillMeteo11InfoFields(const Meteo11Data &d)
  */
 void MeasurementResults::fillMeteo11StringView(const Meteo11Data &d)
 {
-    QString text = buildMeteo11String(d);
+    // Для бюллетеня «От метеостанции» — показываем сырую строку из БД как есть
+    QString text = (!d.rawString.isEmpty() && currentButtelinType == FromMeteoStat)
+                   ? d.rawString
+                   : buildMeteo11String(d);
 
     // Форматирование: переносим длинную строку на несколько строк блоками
     // (каждая строка ≈ 5 групп)

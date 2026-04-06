@@ -191,6 +191,7 @@ private:
         QDateTime bulletinTime;     // время составления
         bool      isValid;          // бюллетень годен
         bool      isApproximate;    // true → приближённый формат
+        QString   rawString;        // сырая строка от МС (для FromMeteoStat)
 
         Meteo11Data() : day(0), hour(0), tenMinutes(0), stationAltitude(0),
             pressureDeviation(0), tempVirtualDev(0),
