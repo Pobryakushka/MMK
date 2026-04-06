@@ -1000,7 +1000,27 @@ void MainWindow::onAmsMeasurementProgress(int percent, float angle)
 
 void MainWindow::onAmsMeasurementCompleted(int recordId)
 {
-    qDebug() << "MainWindow: Измерение завершено успешно, ID записи:" << recordId;
+    qInfo() << "MainWindow: Измерение завершено успешно, ID записи:" << recordId;
+
+    // Сохраняем бюллетень Метео-11 от МС (если оператор ввёл его в «Исходных данных»).
+    // Делаем это здесь, а не при нажатии «Пуск», потому что m_currentRecordId в AMSHandler
+    // гарантированно валиден в слоте сигнала measurementCompleted (сброс — после emit).
+    if (sourceDataInstance && sourceDataInstance->hasMeteo11Bulletin()) {
+        qInfo() << "MainWindow: сохраняем бюллетень Метео-11 в БД, record_id=" << recordId;
+        const bool saved = m_amsHandler->saveMeteo11Bulletin(
+            sourceDataInstance->meteo11BulletinJson(),
+            sourceDataInstance->meteo11BulletinTime(),
+            sourceDataInstance->meteo11ValidityPeriod()
+            );
+        if (saved) {
+            sourceDataInstance->resetMeteo11Applied();
+            statusBar()->showMessage("Метео-11: бюллетень от МС сохранён", 5000);
+        } else {
+            qWarning() << "MainWindow: не удалось сохранить Метео-11 в БД";
+        }
+    } else {
+        qDebug() << "MainWindow: бюллетень Метео-11 не введён — пропускаем сохранение";
+    }
 
     QMessageBox::information(this, "Успех",
                              QString("Измерение завершено успешно!\n\nID записи в БД: %1\n\n"
@@ -1863,25 +1883,6 @@ void MainWindow::onStartClicked()
         ui->lblStatus->setStyleSheet("color: green; font-weight: bold; font-size: 14pt; "
                                      "border: 2px solid green; padding: 5px; border-radius: 5px;");
         return;
-    }
-
-    // Если оператор ввёл бюллетень «Метео-11 от метеостанции» через «Исходные данные»,
-    // сохраняем его с тем же record_id что только что создан в main_archive
-    if (sourceDataInstance && sourceDataInstance->hasMeteo11Bulletin()) {
-        qDebug() << "MainWindow: сохраняем бюллетень Метео-11 в БД...";
-        const bool saved = m_amsHandler->saveMeteo11Bulletin(
-            sourceDataInstance->meteo11BulletinJson(),
-            sourceDataInstance->meteo11BulletinTime(),
-            sourceDataInstance->meteo11ValidityPeriod()
-            );
-        if (saved) {
-            sourceDataInstance->resetMeteo11Applied();
-            statusBar()->showMessage("Метео-11: бюллетень от МС сохранён", 5000);
-        } else {
-            qWarning() << "MainWindow: не удалось сохранить Метео-11 в БД";
-        }
-    } else {
-        qDebug() << "MainWindow: бюллетень Метео-11 не введён, пропускаем";
     }
 
     // Блокируем кнопку старта, разблокируем стоп
