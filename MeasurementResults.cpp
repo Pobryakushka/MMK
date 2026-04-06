@@ -720,29 +720,11 @@ void MeasurementResults::switchMeteo11Display()
     QStackedWidget *stackedWidget = ui->meteo11StackedWidget;
     if (!stackedWidget) return;
 
-    if (currentButtelinType == Approximate) {
-        // Приближённый — только табличный формат (строка недоступна по протоколу)
-        currentOutputFormat = Table;
-        stackedWidget->setCurrentIndex(1); // страница с таблицей (page_meteo11_table)
-        ui->pushButton_string->setEnabled(false);
-        ui->pushButton_table->setEnabled(true);
-    } else if (currentButtelinType == FromMeteoStat) {
-        // От метеостанции — всегда строковый вид (сырая строка из БД)
-        currentOutputFormat = String;
-        stackedWidget->setCurrentIndex(0);
-        ui->pushButton_string->setEnabled(false);
-        ui->pushButton_table->setEnabled(false);
-    } else {
-        // Уточнённый — доступны оба формата
-        ui->pushButton_string->setEnabled(true);
-        ui->pushButton_table->setEnabled(true);
+    // Все три типа поддерживают оба формата
+    ui->pushButton_string->setEnabled(true);
+    ui->pushButton_table->setEnabled(true);
 
-        if (currentOutputFormat == String) {
-            stackedWidget->setCurrentIndex(0);
-        } else {
-            stackedWidget->setCurrentIndex(1);
-        }
-    }
+    stackedWidget->setCurrentIndex(currentOutputFormat == String ? 0 : 1);
 
     updateMeteo11Display();
 }
@@ -771,10 +753,8 @@ void MeasurementResults::onFromMeteoStatButtonClicked()
 
 void MeasurementResults::onStringFormatClicked()
 {
-    if (currentButtelinType != Approximate){
-        currentOutputFormat = String;
-        switchMeteo11Display();
-    }
+    currentOutputFormat = String;
+    switchMeteo11Display();
 }
 
 void MeasurementResults::onTableFormatClicked()
@@ -1827,7 +1807,7 @@ void MeasurementResults::updateMeteo11Display()
     fillMeteo11InfoFields(*d);
 
     // Заполняем контентные виджеты
-    if (currentOutputFormat == String && currentButtelinType != Approximate) {
+    if (currentOutputFormat == String) {
         fillMeteo11StringView(*d);
     } else {
         fillMeteo11TableView(*d);
