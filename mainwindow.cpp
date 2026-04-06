@@ -21,6 +21,7 @@
 #include <QIcon>
 #include <QStatusBar>
 #include <QDebug>
+#include <QStandardItemModel>
 
 // ====================================================================
 // НАСТРОЙКА ПРОТОКОЛА IWS
@@ -190,6 +191,9 @@ MainWindow::MainWindow(QWidget *parent)
     // на 3 минуты прогрева (см. onConnectRequested / onDisconnectRequested)
     ui->comboAvgTime->setEnabled(true);
     ui->comboAvgTime->setToolTip("");
+
+    // Литера 2 по умолчанию (индекс 1)
+    ui->comboLitera->setCurrentIndex(1);
 
     // Инициализация панели статуса датчиков
     updateSensorStatusPanel();
@@ -1358,12 +1362,12 @@ void MainWindow::onConnectRequested()
 
         // Запускаем таймер прогрева ИВС (3 минуты)
         m_iwsWarmupDone = false;
-        // Блокируем выбор 3 мин. в combobox до окончания прогрева
         // Переключаемся на 6 мин., если сейчас выбрано 3 мин.
         if (ui->comboAvgTime->currentIndex() == 0)
             ui->comboAvgTime->setCurrentIndex(1);
-        // Удаляем пункт "3 мин" из combobox на время прогрева
-        ui->comboAvgTime->removeItem(0);
+        // Серим (блокируем) пункт "3 мин" — не удаляем, чтобы не сбивать с толку
+        if (auto *m = qobject_cast<QStandardItemModel*>(ui->comboAvgTime->model()))
+            if (auto *it = m->item(0)) it->setEnabled(false);
         ui->comboAvgTime->setToolTip("Режим 3 мин. станет доступен через 3 минуты после подключения ИВС");
         m_iwsWarmupTimer->start(3 * 60 * 1000);
         statusBar()->showMessage("ИВС подключён. Режим усреднения 3 мин. станет доступен через 3 минуты.", 8000);
@@ -1414,9 +1418,9 @@ void MainWindow::onConnectRequested()
 void MainWindow::onIwsWarmupFinished()
 {
     m_iwsWarmupDone = true;
-    // Возвращаем пункт "3 мин" в combobox (если его ещё нет)
-    if (ui->comboAvgTime->itemText(0) != "3 мин")
-        ui->comboAvgTime->insertItem(0, "3 мин");
+    // Разблокируем пункт "3 мин" в combobox
+    if (auto *m = qobject_cast<QStandardItemModel*>(ui->comboAvgTime->model()))
+        if (auto *it = m->item(0)) it->setEnabled(true);
     ui->comboAvgTime->setToolTip("");
     statusBar()->showMessage("ИВС: режим усреднения 3 минуты теперь доступен", 5000);
     qDebug() << "MainWindow: ИВС прогрев завершён, пункт '3 мин' разблокирован";
@@ -1429,8 +1433,9 @@ void MainWindow::onDisconnectRequested()
         m_iwsWarmupTimer->stop();
     }
     m_iwsWarmupDone = false;
-    if (ui->comboAvgTime->itemText(0) != "3 мин")
-        ui->comboAvgTime->insertItem(0, "3 мин");
+    // При отключении ИВС — разблокируем пункт "3 мин" обратно
+    if (auto *m = qobject_cast<QStandardItemModel*>(ui->comboAvgTime->model()))
+        if (auto *it = m->item(0)) it->setEnabled(true);
     ui->comboAvgTime->setToolTip("");
 
     if (pollTimer) {
