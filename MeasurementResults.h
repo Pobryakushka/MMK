@@ -64,11 +64,12 @@ private slots:
     void onStringFormatClicked();
     void onTableFormatClicked();
 
+    void onExportClicked();
+
 public slots:
     void updateCoordinatesFromMainWindow(double latitude, double longitude);
     void setMapCoordinatesMode(bool enabled);
     void navigateToRecord(int recordId); // Перейти к записи по record_id
-    void onExportClicked();
 
 private:
     Ui::MeasurementResults *ui;
@@ -103,7 +104,6 @@ private:
     void loadMeasurementData(const QDateTime &dateTime);
     QVector<MeasurementRecord> getRecordsForDate(const QDate &date);
     MeasurementRecord findClosestRecord(const QDate &date, int hour);
-    void setupMockData();
 
     void switchMeteo11Display();
 
@@ -244,6 +244,11 @@ private:
     double m_currentLatitude;
     double m_currentLongitude;
     QDateTime m_currentSondingTime;
+
+    // Кеш профилей ветра текущей записи
+    QVector<WindProfileData> m_currentAvgWind;
+    QVector<WindProfileData> m_currentActualWind;
+    QVector<MeasuredWindData> m_currentMeasuredWind;
 };
 
 #endif // MEASUREMENTRESULTS_H

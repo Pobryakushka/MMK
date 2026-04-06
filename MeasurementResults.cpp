@@ -40,6 +40,9 @@ MeasurementResults::MeasurementResults(QWidget *parent)
     , m_currentWindSpeedSurface(0.0)
     , m_currentLatitude(0.0)
     , m_currentLongitude(0.0)
+    , m_currentAvgWind()
+    , m_currentActualWind()
+    , m_currentMeasuredWind()
 //    , m_dbPort(5432)
 //    , m_dbConfigured(false)
 {
@@ -809,6 +812,10 @@ void MeasurementResults::loadMeasurementData(const QDateTime &dateTime)
     QDate date = dateTime.date();
     int hour = dateTime.time().hour();
 
+    m_currentAvgWind.clear();
+    m_currentActualWind.clear();
+    m_currentMeasuredWind.clear();
+
     // Сначала ищем точное совпадение по времени
     MeasurementRecord record;
     if (availableMeasurements.contains(date)) {
@@ -834,6 +841,10 @@ void MeasurementResults::loadMeasurementData(const QDateTime &dateTime)
         QVector<WindProfileData>  avgWind      = loadAvgWindProfile(record.recordId);
         QVector<WindProfileData>  actualWind   = loadActualWindProfile(record.recordId);
         QVector<MeasuredWindData> measuredWind = loadMeasuredWindProfile(record.recordId);
+
+        m_currentAvgWind = avgWind;
+        m_currentActualWind = actualWind;
+        m_currentMeasuredWind = measuredWind;
 
         loadSurfaceMeteoData(record.recordId);
         loadStationCoordinates(record.recordId);
@@ -2275,9 +2286,9 @@ MeasurementSnapshot MeasurementResults::buildSnapshot() const
 
     // ── Профили ветра ────────────────────────────────────────────────────────
     // Загружаем из БД (лёгкий повторный запрос — данные кешируются на уровне БД)
-    snap.avgWind      = const_cast<MeasurementResults*>(this)->loadAvgWindProfile(snap.recordId);
-    snap.actualWind   = const_cast<MeasurementResults*>(this)->loadActualWindProfile(snap.recordId);
-    snap.measuredWind = const_cast<MeasurementResults*>(this)->loadMeasuredWindProfile(snap.recordId);
+    snap.avgWind      = m_currentAvgWind;
+    snap.actualWind   = m_currentActualWind;
+    snap.measuredWind = m_currentMeasuredWind;
 
     // ── Сдвиг ветра ──────────────────────────────────────────────────────────
     snap.windShear = m_currentShearData;
