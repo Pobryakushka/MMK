@@ -7,6 +7,8 @@
 #include <QSqlDatabase>
 #include <QSqlQuery>
 #include <QSqlError>
+#include <QJsonObject>
+#include <QJsonDocument>
 #include "amsprotocol.h"
 
 // Состояния процесса измерения
@@ -41,30 +43,37 @@ public:
 
     // Управление подключением
     bool connectToAMS(const QString &portName, qint32 baudRate,
-                     QSerialPort::DataBits dataBits,
-                     QSerialPort::Parity parity,
-                     QSerialPort::StopBits stopBits);
+                      QSerialPort::DataBits dataBits,
+                      QSerialPort::Parity parity,
+                      QSerialPort::StopBits stopBits);
     void disconnectFromAMS();
     bool isConnected() const;
 
     // Настройка БД
     void setDatabase(const QString &host, int port, const QString &dbName,
-                    const QString &user, const QString &password);
+                     const QString &user, const QString &password);
+
+    // Сохранить бюллетень «Метео-11 от метеостанции» в meteo_11_bulletin.
+    // Вызывается из MainWindow сразу после startMeasurementSequence —
+    // record_id в main_archive уже создан и доступен через m_currentRecordId.
+    bool saveMeteo11Bulletin(const QJsonObject &bulletinJson,
+                             const QDateTime   &bulletinTime,
+                             const QString     &validityPeriod);
 
     // Управление измерениями - новый подход согласно диаграмме
     bool startMeasurementSequence(WorkMode mode, AveragingTime avgTime, Litera litera,
-                                 const StationCoordinates &coords,
-                                 const QDateTime &dateTime);
+                                  const StationCoordinates &coords,
+                                  const QDateTime &dateTime);
     bool stopMeasurement();
 
     // Отправка исходных данных в процессе измерения
     bool sendSourceDataDuringMeasurement(int day, int hour, int tenMinutes,
-                                        float stationAltitude,
-                                        const QVector<float> &avgWindDir,
-                                        const QVector<float> &avgWindSpeed,
-                                        float reachedHeight,
-                                        float surfaceWindDir, float surfaceWindSpeed,
-                                        const QDateTime &currentDateTime);
+                                         float stationAltitude,
+                                         const QVector<float> &avgWindDir,
+                                         const QVector<float> &avgWindSpeed,
+                                         float reachedHeight,
+                                         float surfaceWindDir, float surfaceWindSpeed,
+                                         const QDateTime &currentDateTime);
 
     // Запрос данных (отдельные методы для совместимости)
     bool requestAvgWind();
@@ -170,10 +179,10 @@ private:
     bool saveActualWindProfile(int recordId, const QVector<WindProfileData> &data);
     bool saveMeasuredWindProfile(int recordId, const QVector<MeasuredWindData> &data);
     bool saveWindProfilesReferences(int recordId, int avgProfileId, int actualProfileId,
-                                   int measuredProfileId, int shearProfileId);
+                                    int measuredProfileId, int shearProfileId);
     bool saveStationCoordinates(int recordId, const StationCoordinates &coords);
     bool saveCriticalMessage(int recordId, const QString &message,
-                            const QString &severity);
+                             const QString &severity);
     bool m_intermediateDataSent;
 
     // Флаг: функциональный контроль запрошен после ошибки измерения (progress == -2)

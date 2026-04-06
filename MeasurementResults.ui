@@ -913,17 +913,17 @@ li.checked::marker { content: &quot;\2612&quot;; }
                 </row>
                 <row>
                  <property name="text">
-                  <string>16 000</string>
-                 </property>
-                </row>
-                <row>
-                 <property name="text">
                   <string>18 000</string>
                  </property>
                 </row>
                 <row>
                  <property name="text">
                   <string>22 000</string>
+                 </property>
+                </row>
+                <row>
+                 <property name="text">
+                  <string>26 000</string>
                  </property>
                 </row>
                 <row>

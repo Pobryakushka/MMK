@@ -474,6 +474,38 @@ void MeasurementResults::loadStationCoordinates(int recordId)
              << "lat=" << lat << "lon=" << lon << "alt=" << alt;
 }
 
+void MeasurementResults::loadMeteo11FromStation(int recordId)
+{
+    // Сбрасываем предыдущие данные
+    m_meteo11FromStation         = Meteo11Data();
+    m_meteo11FromStation.isValid = false;
+
+    if (recordId <= 0 || !connectDatabase()) return;
+
+    QSqlDatabase db = DatabaseManager::instance()->database();
+    QSqlQuery query(db);
+    query.prepare(
+        "SELECT bulletin_data, bulletin_time "
+        "FROM meteo_11_bulletin WHERE record_id = :rid"
+        );
+    query.bindValue(":rid", recordId);
+
+    if (!query.exec() || !query.next()) {
+        qDebug() << "MeasurementResults: бюллетень МС не найден для record_id=" << recordId;
+        return; // нормально — бюллетень мог не вводиться
+    }
+
+    const QString  jsonStr = query.value(0).toString();
+    const QDateTime dt     = query.value(1).toDateTime();
+
+    m_meteo11FromStation.isValid       = true;
+    m_meteo11FromStation.bulletinTime  = dt;
+    m_meteo11FromStation.stationNumber = jsonStr; // JSON-строка хранится здесь для отображения
+
+    qDebug() << "MeasurementResults: бюллетень МС загружен для record_id=" << recordId
+             << "время составления:" << dt.toString("dd.MM.yyyy HH:mm");
+}
+
 // ===== ОТОБРАЖЕНИЕ ДАННЫХ =====
 
 void MeasurementResults::displayWindProfile(const QVector<WindProfileData> &avgWind,
@@ -805,6 +837,7 @@ void MeasurementResults::loadMeasurementData(const QDateTime &dateTime)
 
         loadSurfaceMeteoData(record.recordId);
         loadStationCoordinates(record.recordId);
+        loadMeteo11FromStation(record.recordId);
 
         displayWindProfile(avgWind, actualWind, measuredWind);
         computeMeteo11(record.recordId, avgWind, actualWind, measuredWind);
@@ -1352,22 +1385,28 @@ int MeasurementResults::encodeTempDev(double deltaCelsius)
  *  ≤10 км: ХХХХ-ТТННСС  (4-значный код высоты + 6-значный ТТННСС)
  *  >10 км: ХХ-ТТННСС   (2-значный код + 6-значный)
  */
-QString MeasurementResults::formatMeteo11Group(int heightCode, int dir, int speed, bool above10km)
+QString MeasurementResults::formatMeteo11Group(int heightCode, int dir, int speed, bool above10km, bool includePP)
 {
-    // Формат строки:
-    //  ≤8000 м:  ВВПП-ТТННСС  где ВВ = высота в сотнях метров (02,04,...,80), ПП = // (не измеряется)
-    //  ≥10 км:   ВВ//-ТТННСС  где ВВ = высота в км (10,12,...,30), ПП = // (не измеряется)
-    // СС = // если нет данных (speed >= 99)
+    // Формат уточнённого (includePP=true):
+    //  ≤8000 м:  ВВ//-ТТННСС  где ВВ = высота в сотнях метров (02..80)
+    //  ≥10 км:   ВВ//-ТТННСС  где ВВ = высота в км (10..30)
+    // Формат приближённого (includePP=false):
+    //  ВВ-ТТННСС  (без ПП)
     QString hPart;
 
     if (!above10km) {
         // heightCode хранится в метрах (200, 400, ..., 8000)
-        // ВВ = высота / 100 (двузначное), ПП = //
         int hHundreds = heightCode / 100;
-        hPart = QString("%1//").arg(hHundreds, 2, 10, QChar('0'));
+        if (includePP)
+            hPart = QString("%1//").arg(hHundreds, 2, 10, QChar('0'));
+        else
+            hPart = QString("%1").arg(hHundreds, 2, 10, QChar('0'));
     } else {
         // heightCode хранится в км (10, 12, 14, 18, 22, 26, 30)
-        hPart = QString("%1//").arg(heightCode, 2, 10, QChar('0'));
+        if (includePP)
+            hPart = QString("%1//").arg(heightCode, 2, 10, QChar('0'));
+        else
+            hPart = QString("%1").arg(heightCode, 2, 10, QChar('0'));
     }
 
     // СС: если >= 99 — нет данных → //
@@ -1396,8 +1435,11 @@ QString MeasurementResults::buildMeteo11String(const Meteo11Data &d)
     QStringList parts;
 
     // Заголовок
-    QString header = QString("Метео 11%1").arg(d.stationNumber);
-    parts << header;
+    if (d.isApproximate) {
+        parts << "Метео 11 приближенный";
+    } else {
+        parts << QString("Метео 11%1").arg(d.stationNumber);
+    }
 
     // ДДЧЧМ
     parts << QString("%1%2%3")
@@ -1405,24 +1447,27 @@ QString MeasurementResults::buildMeteo11String(const Meteo11Data &d)
                  .arg(d.hour,       2, 10, QChar('0'))
                  .arg(d.tenMinutes, 1, 10, QChar('0'));
 
-    // BBBB — высота станции (+60 м закодировано)
+    // BBBB — высота станции
     parts << QString("%1").arg(d.stationAltitude, 4, 10, QChar('0'));
 
-    // БББT0T0 — отклонение давления + отклонение виртуальной температуры
+    // БББТ0Т0 — отклонение давления + отклонение виртуальной температуры
     parts << QString("%1%2")
                  .arg(d.pressureDeviation, 3, 10, QChar('0'))
                  .arg(d.tempVirtualDev,    2, 10, QChar('0'));
 
-    // Слои
+    // Слои: приближённый — без ПП (ВВ-ТТННСС), уточнённый — с ПП (ВВ//-ТТННСС)
+    const bool includePP = !d.isApproximate;
     for (const Meteo11Data::LayerData &layer : d.layers) {
         parts << formatMeteo11Group(layer.heightCode, layer.windDir,
-                                    layer.windSpeed, layer.isAbove10km);
+                                    layer.windSpeed, layer.isAbove10km, includePP);
     }
 
-    // Достигнутые высоты BтBтBвBв
-    parts << QString("%1%2")
-                 .arg(d.reachedTempHeightKm, 2, 10, QChar('0'))
-                 .arg(d.reachedWindHeightKm, 2, 10, QChar('0'));
+    // Достигнутые высоты BтBтBвBв (только для уточнённого)
+    if (!d.isApproximate) {
+        parts << QString("%1%2")
+                     .arg(d.reachedTempHeightKm, 2, 10, QChar('0'))
+                     .arg(d.reachedWindHeightKm, 2, 10, QChar('0'));
+    }
 
     return parts.join("–");
 }
@@ -1436,6 +1481,7 @@ struct Meteo11Height {
     bool   above10km;   // Флаг ≥10 км
 };
 
+// Уточнённый: все 19 стандартных уровней Метео-11
 static const Meteo11Height kMeteo11Heights[] = {
     {  200,   200.f, false },
     {  400,   400.f, false },
@@ -1456,8 +1502,21 @@ static const Meteo11Height kMeteo11Heights[] = {
     {   22, 22000.f, true  },
     {   26, 26000.f, true  },
     {   30, 30000.f, true  },
-    };
+};
 static const int kMeteo11HeightCount = static_cast<int>(sizeof(kMeteo11Heights) / sizeof(kMeteo11Heights[0]));
+
+// Приближённый: уровни 02 04 08 12 16 24 30 40 (до 4000 м, без 2000 м)
+static const Meteo11Height kApproxHeights[] = {
+    {  200,   200.f, false },
+    {  400,   400.f, false },
+    {  800,   800.f, false },
+    { 1200,  1200.f, false },
+    { 1600,  1600.f, false },
+    { 2400,  2400.f, false },
+    { 3000,  3000.f, false },
+    { 4000,  4000.f, false },
+};
+static const int kApproxHeightCount = static_cast<int>(sizeof(kApproxHeights) / sizeof(kApproxHeights[0]));
 
 /**
  * Построить Meteo11Data из профиля ветра.
@@ -1469,9 +1528,10 @@ MeasurementResults::Meteo11Data MeasurementResults::buildMeteo11(
     double pressureHpa,
     double tempC,
     const QDateTime &sondingTime,
-    bool /*useActual*/)
+    bool useActual)
 {
     Meteo11Data d;
+    d.isApproximate = !useActual;
 
     if (windProfile.isEmpty()) {
         d.isValid = false;
@@ -1526,8 +1586,11 @@ MeasurementResults::Meteo11Data MeasurementResults::buildMeteo11(
     // Для каждой стандартной высоты Метео-11 ищем ближайшую точку профиля
     float maxWindHeightM = 0.f;
 
-    for (int i = 0; i < kMeteo11HeightCount; ++i) {
-        const Meteo11Height &lvl = kMeteo11Heights[i];
+    const Meteo11Height *heightTable = d.isApproximate ? kApproxHeights    : kMeteo11Heights;
+    const int            heightCount = d.isApproximate ? kApproxHeightCount : kMeteo11HeightCount;
+
+    for (int i = 0; i < heightCount; ++i) {
+        const Meteo11Height &lvl = heightTable[i];
 
         // Поиск ближайшей точки профиля по высоте
         int    bestIdx  = -1;
@@ -1609,22 +1672,31 @@ void MeasurementResults::computeMeteo11(int recordId,
     }
 
     // ── ОТ МЕТЕОСТАНЦИИ ──────────────────────────────────────────────────────
-    // Данный вид бюллетеня составляется по данным внешней метеостанции
-    // (устаревший бюллетень «Метеосредний»), которые поступают извне системы.
-    // В текущей реализации БД не хранит эти данные отдельно,
-    // поэтому показываем пустую заглушку с пометкой.
-    {
-        m_meteo11FromStation = Meteo11Data();
-        m_meteo11FromStation.isValid    = false;
-        m_meteo11FromStation.bulletinTime = m_currentSondingTime;
-        // stationNumber намеренно оставляем пустым — данные внешние
-    }
+    // Данные уже загружены из meteo_11_bulletin через loadMeteo11FromStation().
+    // Если бюллетень не вводился — m_meteo11FromStation.isValid = false.
 
-    // Текущий выбор пользователя не меняем.
-    // Исключение: если текущий тип недоступен — переключаем на доступный.
-    if (currentButtelinType == Updated && !m_meteo11Updated.isValid) {
-        if (m_meteo11Approximate.isValid)
+    // ── АВТОВЫБОР ТИПА БЮЛЛЕТЕНЯ ────────────────────────────────────────────
+    // Правило:
+    //  • Бюллетень от МС есть в БД И не старше 12 ч → показываем УТОЧНЁННЫЙ
+    //  • Иначе → ПРИБЛИЖЁННЫЙ
+    //  • «От метеостанции» — только по явному нажатию кнопки
+    {
+        bool stationActual = false;
+        if (m_meteo11FromStation.isValid && m_meteo11FromStation.bulletinTime.isValid()) {
+            const qint64 ageSec =
+                m_meteo11FromStation.bulletinTime.secsTo(QDateTime::currentDateTime());
+            stationActual = (ageSec >= 0 && ageSec <= 12 * 3600);
+        }
+
+        if (stationActual && m_meteo11Updated.isValid) {
+            currentButtelinType = Updated;
+            qDebug() << "Метео-11: автовыбор → УТОЧНЁННЫЙ (бюллетень МС актуален)";
+        } else if (m_meteo11Approximate.isValid) {
             currentButtelinType = Approximate;
+            qDebug() << "Метео-11: автовыбор → ПРИБЛИЖЁННЫЙ"
+                     << (m_meteo11FromStation.isValid ? "(бюллетень МС устарел)" : "(бюллетень МС не введён)");
+        }
+        // Если ни один не валиден — оставляем текущий выбор пользователя
     }
 
     updateMeteo11Display();
