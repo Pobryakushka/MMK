@@ -477,6 +477,54 @@ void MeasurementResults::loadStationCoordinates(int recordId)
              << "lat=" << lat << "lon=" << lon << "alt=" << alt;
 }
 
+// -------------------------------------------------------
+// Стандартные высоты Метео-11 и их коды (объявлены до первого использования)
+// -------------------------------------------------------
+struct Meteo11Height {
+    int    codeValue;
+    float  heightM;
+    bool   above10km;
+};
+
+// Уточнённый: все 19 стандартных уровней
+static const Meteo11Height kMeteo11Heights[] = {
+    {  200,   200.f, false },
+    {  400,   400.f, false },
+    {  800,   800.f, false },
+    { 1200,  1200.f, false },
+    { 1600,  1600.f, false },
+    { 2000,  2000.f, false },
+    { 2400,  2400.f, false },
+    { 3000,  3000.f, false },
+    { 4000,  4000.f, false },
+    { 5000,  5000.f, false },
+    { 6000,  6000.f, false },
+    { 8000,  8000.f, false },
+    {   10, 10000.f, true  },
+    {   12, 12000.f, true  },
+    {   14, 14000.f, true  },
+    {   18, 18000.f, true  },
+    {   22, 22000.f, true  },
+    {   26, 26000.f, true  },
+    {   30, 30000.f, true  },
+};
+static const int kMeteo11HeightCount =
+    static_cast<int>(sizeof(kMeteo11Heights) / sizeof(kMeteo11Heights[0]));
+
+// Приближённый: 02 04 08 12 16 24 30 40 (без 2000 м)
+static const Meteo11Height kApproxHeights[] = {
+    {  200,   200.f, false },
+    {  400,   400.f, false },
+    {  800,   800.f, false },
+    { 1200,  1200.f, false },
+    { 1600,  1600.f, false },
+    { 2400,  2400.f, false },
+    { 3000,  3000.f, false },
+    { 4000,  4000.f, false },
+};
+static const int kApproxHeightCount =
+    static_cast<int>(sizeof(kApproxHeights) / sizeof(kApproxHeights[0]));
+
 void MeasurementResults::loadMeteo11FromStation(int recordId)
 {
     // Сбрасываем предыдущие данные
@@ -1522,51 +1570,6 @@ QString MeasurementResults::buildMeteo11String(const Meteo11Data &d)
     return parts.join("–");
 }
 
-// -------------------------------------------------------
-// Стандартные высоты Метео-11 и их коды
-// -------------------------------------------------------
-struct Meteo11Height {
-    int    codeValue;   // Код в бюллетене
-    float  heightM;     // Высота в метрах
-    bool   above10km;   // Флаг ≥10 км
-};
-
-// Уточнённый: все 19 стандартных уровней Метео-11
-static const Meteo11Height kMeteo11Heights[] = {
-    {  200,   200.f, false },
-    {  400,   400.f, false },
-    {  800,   800.f, false },
-    { 1200,  1200.f, false },
-    { 1600,  1600.f, false },
-    { 2000,  2000.f, false },
-    { 2400,  2400.f, false },
-    { 3000,  3000.f, false },
-    { 4000,  4000.f, false },
-    { 5000,  5000.f, false },
-    { 6000,  6000.f, false },
-    { 8000,  8000.f, false },
-    {   10, 10000.f, true  },
-    {   12, 12000.f, true  },
-    {   14, 14000.f, true  },
-    {   18, 18000.f, true  },
-    {   22, 22000.f, true  },
-    {   26, 26000.f, true  },
-    {   30, 30000.f, true  },
-};
-static const int kMeteo11HeightCount = static_cast<int>(sizeof(kMeteo11Heights) / sizeof(kMeteo11Heights[0]));
-
-// Приближённый: уровни 02 04 08 12 16 24 30 40 (до 4000 м, без 2000 м)
-static const Meteo11Height kApproxHeights[] = {
-    {  200,   200.f, false },
-    {  400,   400.f, false },
-    {  800,   800.f, false },
-    { 1200,  1200.f, false },
-    { 1600,  1600.f, false },
-    { 2400,  2400.f, false },
-    { 3000,  3000.f, false },
-    { 4000,  4000.f, false },
-};
-static const int kApproxHeightCount = static_cast<int>(sizeof(kApproxHeights) / sizeof(kApproxHeights[0]));
 
 /**
  * Построить Meteo11Data из профиля ветра.
