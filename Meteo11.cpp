@@ -203,13 +203,6 @@ void Meteo11::onParseClicked()
     while (idx < parts.size() && layerRow < ui->tableWidget_meteo11->rowCount()) {
         const QString grp = parts[idx];
 
-        // Последний токен длиной 4 — BтBтBвBв (итоговые высоты зондирования)
-        if (idx == parts.size() - 1 && grp.length() == 4) {
-            ui->lineEdit_Met11AchievedSensHeight->setText(
-                QString::number(grp.right(2).toInt()));
-            break;
-        }
-
         if (grp.length() == 4) {
             // ВВПП: первые 2 — высота, последние 2 — поправка за плотность
             pendingPP    = grp.right(2);
@@ -233,6 +226,13 @@ void Meteo11::onParseClicked()
             hasPendingPP = false;
         }
         ++idx;
+    }
+
+    // BтBтBвBв — достигнутые высоты зондирования (следующий токен после слоёв)
+    if (idx < parts.size() && parts[idx].length() == 4) {
+        const QString bh = parts[idx];
+        ui->lineEdit_Met11AchievedSensHeight->setText(
+            QString::number(bh.right(2).toInt()));
     }
 
     ui->lblStatus->setText("Строка разобрана — проверьте поля и нажмите «Применить»");
