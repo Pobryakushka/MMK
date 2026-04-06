@@ -256,7 +256,7 @@ QVector<WindProfileData> MeasurementResults::loadAvgWindProfile(int recordId)
 
     QSqlQuery query(db);
     query.prepare(
-        "SELECT wind_speed, wind_direction "
+        "SELECT height, wind_speed, wind_direction "
         "FROM avg_wind_profile "
         "WHERE profile_id = :pid "
         "ORDER BY height ASC"
@@ -271,17 +271,11 @@ QVector<WindProfileData> MeasurementResults::loadAvgWindProfile(int recordId)
     QVector<WindProfileData> dbData;
     while (query.next()) {
         WindProfileData point;
-        point.windSpeed    = query.value(0).toFloat();
-        point.windDirection = query.value(1).toInt();
-        point.isValid      = true;
+        point.height        = query.value(0).toFloat();
+        point.windSpeed     = query.value(1).toFloat();
+        point.windDirection = query.value(2).toInt();
+        point.isValid       = true;
         dbData.append(point);
-    }
-
-    // Применяем стандартные высоты АМС
-    if (!dbData.isEmpty()) {
-        QVector<float> standardHeights = AMSProtocol::getAverageWindHeights(dbData.size());
-        for (int i = 0; i < dbData.size() && i < standardHeights.size(); i++)
-            dbData[i].height = standardHeights[i];
     }
 
     profile = dbData;
@@ -314,7 +308,7 @@ QVector<WindProfileData> MeasurementResults::loadActualWindProfile(int recordId)
 
     QSqlQuery query(db);
     query.prepare(
-        "SELECT wind_speed, wind_direction "
+        "SELECT height, wind_speed, wind_direction "
         "FROM actual_wind_profile "
         "WHERE profile_id = :pid "
         "ORDER BY height ASC"
@@ -329,17 +323,11 @@ QVector<WindProfileData> MeasurementResults::loadActualWindProfile(int recordId)
     QVector<WindProfileData> dbData;
     while (query.next()) {
         WindProfileData point;
-        point.windSpeed     = query.value(0).toFloat();
-        point.windDirection = query.value(1).toInt();
+        point.height        = query.value(0).toFloat();
+        point.windSpeed     = query.value(1).toFloat();
+        point.windDirection = query.value(2).toInt();
         point.isValid       = true;
         dbData.append(point);
-    }
-
-    // Применяем стандартные высоты АМС
-    if (!dbData.isEmpty()) {
-        QVector<float> standardHeights = AMSProtocol::getActualWindHeights(dbData.size());
-        for (int i = 0; i < dbData.size() && i < standardHeights.size(); i++)
-            dbData[i].height = standardHeights[i];
     }
 
     profile = dbData;
@@ -610,30 +598,26 @@ void MeasurementResults::displayWindProfile(const QVector<WindProfileData> &avgW
                                             const QVector<WindProfileData> &actualWind,
                                             const QVector<MeasuredWindData> &measuredWind)
 {
-    // Заполняем таблицу среднего ветра
-    // Заголовки строк остаются как в UI (диапазоны высот типа "0-50", "0-100")
-    // Высоты уже присвоены в loadAvgWindProfile для построения графиков
+    // Заполняем таблицу среднего ветра: высота из БД — в заголовок строки
     ui->tableWidget_AverageWind->setRowCount(avgWind.size());
     for (int i = 0; i < avgWind.size(); i++) {
-        // Колонка 0: Скорость ветра
+        ui->tableWidget_AverageWind->setVerticalHeaderItem(
+            i, new QTableWidgetItem(QString::number(qRound(avgWind[i].height))));
         ui->tableWidget_AverageWind->setItem(i, 0,
-                                             new QTableWidgetItem(QString::number(avgWind[i].windSpeed, 'f', 2)));
-        // Колонка 1: Направление ветра
+            new QTableWidgetItem(QString::number(avgWind[i].windSpeed, 'f', 2)));
         ui->tableWidget_AverageWind->setItem(i, 1,
-                                             new QTableWidgetItem(QString::number(avgWind[i].windDirection)));
+            new QTableWidgetItem(QString::number(avgWind[i].windDirection)));
     }
 
-    // Заполняем таблицу действительного ветра
-    // Заголовки строк остаются как в UI
-    // Высоты уже присвоены в loadActualWindProfile для построения графиков
+    // Заполняем таблицу действительного ветра: высота из БД — в заголовок строки
     ui->tableWidget_realWind->setRowCount(actualWind.size());
     for (int i = 0; i < actualWind.size(); i++) {
-        // Колонка 0: Скорость ветра
+        ui->tableWidget_realWind->setVerticalHeaderItem(
+            i, new QTableWidgetItem(QString::number(qRound(actualWind[i].height))));
         ui->tableWidget_realWind->setItem(i, 0,
-                                          new QTableWidgetItem(QString::number(actualWind[i].windSpeed, 'f', 2)));
-        // Колонка 1: Направление ветра
+            new QTableWidgetItem(QString::number(actualWind[i].windSpeed, 'f', 2)));
         ui->tableWidget_realWind->setItem(i, 1,
-                                          new QTableWidgetItem(QString::number(actualWind[i].windDirection)));
+            new QTableWidgetItem(QString::number(actualWind[i].windDirection)));
     }
 
     // Заполняем таблицу измеренного ветра
