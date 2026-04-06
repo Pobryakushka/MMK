@@ -192,36 +192,45 @@ void Meteo11::onParseClicked()
         ++idx;
     }
 
-    // Слои ветра: каждая группа = ППНН-СС (4 символа код высоты + 2 направление - 2 скорость)
-    // или ППТТННСС — до и после 10 км разный формат, парсим упрощённо
-    // Группы слоёв: XXXX-TTNNSS
+    // Разбираем слои по парам токенов:
+    //   ниже 10 км: ВВПП (4 симв.) + ТТННСС (6 симв.)
+    //   выше 10 км: ВВ   (2 симв.) + ТТННСС (6 симв.)
+    // Последний 4-символьный токен — BтBтBвBв (достигнутые высоты), не слой.
     int layerRow = 0;
+    QString pendingPP;          // ПП из предыдущего ВВПП-токена
+    bool    hasPendingPP = false;
+
     while (idx < parts.size() && layerRow < ui->tableWidget_meteo11->rowCount()) {
         const QString grp = parts[idx];
 
-        // Пропускаем итоговые группы BтBт и BвBв (2-значные в конце)
-        if (idx == parts.size() - 1 && grp.length() == 4 && grp.toInt() > 0) {
+        // Последний токен длиной 4 — BтBтBвBв (итоговые высоты зондирования)
+        if (idx == parts.size() - 1 && grp.length() == 4) {
             ui->lineEdit_Met11AchievedSensHeight->setText(
                 QString::number(grp.right(2).toInt()));
-            ++idx;
             break;
         }
 
-        // Группа слоя: первые 2-4 символа — код высоты+доп, последние 6 — ТТННСС
-        if (grp.length() >= 6) {
-            const QString ttnnss = grp.right(6);
-            // НН — символы 2-3 (индексы 2,3)
-            const QString nn = ttnnss.mid(2, 2);
-            // СС — символы 4-5 (индексы 4,5)
-            const QString ss = ttnnss.mid(4, 2);
+        if (grp.length() == 4) {
+            // ВВПП: первые 2 — высота, последние 2 — поправка за плотность
+            pendingPP    = grp.right(2);
+            hasPendingPP = true;
+        } else if (grp.length() == 2) {
+            // ВВ (высота в км, >10 км): ПП отсутствует
+            pendingPP    = "//";
+            hasPendingPP = true;
+        } else if (grp.length() == 6) {
+            // ТТННСС: заполняем строку таблицы
+            const QString nn = grp.mid(2, 2);
+            const QString ss = grp.mid(4, 2);
+            const QString pp = hasPendingPP ? pendingPP : "//";
 
-            if (layerRow < ui->tableWidget_meteo11->rowCount()) {
-                ui->tableWidget_meteo11->setItem(layerRow, 1,
-                                                 new QTableWidgetItem(nn));
-                ui->tableWidget_meteo11->setItem(layerRow, 2,
-                                                 new QTableWidgetItem(ss));
-                ++layerRow;
-            }
+            auto *ppItem = new QTableWidgetItem(pp);
+            ppItem->setTextAlignment(Qt::AlignCenter);
+            ui->tableWidget_meteo11->setItem(layerRow, 0, ppItem);
+            ui->tableWidget_meteo11->setItem(layerRow, 1, new QTableWidgetItem(nn));
+            ui->tableWidget_meteo11->setItem(layerRow, 2, new QTableWidgetItem(ss));
+            ++layerRow;
+            hasPendingPP = false;
         }
         ++idx;
     }
