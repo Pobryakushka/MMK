@@ -108,16 +108,6 @@ bool MeasurementExporter::generatePdf(const MeasurementSnapshot &snap,
 
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// generateXlsx() — исправленный QXlsx API
-//
-// Два ключевых исправления:
-//  1. addSeries() принимает QXlsx::AbstractSheet*, а не QString.
-//     Получаем через xlsx.currentSheet() СРАЗУ после addSheet().
-//  2. setAxisTitle() / setChartStyle() отсутствуют в публичном API QXlsx —
-//     заменены на setChartTitle() (единственный гарантированный метод).
-// ══════════════════════════════════════════════════════════════════════════════
-
 bool MeasurementExporter::generateXlsx(const MeasurementSnapshot &snap,
                                        const ExportOptions       &opts,
                                        const QString             &filePath,
@@ -131,6 +121,10 @@ bool MeasurementExporter::generateXlsx(const MeasurementSnapshot &snap,
 
 
     QXlsx::Document xlsx;
+    {
+        QStringList sheets = xlsx.sheetNames();
+        xlsx.renameSheet(sheets.isEmpty() ? "Sheet1" : sheets.first(), "Сводка");
+    }
 
     // ── Форматы ──────────────────────────────────────────────────────────────
 
@@ -162,7 +156,6 @@ bool MeasurementExporter::generateXlsx(const MeasurementSnapshot &snap,
 
     // ── Лист 1: Сводка ───────────────────────────────────────────────────────
 
-    xlsx.renameSheet("Sheet1", "Сводка");
     xlsx.setColumnWidth(1, 40);
     xlsx.setColumnWidth(2, 30);
 
@@ -198,10 +191,10 @@ bool MeasurementExporter::generateXlsx(const MeasurementSnapshot &snap,
     // ── Вспомогательные функции для вставки графиков ─────────────────────────
     auto insertLineChart = [&](int anchorRow, int anchorCol,
                             int firstDataRow, int lastDataRow,
-                            int colData, int colCategories,
+                            int colData, int /*colCategories*/,
                             const QString &title,
                             QXlsx::AbstractSheet *sheet) {
-    QXlsx::Chart *chart = xlsx.insertChart(anchorRow, anchorCol, QSize(400, 280));
+    QXlsx::Chart *chart = xlsx.insertChart(anchorRow, anchorCol, QSize(420, 300));
     chart->setChartType(QXlsx::Chart::CT_LineChart);
     chart->setChartTitle(title);
     // Значения (Y)
@@ -210,25 +203,25 @@ bool MeasurementExporter::generateXlsx(const MeasurementSnapshot &snap,
         sheet);
     // Категории (X) — передаём как вторую серию; QXlsx использует первый
     // addSeries как значения, второй — как подписи при наличии заголовка
-    chart->addSeries(
-        QXlsx::CellRange(firstDataRow, colCategories, lastDataRow, colCategories),
-        sheet);
+    // chart->addSeries(
+    //     QXlsx::CellRange(firstDataRow, colCategories, lastDataRow, colCategories),
+    //     sheet);
 };
 
 auto insertBarChart = [&](int anchorRow, int anchorCol,
                            int firstDataRow, int lastDataRow,
-                           int colData, int colCategories,
+                           int colData, int /*colCategories*/,
                            const QString &title,
                            QXlsx::AbstractSheet *sheet) {
-    QXlsx::Chart *chart = xlsx.insertChart(anchorRow, anchorCol, QSize(400, 280));
-    chart->setChartType(QXlsx::Chart::CT_BarChart);
+    QXlsx::Chart *chart = xlsx.insertChart(anchorRow, anchorCol, QSize(420, 300));
+    chart->setChartType(QXlsx::Chart::CT_LineChart);
     chart->setChartTitle(title);
     chart->addSeries(
         QXlsx::CellRange(firstDataRow, colData, lastDataRow, colData),
         sheet);
-    chart->addSeries(
-        QXlsx::CellRange(firstDataRow, colCategories, lastDataRow, colCategories),
-        sheet);
+    // chart->addSeries(
+    //     QXlsx::CellRange(firstDataRow, colCategories, lastDataRow, colCategories),
+    //     sheet);
 };
 
 // ── Профили ветра (общий шаблон) ─────────────────────────────────────────
@@ -738,7 +731,10 @@ static const char *kCss =
 static QString chartImg(const QMap<QString,QImage> &charts, const QString &key)
 {
     if (!charts.contains(key) || charts[key].isNull()) return {};
-    return QString("<img class=\"chart\" src=\"img://%1\"/>").arg(key);
+    const QImage &img = charts[key];
+    int w = qMin(img.width(), 290);
+    int h = (img.width() > 0) ? (img.height() * w / img.width()) : img.height();
+    return QString("<img src=\"img://%1\" width=\"%2\" height=\"%3\"/>").arg(key).arg(w).arg(h);
 }
 
 QString MeasurementExporter::buildHtmlReport(const MeasurementSnapshot &s,

@@ -1103,42 +1103,38 @@ void MeasurementResults::plotWindSpeed(QwtPlot *plot, const QVector<WindProfileD
                                        const QString &title, const QColor &color)
 {
     if (!plot || data.isEmpty()) return;
-
-    // Очищаем старые кривые
     plot->detachItems(QwtPlotItem::Rtti_PlotCurve);
 
-    // Подготавливаем данные
-    QVector<double> heights;
-    QVector<double> speeds;
+    QVector<double> heights, speeds;
+    double maxSpeed = 0, maxHeight = 0;
 
     for (const WindProfileData &point : data) {
-        if (point.isValid) {
+        if (point.isValid && point.windSpeed < 900.f) { // 999 = нет данных (sentinel)
             heights.append(point.height);
             speeds.append(point.windSpeed);
+            maxSpeed  = qMax(maxSpeed,  (double)point.windSpeed);
+            maxHeight = qMax(maxHeight, (double)point.height);
         }
     }
 
-    if (heights.isEmpty()) {
-        plot->replot();
-        return;
-    }
+    if (heights.isEmpty()) { plot->replot(); return; }
 
-    // Создаем кривую
     QwtPlotCurve *curve = new QwtPlotCurve(title);
-    // X-ось: скорость, Y-ось: высота
     curve->setSamples(speeds, heights);
     curve->setPen(QPen(color, 2));
-
-    // Добавляем символы на точках
     QwtSymbol *symbol = new QwtSymbol(QwtSymbol::Ellipse,
-                                      QBrush(color),
-                                      QPen(color, 1),
-                                      QSize(5, 5));
+                                      QBrush(color), QPen(color, 1), QSize(5, 5));
     curve->setSymbol(symbol);
     curve->setStyle(QwtPlotCurve::Lines);
-
     curve->attach(plot);
+
+    // Динамические оси по данным
+    double xMax = (maxSpeed < 1.0) ? 10.0 : maxSpeed * 1.15;
+    double yMax = (maxHeight < 100.0) ? 1000.0 : maxHeight * 1.05;
+    plot->setAxisScale(QwtPlot::xBottom, 0.0, xMax);
+    plot->setAxisScale(QwtPlot::yLeft,   0.0, yMax);
     plot->replot();
+
 }
 
 void MeasurementResults::plotWindDirection(QwtPlot *plot, const QVector<WindProfileData> &data,
@@ -1183,32 +1179,35 @@ void MeasurementResults::plotMeasuredWindSpeed(QwtPlot *plot, const QVector<Meas
                                                const QString &title, const QColor &color)
 {
     if (!plot || data.isEmpty()) return;
-
     plot->detachItems(QwtPlotItem::Rtti_PlotCurve);
 
-    QVector<double> heights;
-    QVector<double> speeds;
+    QVector<double> heights, speeds;
+    double maxSpeed = 0, maxHeight = 0;
 
     for (const MeasuredWindData &point : data) {
         heights.append(point.height);
         speeds.append(point.windSpeed);
+        maxSpeed  = qMax(maxSpeed,  (double)point.windSpeed);
+        maxHeight = qMax(maxHeight, (double)point.height);
     }
 
     QwtPlotCurve *curve = new QwtPlotCurve(title);
-    // X-ось: скорость, Y-ось: высота
     curve->setSamples(speeds, heights);
     curve->setPen(QPen(color, 2));
-
     QwtSymbol *symbol = new QwtSymbol(QwtSymbol::Ellipse,
-                                      QBrush(color),
-                                      QPen(color, 1),
-                                      QSize(5, 5));
+                                      QBrush(color), QPen(color, 1), QSize(5, 5));
     curve->setSymbol(symbol);
     curve->setStyle(QwtPlotCurve::Lines);
-
     curve->attach(plot);
+
+    double xMax = (maxSpeed < 0.01) ? 1.0 : maxSpeed * 1.15;
+    double yMax = (maxHeight < 100.0) ? 1000.0 : maxHeight * 1.05;
+    plot->setAxisScale(QwtPlot::xBottom, 0.0, xMax);
+    plot->setAxisScale(QwtPlot::yLeft,   0.0, yMax);
     plot->replot();
+
 }
+
 
 void MeasurementResults::plotMeasuredWindDirection(QwtPlot *plot, const QVector<MeasuredWindData> &data,
                                                    const QString &title, const QColor &color)
@@ -2234,7 +2233,7 @@ MeasurementSnapshot MeasurementResults::buildSnapshot() const
         return img;
     };
 
-    const int CW = 560, CH = 250;
+    const int CW = 400, CH = 280;
     snap.charts["avgSpeed"]    = renderPlot(ui->plot_midWindSpeed,       CW, CH);
     snap.charts["avgDir"]      = renderPlot(ui->plot_midWindAzimut,      CW, CH);
     snap.charts["actualSpeed"] = renderPlot(ui->plot_realWindSpeed,      CW, CH);
