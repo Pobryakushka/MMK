@@ -63,7 +63,8 @@ private:
     QJsonObject m_bulletinJson;
     QString     m_validityPeriod;
 
-    // Коды высот для строк таблицы: 02, 04, 08, 12, 16, 20, 24, 30
+    // Коды высот для строк таблицы (19 стандартных уровней):
+    // 02 04 08 12 16 20 24 30 40 50 60 80 10 12 14 18 22 26 30
     static const QStringList kHeightCodes;
 };
 

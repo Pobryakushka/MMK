@@ -190,10 +190,12 @@ private:
         // --- Метаданные для отображения (не входят в строку) ---
         QDateTime bulletinTime;     // время составления
         bool      isValid;          // бюллетень годен
+        bool      isApproximate;    // true → приближённый формат
 
         Meteo11Data() : day(0), hour(0), tenMinutes(0), stationAltitude(0),
             pressureDeviation(0), tempVirtualDev(0),
-            reachedTempHeightKm(0), reachedWindHeightKm(0), isValid(false) {}
+            reachedTempHeightKm(0), reachedWindHeightKm(0),
+            isValid(false), isApproximate(false) {}
     };
 
     // Хранимые данные трёх типов бюллетеня
@@ -226,7 +228,7 @@ private:
     static int  encodeWindDir(int degrees);             // градусы → делители угломера (0-60)
     static int  encodePressureDev(double deltaMmHg);    // отклонение давления → БББ
     static int  encodeTempDev(double deltaCelsius);     // отклонение темп. → ТТ
-    static QString formatMeteo11Group(int heightCode, int dir, int speed, bool above10km);
+    static QString formatMeteo11Group(int heightCode, int dir, int speed, bool above10km, bool includePP = true);
     static QString buildMeteo11String(const Meteo11Data &d);
 
     // Параметры атмосферы для кодирования
