@@ -330,6 +330,61 @@
             <string>0–3000 (30)</string>
            </property>
           </row>
+          <row>
+           <property name="text">
+            <string>4000 (40)</string>
+           </property>
+          </row>
+          <row>
+           <property name="text">
+            <string>5000 (50)</string>
+           </property>
+          </row>
+          <row>
+           <property name="text">
+            <string>6000 (60)</string>
+           </property>
+          </row>
+          <row>
+           <property name="text">
+            <string>8000 (80)</string>
+           </property>
+          </row>
+          <row>
+           <property name="text">
+            <string>10000 (10)</string>
+           </property>
+          </row>
+          <row>
+           <property name="text">
+            <string>12000 (12)</string>
+           </property>
+          </row>
+          <row>
+           <property name="text">
+            <string>14000 (14)</string>
+           </property>
+          </row>
+          <row>
+           <property name="text">
+            <string>18000 (18)</string>
+           </property>
+          </row>
+          <row>
+           <property name="text">
+            <string>22000 (22)</string>
+           </property>
+          </row>
+          <row>
+           <property name="text">
+            <string>26000 (26)</string>
+           </property>
+          </row>
+          <row>
+           <property name="text">
+            <string>30000 (30)</string>
+           </property>
+          </row>
           <column>
            <property name="text">
             <string>ПП</string>
