@@ -834,7 +834,7 @@ void AMSHandler::processReceivedPacket(const QByteArray &packet)
         bool ok = m_protocol->parseRotateAntennaResponse(packet, status, currentAngle);
         if (ok) {
             qInfo() << "AMSHandler: Поворот —" << AMSProtocol::rotateStatusString(status)
-                    << "угол:" << currentAngle;
+                << "угол:" << currentAngle;
             // Останавливаем опрос при финальном статусе
             if (status == ROTATE_IDLE_OK || status == ROTATE_FAULT) {
                 m_rotatePollTimer->stop();
@@ -879,7 +879,7 @@ void AMSHandler::onResponseTimeout()
     m_waitingForResponse = false;
 
     QString error = QString("Таймаут ответа на команду 0x%1")
-            .arg(static_cast<int>(m_lastCommand), 2, 16, QChar('0'));
+                        .arg(static_cast<int>(m_lastCommand), 2, 16, QChar('0'));
 
     qWarning() << "AMSHandler:" << error;
 
@@ -906,6 +906,47 @@ void AMSHandler::onSerialError(QSerialPort::SerialPortError error)
 
 // ===== МЕТОДЫ ЗАПИСИ В БД =====
 
+bool AMSHandler::saveMeteo11Bulletin(const QJsonObject &bulletinJson,
+                                     const QDateTime   &bulletinTime,
+                                     const QString     &validityPeriod)
+{
+    if (m_currentRecordId <= 0) {
+        qWarning() << "AMSHandler::saveMeteo11Bulletin: нет активного record_id, пропускаем";
+        return false;
+    }
+    if (!DatabaseManager::instance()->connect()) {
+        qWarning() << "AMSHandler::saveMeteo11Bulletin: нет подключения к БД";
+        return false;
+    }
+
+    QSqlDatabase db = DatabaseManager::instance()->database();
+    QSqlQuery query(db);
+    query.prepare(
+        "INSERT INTO meteo_11_bulletin "
+        "  (record_id, bulletin_data, bulletin_time, validity_period) "
+        "VALUES (:record_id, :data::jsonb, :time, :period) "
+        "ON CONFLICT (record_id) DO UPDATE SET "
+        "  bulletin_data   = EXCLUDED.bulletin_data, "
+        "  bulletin_time   = EXCLUDED.bulletin_time, "
+        "  validity_period = EXCLUDED.validity_period"
+        );
+    query.bindValue(":record_id", m_currentRecordId);
+    query.bindValue(":data",      QString::fromUtf8(
+                                 QJsonDocument(bulletinJson).toJson(QJsonDocument::Compact)));
+    query.bindValue(":time",      bulletinTime);
+    query.bindValue(":period",    validityPeriod);
+
+    if (!query.exec()) {
+        qWarning() << "AMSHandler::saveMeteo11Bulletin: ошибка БД:"
+                   << query.lastError().text();
+        return false;
+    }
+
+    qInfo() << "AMSHandler: Метео-11 сохранён для record_id=" << m_currentRecordId
+            << "время:" << bulletinTime.toString("dd.MM.yyyy HH:mm");
+    return true;
+}
+
 int AMSHandler::createMainArchiveRecord(const QString &notes)
 {
     if (!DatabaseManager::instance()->connect()) return -1;
@@ -920,7 +961,7 @@ int AMSHandler::createMainArchiveRecord(const QString &notes)
 
     if (!query.exec() || !query.next()) {
         QString error = QString("Ошибка создания записи в main_archive: %1")
-                .arg(query.lastError().text());
+                            .arg(query.lastError().text());
         qCritical() << "AMSHandler:" << error;
         emit databaseError(error);
         return -1;
@@ -946,7 +987,7 @@ bool AMSHandler::saveAvgWindProfile(int recordId, const QVector<WindProfileData>
     if (!idQuery.exec("SELECT nextval('avg_wind_profile_profile_id_seq')")) {
         db.rollback();
         QString error = QString("Ошибка генерации profile_id: %1")
-                .arg(idQuery.lastError().text());
+                            .arg(idQuery.lastError().text());
         qCritical() << "AMSHandler:" << error;
         emit databaseError(error);
         return false;
@@ -984,7 +1025,7 @@ bool AMSHandler::saveAvgWindProfile(int recordId, const QVector<WindProfileData>
         if (!query.exec()) {
             db.rollback();
             QString error = QString("Ошибка записи точки среднего ветра: %1")
-                    .arg(query.lastError().text());
+                                .arg(query.lastError().text());
             qCritical() << "AMSHandler:" << error;
             emit databaseError(error);
             return false;
@@ -999,10 +1040,10 @@ bool AMSHandler::saveAvgWindProfile(int recordId, const QVector<WindProfileData>
     // ШАГ 3: Обновляем ссылку в wind_profiles_references (upsert по record_id)
     QSqlQuery refQuery(db);
     refQuery.prepare(
-                "INSERT INTO wind_profiles_references (record_id, avg_wind_profile_id) "
-                "VALUES (:record_id, :profile_id) "
-                "ON CONFLICT (record_id) DO UPDATE SET avg_wind_profile_id = EXCLUDED.avg_wind_profile_id"
-                );
+        "INSERT INTO wind_profiles_references (record_id, avg_wind_profile_id) "
+        "VALUES (:record_id, :profile_id) "
+        "ON CONFLICT (record_id) DO UPDATE SET avg_wind_profile_id = EXCLUDED.avg_wind_profile_id"
+        );
     refQuery.bindValue(":record_id", recordId);
     refQuery.bindValue(":profile_id", profileId);
     if (!refQuery.exec()) {
@@ -1027,7 +1068,7 @@ bool AMSHandler::saveActualWindProfile(int recordId, const QVector<WindProfileDa
     if (!idQuery.exec("SELECT nextval('actual_wind_profile_profile_id_seq')")) {
         db.rollback();
         QString error = QString("Ошибка генерации profile_id: %1")
-                .arg(idQuery.lastError().text());
+                            .arg(idQuery.lastError().text());
         qCritical() << "AMSHandler:" << error;
         emit databaseError(error);
         return false;
@@ -1065,7 +1106,7 @@ bool AMSHandler::saveActualWindProfile(int recordId, const QVector<WindProfileDa
         if (!query.exec()) {
             db.rollback();
             QString error = QString("Ошибка записи точки действительного ветра: %1")
-                    .arg(query.lastError().text());
+                                .arg(query.lastError().text());
             qCritical() << "AMSHandler:" << error;
             emit databaseError(error);
             return false;
@@ -1080,10 +1121,10 @@ bool AMSHandler::saveActualWindProfile(int recordId, const QVector<WindProfileDa
     // ШАГ 3: Обновляем ссылку в wind_profiles_references (upsert по record_id)
     QSqlQuery refQuery(db);
     refQuery.prepare(
-                "INSERT INTO wind_profiles_references (record_id, actual_wind_profile_id) "
-                "VALUES (:record_id, :profile_id) "
-                "ON CONFLICT (record_id) DO UPDATE SET actual_wind_profile_id = EXCLUDED.actual_wind_profile_id"
-                );
+        "INSERT INTO wind_profiles_references (record_id, actual_wind_profile_id) "
+        "VALUES (:record_id, :profile_id) "
+        "ON CONFLICT (record_id) DO UPDATE SET actual_wind_profile_id = EXCLUDED.actual_wind_profile_id"
+        );
     refQuery.bindValue(":record_id", recordId);
     refQuery.bindValue(":profile_id", profileId);
     if (!refQuery.exec()) {
@@ -1108,7 +1149,7 @@ bool AMSHandler::saveMeasuredWindProfile(int recordId, const QVector<MeasuredWin
     if (!idQuery.exec("SELECT nextval('measured_wind_profile_profile_id_seq')")) {
         db.rollback();
         QString error = QString("Ошибка генерации profile_id: %1")
-                .arg(idQuery.lastError().text());
+                            .arg(idQuery.lastError().text());
         qCritical() << "AMSHandler:" << error;
         emit databaseError(error);
         return false;
@@ -1139,7 +1180,7 @@ bool AMSHandler::saveMeasuredWindProfile(int recordId, const QVector<MeasuredWin
         if (!query.exec()) {
             db.rollback();
             QString error = QString("Ошибка записи точки измеренного ветра: %1")
-                    .arg(query.lastError().text());
+                                .arg(query.lastError().text());
             qCritical() << "AMSHandler:" << error;
             emit databaseError(error);
             return false;
@@ -1154,10 +1195,10 @@ bool AMSHandler::saveMeasuredWindProfile(int recordId, const QVector<MeasuredWin
     // ШАГ 3: Обновляем ссылку в wind_profiles_references (upsert по record_id)
     QSqlQuery refQuery(db);
     refQuery.prepare(
-                "INSERT INTO wind_profiles_references (record_id, measured_wind_profile_id) "
-                "VALUES (:record_id, :profile_id) "
-                "ON CONFLICT (record_id) DO UPDATE SET measured_wind_profile_id = EXCLUDED.measured_wind_profile_id"
-                );
+        "INSERT INTO wind_profiles_references (record_id, measured_wind_profile_id) "
+        "VALUES (:record_id, :profile_id) "
+        "ON CONFLICT (record_id) DO UPDATE SET measured_wind_profile_id = EXCLUDED.measured_wind_profile_id"
+        );
     refQuery.bindValue(":record_id", recordId);
     refQuery.bindValue(":profile_id", profileId);
     if (!refQuery.exec()) {

@@ -36,7 +36,7 @@ struct MeasurementRecord {
     QString notes;
 
     MeasurementRecord() : recordId(-1), hasAvgWind(false),
-                         hasActualWind(false), hasMeasuredWind(false) {}
+        hasActualWind(false), hasMeasuredWind(false) {}
 };
 
 class MeasurementResults : public QDialog
@@ -47,8 +47,8 @@ public:
     explicit MeasurementResults(QWidget *parent = nullptr);
     ~MeasurementResults();
 
-//    void setDatabase(const QString &host, int port, const QString &dbName,
-//                    const QString &user, const QString &password);
+    //    void setDatabase(const QString &host, int port, const QString &dbName,
+    //                    const QString &user, const QString &password);
 
 private slots:
     void onPrevDateClicked();
@@ -90,13 +90,13 @@ private:
     ZoomsContainer *m_zoomsContainer;
 
     // База данных
-//    QSqlDatabase m_database;
-//    QString m_dbHost;
-//    int m_dbPort;
-//    QString m_dbName;
-//    QString m_dbUser;
-//    QString m_dbPassword;
-//    bool m_dbConfigured;
+    //    QSqlDatabase m_database;
+    //    QString m_dbHost;
+    //    int m_dbPort;
+    //    QString m_dbName;
+    //    QString m_dbUser;
+    //    QString m_dbPassword;
+    //    bool m_dbConfigured;
 
     void updateDateTimeDisplay();
     void updateSliderRange();
@@ -118,11 +118,12 @@ private:
     QVector<MeasuredWindData> loadMeasuredWindProfile(int recordId);
     void loadSurfaceMeteoData(int recordId);
     void loadStationCoordinates(int recordId);
+    void loadMeteo11FromStation(int recordId); // читает meteo_11_bulletin из БД
 
     // Отображение данных
     void displayWindProfile(const QVector<WindProfileData> &avgWind,
-                          const QVector<WindProfileData> &actualWind,
-                          const QVector<MeasuredWindData> &measuredWind);
+                            const QVector<WindProfileData> &actualWind,
+                            const QVector<MeasuredWindData> &measuredWind);
     void updateAvailableRecordsLabel();
 
     void setupPlots();
