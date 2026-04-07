@@ -279,8 +279,13 @@ QVector<WindProfileData> MeasurementResults::loadAvgWindProfile(int recordId)
     }
 
     profile = dbData;
-    qDebug() << "MeasurementResults: Загружен профиль среднего ветра," << profile.size()
-             << "точек (record_id=" << recordId << ", profile_id=" << profileId << ")";
+    QStringList heightList;
+    for (const auto &pt : profile)
+        heightList << QString::number(qRound(pt.height));
+    qDebug() << "MeasurementResults: Средний ветер record_id=" << recordId
+             << "profile_id=" << profileId
+             << "точек=" << profile.size()
+             << "высоты:" << heightList.join(", ");
     return profile;
 }
 
@@ -331,8 +336,13 @@ QVector<WindProfileData> MeasurementResults::loadActualWindProfile(int recordId)
     }
 
     profile = dbData;
-    qDebug() << "MeasurementResults: Загружен профиль действительного ветра," << profile.size()
-             << "точек (record_id=" << recordId << ", profile_id=" << profileId << ")";
+    QStringList heightListA;
+    for (const auto &pt : profile)
+        heightListA << QString::number(qRound(pt.height));
+    qDebug() << "MeasurementResults: Действительный ветер record_id=" << recordId
+             << "profile_id=" << profileId
+             << "точек=" << profile.size()
+             << "высоты:" << heightListA.join(", ");
     return profile;
 }
 
@@ -512,6 +522,75 @@ static const Meteo11Height kApproxHeights[] = {
 };
 static const int kApproxHeightCount =
     static_cast<int>(sizeof(kApproxHeights) / sizeof(kApproxHeights[0]));
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Таблица 3: средние отклонения температуры ΔτY (°C) без бюллетеня «Метеосредний»
+// Строки: стандартные высоты 200..4000 м (9 уровней)
+// Столбцы: |Δτ₀МП| = 1,2,3,4,5,6,7,8,9,10,20,30,40,50
+// Значения — абсолютные; знак = знак Δτ₀МП
+// ──────────────────────────────────────────────────────────────────────────────
+static const int kTable3Heights[9] = { 200, 400, 800, 1200, 1600, 2000, 2400, 3000, 4000 };
+static const int kTable3ColKeys[14] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 30, 40, 50 };
+
+// Значения для ОТРИЦАТЕЛЬНОГО Δτ₀МП (числитель дроби)
+static const int kTable3Neg[9][14] = {
+    //  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 20, 30, 40, 50
+    {   1,  2,  3,  4,  5,  6,  7,  8,  8,  9, 20, 29, 39, 49 }, // 200 м
+    {   1,  2,  3,  4,  5,  6,  6,  7,  8,  9, 19, 29, 38, 48 }, // 400 м
+    {   1,  2,  3,  4,  5,  6,  7,  7,  7,  8, 18, 28, 37, 46 }, // 800 м
+    {   1,  2,  3,  4,  4,  5,  5,  6,  7,  8, 17, 26, 35, 44 }, // 1200 м
+    {   1,  2,  3,  3,  4,  4,  5,  6,  7,  7, 17, 25, 34, 42 }, // 1600 м
+    {   1,  2,  3,  3,  4,  4,  5,  6,  6,  7, 16, 24, 32, 40 }, // 2000 м
+    {   1,  2,  2,  3,  4,  4,  5,  5,  6,  7, 15, 23, 31, 38 }, // 2400 м
+    {   1,  2,  2,  3,  4,  4,  4,  5,  5,  6, 15, 22, 30, 37 }, // 3000 м
+    {   1,  2,  2,  3,  4,  4,  4,  4,  5,  6, 14, 20, 27, 34 }, // 4000 м
+};
+
+// Значения для ПОЛОЖИТЕЛЬНОГО Δτ₀МП (знаменатель) — одинаковы для всех высот
+// Столбцы 40 и 50 не используются (нет данных)
+static const int kTable3Pos[14] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 30, 0, 0 };
+
+// Вспомогательная функция: поиск одного значения по таблице 3
+static int table3LookupAbs(int heightRow, int absKey, bool negative)
+{
+    for (int c = 0; c < 14; ++c) {
+        if (kTable3ColKeys[c] == absKey) {
+            return negative ? kTable3Neg[heightRow][c] : kTable3Pos[c];
+        }
+    }
+    return 0;
+}
+
+// Вычислить ΔτY по Таблице 3 (без Метеосредний) для одной высоты
+// Возвращает готовое закодированное ТТ значение (см. encodeTempDev)
+static int computeApproxTempDev(float heightM, double deltaTau0)
+{
+    // Находим строку таблицы
+    int row = -1;
+    for (int i = 0; i < 9; ++i) {
+        if (qAbs(static_cast<int>(heightM) - kTable3Heights[i]) < 1) { row = i; break; }
+    }
+    if (row < 0 || qAbs(deltaTau0) < 0.5) return 0;
+
+    bool negative = deltaTau0 < 0.0;
+    int  abs0     = qRound(qAbs(deltaTau0));
+    if (abs0 > 50) abs0 = 50; // ограничиваем диапазоном таблицы
+
+    // Разложение: сотни десятков + единицы (аналогично тому, как описано в протоколе)
+    int tens  = (abs0 / 10) * 10;
+    int units = abs0 % 10;
+    int absVal = 0;
+    if (tens  > 0) absVal += table3LookupAbs(row, tens, negative);
+    if (units > 0) absVal += table3LookupAbs(row, units, negative);
+
+    double signedDev = negative ? -static_cast<double>(absVal) : static_cast<double>(absVal);
+
+    // Кодируем так же как encodeTempDev: отрицательные +50 к первой цифре
+    int val = qRound(qAbs(signedDev));
+    val = qMin(val, 49);
+    if (signedDev < 0.0) val += 50;
+    return val;
+}
 
 void MeasurementResults::loadMeteo11FromStation(int recordId)
 {
@@ -1447,7 +1526,7 @@ int MeasurementResults::encodeTempDev(double deltaCelsius)
  *  ≤10 км: ХХХХ-ТТННСС  (4-значный код высоты + 6-значный ТТННСС)
  *  >10 км: ХХ-ТТННСС   (2-значный код + 6-значный)
  */
-QString MeasurementResults::formatMeteo11Group(int heightCode, int dir, int speed, bool above10km, bool includePP)
+QString MeasurementResults::formatMeteo11Group(int heightCode, int dir, int speed, int tempDev, bool above10km, bool includePP)
 {
     // Формат уточнённого (includePP=true):
     //  ≤8000 м:  ВВ//-ТТННСС  где ВВ = высота в сотнях метров (02..80)
@@ -1457,30 +1536,26 @@ QString MeasurementResults::formatMeteo11Group(int heightCode, int dir, int spee
     QString hPart;
 
     if (!above10km) {
-        // heightCode хранится в метрах (200, 400, ..., 8000)
         int hHundreds = heightCode / 100;
         if (includePP)
             hPart = QString("%1//").arg(hHundreds, 2, 10, QChar('0'));
         else
             hPart = QString("%1").arg(hHundreds, 2, 10, QChar('0'));
     } else {
-        // heightCode хранится в км (10, 12, 14, 18, 22, 26, 30)
         if (includePP)
             hPart = QString("%1//").arg(heightCode, 2, 10, QChar('0'));
         else
             hPart = QString("%1").arg(heightCode, 2, 10, QChar('0'));
     }
 
-    // СС: если >= 99 — нет данных → //
     QString ssStr = (speed >= 99)
                         ? "//"
                         : QString("%1").arg(speed, 2, 10, QChar('0'));
 
-    // ТТННСС: ТТ=00 (нет данных), НН=направление, СС=скорость или //
     QString dataPart = QString("%1%2%3")
-                           .arg(0,   2, 10, QChar('0'))   // ТТ
-                           .arg(dir, 2, 10, QChar('0'))   // НН
-                           .arg(ssStr);                   // СС
+                           .arg(tempDev, 2, 10, QChar('0'))  // ТТ
+                           .arg(dir,     2, 10, QChar('0'))  // НН
+                           .arg(ssStr);                      // СС
 
     return hPart + "-" + dataPart;
 }
@@ -1521,7 +1596,8 @@ QString MeasurementResults::buildMeteo11String(const Meteo11Data &d)
     const bool includePP = !d.isApproximate;
     for (const Meteo11Data::LayerData &layer : d.layers) {
         parts << formatMeteo11Group(layer.heightCode, layer.windDir,
-                                    layer.windSpeed, layer.isAbove10km, includePP);
+                                    layer.windSpeed, layer.tempDev,
+                                    layer.isAbove10km, includePP);
     }
 
     // Достигнутые высоты BтBтBвBв (только для уточнённого)
@@ -1620,9 +1696,13 @@ MeasurementResults::Meteo11Data MeasurementResults::buildMeteo11(
             }
         }
 
-        // Допускаем отклонение не более 300 м (для низких уровней) или 1000 м (для высоких)
-        float tolerance = lvl.above10km ? 2000.f : 400.f;
-        if (bestIdx < 0 || bestDiff > tolerance) break; // Выше достигнутой высоты — стоп
+        // Допускаем отклонение не более 400 м для слоёв ≤8000 м
+        // и не более 1500 м для слоёв ≥10000 м.
+        // Дополнительное условие: профильная точка должна быть не ниже 80% целевой высоты
+        // (чтобы точка 8000 м не попала в слой 10000 м).
+        float tolerance = lvl.above10km ? 1500.f : 400.f;
+        if (bestIdx < 0 || bestDiff > tolerance) break;
+        if (windProfile[bestIdx].height < lvl.heightM * 0.80f) break;
 
         const WindProfileData &pt = windProfile[bestIdx];
         if (!pt.isValid) break;
@@ -1634,6 +1714,10 @@ MeasurementResults::Meteo11Data MeasurementResults::buildMeteo11(
         layer.windDir     = encodeWindDir(pt.windDirection);
         layer.windSpeed   = qRound(pt.windSpeed);
         layer.isAbove10km = lvl.above10km;
+        // Для приближённого — ΔτY из Таблицы 3 (без Метеосредний)
+        layer.tempDev = d.isApproximate
+                        ? computeApproxTempDev(lvl.heightM, deltaTau0)
+                        : 0;
         d.layers.append(layer);
     }
 
@@ -1642,6 +1726,68 @@ MeasurementResults::Meteo11Data MeasurementResults::buildMeteo11(
     d.reachedWindHeightKm = qRound(maxWindHeightM / 1000.0);
 
     d.isValid = !d.layers.isEmpty();
+    return d;
+}
+
+/**
+ * Приближённый бюллетень — только из наземных параметров (IWS):
+ *  ΔH₀, Δτ₀МП вычисляются по протоколу; НН/СС = наземный ветер для всех высот;
+ *  ΔτY на каждой высоте — по Таблице 3 (без Метеосредний).
+ */
+MeasurementResults::Meteo11Data MeasurementResults::buildMeteo11Approximate(
+    double stationAltitudeM,
+    double pressureHpa,
+    double tempC,
+    double surfaceWindDirDeg,
+    double surfaceWindSpeedMs,
+    const QDateTime &sondingTime)
+{
+    Meteo11Data d;
+    d.isApproximate = true;
+
+    d.stationNumber   = "00000";
+    d.day             = sondingTime.date().day();
+    d.hour            = sondingTime.time().hour();
+    d.tenMinutes      = sondingTime.time().minute() / 10;
+    d.bulletinTime    = sondingTime;
+    d.stationAltitude = qBound(0, qRound(stationAltitudeM), 9999);
+
+    // ΔH₀ = H₀ - 750 (мм рт. ст.)
+    double pressureMmHg = pressureHpa * 0.750062;
+    double deltaH0      = pressureMmHg - 750.0;
+    d.pressureDeviation = encodePressureDev(deltaH0);
+
+    // ΔTv из Таблицы 1, τ₀ = t₀ + ΔTv, Δτ₀МП = τ₀ - 15.9
+    double deltaTV = 0.0;
+    if      (tempC < 0.0)   deltaTV = 0.0;
+    else if (tempC <= 5.0)  deltaTV = 0.5;
+    else if (tempC <= 15.0) deltaTV = 1.0;
+    else if (tempC <= 22.5) deltaTV = 1.5;
+    else if (tempC <= 27.5) deltaTV = 2.0;
+    else if (tempC <= 35.0) deltaTV = 3.5;
+    else                    deltaTV = 4.5;
+    double deltaTau0 = (tempC + deltaTV) - 15.9;
+    d.tempVirtualDev = encodeTempDev(deltaTau0);
+
+    // НН и СС: наземный ветер от IWS одинаков для всех высот
+    int encodedDir   = encodeWindDir(qRound(surfaceWindDirDeg));
+    int encodedSpeed = qBound(0, qRound(surfaceWindSpeedMs), 99);
+
+    // Слои: 02 04 08 12 16 24 30 40 (без 2000 м)
+    for (int i = 0; i < kApproxHeightCount; ++i) {
+        const Meteo11Height &lvl = kApproxHeights[i];
+        Meteo11Data::LayerData layer;
+        layer.heightCode  = lvl.codeValue;
+        layer.isAbove10km = false;
+        layer.windDir     = encodedDir;
+        layer.windSpeed   = encodedSpeed;
+        layer.tempDev     = computeApproxTempDev(lvl.heightM, deltaTau0);
+        d.layers.append(layer);
+    }
+
+    d.reachedWindHeightKm = 4; // фиксированный потолок приближённого
+    d.reachedTempHeightKm = 0; // не используется
+    d.isValid = true;           // всегда строится при наличии наземных данных
     return d;
 }
 
@@ -1673,19 +1819,17 @@ void MeasurementResults::computeMeteo11(int recordId,
     }
 
     // ── ПРИБЛИЖЁННЫЙ бюллетень ───────────────────────────────────────────────
-    // Строится по среднему ветру (avgWind).
-    // Наземные параметры те же от метеопоста — принципиальное отличие
-    // от уточнённого только в используемом профиле ветра.
-    // Согласно протоколу, приближённый не использует поправки Δt'γ из устаревшего
-    // бюллетеня «Метеосредний» — поэтому buildMeteo11 одинакова, но профиль другой.
+    // Строится только из наземных параметров IWS (давление, температура, ветер).
+    // Не требует профиля ветра. НН/СС = наземный ветер для всех высот.
+    // ΔτY вычисляется по Таблице 3 протокола.
     {
-        m_meteo11Approximate = buildMeteo11(avgWind,
-                                            m_currentStationAltitude,
-                                            m_currentPressureHpa,
-                                            m_currentTempC,
-                                            m_currentSondingTime,
-                                            false /*useActual*/);
-        m_meteo11Approximate.isValid = !avgWind.isEmpty();
+        m_meteo11Approximate = buildMeteo11Approximate(
+            m_currentStationAltitude,
+            m_currentPressureHpa,
+            m_currentTempC,
+            m_currentWindDirSurface,
+            m_currentWindSpeedSurface,
+            m_currentSondingTime);
     }
 
     // ── ОТ МЕТЕОСТАНЦИИ ──────────────────────────────────────────────────────
@@ -1733,6 +1877,13 @@ void MeasurementResults::updateMeteo11Display()
     }
 
     if (!d) return;
+
+    // Скрываем поля, не применимые к приближённому бюллетеню
+    const bool isApprox = (currentButtelinType == Approximate);
+    ui->lineEdit_numStation->setVisible(!isApprox);
+    ui->label_numStation->setVisible(!isApprox);
+    ui->lineEdit_ht->setVisible(!isApprox);
+    ui->label_tempSensingHReached->setVisible(!isApprox);
 
     // Обновляем поля ГОДНЫЙ / ВРЕМЯ СОСТАВЛЕНИЯ
     if (d->isValid) {
@@ -1834,8 +1985,11 @@ void MeasurementResults::fillMeteo11InfoFields(const Meteo11Data &d)
     // lineEdit_t — отклонение вирт. температуры T0T0
     ui->lineEdit_t->setText(QString("%1").arg(d.tempVirtualDev, 2, 10, QChar('0')));
 
-    // lineEdit_ht — достигнутая высота темп. зондирования
-    ui->lineEdit_ht->setText(QString::number(d.reachedTempHeightKm));
+    // lineEdit_ht — достигнутая высота темп. зондирования (только для уточнённого)
+    if (d.isApproximate)
+        ui->lineEdit_ht->clear();
+    else
+        ui->lineEdit_ht->setText(QString::number(d.reachedTempHeightKm));
 
     // lineEdit_hw — достигнутая высота ветрового зондирования
     ui->lineEdit_hw->setText(QString::number(d.reachedWindHeightKm));
@@ -1897,44 +2051,56 @@ void MeasurementResults::fillMeteo11TableView(const Meteo11Data &d)
     QTableWidget *table = ui->tableWidget_meteo11Formalize;
     if (!table) return;
 
-    // Очищаем содержимое, не трогая заголовки строк (заданы в UI)
-    for (int r = 0; r < table->rowCount(); ++r) {
-        for (int c = 0; c < table->columnCount(); ++c) {
-            table->setItem(r, c, new QTableWidgetItem(""));
-        }
-    }
-
-    // Сопоставляем слои с позициями таблицы
-    // Таблица имеет 18 строк с высотами (без 16000, с 26000):
-    // 200,400,800,1200,1600,2000,2400,3000,4000,5000,6000,8000,10000,12000,14000,18000,22000,26000,30000
+    // Все высоты таблицы (19 строк)
     static const float kTableHeights[] = {
         200, 400, 800, 1200, 1600, 2000, 2400, 3000, 4000,
         5000, 6000, 8000, 10000, 12000, 14000, 18000, 22000, 26000, 30000
     };
     static const int kTableRowCount = static_cast<int>(sizeof(kTableHeights)/sizeof(kTableHeights[0]));
 
+    // Высоты приближённого бюллетеня (02 04 08 12 16 24 30 40 — без 2000 м)
+    static const float kApproxTableHeights[] = {
+        200, 400, 800, 1200, 1600, 2400, 3000, 4000
+    };
+    static const int kApproxTableCount = static_cast<int>(sizeof(kApproxTableHeights)/sizeof(kApproxTableHeights[0]));
+
+    // Показываем / скрываем строки в зависимости от типа бюллетеня
+    for (int r = 0; r < kTableRowCount; ++r) {
+        bool visible = true;
+        if (d.isApproximate) {
+            visible = false;
+            for (int a = 0; a < kApproxTableCount; ++a) {
+                if (qAbs(kApproxTableHeights[a] - kTableHeights[r]) < 1.f) { visible = true; break; }
+            }
+        }
+        table->setRowHidden(r, !visible);
+    }
+
+    // Очищаем содержимое видимых строк
+    for (int r = 0; r < kTableRowCount; ++r) {
+        if (table->isRowHidden(r)) continue;
+        for (int c = 0; c < table->columnCount(); ++c)
+            table->setItem(r, c, new QTableWidgetItem(""));
+    }
+
+    // Заполняем данными слоёв
     for (const Meteo11Data::LayerData &layer : d.layers) {
-        // Определяем высоту слоя в метрах
         float heightM = layer.isAbove10km
                             ? layer.heightCode * 1000.f
                             : static_cast<float>(layer.heightCode);
 
-        // Ищем строку таблицы для этой высоты
         for (int r = 0; r < kTableRowCount; ++r) {
             if (qAbs(kTableHeights[r] - heightM) < 1.f) {
-                // Столбец 0: ПП — всегда // (не измеряется нормально)
                 auto *itemPP = new QTableWidgetItem("//");
                 itemPP->setTextAlignment(Qt::AlignCenter);
                 table->setItem(r, 0, itemPP);
 
-                // Столбец 1: ТТНН (без СС — скорость отдельно)
-                // СС: если 99 (нет данных) — заменяем на //
                 QString ssStr = (layer.windSpeed >= 99)
                                     ? "//"
                                     : QString("%1").arg(layer.windSpeed, 2, 10, QChar('0'));
                 QString ttnnss = QString("%1%2%3")
-                                     .arg(0, 2, 10, QChar('0'))
-                                     .arg(layer.windDir,   2, 10, QChar('0'))
+                                     .arg(layer.tempDev, 2, 10, QChar('0'))
+                                     .arg(layer.windDir, 2, 10, QChar('0'))
                                      .arg(ssStr);
                 auto *itemData = new QTableWidgetItem(ttnnss);
                 itemData->setTextAlignment(Qt::AlignCenter);
