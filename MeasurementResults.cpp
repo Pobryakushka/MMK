@@ -37,7 +37,7 @@ MeasurementResults::MeasurementResults(QWidget *parent)
     , m_windShearCurve(nullptr)
     , m_windShearGrid(nullptr)
     , m_currentStationAltitude(0.0)
-    , m_currentPressureHpa(1013.25)
+    , m_currentPressureMmHg(750.0)
     , m_currentTempC(15.0)
     , m_currentWindDirSurface(0.0)
     , m_currentWindSpeedSurface(0.0)
@@ -427,7 +427,7 @@ void MeasurementResults::loadSurfaceMeteoData(int recordId)
     setCell(4, QString::number(query.value(3).toDouble(), 'f', 1)); // скорость
 
     // Сохраняем значения для последующего формирования Метео-11
-    m_currentPressureHpa      = query.value(2).toDouble();
+    m_currentPressureMmHg     = query.value(2).toDouble(); // из БД уже в мм рт.ст.
     m_currentTempC            = query.value(0).toDouble();
     m_currentWindDirSurface   = query.value(4).toDouble();
     m_currentWindSpeedSurface = query.value(3).toDouble();
@@ -1645,8 +1645,7 @@ MeasurementResults::Meteo11Data MeasurementResults::buildMeteo11(
     // ΔH₀: отклонение наземного давления по протоколу Метео-11
     // ΔH₀ = H₀ - 750  (мм рт.ст., табличное значение = 750)
     // Если > 750 → знак «+», если < 750 → знак «-»
-    double pressureMmHg = pressureHpa * 0.750062; // гПа → мм рт.ст.
-    double deltaH0      = pressureMmHg - 750.0;
+    double deltaH0      = pressureHpa - 750.0; // pressureHpa теперь уже в мм рт.ст.
     d.pressureDeviation = encodePressureDev(deltaH0);
 
     // Δτ₀: отклонение наземной виртуальной температуры по протоколу Метео-11
@@ -1752,9 +1751,8 @@ MeasurementResults::Meteo11Data MeasurementResults::buildMeteo11Approximate(
     d.bulletinTime    = sondingTime;
     d.stationAltitude = qBound(0, qRound(stationAltitudeM), 9999);
 
-    // ΔH₀ = H₀ - 750 (мм рт. ст.)
-    double pressureMmHg = pressureHpa * 0.750062;
-    double deltaH0      = pressureMmHg - 750.0;
+    // ΔH₀ = H₀ - 750 (мм рт. ст.; pressureHpa уже в мм рт.ст. из БД)
+    double deltaH0 = pressureHpa - 750.0;
     d.pressureDeviation = encodePressureDev(deltaH0);
 
     // ΔTv из Таблицы 1, τ₀ = t₀ + ΔTv, Δτ₀МП = τ₀ - 15.9
@@ -1811,7 +1809,7 @@ void MeasurementResults::computeMeteo11(int recordId,
 
         m_meteo11Updated = buildMeteo11(profile,
                                         m_currentStationAltitude,
-                                        m_currentPressureHpa,
+                                        m_currentPressureMmHg,
                                         m_currentTempC,
                                         m_currentSondingTime,
                                         true /*useActual*/);
@@ -1825,7 +1823,7 @@ void MeasurementResults::computeMeteo11(int recordId,
     {
         m_meteo11Approximate = buildMeteo11Approximate(
             m_currentStationAltitude,
-            m_currentPressureHpa,
+            m_currentPressureMmHg,
             m_currentTempC,
             m_currentWindDirSurface,
             m_currentWindSpeedSurface,
@@ -2451,7 +2449,7 @@ MeasurementSnapshot MeasurementResults::buildSnapshot() const
             auto cell = [&](int row) -> double {
                 return t->item(row, 0) ? t->item(row, 0)->text().toDouble() : 0.0;
             };
-            snap.pressureHpa      = cell(0);
+            snap.pressureMmHg      = cell(0);
             snap.temperatureC     = cell(1);
             snap.humidityPct      = cell(2);
             snap.surfaceWindDir   = cell(3);

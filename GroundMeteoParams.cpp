@@ -365,7 +365,11 @@ void GroundMeteoParams::updateTableWithData(const QMap<QString, double>& values)
                         valueItem = new QTableWidgetItem();
                         ui->tableWidget_GroundParams->setItem(row, 1, valueItem);
                     }
-                    valueItem->setText(QString::number(it.value(), 'f', 2));
+                    // Давление от IWS приходит в гПа — переводим в мм рт.ст. для отображения
+                    double displayValue = cellText.contains("давлени", Qt::CaseInsensitive)
+                                         ? it.value() * 0.750064
+                                         : it.value();
+                    valueItem->setText(QString::number(displayValue, 'f', 2));
                     qDebug() << "Updated row" << row << "with value:" << it.value();
                     found = true;
                     break;

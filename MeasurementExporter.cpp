@@ -164,7 +164,7 @@ bool MeasurementExporter::generateXlsx(const MeasurementSnapshot &snap,
 
     if (opts.includeSurfaceMeteo && snap.surfaceMeteoValid) {
         xlsx.write(r++, 1, "Наземные метеоусловия", fmtTitle);
-        write2(r++, "Давление, мм рт.ст.", QString::number(snap.pressureHpa, 'f', 1));
+        write2(r++, "Давление, мм рт.ст.", QString::number(snap.pressureMmHg, 'f', 1));
         write2(r++, "Температура, °C", QString::number(snap.temperatureC, 'f', 1));
         write2(r++, "Влажность, %", QString::number(snap.humidityPct, 'f', 1));
         write2(r++, "Направление ветра, °", QString::number(snap.surfaceWindDir, 'f', 0));
@@ -367,7 +367,7 @@ QString MeasurementExporter::generateTxt(const MeasurementSnapshot &s,
     if (o.includeSurfaceMeteo) {
         h2("НАЗЕМНЫЕ МЕТЕОРОЛОГИЧЕСКИЕ УСЛОВИЯ");
         if (s.surfaceMeteoValid) {
-            kv("Давление (P), мм рт.ст.",       QString::number(s.pressureHpa,     'f', 1));
+            kv("Давление (P), мм рт.ст.",       QString::number(s.pressureMmHg,     'f', 1));
             kv("Температура (T), °C",            QString::number(s.temperatureC,    'f', 1));
             kv("Относит. влажность (r), %",      QString::number(s.humidityPct,     'f', 1));
             kv("Направление ветра (A), °",       QString::number(s.surfaceWindDir,  'f', 0));
@@ -493,7 +493,7 @@ QString MeasurementExporter::generateCsv(const MeasurementSnapshot &s,
     if (o.includeSurfaceMeteo) {
         out << csvQ(S, {"[НАЗЕМНЫЕ МЕТ. УСЛОВИЯ]", ""});
         if (s.surfaceMeteoValid) {
-            out << csvQ(S, {"pressure_mmhg",   QString::number(s.pressureHpa,     'f',1)});
+            out << csvQ(S, {"pressure_mmhg",   QString::number(s.pressureMmHg,     'f',1)});
             out << csvQ(S, {"temperature_c",   QString::number(s.temperatureC,    'f',1)});
             out << csvQ(S, {"humidity_pct",    QString::number(s.humidityPct,     'f',1)});
             out << csvQ(S, {"wind_dir_deg",    QString::number(s.surfaceWindDir,  'f',0)});
@@ -597,7 +597,7 @@ QString MeasurementExporter::generateJson(const MeasurementSnapshot &s,
         QJsonObject sm;
         sm["valid"] = s.surfaceMeteoValid;
         if (s.surfaceMeteoValid) {
-            sm["pressure_hpa"]     = s.pressureHpa;
+            sm["pressure_mmhg"]     = s.pressureMmHg;
             sm["temperature_c"]    = s.temperatureC;
             sm["humidity_pct"]     = s.humidityPct;
             sm["wind_dir_deg"]     = s.surfaceWindDir;
@@ -750,7 +750,7 @@ QString MeasurementExporter::buildHtmlReport(const MeasurementSnapshot &s,
                     "<h2>Наземные метеоусловия</h2>"
                     "<table class=\"kv\">"
                     "<tr><td class=\"k\">Давление, мм рт.ст.</td><td class=\"v\">"  +
-                    QString::number(s.pressureHpa,     'f',1) + "</td></tr>"
+                    QString::number(s.pressureMmHg,     'f',1) + "</td></tr>"
                                                              "<tr><td class=\"k\">Температура, °C</td><td class=\"v\">"      +
                     QString::number(s.temperatureC,    'f',1) + "</td></tr>"
                                                               "<tr><td class=\"k\">Влажность, %</td><td class=\"v\">"         +

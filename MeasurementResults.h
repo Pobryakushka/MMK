@@ -246,7 +246,7 @@ private:
 
     // Исходные данные для текущей записи (сохраняются при loadMeasurementData)
     double m_currentStationAltitude;
-    double m_currentPressureHpa;
+    double m_currentPressureMmHg;
     double m_currentTempC;
     double m_currentWindDirSurface;
     double m_currentWindSpeedSurface;
