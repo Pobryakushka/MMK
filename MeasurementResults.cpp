@@ -513,6 +513,75 @@ static const Meteo11Height kApproxHeights[] = {
 static const int kApproxHeightCount =
     static_cast<int>(sizeof(kApproxHeights) / sizeof(kApproxHeights[0]));
 
+// ──────────────────────────────────────────────────────────────────────────────
+// Таблица 3: средние отклонения температуры ΔτY (°C) без бюллетеня «Метеосредний»
+// Строки: стандартные высоты 200..4000 м (9 уровней)
+// Столбцы: |Δτ₀МП| = 1,2,3,4,5,6,7,8,9,10,20,30,40,50
+// Значения — абсолютные; знак = знак Δτ₀МП
+// ──────────────────────────────────────────────────────────────────────────────
+static const int kTable3Heights[9] = { 200, 400, 800, 1200, 1600, 2000, 2400, 3000, 4000 };
+static const int kTable3ColKeys[14] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 30, 40, 50 };
+
+// Значения для ОТРИЦАТЕЛЬНОГО Δτ₀МП (числитель дроби)
+static const int kTable3Neg[9][14] = {
+    //  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 20, 30, 40, 50
+    {   1,  2,  3,  4,  5,  6,  7,  8,  8,  9, 20, 29, 39, 49 }, // 200 м
+    {   1,  2,  3,  4,  5,  6,  6,  7,  8,  9, 19, 29, 38, 48 }, // 400 м
+    {   1,  2,  3,  4,  5,  6,  7,  7,  7,  8, 18, 28, 37, 46 }, // 800 м
+    {   1,  2,  3,  4,  4,  5,  5,  6,  7,  8, 17, 26, 35, 44 }, // 1200 м
+    {   1,  2,  3,  3,  4,  4,  5,  6,  7,  7, 17, 25, 34, 42 }, // 1600 м
+    {   1,  2,  3,  3,  4,  4,  5,  6,  6,  7, 16, 24, 32, 40 }, // 2000 м
+    {   1,  2,  2,  3,  4,  4,  5,  5,  6,  7, 15, 23, 31, 38 }, // 2400 м
+    {   1,  2,  2,  3,  4,  4,  4,  5,  5,  6, 15, 22, 30, 37 }, // 3000 м
+    {   1,  2,  2,  3,  4,  4,  4,  4,  5,  6, 14, 20, 27, 34 }, // 4000 м
+};
+
+// Значения для ПОЛОЖИТЕЛЬНОГО Δτ₀МП (знаменатель) — одинаковы для всех высот
+// Столбцы 40 и 50 не используются (нет данных)
+static const int kTable3Pos[14] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 30, 0, 0 };
+
+// Вспомогательная функция: поиск одного значения по таблице 3
+static int table3LookupAbs(int heightRow, int absKey, bool negative)
+{
+    for (int c = 0; c < 14; ++c) {
+        if (kTable3ColKeys[c] == absKey) {
+            return negative ? kTable3Neg[heightRow][c] : kTable3Pos[c];
+        }
+    }
+    return 0;
+}
+
+// Вычислить ΔτY по Таблице 3 (без Метеосредний) для одной высоты
+// Возвращает готовое закодированное ТТ значение (см. encodeTempDev)
+static int computeApproxTempDev(float heightM, double deltaTau0)
+{
+    // Находим строку таблицы
+    int row = -1;
+    for (int i = 0; i < 9; ++i) {
+        if (qAbs(static_cast<int>(heightM) - kTable3Heights[i]) < 1) { row = i; break; }
+    }
+    if (row < 0 || qAbs(deltaTau0) < 0.5) return 0;
+
+    bool negative = deltaTau0 < 0.0;
+    int  abs0     = qRound(qAbs(deltaTau0));
+    if (abs0 > 50) abs0 = 50; // ограничиваем диапазоном таблицы
+
+    // Разложение: сотни десятков + единицы (аналогично тому, как описано в протоколе)
+    int tens  = (abs0 / 10) * 10;
+    int units = abs0 % 10;
+    int absVal = 0;
+    if (tens  > 0) absVal += table3LookupAbs(row, tens, negative);
+    if (units > 0) absVal += table3LookupAbs(row, units, negative);
+
+    double signedDev = negative ? -static_cast<double>(absVal) : static_cast<double>(absVal);
+
+    // Кодируем так же как encodeTempDev: отрицательные +50 к первой цифре
+    int val = qRound(qAbs(signedDev));
+    val = qMin(val, 49);
+    if (signedDev < 0.0) val += 50;
+    return val;
+}
+
 void MeasurementResults::loadMeteo11FromStation(int recordId)
 {
     // Сбрасываем предыдущие данные
@@ -1447,7 +1516,7 @@ int MeasurementResults::encodeTempDev(double deltaCelsius)
  *  ≤10 км: ХХХХ-ТТННСС  (4-значный код высоты + 6-значный ТТННСС)
  *  >10 км: ХХ-ТТННСС   (2-значный код + 6-значный)
  */
-QString MeasurementResults::formatMeteo11Group(int heightCode, int dir, int speed, bool above10km, bool includePP)
+QString MeasurementResults::formatMeteo11Group(int heightCode, int dir, int speed, int tempDev, bool above10km, bool includePP)
 {
     // Формат уточнённого (includePP=true):
     //  ≤8000 м:  ВВ//-ТТННСС  где ВВ = высота в сотнях метров (02..80)
@@ -1457,30 +1526,26 @@ QString MeasurementResults::formatMeteo11Group(int heightCode, int dir, int spee
     QString hPart;
 
     if (!above10km) {
-        // heightCode хранится в метрах (200, 400, ..., 8000)
         int hHundreds = heightCode / 100;
         if (includePP)
             hPart = QString("%1//").arg(hHundreds, 2, 10, QChar('0'));
         else
             hPart = QString("%1").arg(hHundreds, 2, 10, QChar('0'));
     } else {
-        // heightCode хранится в км (10, 12, 14, 18, 22, 26, 30)
         if (includePP)
             hPart = QString("%1//").arg(heightCode, 2, 10, QChar('0'));
         else
             hPart = QString("%1").arg(heightCode, 2, 10, QChar('0'));
     }
 
-    // СС: если >= 99 — нет данных → //
     QString ssStr = (speed >= 99)
                         ? "//"
                         : QString("%1").arg(speed, 2, 10, QChar('0'));
 
-    // ТТННСС: ТТ=00 (нет данных), НН=направление, СС=скорость или //
     QString dataPart = QString("%1%2%3")
-                           .arg(0,   2, 10, QChar('0'))   // ТТ
-                           .arg(dir, 2, 10, QChar('0'))   // НН
-                           .arg(ssStr);                   // СС
+                           .arg(tempDev, 2, 10, QChar('0'))  // ТТ
+                           .arg(dir,     2, 10, QChar('0'))  // НН
+                           .arg(ssStr);                      // СС
 
     return hPart + "-" + dataPart;
 }
@@ -1521,7 +1586,8 @@ QString MeasurementResults::buildMeteo11String(const Meteo11Data &d)
     const bool includePP = !d.isApproximate;
     for (const Meteo11Data::LayerData &layer : d.layers) {
         parts << formatMeteo11Group(layer.heightCode, layer.windDir,
-                                    layer.windSpeed, layer.isAbove10km, includePP);
+                                    layer.windSpeed, layer.tempDev,
+                                    layer.isAbove10km, includePP);
     }
 
     // Достигнутые высоты BтBтBвBв (только для уточнённого)
@@ -1634,6 +1700,10 @@ MeasurementResults::Meteo11Data MeasurementResults::buildMeteo11(
         layer.windDir     = encodeWindDir(pt.windDirection);
         layer.windSpeed   = qRound(pt.windSpeed);
         layer.isAbove10km = lvl.above10km;
+        // Для приближённого — ΔτY из Таблицы 3 (без Метеосредний)
+        layer.tempDev = d.isApproximate
+                        ? computeApproxTempDev(lvl.heightM, deltaTau0)
+                        : 0;
         d.layers.append(layer);
     }
 
@@ -1834,8 +1904,11 @@ void MeasurementResults::fillMeteo11InfoFields(const Meteo11Data &d)
     // lineEdit_t — отклонение вирт. температуры T0T0
     ui->lineEdit_t->setText(QString("%1").arg(d.tempVirtualDev, 2, 10, QChar('0')));
 
-    // lineEdit_ht — достигнутая высота темп. зондирования
-    ui->lineEdit_ht->setText(QString::number(d.reachedTempHeightKm));
+    // lineEdit_ht — достигнутая высота темп. зондирования (только для уточнённого)
+    if (d.isApproximate)
+        ui->lineEdit_ht->clear();
+    else
+        ui->lineEdit_ht->setText(QString::number(d.reachedTempHeightKm));
 
     // lineEdit_hw — достигнутая высота ветрового зондирования
     ui->lineEdit_hw->setText(QString::number(d.reachedWindHeightKm));
@@ -1927,14 +2000,13 @@ void MeasurementResults::fillMeteo11TableView(const Meteo11Data &d)
                 itemPP->setTextAlignment(Qt::AlignCenter);
                 table->setItem(r, 0, itemPP);
 
-                // Столбец 1: ТТНН (без СС — скорость отдельно)
-                // СС: если 99 (нет данных) — заменяем на //
+                // Столбец 1: ТТННСС
                 QString ssStr = (layer.windSpeed >= 99)
                                     ? "//"
                                     : QString("%1").arg(layer.windSpeed, 2, 10, QChar('0'));
                 QString ttnnss = QString("%1%2%3")
-                                     .arg(0, 2, 10, QChar('0'))
-                                     .arg(layer.windDir,   2, 10, QChar('0'))
+                                     .arg(layer.tempDev, 2, 10, QChar('0'))
+                                     .arg(layer.windDir, 2, 10, QChar('0'))
                                      .arg(ssStr);
                 auto *itemData = new QTableWidgetItem(ttnnss);
                 itemData->setTextAlignment(Qt::AlignCenter);
