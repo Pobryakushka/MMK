@@ -218,6 +218,13 @@ private:
                              const QDateTime &sondingTime,
                              bool useActual);
 
+    Meteo11Data buildMeteo11Approximate(double stationAltitudeM,
+                                        double pressureHpa,
+                                        double tempC,
+                                        double surfaceWindDirDeg,
+                                        double surfaceWindSpeedMs,
+                                        const QDateTime &sondingTime);
+
     void updateMeteo11Display();                        // Перерисовать вкладку
     void fillMeteo11StringView(const Meteo11Data &d);   // Заполнить textEdit_meteo11 / textEdit_meteo11_updated
     void fillMeteo11TableView(const Meteo11Data &d);    // Заполнить tableWidget_meteo11Formalize

@@ -1730,6 +1730,68 @@ MeasurementResults::Meteo11Data MeasurementResults::buildMeteo11(
 }
 
 /**
+ * Приближённый бюллетень — только из наземных параметров (IWS):
+ *  ΔH₀, Δτ₀МП вычисляются по протоколу; НН/СС = наземный ветер для всех высот;
+ *  ΔτY на каждой высоте — по Таблице 3 (без Метеосредний).
+ */
+MeasurementResults::Meteo11Data MeasurementResults::buildMeteo11Approximate(
+    double stationAltitudeM,
+    double pressureHpa,
+    double tempC,
+    double surfaceWindDirDeg,
+    double surfaceWindSpeedMs,
+    const QDateTime &sondingTime)
+{
+    Meteo11Data d;
+    d.isApproximate = true;
+
+    d.stationNumber   = "00000";
+    d.day             = sondingTime.date().day();
+    d.hour            = sondingTime.time().hour();
+    d.tenMinutes      = sondingTime.time().minute() / 10;
+    d.bulletinTime    = sondingTime;
+    d.stationAltitude = qBound(0, qRound(stationAltitudeM), 9999);
+
+    // ΔH₀ = H₀ - 750 (мм рт. ст.)
+    double pressureMmHg = pressureHpa * 0.750062;
+    double deltaH0      = pressureMmHg - 750.0;
+    d.pressureDeviation = encodePressureDev(deltaH0);
+
+    // ΔTv из Таблицы 1, τ₀ = t₀ + ΔTv, Δτ₀МП = τ₀ - 15.9
+    double deltaTV = 0.0;
+    if      (tempC < 0.0)   deltaTV = 0.0;
+    else if (tempC <= 5.0)  deltaTV = 0.5;
+    else if (tempC <= 15.0) deltaTV = 1.0;
+    else if (tempC <= 22.5) deltaTV = 1.5;
+    else if (tempC <= 27.5) deltaTV = 2.0;
+    else if (tempC <= 35.0) deltaTV = 3.5;
+    else                    deltaTV = 4.5;
+    double deltaTau0 = (tempC + deltaTV) - 15.9;
+    d.tempVirtualDev = encodeTempDev(deltaTau0);
+
+    // НН и СС: наземный ветер от IWS одинаков для всех высот
+    int encodedDir   = encodeWindDir(qRound(surfaceWindDirDeg));
+    int encodedSpeed = qBound(0, qRound(surfaceWindSpeedMs), 99);
+
+    // Слои: 02 04 08 12 16 24 30 40 (без 2000 м)
+    for (int i = 0; i < kApproxHeightCount; ++i) {
+        const Meteo11Height &lvl = kApproxHeights[i];
+        Meteo11Data::LayerData layer;
+        layer.heightCode  = lvl.codeValue;
+        layer.isAbove10km = false;
+        layer.windDir     = encodedDir;
+        layer.windSpeed   = encodedSpeed;
+        layer.tempDev     = computeApproxTempDev(lvl.heightM, deltaTau0);
+        d.layers.append(layer);
+    }
+
+    d.reachedWindHeightKm = 4; // фиксированный потолок приближённого
+    d.reachedTempHeightKm = 0; // не используется
+    d.isValid = true;           // всегда строится при наличии наземных данных
+    return d;
+}
+
+/**
  * Главная точка входа: вычислить все три варианта бюллетеня.
  */
 void MeasurementResults::computeMeteo11(int recordId,
@@ -1757,19 +1819,17 @@ void MeasurementResults::computeMeteo11(int recordId,
     }
 
     // ── ПРИБЛИЖЁННЫЙ бюллетень ───────────────────────────────────────────────
-    // Строится по среднему ветру (avgWind).
-    // Наземные параметры те же от метеопоста — принципиальное отличие
-    // от уточнённого только в используемом профиле ветра.
-    // Согласно протоколу, приближённый не использует поправки Δt'γ из устаревшего
-    // бюллетеня «Метеосредний» — поэтому buildMeteo11 одинакова, но профиль другой.
+    // Строится только из наземных параметров IWS (давление, температура, ветер).
+    // Не требует профиля ветра. НН/СС = наземный ветер для всех высот.
+    // ΔτY вычисляется по Таблице 3 протокола.
     {
-        m_meteo11Approximate = buildMeteo11(avgWind,
-                                            m_currentStationAltitude,
-                                            m_currentPressureHpa,
-                                            m_currentTempC,
-                                            m_currentSondingTime,
-                                            false /*useActual*/);
-        m_meteo11Approximate.isValid = !avgWind.isEmpty();
+        m_meteo11Approximate = buildMeteo11Approximate(
+            m_currentStationAltitude,
+            m_currentPressureHpa,
+            m_currentTempC,
+            m_currentWindDirSurface,
+            m_currentWindSpeedSurface,
+            m_currentSondingTime);
     }
 
     // ── ОТ МЕТЕОСТАНЦИИ ──────────────────────────────────────────────────────
