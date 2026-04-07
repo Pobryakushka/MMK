@@ -1696,9 +1696,13 @@ MeasurementResults::Meteo11Data MeasurementResults::buildMeteo11(
             }
         }
 
-        // Допускаем отклонение не более 300 м (для низких уровней) или 1000 м (для высоких)
-        float tolerance = lvl.above10km ? 2000.f : 400.f;
-        if (bestIdx < 0 || bestDiff > tolerance) break; // Выше достигнутой высоты — стоп
+        // Допускаем отклонение не более 400 м для слоёв ≤8000 м
+        // и не более 1500 м для слоёв ≥10000 м.
+        // Дополнительное условие: профильная точка должна быть не ниже 80% целевой высоты
+        // (чтобы точка 8000 м не попала в слой 10000 м).
+        float tolerance = lvl.above10km ? 1500.f : 400.f;
+        if (bestIdx < 0 || bestDiff > tolerance) break;
+        if (windProfile[bestIdx].height < lvl.heightM * 0.80f) break;
 
         const WindProfileData &pt = windProfile[bestIdx];
         if (!pt.isValid) break;
@@ -1987,37 +1991,50 @@ void MeasurementResults::fillMeteo11TableView(const Meteo11Data &d)
     QTableWidget *table = ui->tableWidget_meteo11Formalize;
     if (!table) return;
 
-    // Очищаем содержимое, не трогая заголовки строк (заданы в UI)
-    for (int r = 0; r < table->rowCount(); ++r) {
-        for (int c = 0; c < table->columnCount(); ++c) {
-            table->setItem(r, c, new QTableWidgetItem(""));
-        }
-    }
-
-    // Сопоставляем слои с позициями таблицы
-    // Таблица имеет 18 строк с высотами (без 16000, с 26000):
-    // 200,400,800,1200,1600,2000,2400,3000,4000,5000,6000,8000,10000,12000,14000,18000,22000,26000,30000
+    // Все высоты таблицы (19 строк)
     static const float kTableHeights[] = {
         200, 400, 800, 1200, 1600, 2000, 2400, 3000, 4000,
         5000, 6000, 8000, 10000, 12000, 14000, 18000, 22000, 26000, 30000
     };
     static const int kTableRowCount = static_cast<int>(sizeof(kTableHeights)/sizeof(kTableHeights[0]));
 
+    // Высоты приближённого бюллетеня (02 04 08 12 16 24 30 40 — без 2000 м)
+    static const float kApproxTableHeights[] = {
+        200, 400, 800, 1200, 1600, 2400, 3000, 4000
+    };
+    static const int kApproxTableCount = static_cast<int>(sizeof(kApproxTableHeights)/sizeof(kApproxTableHeights[0]));
+
+    // Показываем / скрываем строки в зависимости от типа бюллетеня
+    for (int r = 0; r < kTableRowCount; ++r) {
+        bool visible = true;
+        if (d.isApproximate) {
+            visible = false;
+            for (int a = 0; a < kApproxTableCount; ++a) {
+                if (qAbs(kApproxTableHeights[a] - kTableHeights[r]) < 1.f) { visible = true; break; }
+            }
+        }
+        table->setRowHidden(r, !visible);
+    }
+
+    // Очищаем содержимое видимых строк
+    for (int r = 0; r < kTableRowCount; ++r) {
+        if (table->isRowHidden(r)) continue;
+        for (int c = 0; c < table->columnCount(); ++c)
+            table->setItem(r, c, new QTableWidgetItem(""));
+    }
+
+    // Заполняем данными слоёв
     for (const Meteo11Data::LayerData &layer : d.layers) {
-        // Определяем высоту слоя в метрах
         float heightM = layer.isAbove10km
                             ? layer.heightCode * 1000.f
                             : static_cast<float>(layer.heightCode);
 
-        // Ищем строку таблицы для этой высоты
         for (int r = 0; r < kTableRowCount; ++r) {
             if (qAbs(kTableHeights[r] - heightM) < 1.f) {
-                // Столбец 0: ПП — всегда // (не измеряется нормально)
                 auto *itemPP = new QTableWidgetItem("//");
                 itemPP->setTextAlignment(Qt::AlignCenter);
                 table->setItem(r, 0, itemPP);
 
-                // Столбец 1: ТТННСС
                 QString ssStr = (layer.windSpeed >= 99)
                                     ? "//"
                                     : QString("%1").arg(layer.windSpeed, 2, 10, QChar('0'));
