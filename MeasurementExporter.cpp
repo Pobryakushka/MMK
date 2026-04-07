@@ -63,6 +63,27 @@ QString MeasurementExporter::generate(const MeasurementSnapshot &snap,
 // generatePdf()
 // ══════════════════════════════════════════════════════════════════════════════
 
+static QSize computeChartSize(const ExportOptions &opts)
+{
+    double pageW_mm = 0, pageH_mm = 0;
+    switch (opts.pdfPageSize) {
+    case QPageSize::A3: pageW_mm = 297; pageH_mm = 420; break;
+    case QPageSize::Letter: pageW_mm = 216; pageH_mm = 279; break;
+    default: pageW_mm = 210; pageH_mm = 297; break;
+    }
+    if (opts.pdfLandscape) qSwap(pageW_mm, pageH_mm);
+
+    double contentW_mm = pageW_mm - 24.0;
+
+    const double dpi = 96.0;
+    int totalW_px = static_cast<int>(contentW_mm / 25.4 * dpi);
+
+    int chartW = (totalW_px - 8) / 2;
+    int chartH = static_cast<int>(chartW * 0.70);
+
+    return QSize(qMax(chartW, 180), qMax(chartH, 126));
+}
+
 bool MeasurementExporter::generatePdf(const MeasurementSnapshot &snap,
                                       const ExportOptions       &opts,
                                       const QString             &filePath,
@@ -89,11 +110,14 @@ bool MeasurementExporter::generatePdf(const MeasurementSnapshot &snap,
         "body { font-family: Arial, sans-serif; font-size: 9pt; color: #111; }");
 
     if (opts.pdfCharts) {
+        const QSize chartSz = computeChartSize(opts);
         for (auto it = snap.charts.constBegin(); it != snap.charts.constEnd(); ++it) {
-            if (!it.value().isNull())
+            if (!it.value().isNull()) {
+                QImage scaled = it.value().scaled(chartSz, Qt::KeepAspectRatio, Qt::SmoothTransformation);
                 doc.addResource(QTextDocument::ImageResource,
                                 QUrl("img://" + it.key()),
                                 QVariant(it.value()));
+            }
         }
     }
 
@@ -359,7 +383,7 @@ if (opts.includeWindShear && !snap.windShear.isEmpty()) {
     insertBarChart(dataRow + 18, 6, dataRow, lastRow, 3, 1,
                    "Изменение направления ветра, °", sheet);
 }
-
+// TODO: ОСТАНОВКА
 // ── Метео-11 ──────────────────────────────────────────────────────────────
 
 if (opts.includeMeteo11Updated || opts.includeMeteo11Approx ||
@@ -413,8 +437,8 @@ QString MeasurementExporter::suggestedFileName(const MeasurementSnapshot &snap,
                                                ExportOptions::Format      format)
 {
     QString dt = snap.measurementTime.isValid()
-    ? snap.measurementTime.toString("yyyyMMdd_HHmmss")
-    : "unknown";
+                     ? snap.measurementTime.toString("yyyyMMdd_HHmmss")
+                     : "unknown";
     return QString("measurement_%1_ID%2.%3")
         .arg(dt).arg(snap.recordId).arg(formatExt(format));
 }
@@ -504,35 +528,34 @@ QString MeasurementExporter::generateTxt(const MeasurementSnapshot &s,
                        .arg(QString::number(w.shearPer30m,'f',2),        -18)
                        .arg(QString::number(w.shearDirection,'f',1),     -20)
                        .arg(WindShearCalculator::getSeverityText(w.severityLevel));
+        }
     }
-}
 
-auto m11Block = [&](const QString &title,
-                     const MeasurementSnapshot::Meteo11Export &m, bool inc) {
-    if (!inc) return;
-    h2(title);
-    if (!m.valid) { out << "  — нет данных —"; return; }
-    out << "  " + m.bulletinString << "";
-    kv("Номер ст. (NNNNN)",    m.stationNumber);
-    kv("BBBB (высота ст.)",    QString("%1").arg(m.stationAltitude,4,10,QChar('0')));
-    kv("БББ (откл. давл.)",    QString("%1").arg(m.pressureDev,3,10,QChar('0')));
-    kv("ТТ (откл. темп.)",     QString("%1").arg(m.tempVirtDev,2,10,QChar('0')));
-    kv("Выс. темп. зонд., км", QString::number(m.reachedTempKm));
-    kv("Выс. ветр. зонд., км", QString::number(m.reachedWindKm));
-};
+    auto m11Block = [&](const QString &title,
+                        const MeasurementSnapshot::Meteo11Export &m, bool inc) {
+        if (!inc) return;
+        h2(title);
+        if (!m.valid) { out << "  — нет данных —"; return; }
+        out << "  " + m.bulletinString << "";
+        kv("Номер ст. (NNNNN)",    m.stationNumber);
+        kv("BBBB (высота ст.)",    QString("%1").arg(m.stationAltitude,4,10,QChar('0')));
+        kv("БББ (откл. давл.)",    QString("%1").arg(m.pressureDev,3,10,QChar('0')));
+        kv("ТТ (откл. темп.)",     QString("%1").arg(m.tempVirtDev,2,10,QChar('0')));
+        kv("Выс. темп. зонд., км", QString::number(m.reachedTempKm));
+        kv("Выс. ветр. зонд., км", QString::number(m.reachedWindKm));
+    };
 
-m11Block("БЮЛЛЕТЕНЬ МЕТЕО-11 (УТОЧНЁННЫЙ)",      s.meteo11Updated,     o.includeMeteo11Updated);
-m11Block("БЮЛЛЕТЕНЬ МЕТЕО-11 (ПРИБЛИЖЁННЫЙ)",    s.meteo11Approximate, o.includeMeteo11Approx);
-m11Block("БЮЛЛЕТЕНЬ МЕТЕО-11 (ОТ МЕТЕОСТАНЦИИ)", s.meteo11FromStation, o.includeMeteo11Station);
+    m11Block("БЮЛЛЕТЕНЬ МЕТЕО-11 (УТОЧНЁННЫЙ)",      s.meteo11Updated,     o.includeMeteo11Updated);
+    m11Block("БЮЛЛЕТЕНЬ МЕТЕО-11 (ПРИБЛИЖЁННЫЙ)",    s.meteo11Approximate, o.includeMeteo11Approx);
+    m11Block("БЮЛЛЕТЕНЬ МЕТЕО-11 (ОТ МЕТЕОСТАНЦИИ)", s.meteo11FromStation, o.includeMeteo11Station);
 
-out << "" << SEP
-    << "  Сформировано: " +
-       QDateTime::currentDateTime().toString("dd.MM.yyyy hh:mm:ss") +
-       "  |  Метеокомплекс АМС"
-    << SEP;
+    out << "" << SEP
+        << "  Сформировано: " +
+               QDateTime::currentDateTime().toString("dd.MM.yyyy hh:mm:ss") +
+               "  |  Метеокомплекс АМС"
+        << SEP;
 
-return out.join('\n');
-
+    return out.join('\n');
 
 }
 
@@ -560,27 +583,27 @@ QString MeasurementExporter::generateCsv(const MeasurementSnapshot &s,
     QStringList out;
 
 
-    out << csvQ(S, {"[ЗАПИСЬ]",""}); out << csvQ(S, {"record_id", QString::number(s.recordId)});
-    out << csvQ(S, {"datetime", s.measurementTime.toString("dd.MM.yyyy hh:mm:ss")});
-    out << csvQ(S, {"station",  s.stationNumber}); out << "";
+    out << csvQ(S, {"[ЗАПИСЬ]",""}); out << csvQ(S, {"Номер записи", QString::number(s.recordId)});
+    out << csvQ(S, {"Дата/время", s.measurementTime.toString("dd.MM.yyyy hh:mm:ss")});
+    out << csvQ(S, {"Станция",  s.stationNumber}); out << "";
 
     if (o.includeCoordinates) {
         out << csvQ(S, {"[КООРДИНАТЫ]",""});
         if (s.coordinatesValid) {
-            out << csvQ(S, {"latitude",  latToStr(s.latitude)});
-            out << csvQ(S, {"longitude", lonToStr(s.longitude)});
-            out << csvQ(S, {"altitude_m",QString::number(s.altitude,'f',1)});
+            out << csvQ(S, {"Широта",  latToStr(s.latitude)});
+            out << csvQ(S, {"Долгота", lonToStr(s.longitude)});
+            out << csvQ(S, {"Высота, м",QString::number(s.altitude,'f',1)});
         } else out << csvQ(S, {"","нет данных"});
         out << "";
     }
     if (o.includeSurfaceMeteo) {
         out << csvQ(S, {"[НАЗЕМНЫЕ МЕТ. УСЛОВИЯ]",""});
         if (s.surfaceMeteoValid) {
-            out << csvQ(S, {"pressure_mmhg",QString::number(s.pressureHpa,    'f',1)});
-            out << csvQ(S, {"temperature_c",QString::number(s.temperatureC,   'f',1)});
-            out << csvQ(S, {"humidity_pct", QString::number(s.humidityPct,    'f',1)});
-            out << csvQ(S, {"wind_dir_deg", QString::number(s.surfaceWindDir, 'f',0)});
-            out << csvQ(S, {"wind_speed_ms",QString::number(s.surfaceWindSpeed,'f',1)});
+            out << csvQ(S, {"Давление, мм рт.ст.",QString::number(s.pressureHpa,    'f',1)});
+            out << csvQ(S, {"Температура, C",QString::number(s.temperatureC,   'f',1)});
+            out << csvQ(S, {"Влажность, %", QString::number(s.humidityPct,    'f',1)});
+            out << csvQ(S, {"Напр. ветра, град.", QString::number(s.surfaceWindDir, 'f',0)});
+            out << csvQ(S, {"Скор. ветра, м/с",QString::number(s.surfaceWindSpeed,'f',1)});
         } else out << csvQ(S, {"","нет данных"});
         out << "";
     }
@@ -588,13 +611,13 @@ QString MeasurementExporter::generateCsv(const MeasurementSnapshot &s,
     auto windSec = [&](const QString &tag, const QVector<WindProfileData> &data, bool inc) {
         if (!inc) return;
         out << csvQ(S,{tag,"",""});
-        out << csvQ(S,{"height_m","speed_ms","direction_deg"});
+        out << csvQ(S,{"Высота, м","Скорость, м/с","Направление, град"});
         if (!data.isEmpty())
             for (const WindProfileData &p : data)
                 out << csvQ(S,{QString::number(p.height,'f',0),
                                 QString::number(p.windSpeed,'f',2),
                                 QString::number(p.windDirection)});
-        else out << csvQ(S,{"нет данных","",""});
+        else out << csvQ(S,{"Нет данных","",""});
         out << "";
     };
     windSec("[СРЕДНИЙ ВЕТЕР]",        s.avgWind,    o.includeAvgWind);
@@ -602,18 +625,18 @@ QString MeasurementExporter::generateCsv(const MeasurementSnapshot &s,
 
     if (o.includeMeasuredWind) {
         out << csvQ(S,{"[ИЗМЕРЕННЫЙ ВЕТЕР]","",""});
-    out << csvQ(S,{"height_m","speed_ms","direction_deg"});
-    if (!s.measuredWind.isEmpty())
-        for (const MeasuredWindData &p : s.measuredWind)
-            out << csvQ(S,{QString::number(p.height,'f',0),
-                            QString::number(p.windSpeed,'f',2),
-                            QString::number(p.windDirection)});
-    else out << csvQ(S,{"нет данных","",""});
-    out << "";
+        out << csvQ(S,{"Высота, м","Скорость, м/с","Направление, град."});
+        if (!s.measuredWind.isEmpty())
+            for (const MeasuredWindData &p : s.measuredWind)
+                out << csvQ(S,{QString::number(p.height,'f',0),
+                                QString::number(p.windSpeed,'f',2),
+                                QString::number(p.windDirection)});
+        else out << csvQ(S,{"нет данных","",""});
+        out << "";
     }
     if (o.includeWindShear) {
         out << csvQ(S,{"[СДВИГ ВЕТРА]","","",""});
-        out << csvQ(S,{"height_m","shear_ms_30m","dir_change_deg","severity"});
+        out << csvQ(S,{"Высота, м","Скор. сдвига, м/с/30м","Изм. направления, град.","Уровень"});
         if (!s.windShear.isEmpty())
             for (const WindShearData &w : s.windShear)
                 out << csvQ(S,{QString::number(static_cast<int>(w.height)),
@@ -629,13 +652,13 @@ QString MeasurementExporter::generateCsv(const MeasurementSnapshot &s,
         if (!inc) return;
         out << csvQ(S,{tag,""});
         if (m.valid) {
-            out << csvQ(S,{"bulletin",       m.bulletinString});
-            out << csvQ(S,{"NNNNN",           m.stationNumber});
-            out << csvQ(S,{"BBBB",            QString::number(m.stationAltitude)});
-            out << csvQ(S,{"BBB",             QString::number(m.pressureDev)});
-            out << csvQ(S,{"T0T0",            QString::number(m.tempVirtDev)});
-            out << csvQ(S,{"reached_temp_km", QString::number(m.reachedTempKm)});
-            out << csvQ(S,{"reached_wind_km", QString::number(m.reachedWindKm)});
+            out << csvQ(S,{"Строка бюллетеня",       m.bulletinString});
+            out << csvQ(S,{"NNNNN (ном. ст.)",           m.stationNumber});
+            out << csvQ(S,{"BBBB (высота ст.)",            QString::number(m.stationAltitude)});
+            out << csvQ(S,{"БББ (откл. давл.)",             QString::number(m.pressureDev)});
+            out << csvQ(S,{"TT (откл. темп.)",            QString::number(m.tempVirtDev)});
+            out << csvQ(S,{"Выс. темп. зонд., км", QString::number(m.reachedTempKm)});
+            out << csvQ(S,{"Выс. ветр. зонд., км", QString::number(m.reachedWindKm)});
         } else out << csvQ(S,{"","нет данных"});
         out << "";
     };
@@ -732,9 +755,7 @@ static QString chartImg(const QMap<QString,QImage> &charts, const QString &key)
 {
     if (!charts.contains(key) || charts[key].isNull()) return {};
     const QImage &img = charts[key];
-    int w = qMin(img.width(), 290);
-    int h = (img.width() > 0) ? (img.height() * w / img.width()) : img.height();
-    return QString("<img src=\"img://%1\" width=\"%2\" height=\"%3\"/>").arg(key).arg(w).arg(h);
+    return QString("<img src=\"img://%1\" width=\"%2\" height=\"%3\"/>").arg(key).arg(img.width()).arg(img.height());
 }
 
 QString MeasurementExporter::buildHtmlReport(const MeasurementSnapshot &s,

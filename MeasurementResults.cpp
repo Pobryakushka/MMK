@@ -1144,8 +1144,7 @@ void MeasurementResults::plotWindDirection(QwtPlot *plot, const QVector<WindProf
 
     plot->detachItems(QwtPlotItem::Rtti_PlotCurve);
 
-    QVector<double> heights;
-    QVector<double> directions;
+    QVector<double> heights, directions;
 
     for (const WindProfileData &point : data) {
         if (point.isValid) {
@@ -1170,8 +1169,8 @@ void MeasurementResults::plotWindDirection(QwtPlot *plot, const QVector<WindProf
                                       QSize(5, 5));
     curve->setSymbol(symbol);
     curve->setStyle(QwtPlotCurve::Lines);
-
     curve->attach(plot);
+
     plot->replot();
 }
 
