@@ -279,8 +279,13 @@ QVector<WindProfileData> MeasurementResults::loadAvgWindProfile(int recordId)
     }
 
     profile = dbData;
-    qDebug() << "MeasurementResults: Загружен профиль среднего ветра," << profile.size()
-             << "точек (record_id=" << recordId << ", profile_id=" << profileId << ")";
+    QStringList heightList;
+    for (const auto &pt : profile)
+        heightList << QString::number(qRound(pt.height));
+    qDebug() << "MeasurementResults: Средний ветер record_id=" << recordId
+             << "profile_id=" << profileId
+             << "точек=" << profile.size()
+             << "высоты:" << heightList.join(", ");
     return profile;
 }
 
@@ -331,8 +336,13 @@ QVector<WindProfileData> MeasurementResults::loadActualWindProfile(int recordId)
     }
 
     profile = dbData;
-    qDebug() << "MeasurementResults: Загружен профиль действительного ветра," << profile.size()
-             << "точек (record_id=" << recordId << ", profile_id=" << profileId << ")";
+    QStringList heightListA;
+    for (const auto &pt : profile)
+        heightListA << QString::number(qRound(pt.height));
+    qDebug() << "MeasurementResults: Действительный ветер record_id=" << recordId
+             << "profile_id=" << profileId
+             << "точек=" << profile.size()
+             << "высоты:" << heightListA.join(", ");
     return profile;
 }
 
@@ -1803,6 +1813,13 @@ void MeasurementResults::updateMeteo11Display()
     }
 
     if (!d) return;
+
+    // Скрываем поля, не применимые к приближённому бюллетеню
+    const bool isApprox = (currentButtelinType == Approximate);
+    ui->lineEdit_numStation->setVisible(!isApprox);
+    ui->label_numStation->setVisible(!isApprox);
+    ui->lineEdit_ht->setVisible(!isApprox);
+    ui->label_tempSensingHReached->setVisible(!isApprox);
 
     // Обновляем поля ГОДНЫЙ / ВРЕМЯ СОСТАВЛЕНИЯ
     if (d->isValid) {
