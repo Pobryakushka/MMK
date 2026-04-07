@@ -219,7 +219,8 @@ private:
                              double pressureHpa,
                              double tempC,
                              const QDateTime &sondingTime,
-                             bool useActual);
+                             bool useActual,
+                             const Meteo11Data *oldBulletin = nullptr);
 
     Meteo11Data buildMeteo11Approximate(double stationAltitudeM,
                                         double pressureHpa,

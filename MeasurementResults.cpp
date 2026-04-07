@@ -1647,7 +1647,8 @@ MeasurementResults::Meteo11Data MeasurementResults::buildMeteo11(
     double pressureHpa,
     double tempC,
     const QDateTime &sondingTime,
-    bool useActual)
+    bool useActual,
+    const Meteo11Data *oldBulletin)
 {
     Meteo11Data d;
     d.isApproximate = !useActual;
@@ -1746,22 +1747,44 @@ MeasurementResults::Meteo11Data MeasurementResults::buildMeteo11(
         d.layers.append(layer);
     }
 
-    // --- Для уточнённого: оставшиеся стандартные высоты заполняем как недостижимые ---
-    // В строке бюллетеня они будут "ВВ//–00////", в таблице — "//"
+    // --- Для уточнённого: слои выше данных АМС ---
+    // Если есть актуальный входящий бюллетень — берём его данные (уточняем до 30 км).
+    // Если нет — ставим "//" (недостижимые слои).
     if (!d.isApproximate) {
         int filledCount = d.layers.size();
         for (int i = filledCount; i < heightCount; ++i) {
             const Meteo11Height &lvl = heightTable[i];
-            Meteo11Data::LayerData layer;
-            layer.heightCode    = lvl.codeValue;
-            layer.isAbove10km   = lvl.above10km;
-            layer.isUnavailable = true;
-            d.layers.append(layer);
+
+            bool foundInOld = false;
+            if (oldBulletin) {
+                // Ищем слой с этой высотой во входящем бюллетене
+                for (const Meteo11Data::LayerData &ol : oldBulletin->layers) {
+                    float oldHM = ol.isAbove10km
+                                  ? ol.heightCode * 1000.f
+                                  : static_cast<float>(ol.heightCode);
+                    if (qAbs(oldHM - lvl.heightM) < 1.f && !ol.isUnavailable) {
+                        Meteo11Data::LayerData layer = ol;
+                        layer.tempDev = 0; // ТТ пока не уточняем (нет темп. зондирования)
+                        maxWindHeightM = qMax(maxWindHeightM, oldHM);
+                        d.layers.append(layer);
+                        foundInOld = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!foundInOld) {
+                Meteo11Data::LayerData layer;
+                layer.heightCode    = lvl.codeValue;
+                layer.isAbove10km   = lvl.above10km;
+                layer.isUnavailable = true;
+                d.layers.append(layer);
+            }
         }
     }
 
     // --- Достигнутые высоты ---
-    d.reachedTempHeightKm = 30; // Данных о темп. зондировании нет — ставим максимум (заглушка)
+    d.reachedTempHeightKm = 30; // нет темп. зондирования — заглушка
     d.reachedWindHeightKm = qRound(maxWindHeightM / 1000.0);
 
     d.isValid = !d.layers.isEmpty();
@@ -1846,19 +1869,38 @@ void MeasurementResults::computeMeteo11(int recordId,
     Q_UNUSED(recordId)
 
     // ── УТОЧНЁННЫЙ бюллетень ────────────────────────────────────────────────
-    // Строится по действительному ветру (actualWind).
-    // Если действительный ветер недоступен — по среднему (avgWind).
-    // Наземные параметры (ΔH₀, Δτ₀) берутся от метеопоста (m_current*).
+    // Строится по действительному ветру (actualWind → avgWind если нет).
+    // Наземные параметры (ΔH₀, Δτ₀) — от метеопоста (m_current*).
+    // Если входящий бюллетень актуален (< 12 ч) — используем его данные для
+    // слоёв выше данных АМС, уточняя до 30 км.
+    // Без актуального входящего — только до высоты АМС, выше "//"
     {
         const QVector<WindProfileData> &profile =
             !actualWind.isEmpty() ? actualWind : avgWind;
+
+        // Проверяем актуальность входящего бюллетеня
+        const Meteo11Data *oldBulletin = nullptr;
+        if (m_meteo11FromStation.isValid && m_meteo11FromStation.bulletinTime.isValid()) {
+            qint64 ageSec = m_meteo11FromStation.bulletinTime.secsTo(QDateTime::currentDateTime());
+            if (ageSec >= 0 && ageSec <= 12 * 3600) {
+                oldBulletin = &m_meteo11FromStation;
+                qDebug() << "Метео-11: входящий бюллетень актуален, уточняем до 30 км"
+                         << "(давность" << ageSec / 3600 << "ч)";
+            } else {
+                qDebug() << "Метео-11: входящий бюллетень устарел"
+                         << "(давность" << ageSec / 3600 << "ч > 12 ч), строим только до АМС";
+            }
+        } else {
+            qDebug() << "Метео-11: входящий бюллетень отсутствует, строим только до АМС";
+        }
 
         m_meteo11Updated = buildMeteo11(profile,
                                         m_currentStationAltitude,
                                         m_currentPressureMmHg,
                                         m_currentTempC,
                                         m_currentSondingTime,
-                                        true /*useActual*/);
+                                        true /*useActual*/,
+                                        oldBulletin);
         m_meteo11Updated.isValid = !profile.isEmpty();
     }
 
