@@ -181,6 +181,9 @@ private:
             int  windSpeed;         // СС скорость м/с
             int  tempDev;           // ТТ — отклонение температуры, закодированное (0 = нет данных)
             bool isAbove10km;       // для высот ≥10 км высота в км (двузначная)
+            bool isUnavailable;     // true → нет данных, в строку пишем 00////
+            LayerData() : heightCode(0), windDir(0), windSpeed(0), tempDev(0),
+                          isAbove10km(false), isUnavailable(false) {}
         };
         QVector<LayerData> layers;
 
@@ -237,7 +240,7 @@ private:
     static int  encodeWindDir(int degrees);             // градусы → делители угломера (0-60)
     static int  encodePressureDev(double deltaMmHg);    // отклонение давления → БББ
     static int  encodeTempDev(double deltaCelsius);     // отклонение темп. → ТТ
-    static QString formatMeteo11Group(int heightCode, int dir, int speed, int tempDev, bool above10km, bool includePP = true);
+    static QString formatMeteo11Group(int heightCode, int dir, int speed, int tempDev, bool above10km, bool includePP = true, bool unavailable = false);
     static QString buildMeteo11String(const Meteo11Data &d);
 
     // Параметры атмосферы для кодирования

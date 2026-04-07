@@ -524,6 +524,27 @@ static const int kApproxHeightCount =
     static_cast<int>(sizeof(kApproxHeights) / sizeof(kApproxHeights[0]));
 
 // ──────────────────────────────────────────────────────────────────────────────
+// Коэффициенты экстраполяции ветра для приближённого бюллетеня (Приложение 4)
+// Формулы: Wy = K'y × V₀;  αWy = αV₀ + Δα'Wy
+// K'y получены из примера учебника (V₀=6 м/с): Wy=9,11,11,12,13,14,14,14 м/с
+// Δα'Wy — приращение направления (д.у.), ветер поворачивает вправо с высотой
+// Порядок: 200, 400, 800, 1200, 1600, 2400, 3000, 4000 м (совпадает с kApproxHeights)
+// При V₀ < 3 м/с скорость ветра на всех высотах принимается равной нулю
+// ──────────────────────────────────────────────────────────────────────────────
+struct ApproxWindCoeff { float heightM; float ky; int dalpha; };
+static const ApproxWindCoeff kApproxWindCoeffs[] = {
+    //  Y, м   K'y    Δα'Wy (д.у.)
+    {  200.f, 1.50f,  1 },
+    {  400.f, 1.83f,  2 },
+    {  800.f, 1.83f,  3 },
+    { 1200.f, 2.00f,  3 },
+    { 1600.f, 2.17f,  4 },
+    { 2400.f, 2.33f,  4 },
+    { 3000.f, 2.33f,  5 },
+    { 4000.f, 2.33f,  5 },
+};
+
+// ──────────────────────────────────────────────────────────────────────────────
 // Таблица 3: средние отклонения температуры ΔτY (°C) без бюллетеня «Метеосредний»
 // Строки: стандартные высоты 200..4000 м (9 уровней)
 // Столбцы: |Δτ₀МП| = 1,2,3,4,5,6,7,8,9,10,20,30,40,50
@@ -1526,7 +1547,7 @@ int MeasurementResults::encodeTempDev(double deltaCelsius)
  *  ≤10 км: ХХХХ-ТТННСС  (4-значный код высоты + 6-значный ТТННСС)
  *  >10 км: ХХ-ТТННСС   (2-значный код + 6-значный)
  */
-QString MeasurementResults::formatMeteo11Group(int heightCode, int dir, int speed, int tempDev, bool above10km, bool includePP)
+QString MeasurementResults::formatMeteo11Group(int heightCode, int dir, int speed, int tempDev, bool above10km, bool includePP, bool unavailable)
 {
     // Формат уточнённого (includePP=true):
     //  ≤8000 м:  ВВ//-ТТННСС  где ВВ = высота в сотнях метров (02..80)
@@ -1547,6 +1568,10 @@ QString MeasurementResults::formatMeteo11Group(int heightCode, int dir, int spee
         else
             hPart = QString("%1").arg(heightCode, 2, 10, QChar('0'));
     }
+
+    // Нет данных → ТТ=00, НН=//, СС=//
+    if (unavailable)
+        return hPart + "-" + "00////";
 
     QString ssStr = (speed >= 99)
                         ? "//"
@@ -1597,7 +1622,8 @@ QString MeasurementResults::buildMeteo11String(const Meteo11Data &d)
     for (const Meteo11Data::LayerData &layer : d.layers) {
         parts << formatMeteo11Group(layer.heightCode, layer.windDir,
                                     layer.windSpeed, layer.tempDev,
-                                    layer.isAbove10km, includePP);
+                                    layer.isAbove10km, includePP,
+                                    layer.isUnavailable);
     }
 
     // Достигнутые высоты BтBтBвBв (только для уточнённого)
@@ -1720,6 +1746,20 @@ MeasurementResults::Meteo11Data MeasurementResults::buildMeteo11(
         d.layers.append(layer);
     }
 
+    // --- Для уточнённого: оставшиеся стандартные высоты заполняем как недостижимые ---
+    // В строке бюллетеня они будут "ВВ//–00////", в таблице — "//"
+    if (!d.isApproximate) {
+        int filledCount = d.layers.size();
+        for (int i = filledCount; i < heightCount; ++i) {
+            const Meteo11Height &lvl = heightTable[i];
+            Meteo11Data::LayerData layer;
+            layer.heightCode    = lvl.codeValue;
+            layer.isAbove10km   = lvl.above10km;
+            layer.isUnavailable = true;
+            d.layers.append(layer);
+        }
+    }
+
     // --- Достигнутые высоты ---
     d.reachedTempHeightKm = 30; // Данных о темп. зондировании нет — ставим максимум (заглушка)
     d.reachedWindHeightKm = qRound(maxWindHeightM / 1000.0);
@@ -1767,18 +1807,24 @@ MeasurementResults::Meteo11Data MeasurementResults::buildMeteo11Approximate(
     double deltaTau0 = (tempC + deltaTV) - 15.9;
     d.tempVirtualDev = encodeTempDev(deltaTau0);
 
-    // НН и СС: наземный ветер от IWS одинаков для всех высот
-    int encodedDir   = encodeWindDir(qRound(surfaceWindDirDeg));
-    int encodedSpeed = qBound(0, qRound(surfaceWindSpeedMs), 99);
+    // НН и СС: экстраполяция по Приложению 4 (Wy = K'y × V₀, αWy = αV₀ + Δα'Wy)
+    // При V₀ < 3 м/с скорость принимается равной нулю на всех высотах
+    bool windTooLow  = surfaceWindSpeedMs < 3.0;
+    int  groundDirDU = encodeWindDir(qRound(surfaceWindDirDeg));
 
     // Слои: 02 04 08 12 16 24 30 40 (без 2000 м)
     for (int i = 0; i < kApproxHeightCount; ++i) {
-        const Meteo11Height &lvl = kApproxHeights[i];
+        const Meteo11Height    &lvl   = kApproxHeights[i];
+        const ApproxWindCoeff  &coeff = kApproxWindCoeffs[i];
+
+        int speed = windTooLow ? 0 : qMin(99, qRound(coeff.ky * surfaceWindSpeedMs));
+        int dir   = (groundDirDU + coeff.dalpha + 60) % 60; // вращение вправо, ограничение 0-59
+
         Meteo11Data::LayerData layer;
         layer.heightCode  = lvl.codeValue;
         layer.isAbove10km = false;
-        layer.windDir     = encodedDir;
-        layer.windSpeed   = encodedSpeed;
+        layer.windSpeed   = speed;
+        layer.windDir     = dir;
         layer.tempDev     = computeApproxTempDev(lvl.heightM, deltaTau0);
         d.layers.append(layer);
     }
@@ -2093,14 +2139,19 @@ void MeasurementResults::fillMeteo11TableView(const Meteo11Data &d)
                 itemPP->setTextAlignment(Qt::AlignCenter);
                 table->setItem(r, 0, itemPP);
 
-                QString ssStr = (layer.windSpeed >= 99)
-                                    ? "//"
-                                    : QString("%1").arg(layer.windSpeed, 2, 10, QChar('0'));
-                QString ttnnss = QString("%1%2%3")
-                                     .arg(layer.tempDev, 2, 10, QChar('0'))
-                                     .arg(layer.windDir, 2, 10, QChar('0'))
-                                     .arg(ssStr);
-                auto *itemData = new QTableWidgetItem(ttnnss);
+                QString dataText;
+                if (layer.isUnavailable) {
+                    dataText = "//";
+                } else {
+                    QString ssStr = (layer.windSpeed >= 99)
+                                        ? "//"
+                                        : QString("%1").arg(layer.windSpeed, 2, 10, QChar('0'));
+                    dataText = QString("%1%2%3")
+                                   .arg(layer.tempDev, 2, 10, QChar('0'))
+                                   .arg(layer.windDir, 2, 10, QChar('0'))
+                                   .arg(ssStr);
+                }
+                auto *itemData = new QTableWidgetItem(dataText);
                 itemData->setTextAlignment(Qt::AlignCenter);
                 table->setItem(r, 1, itemData);
                 break;
