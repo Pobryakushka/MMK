@@ -582,6 +582,31 @@ static int table3LookupAbs(int heightRow, int absKey, bool negative)
     return 0;
 }
 
+// ──────────────────────────────────────────────────────────────────────────────
+// Таблица 4: виртуальные поправки ΔTv при относительной влажности 50%
+// Источник: формула e = 0.5E, давление H = 750 мм рт.ст.
+// t (°C):    -20  -10    0    5   10   15   20   25   30   35   40
+// ΔTv (°C):    0  0.1  0.3  0.5  0.7  0.9  1.3  1.8  2.4  3.3  4.4
+// ──────────────────────────────────────────────────────────────────────────────
+static const double kTable4T[]   = { -20, -10,  0,   5,  10,  15,  20,  25,  30,  35,  40 };
+static const double kTable4Dtv[] = { 0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.3, 1.8, 2.4, 3.3, 4.4 };
+static const int    kTable4N     = 11;
+
+// Вернуть виртуальную поправку ΔTv для наземной температуры t (°C) по Таблице 4.
+// Для t ≤ −20 °C → 0; для t ≥ 40 °C → 4.4; между точками — линейная интерполяция.
+static double virtualTempCorrection(double tempC)
+{
+    if (tempC <= kTable4T[0])          return kTable4Dtv[0];
+    if (tempC >= kTable4T[kTable4N-1]) return kTable4Dtv[kTable4N-1];
+    for (int i = 0; i < kTable4N - 1; ++i) {
+        if (tempC >= kTable4T[i] && tempC <= kTable4T[i+1]) {
+            double frac = (tempC - kTable4T[i]) / (kTable4T[i+1] - kTable4T[i]);
+            return kTable4Dtv[i] + frac * (kTable4Dtv[i+1] - kTable4Dtv[i]);
+        }
+    }
+    return 0.0;
+}
+
 // Вычислить ΔτY по Таблице 3 (без Метеосредний) для одной высоты
 // Возвращает готовое закодированное ТТ значение (см. encodeTempDev)
 static int computeApproxTempDev(float heightM, double deltaTau0)
@@ -1677,23 +1702,8 @@ MeasurementResults::Meteo11Data MeasurementResults::buildMeteo11(
     d.pressureDeviation = encodePressureDev(deltaH0);
 
     // Δτ₀: отклонение наземной виртуальной температуры по протоколу Метео-11
-    // Шаг 1: виртуальная поправка ΔTᵥ из Таблицы 1 (по наземной температуре t₀)
-    // t₀ < 0    → ΔTᵥ = 0
-    // t₀ 0–5   → ΔTᵥ = +0.5
-    // t₀ 5–10  → ΔTᵥ = +1.0  (промежуточный диапазон, не указан явно — берём 0.5 как ближайший)
-    // t₀ 10–15 → ΔTᵥ = +1.0
-    // t₀ ~20   → ΔTᵥ = +1.5
-    // t₀ ~25   → ΔTᵥ = +2.0
-    // t₀ ~30   → ΔTᵥ = +3.5
-    // t₀ ~40   → ΔTᵥ = +4.5
-    double deltaTV = 0.0;
-    if      (tempC < 0.0)   deltaTV =  0.0;
-    else if (tempC <= 5.0)  deltaTV =  0.5;
-    else if (tempC <= 15.0) deltaTV =  1.0;
-    else if (tempC <= 22.5) deltaTV =  1.5;
-    else if (tempC <= 27.5) deltaTV =  2.0;
-    else if (tempC <= 35.0) deltaTV =  3.5;
-    else                    deltaTV =  4.5;
+    // Шаг 1: виртуальная поправка ΔTᵥ из Таблицы 4 (r = 50%, H = 750 мм рт.ст.)
+    double deltaTV = virtualTempCorrection(tempC);
 
     // Шаг 2: наземная виртуальная температура τ₀ = t₀ + ΔTᵥ
     double tau0 = tempC + deltaTV;
@@ -1819,15 +1829,10 @@ MeasurementResults::Meteo11Data MeasurementResults::buildMeteo11Approximate(
     double deltaH0 = pressureHpa - 750.0;
     d.pressureDeviation = encodePressureDev(deltaH0);
 
-    // ΔTv из Таблицы 1, τ₀ = t₀ + ΔTv, Δτ₀МП = τ₀ - 15.9
-    double deltaTV = 0.0;
-    if      (tempC < 0.0)   deltaTV = 0.0;
-    else if (tempC <= 5.0)  deltaTV = 0.5;
-    else if (tempC <= 15.0) deltaTV = 1.0;
-    else if (tempC <= 22.5) deltaTV = 1.5;
-    else if (tempC <= 27.5) deltaTV = 2.0;
-    else if (tempC <= 35.0) deltaTV = 3.5;
-    else                    deltaTV = 4.5;
+    // Виртуальная поправка ΔTv по Таблице 4 (r = 50%, H = 750 мм рт.ст.)
+    // τ₀ = t₀ + ΔTv  (наземная виртуальная температура)
+    // Δτ₀МП = τ₀ − 15.9  (наземное отклонение виртуальной температуры, таблица: +15.9°C)
+    double deltaTV   = virtualTempCorrection(tempC);
     double deltaTau0 = (tempC + deltaTV) - 15.9;
     d.tempVirtualDev = encodeTempDev(deltaTau0);
 
