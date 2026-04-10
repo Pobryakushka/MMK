@@ -105,8 +105,6 @@ void ZedF9PReceiver::disconnectFromReceiver()
 
         m_serialPort->close();
 
-        QThread::msleep(100);
-
         emit disconnected();
     }
 

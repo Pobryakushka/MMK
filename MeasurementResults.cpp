@@ -582,6 +582,31 @@ static int table3LookupAbs(int heightRow, int absKey, bool negative)
     return 0;
 }
 
+// ──────────────────────────────────────────────────────────────────────────────
+// Таблица 4: виртуальные поправки ΔTv при относительной влажности 50%
+// Источник: формула e = 0.5E, давление H = 750 мм рт.ст.
+// t (°C):    -20  -10    0    5   10   15   20   25   30   35   40
+// ΔTv (°C):    0  0.1  0.3  0.5  0.7  0.9  1.3  1.8  2.4  3.3  4.4
+// ──────────────────────────────────────────────────────────────────────────────
+static const double kTable4T[]   = { -20, -10,  0,   5,  10,  15,  20,  25,  30,  35,  40 };
+static const double kTable4Dtv[] = { 0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.3, 1.8, 2.4, 3.3, 4.4 };
+static const int    kTable4N     = 11;
+
+// Вернуть виртуальную поправку ΔTv для наземной температуры t (°C) по Таблице 4.
+// Для t ≤ −20 °C → 0; для t ≥ 40 °C → 4.4; между точками — линейная интерполяция.
+static double virtualTempCorrection(double tempC)
+{
+    if (tempC <= kTable4T[0])          return kTable4Dtv[0];
+    if (tempC >= kTable4T[kTable4N-1]) return kTable4Dtv[kTable4N-1];
+    for (int i = 0; i < kTable4N - 1; ++i) {
+        if (tempC >= kTable4T[i] && tempC <= kTable4T[i+1]) {
+            double frac = (tempC - kTable4T[i]) / (kTable4T[i+1] - kTable4T[i]);
+            return kTable4Dtv[i] + frac * (kTable4Dtv[i+1] - kTable4Dtv[i]);
+        }
+    }
+    return 0.0;
+}
+
 // Вычислить ΔτY по Таблице 3 (без Метеосредний) для одной высоты
 // Возвращает готовое закодированное ТТ значение (см. encodeTempDev)
 static int computeApproxTempDev(float heightM, double deltaTau0)
@@ -1677,23 +1702,8 @@ MeasurementResults::Meteo11Data MeasurementResults::buildMeteo11(
     d.pressureDeviation = encodePressureDev(deltaH0);
 
     // Δτ₀: отклонение наземной виртуальной температуры по протоколу Метео-11
-    // Шаг 1: виртуальная поправка ΔTᵥ из Таблицы 1 (по наземной температуре t₀)
-    // t₀ < 0    → ΔTᵥ = 0
-    // t₀ 0–5   → ΔTᵥ = +0.5
-    // t₀ 5–10  → ΔTᵥ = +1.0  (промежуточный диапазон, не указан явно — берём 0.5 как ближайший)
-    // t₀ 10–15 → ΔTᵥ = +1.0
-    // t₀ ~20   → ΔTᵥ = +1.5
-    // t₀ ~25   → ΔTᵥ = +2.0
-    // t₀ ~30   → ΔTᵥ = +3.5
-    // t₀ ~40   → ΔTᵥ = +4.5
-    double deltaTV = 0.0;
-    if      (tempC < 0.0)   deltaTV =  0.0;
-    else if (tempC <= 5.0)  deltaTV =  0.5;
-    else if (tempC <= 15.0) deltaTV =  1.0;
-    else if (tempC <= 22.5) deltaTV =  1.5;
-    else if (tempC <= 27.5) deltaTV =  2.0;
-    else if (tempC <= 35.0) deltaTV =  3.5;
-    else                    deltaTV =  4.5;
+    // Шаг 1: виртуальная поправка ΔTᵥ из Таблицы 4 (r = 50%, H = 750 мм рт.ст.)
+    double deltaTV = virtualTempCorrection(tempC);
 
     // Шаг 2: наземная виртуальная температура τ₀ = t₀ + ΔTᵥ
     double tau0 = tempC + deltaTV;
@@ -1753,10 +1763,6 @@ MeasurementResults::Meteo11Data MeasurementResults::buildMeteo11(
     // Если нет — ставим "//" (недостижимые слои).
     if (!d.isApproximate) {
         int filledCount = d.layers.size();
-        qDebug() << "Метео-11 buildMeteo11: АМС заполнил" << filledCount
-                 << "слоёв, ищем" << (heightCount - filledCount)
-                 << "слоёв в oldBulletin (ptr=" << (oldBulletin ? "SET" : "NULL") << ")";
-
         for (int i = filledCount; i < heightCount; ++i) {
             const Meteo11Height &lvl = heightTable[i];
 
@@ -1773,14 +1779,8 @@ MeasurementResults::Meteo11Data MeasurementResults::buildMeteo11(
                         maxWindHeightM = qMax(maxWindHeightM, oldHM);
                         d.layers.append(layer);
                         foundInOld = true;
-                        qDebug() << "  → НАЙДЕНО в oldBulletin: lvl.heightM=" << lvl.heightM
-                                 << "oldHM=" << oldHM << "dir=" << layer.windDir << "speed=" << layer.windSpeed;
                         break;
                     }
-                }
-                if (!foundInOld) {
-                    qDebug() << "  → НЕ НАЙДЕНО в oldBulletin: lvl.heightM=" << lvl.heightM
-                             << "(в бюллетене" << oldBulletin->layers.size() << "слоёв)";
                 }
             }
 
@@ -1829,15 +1829,10 @@ MeasurementResults::Meteo11Data MeasurementResults::buildMeteo11Approximate(
     double deltaH0 = pressureHpa - 750.0;
     d.pressureDeviation = encodePressureDev(deltaH0);
 
-    // ΔTv из Таблицы 1, τ₀ = t₀ + ΔTv, Δτ₀МП = τ₀ - 15.9
-    double deltaTV = 0.0;
-    if      (tempC < 0.0)   deltaTV = 0.0;
-    else if (tempC <= 5.0)  deltaTV = 0.5;
-    else if (tempC <= 15.0) deltaTV = 1.0;
-    else if (tempC <= 22.5) deltaTV = 1.5;
-    else if (tempC <= 27.5) deltaTV = 2.0;
-    else if (tempC <= 35.0) deltaTV = 3.5;
-    else                    deltaTV = 4.5;
+    // Виртуальная поправка ΔTv по Таблице 4 (r = 50%, H = 750 мм рт.ст.)
+    // τ₀ = t₀ + ΔTv  (наземная виртуальная температура)
+    // Δτ₀МП = τ₀ − 15.9  (наземное отклонение виртуальной температуры, таблица: +15.9°C)
+    double deltaTV   = virtualTempCorrection(tempC);
     double deltaTau0 = (tempC + deltaTV) - 15.9;
     d.tempVirtualDev = encodeTempDev(deltaTau0);
 
@@ -1880,57 +1875,33 @@ void MeasurementResults::computeMeteo11(int recordId,
     Q_UNUSED(recordId)
 
     // ── ВРЕМЯ ВХОДЯЩЕГО БЮЛЛЕТЕНЯ ────────────────────────────────────────────
-    // Используем bulletin_time из БД: оно вычислено в onApplyClicked из ДДЧЧМ
-    // (или текущего времени как резерв) и хранит правильный год/месяц/день.
-    // Реконструкция по ДДЧЧМ без года/месяца ненадёжна (неоднозначность граница месяца).
+    // Используем bulletin_time из БД: вычислено в onApplyClicked из ДДЧЧМ
+    // и хранит правильный год/месяц/день без двусмысленности границы месяца.
     QDateTime fromStationDT;
-    if (m_meteo11FromStation.isValid && m_currentSondingTime.isValid()) {
-        if (m_meteo11FromStation.bulletinTime.isValid())
-            fromStationDT = m_meteo11FromStation.bulletinTime;
-
-        qDebug() << "Метео-11: входящий бюллетень: isValid=" << m_meteo11FromStation.isValid
-                 << "day=" << m_meteo11FromStation.day
-                 << "hour=" << m_meteo11FromStation.hour
-                 << "tenMin=" << m_meteo11FromStation.tenMinutes
-                 << "bulletinTime(DB)=" << m_meteo11FromStation.bulletinTime.toString("dd.MM.yyyy HH:mm")
-                 << "fromStationDT=" << fromStationDT.toString("dd.MM.yyyy HH:mm")
-                 << "sondingTime=" << m_currentSondingTime.toString("dd.MM.yyyy HH:mm")
-                 << "layers=" << m_meteo11FromStation.layers.size();
-        for (const Meteo11Data::LayerData &l : m_meteo11FromStation.layers) {
-            float hm = l.isAbove10km ? l.heightCode * 1000.f : static_cast<float>(l.heightCode);
-            qDebug() << "  layer: heightM=" << hm << "above10km=" << l.isAbove10km
-                     << "dir=" << l.windDir << "speed=" << l.windSpeed;
-        }
-    } else {
-        qDebug() << "Метео-11: входящий бюллетень не загружен"
-                 << "(isValid=" << m_meteo11FromStation.isValid
-                 << "sondingTimeValid=" << m_currentSondingTime.isValid() << ")";
-    }
+    if (m_meteo11FromStation.isValid && m_currentSondingTime.isValid()
+            && m_meteo11FromStation.bulletinTime.isValid())
+        fromStationDT = m_meteo11FromStation.bulletinTime;
 
     // ── УТОЧНЁННЫЙ бюллетень ────────────────────────────────────────────────
     // Строится по действительному ветру (actualWind → avgWind если нет).
-    // Наземные параметры (ΔH₀, Δτ₀) — от метеопоста (m_current*).
-    // Если входящий бюллетень актуален (< 12 ч от зондирования) — используем
-    // его данные для слоёв выше данных АМС, уточняя до 30 км.
+    // Если входящий бюллетень в пределах ±12 ч от зондирования — используем
+    // его данные для слоёв выше данных АМС (уточнение до 30 км).
     // Без актуального входящего — только до высоты АМС, выше "//"
     {
         const QVector<WindProfileData> &profile =
             !actualWind.isEmpty() ? actualWind : avgWind;
 
-        // Проверяем актуальность входящего бюллетеня по его собственному времени ДДЧЧМ.
-        // Допуск ±1 ч (на случай если время бюллетеня чуть позже времени зондирования).
         const Meteo11Data *oldBulletin = nullptr;
         if (m_meteo11FromStation.isValid && fromStationDT.isValid()) {
             qint64 ageSec = fromStationDT.secsTo(m_currentSondingTime);
-            qDebug() << "Метео-11: ageSec=" << ageSec << "(" << ageSec/3600.0 << "ч)";
             if (qAbs(ageSec) <= 12 * 3600) {
                 oldBulletin = &m_meteo11FromStation;
-                qDebug() << "Метео-11: входящий бюллетень АКТУАЛЕН, уточняем до 30 км";
+                qDebug() << "Метео-11: входящий бюллетень актуален ("
+                         << qAbs(ageSec) / 3600.0 << "ч), уточняем до 30 км";
             } else {
-                qDebug() << "Метео-11: входящий бюллетень УСТАРЕЛ (> 12 ч), строим только до АМС";
+                qDebug() << "Метео-11: входящий бюллетень устарел ("
+                         << qAbs(ageSec) / 3600.0 << "ч > 12), строим до АМС";
             }
-        } else {
-            qDebug() << "Метео-11: нет корректного времени бюллетеня, строим только до АМС";
         }
 
         m_meteo11Updated = buildMeteo11(profile,
@@ -1975,7 +1946,6 @@ void MeasurementResults::computeMeteo11(int recordId,
 
         if (stationActual && m_meteo11Updated.isValid) {
             currentButtelinType = Updated;
-            qDebug() << "Метео-11: автовыбор → УТОЧНЁННЫЙ (бюллетень МС актуален)";
         } else if (m_meteo11Approximate.isValid) {
             currentButtelinType = Approximate;
             qDebug() << "Метео-11: автовыбор → ПРИБЛИЖЁННЫЙ"
