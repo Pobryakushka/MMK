@@ -120,7 +120,7 @@ bool SurfaceMeteoSaver::saveToDatabase(int recordId)
     query.bindValue(":record_id",      recordId);
     query.bindValue(":temperature",    m_temperature);
     query.bindValue(":humidity",       m_humidity);
-    query.bindValue(":pressure",       m_pressure);
+    query.bindValue(":pressure",       m_pressure * 0.750064); // гПа → мм рт.ст.
     query.bindValue(":wind_speed",     m_windSpeed);
     query.bindValue(":wind_direction", m_windDirection);
 
