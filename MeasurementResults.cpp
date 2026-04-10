@@ -1923,7 +1923,7 @@ void MeasurementResults::computeMeteo11(int recordId,
         if (m_meteo11FromStation.isValid && fromStationDT.isValid()) {
             qint64 ageSec = fromStationDT.secsTo(m_currentSondingTime);
             qDebug() << "Метео-11: ageSec=" << ageSec << "(" << ageSec/3600.0 << "ч)";
-            if (ageSec >= -3600 && ageSec <= 12 * 3600) {
+            if (qAbs(ageSec) <= 12 * 3600) {
                 oldBulletin = &m_meteo11FromStation;
                 qDebug() << "Метео-11: входящий бюллетень АКТУАЛЕН, уточняем до 30 км";
             } else {
@@ -1970,7 +1970,7 @@ void MeasurementResults::computeMeteo11(int recordId,
         bool stationActual = false;
         if (m_meteo11FromStation.isValid && fromStationDT.isValid()) {
             const qint64 ageSec = fromStationDT.secsTo(m_currentSondingTime);
-            stationActual = (ageSec >= -3600 && ageSec <= 12 * 3600);
+            stationActual = (qAbs(ageSec) <= 12 * 3600);
         }
 
         if (stationActual && m_meteo11Updated.isValid) {
