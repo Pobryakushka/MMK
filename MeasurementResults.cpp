@@ -1869,22 +1869,38 @@ void MeasurementResults::computeMeteo11(int recordId,
 {
     Q_UNUSED(recordId)
 
+    // Реконструируем время входящего бюллетеня из его собственных полей ДДЧЧМ.
+    // Используем год/месяц зондирования; если день бюллетеня > дня зондирования —
+    // бюллетень из предыдущего месяца (граница месяца).
+    QDateTime fromStationDT;
+    if (m_meteo11FromStation.isValid && m_meteo11FromStation.day > 0
+            && m_currentSondingTime.isValid()) {
+        QDate bDate(m_currentSondingTime.date().year(),
+                    m_currentSondingTime.date().month(),
+                    m_meteo11FromStation.day);
+        if (!bDate.isValid() || m_meteo11FromStation.day > m_currentSondingTime.date().day()) {
+            QDate prev = m_currentSondingTime.date().addMonths(-1);
+            bDate = QDate(prev.year(), prev.month(), m_meteo11FromStation.day);
+        }
+        fromStationDT = QDateTime(bDate,
+                                  QTime(m_meteo11FromStation.hour,
+                                        m_meteo11FromStation.tenMinutes * 10, 0));
+    }
+
     // ── УТОЧНЁННЫЙ бюллетень ────────────────────────────────────────────────
     // Строится по действительному ветру (actualWind → avgWind если нет).
     // Наземные параметры (ΔH₀, Δτ₀) — от метеопоста (m_current*).
-    // Если входящий бюллетень актуален (< 12 ч) — используем его данные для
-    // слоёв выше данных АМС, уточняя до 30 км.
+    // Если входящий бюллетень актуален (< 12 ч от зондирования) — используем
+    // его данные для слоёв выше данных АМС, уточняя до 30 км.
     // Без актуального входящего — только до высоты АМС, выше "//"
     {
         const QVector<WindProfileData> &profile =
             !actualWind.isEmpty() ? actualWind : avgWind;
 
-        // Проверяем актуальность входящего бюллетеня относительно времени зондирования.
-        // Условие: бюллетень получен не позднее чем за 12 часов до зондирования.
+        // Проверяем актуальность входящего бюллетеня по его собственному времени ДДЧЧМ.
         const Meteo11Data *oldBulletin = nullptr;
-        if (m_meteo11FromStation.isValid && m_meteo11FromStation.bulletinTime.isValid()
-                && m_currentSondingTime.isValid()) {
-            qint64 ageSec = m_meteo11FromStation.bulletinTime.secsTo(m_currentSondingTime);
+        if (m_meteo11FromStation.isValid && fromStationDT.isValid()) {
+            qint64 ageSec = fromStationDT.secsTo(m_currentSondingTime);
             if (ageSec >= 0 && ageSec <= 12 * 3600) {
                 oldBulletin = &m_meteo11FromStation;
                 qDebug() << "Метео-11: входящий бюллетень актуален, уточняем до 30 км"
@@ -1932,10 +1948,8 @@ void MeasurementResults::computeMeteo11(int recordId,
     //  • «От метеостанции» — только по явному нажатию кнопки
     {
         bool stationActual = false;
-        if (m_meteo11FromStation.isValid && m_meteo11FromStation.bulletinTime.isValid()
-                && m_currentSondingTime.isValid()) {
-            const qint64 ageSec =
-                m_meteo11FromStation.bulletinTime.secsTo(m_currentSondingTime);
+        if (m_meteo11FromStation.isValid && fromStationDT.isValid()) {
+            const qint64 ageSec = fromStationDT.secsTo(m_currentSondingTime);
             stationActual = (ageSec >= 0 && ageSec <= 12 * 3600);
         }
 
