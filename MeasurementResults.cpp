@@ -679,6 +679,7 @@ void MeasurementResults::loadMeteo11FromStation(int recordId)
                     layer.isAbove10km = h.above10km;
                     layer.windDir     = lo["nn"].toString().toInt();
                     layer.windSpeed   = lo["ss"].toString().toInt();
+                    layer.pp          = lo["pp"].toString("//");
                     m_meteo11FromStation.layers.append(layer);
                     scanFrom = i + 1;
                     break;
@@ -1547,11 +1548,11 @@ int MeasurementResults::encodeTempDev(double deltaCelsius)
  *  ≤10 км: ХХХХ-ТТННСС  (4-значный код высоты + 6-значный ТТННСС)
  *  >10 км: ХХ-ТТННСС   (2-значный код + 6-значный)
  */
-QString MeasurementResults::formatMeteo11Group(int heightCode, int dir, int speed, int tempDev, bool above10km, bool includePP, bool unavailable)
+QString MeasurementResults::formatMeteo11Group(int heightCode, const QString &pp, int dir, int speed, int tempDev, bool above10km, bool includePP, bool unavailable)
 {
     // Формат уточнённого (includePP=true):
-    //  ≤8000 м:  ВВ//-ТТННСС  где ВВ = высота в сотнях метров (02..80)
-    //  ≥10 км:   ВВ//-ТТННСС  где ВВ = высота в км (10..30)
+    //  ≤8000 м:  ВВПП-ТТННСС  где ВВ = высота в сотнях метров (02..80), ПП — из данных
+    //  ≥10 км:   ВВПП-ТТННСС  где ВВ = высота в км (10..30)
     // Формат приближённого (includePP=false):
     //  ВВ-ТТННСС  (без ПП)
     QString hPart;
@@ -1559,12 +1560,12 @@ QString MeasurementResults::formatMeteo11Group(int heightCode, int dir, int spee
     if (!above10km) {
         int hHundreds = heightCode / 100;
         if (includePP)
-            hPart = QString("%1//").arg(hHundreds, 2, 10, QChar('0'));
+            hPart = QString("%1%2").arg(hHundreds, 2, 10, QChar('0')).arg(pp);
         else
             hPart = QString("%1").arg(hHundreds, 2, 10, QChar('0'));
     } else {
         if (includePP)
-            hPart = QString("%1//").arg(heightCode, 2, 10, QChar('0'));
+            hPart = QString("%1%2").arg(heightCode, 2, 10, QChar('0')).arg(pp);
         else
             hPart = QString("%1").arg(heightCode, 2, 10, QChar('0'));
     }
@@ -1617,11 +1618,11 @@ QString MeasurementResults::buildMeteo11String(const Meteo11Data &d)
                  .arg(d.pressureDeviation, 3, 10, QChar('0'))
                  .arg(d.tempVirtualDev,    2, 10, QChar('0'));
 
-    // Слои: приближённый — без ПП (ВВ-ТТННСС), уточнённый — с ПП (ВВ//-ТТННСС)
+    // Слои: приближённый — без ПП (ВВ-ТТННСС), уточнённый — с ПП (ВВПП-ТТННСС)
     const bool includePP = !d.isApproximate;
     for (const Meteo11Data::LayerData &layer : d.layers) {
-        parts << formatMeteo11Group(layer.heightCode, layer.windDir,
-                                    layer.windSpeed, layer.tempDev,
+        parts << formatMeteo11Group(layer.heightCode, layer.pp,
+                                    layer.windDir, layer.windSpeed, layer.tempDev,
                                     layer.isAbove10km, includePP,
                                     layer.isUnavailable);
     }
@@ -2177,7 +2178,7 @@ void MeasurementResults::fillMeteo11TableView(const Meteo11Data &d)
 
         for (int r = 0; r < kTableRowCount; ++r) {
             if (qAbs(kTableHeights[r] - heightM) < 1.f) {
-                auto *itemPP = new QTableWidgetItem("//");
+                auto *itemPP = new QTableWidgetItem(layer.pp);
                 itemPP->setTextAlignment(Qt::AlignCenter);
                 table->setItem(r, 0, itemPP);
 
