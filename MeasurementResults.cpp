@@ -1880,26 +1880,12 @@ void MeasurementResults::computeMeteo11(int recordId,
     Q_UNUSED(recordId)
 
     // ── ВРЕМЯ ВХОДЯЩЕГО БЮЛЛЕТЕНЯ ────────────────────────────────────────────
-    // Приоритет: поля ДДЧЧМ из самого бюллетеня; резерв — bulletin_time из БД.
+    // Используем bulletin_time из БД: оно вычислено в onApplyClicked из ДДЧЧМ
+    // (или текущего времени как резерв) и хранит правильный год/месяц/день.
+    // Реконструкция по ДДЧЧМ без года/месяца ненадёжна (неоднозначность граница месяца).
     QDateTime fromStationDT;
     if (m_meteo11FromStation.isValid && m_currentSondingTime.isValid()) {
-        // Вариант 1: реконструируем из ДДЧЧМ
-        if (m_meteo11FromStation.day > 0) {
-            QDate bDate(m_currentSondingTime.date().year(),
-                        m_currentSondingTime.date().month(),
-                        m_meteo11FromStation.day);
-            if (!bDate.isValid()
-                    || m_meteo11FromStation.day > m_currentSondingTime.date().day()) {
-                QDate prev = m_currentSondingTime.date().addMonths(-1);
-                bDate = QDate(prev.year(), prev.month(), m_meteo11FromStation.day);
-            }
-            QDateTime cand(bDate, QTime(m_meteo11FromStation.hour,
-                                        m_meteo11FromStation.tenMinutes * 10, 0));
-            if (cand.isValid())
-                fromStationDT = cand;
-        }
-        // Вариант 2: bulletin_time из БД, если ДДЧЧМ не дал результата
-        if (!fromStationDT.isValid() && m_meteo11FromStation.bulletinTime.isValid())
+        if (m_meteo11FromStation.bulletinTime.isValid())
             fromStationDT = m_meteo11FromStation.bulletinTime;
 
         qDebug() << "Метео-11: входящий бюллетень: isValid=" << m_meteo11FromStation.isValid
