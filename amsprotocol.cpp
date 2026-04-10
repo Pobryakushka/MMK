@@ -496,7 +496,7 @@ QVector<WindProfileData> AMSProtocol::parseAvgWindResponse(const QByteArray &dat
     for (int i = 0; i < 33; i++) {
         WindProfileData point;
         point.height = bytesToFloat(data, 1 + 33 * 2 * 4 + i * 4);  // Устанавливаем стандартную высоту
-        point.windDirection = (data, 1 + i * 4);
+        point.windDirection = bytesToFloat(data, 1 + i * 4);
         point.windSpeed = bytesToFloat(data, 1 + 33 * 4 + i * 4);
 //        point.windHeight = bytesToFloat(data, 1 + 33 * 2 * 4 + i * 4);
         point.isValid = true;
