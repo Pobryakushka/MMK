@@ -175,7 +175,6 @@ MainWindow::MainWindow(QWidget *parent)
     sourceDataInstance = new SourceData(this);
     qDebug() << "SourceData instance created (with GroundMeteoParams inside)";
 
-    m_amsHandler = new AMSHandler(this);
     setupAmsHandler();
     //    configureAmsDatabase();
 

@@ -263,10 +263,10 @@ bool MeasurementExporter::generateXlsx(const MeasurementSnapshot &snap,
         int row = 4;
         for (const WindShearData &s : snap.windShear) {
             QXlsx::Format *sf = &fmtCell;
-            if      (s.severityLevel == 1) sf = &fmtLow;
-            else if (s.severityLevel == 2) sf = &fmtMed;
-            else if (s.severityLevel == 3) sf = &fmtHigh;
-            else if (s.severityLevel >= 4) sf = &fmtCrit;
+            if      (s.severityLevel == 0) sf = &fmtLow;
+            else if (s.severityLevel == 1) sf = &fmtMed;
+            else if (s.severityLevel == 2) sf = &fmtHigh;
+            else if (s.severityLevel >= 3) sf = &fmtCrit;
 
             xlsx.write(row, 1, static_cast<int>(s.height), *sf);
             xlsx.write(row, 2, s.shearPer30m,               *sf);
@@ -870,10 +870,10 @@ QString MeasurementExporter::htmlShearTable(const QVector<WindShearData> &data)
                 "<th>Изм. направления, °</th><th>Уровень</th></tr>";
     for (const WindShearData &w : data) {
         QString cls;
-        if      (w.severityLevel == 1) cls = " class=\"sev1\"";
-        else if (w.severityLevel == 2) cls = " class=\"sev2\"";
-        else if (w.severityLevel == 3) cls = " class=\"sev3\"";
-        else if (w.severityLevel >= 4) cls = " class=\"sev4\"";
+        if      (w.severityLevel == 0) cls = " class=\"sev1\"";
+        else if (w.severityLevel == 1) cls = " class=\"sev2\"";
+        else if (w.severityLevel == 2) cls = " class=\"sev3\"";
+        else if (w.severityLevel >= 3) cls = " class=\"sev4\"";
         t += QString("<tr%1><td>%2</td><td>%3</td><td>%4</td><td>%5</td></tr>")
                  .arg(cls)
                  .arg(static_cast<int>(w.height))

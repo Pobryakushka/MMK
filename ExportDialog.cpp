@@ -56,10 +56,10 @@ void ExportDialog::disableEmptySections()
 
     if (!m_snap.coordinatesValid) disable(ui->cbCoordinates);
     if (!m_snap.surfaceMeteoValid) disable(ui->cbSurfaceMeteo);
-    if (!m_snap.avgWind.isEmpty()) disable(ui->cbAvgWind);
-    if (!m_snap.actualWind.isEmpty()) disable(ui->cbActualWind);
-    if (!m_snap.measuredWind.isEmpty()) disable(ui->cbMeasuredWind);
-    if (!m_snap.windShear.isEmpty()) disable(ui->cbWindShear);
+    if (m_snap.avgWind.isEmpty()) disable(ui->cbAvgWind);
+    if (m_snap.actualWind.isEmpty()) disable(ui->cbActualWind);
+    if (m_snap.measuredWind.isEmpty()) disable(ui->cbMeasuredWind);
+    if (m_snap.windShear.isEmpty()) disable(ui->cbWindShear);
     if (!m_snap.meteo11Updated.valid) disable(ui->cbMeteo11Updated);
     if (!m_snap.meteo11Approximate.valid) disable(ui->cbMeteo11Approx);
     if (!m_snap.meteo11FromStation.valid) disable(ui->cbMeteo11Station);
@@ -100,7 +100,7 @@ ExportOptions ExportDialog::getOptions() const
     opts.includeAvgWind = ui->cbAvgWind->isChecked();
     opts.includeActualWind = ui->cbActualWind->isChecked();
     opts.includeMeasuredWind = ui->cbMeasuredWind->isChecked();
-    opts.includeWindShear = ui->cbMeasuredWind->isChecked();
+    opts.includeWindShear = ui->cbWindShear->isChecked();
     opts.includeMeteo11Updated = ui->cbMeteo11Updated->isChecked();
     opts.includeMeteo11Approx = ui->cbMeteo11Approx->isChecked();
     opts.includeMeteo11Station = ui->cbMeteo11Station->isChecked();

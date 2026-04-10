@@ -196,7 +196,7 @@ void AutoConnector::openPortAndTest(const QString &portName, int baudRate)
                        .arg(portName)
                        .arg(baudRate)
                        .arg(m_testPort->errorString()));
-        delete m_testPort;
+        m_testPort->deleteLater();
         m_testPort = nullptr;
 
         // Переходим к следующему порту
