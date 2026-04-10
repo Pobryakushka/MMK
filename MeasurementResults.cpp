@@ -23,6 +23,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QRegularExpression>
 #include <limits>
 #include <algorithm>  // Для std::sort
 #include <cmath>       // Для std::pow (расчёт давления МСА в Метео-11)
@@ -671,6 +672,31 @@ void MeasurementResults::loadMeteo11FromStation(int recordId)
     m_meteo11FromStation.bulletinTime  = dt;
     m_meteo11FromStation.rawString     = obj["raw_string"].toString();
     m_meteo11FromStation.stationNumber = obj["station_num"].toString();
+
+    // Достигнутые высоты BтBтBвBв — читаем из явных полей JSON (новые записи),
+    // иначе парсим последнюю 4-символьную группу из rawString (старые записи)
+    {
+        const QString jTH = obj["achieved_temp_height"].toString();
+        const QString jWH = obj["achieved_wind_height"].toString();
+        if (!jTH.isEmpty() || !jWH.isEmpty()) {
+            m_meteo11FromStation.reachedTempHeightKm = jTH.toInt();
+            m_meteo11FromStation.reachedWindHeightKm = jWH.toInt();
+        } else if (!m_meteo11FromStation.rawString.isEmpty()) {
+            QString norm = m_meteo11FromStation.rawString;
+            norm.replace(QRegularExpression("[—–\\-]+"), " ");
+            norm.replace(QRegularExpression("\\s+"), " ").trimmed();
+            const QStringList parts = norm.split(' ', Qt::SkipEmptyParts);
+            if (!parts.isEmpty()) {
+                const QString last = parts.last();
+                bool ok = false;
+                last.toInt(&ok);
+                if (ok && last.length() == 4) {
+                    m_meteo11FromStation.reachedTempHeightKm = last.left(2).toInt();
+                    m_meteo11FromStation.reachedWindHeightKm = last.right(2).toInt();
+                }
+            }
+        }
+    }
     m_meteo11FromStation.stationAltitude =
         obj["station_height"].toString().toInt();
     m_meteo11FromStation.pressureDeviation =

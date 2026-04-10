@@ -98,7 +98,21 @@ void Meteo11::onApplyClicked()
     json["datetime"]             = datetimeStr;
     json["ground_pres_dev"]      = ui->lineEdit_Met11GroundPresDev->text().trimmed();
     json["ground_virt_temp_dev"] = ui->lineEdit_Met11GroundVertTempDev->text().trimmed();
-    json["achieved_wind_height"] = ui->lineEdit_Met11AchievedSensHeight->text().trimmed();
+    // BтBтBвBв: 4-символьный код → разбиваем на темп. и ветровую высоты
+    // Если введено 4-значное число (как сохраняет «Разобрать») — берём по 2 символа.
+    // Иначе трактуем как ветровую высоту (старый формат ввода).
+    {
+        const QString ach = ui->lineEdit_Met11AchievedSensHeight->text().trimmed();
+        bool ok = false;
+        ach.toInt(&ok);
+        if (ok && ach.length() == 4) {
+            json["achieved_temp_height"] = ach.left(2);
+            json["achieved_wind_height"] = ach.right(2);
+        } else {
+            json["achieved_temp_height"] = "0";
+            json["achieved_wind_height"] = ach;
+        }
+    }
     json["raw_string"]           = ui->plainEdit_rawBulletin->toPlainText().trimmed();
 
     // Считываем слои из таблицы (колонки: 0=ПП, 1=НН, 2=СС)
@@ -229,10 +243,9 @@ void Meteo11::onParseClicked()
     }
 
     // BтBтBвBв — достигнутые высоты зондирования (следующий токен после слоёв)
+    // Сохраняем полный 4-символьный код: левые 2 — темп., правые 2 — ветровое
     if (idx < parts.size() && parts[idx].length() == 4) {
-        const QString bh = parts[idx];
-        ui->lineEdit_Met11AchievedSensHeight->setText(
-            QString::number(bh.right(2).toInt()));
+        ui->lineEdit_Met11AchievedSensHeight->setText(parts[idx]);
     }
 
     ui->lblStatus->setText("Строка разобрана — проверьте поля и нажмите «Применить»");
