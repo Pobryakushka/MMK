@@ -2559,7 +2559,7 @@ MeasurementSnapshot MeasurementResults::buildSnapshot() const
             auto cell = [&](int row) -> double {
                 return t->item(row, 0) ? t->item(row, 0)->text().toDouble() : 0.0;
             };
-            snap.pressureMmHg      = cell(0);
+            snap.pressureHpa      = cell(0);
             snap.temperatureC     = cell(1);
             snap.humidityPct      = cell(2);
             snap.surfaceWindDir   = cell(3);

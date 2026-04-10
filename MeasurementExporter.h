@@ -25,7 +25,7 @@ struct MeasurementSnapshot
     bool coordinatesValid = false;
 
     // Наземные метеоусловия
-    double pressureMmHg = 0.0;
+    double pressureHpa = 0.0;
     double temperatureC = 0.0;
     double humidityPct = 0.0;
     double surfaceWindDir = 0.0;  // градусы
