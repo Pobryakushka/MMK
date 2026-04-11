@@ -507,9 +507,15 @@
             </item>
             <item>
              <widget class="QLineEdit" name="lineEdit_bulletenTime">
+              <property name="minimumSize">
+               <size>
+                <width>140</width>
+                <height>0</height>
+               </size>
+              </property>
               <property name="maximumSize">
                <size>
-                <width>150</width>
+                <width>200</width>
                 <height>16777215</height>
                </size>
               </property>
