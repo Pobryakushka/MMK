@@ -504,45 +504,21 @@
                 </property>
                </widget>
               </item>
-              <item>
-               <layout class="QHBoxLayout" name="horizontalLayout_3">
-                <item>
-                 <widget class="QLabel" name="lblRPVLabel">
-                  <property name="text">
-                   <string>Положение РПВ:</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QLineEdit" name="editRPVPosition">
-                  <property name="maximumSize">
-                   <size>
-                    <width>100</width>
-                    <height>16777215</height>
-                   </size>
-                  </property>
-                  <property name="text">
-                   <string>0.0</string>
-                  </property>
-                  <property name="placeholderText">
-                   <string>градусы</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <spacer name="horizontalSpacer">
-                  <property name="orientation">
-                   <enum>Qt::Horizontal</enum>
-                  </property>
-                  <property name="sizeHint" stdset="0">
-                   <size>
-                    <width>40</width>
-                    <height>20</height>
-                   </size>
-                  </property>
-                 </spacer>
-                </item>
-               </layout>
+              <item alignment="Qt::AlignHCenter">
+               <widget class="RpvIndicator" name="rpvIndicator">
+                <property name="minimumSize">
+                 <size>
+                  <width>56</width>
+                  <height>56</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>80</width>
+                  <height>80</height>
+                 </size>
+                </property>
+               </widget>
               </item>
               <item>
                <widget class="QPushButton" name="btnStart">
@@ -1405,6 +1381,11 @@ QPushButton:checked {
    <class>QQuickWidget</class>
    <extends>QWidget</extends>
    <header location="global">QtQuickWidgets/QQuickWidget</header>
+  </customwidget>
+  <customwidget>
+   <class>RpvIndicator</class>
+   <extends>QWidget</extends>
+   <header>RpvIndicator.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

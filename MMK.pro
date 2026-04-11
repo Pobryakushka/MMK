@@ -36,7 +36,8 @@ SOURCES += \
     autoconnector.cpp \
     WindShearCalculator.cpp \
     surfacemeteosaver.cpp \
-    workregulationdialog.cpp
+    workregulationdialog.cpp \
+    RpvIndicator.cpp
 
 HEADERS += \
     AlgorithmsCalc.h \
@@ -69,7 +70,8 @@ HEADERS += \
     autoconnector.h \
     WindShearCalculator.h \
     surfacemeteosaver.h \
-    workregulationdialog.h
+    workregulationdialog.h \
+    RpvIndicator.h
 
 
 # Default rules for deployment.
