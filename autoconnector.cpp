@@ -5,7 +5,6 @@
 #include <QDir>
 #include "amsprotocol.h"
 
-//TODO Сделать поиск для каждой системы со своей скоростью. Если система была найдена убрать систему из поиска.
 
 AutoConnector::AutoConnector(QObject *parent)
     : QObject(parent)
