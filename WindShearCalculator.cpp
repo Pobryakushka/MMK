@@ -33,8 +33,8 @@ QVector<WindShearData> WindShearCalculator::calculateShear(const QVector<WindPro
         double deltaV = 0.0;
         double deltaAlpha = 0.0;
 
-        // Используем первый способ расчета (через скорость и направление)
-        calculateShearMethod1(upper.windSpeed, upper.windDirection,
+        // Используем второй способ (через составляющие) — даёт верное направление ΔA
+        calculateShearMethod2(upper.windSpeed, upper.windDirection,
                              lower.windSpeed, lower.windDirection,
                              upper.height, lower.height,
                              deltaV, deltaAlpha);
@@ -83,8 +83,8 @@ QVector<WindShearData> WindShearCalculator::calculateShear(const QVector<Measure
         double deltaV = 0.0;
         double deltaAlpha = 0.0;
 
-        // СПОСОБ 1 (через скорость и направление)
-        calculateShearMethod1(upper.windSpeed, upper.windDirection,
+        // Используем второй способ (через составляющие) — даёт верное направление ΔA
+        calculateShearMethod2(upper.windSpeed, upper.windDirection,
                              lower.windSpeed, lower.windDirection,
                              upper.height, lower.height,
                              deltaV, deltaAlpha);
