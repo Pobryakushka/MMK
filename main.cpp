@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "WindShearCalculator.h"
 #include <QApplication>
 
 int main(int argc, char *argv[])
@@ -17,6 +18,8 @@ int main(int argc, char *argv[])
     a.setOrganizationName("412");
     a.setOrganizationDomain("mmk.local");
     a.setApplicationName("MMK");
+
+    WindShearCalculator::runSelfTest();
 
     MainWindow w;
     // Открываем окно развёрнутым — содержимое гарантированно помещается

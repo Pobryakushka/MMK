@@ -1,6 +1,7 @@
 #include "WindShearCalculator.h"
 #include <QColor>
 #include <QtMath>
+#include <QDebug>
 #include <cmath>
 
 WindShearCalculator::WindShearCalculator()
@@ -235,6 +236,82 @@ double WindShearCalculator::degToRad(double degrees)
 double WindShearCalculator::radToDeg(double radians)
 {
     return radians * 180.0 / M_PI;
+}
+
+bool WindShearCalculator::runSelfTest()
+{
+    // Эталонные данные из таблицы "Результаты тестирования алгоритма расчета сдвига ветра"
+    // { Vi-1, Ai-1, Vi, Ai, ожид_ΔV, ожид_ΔA }
+    struct TestCase { double Vi1, Ai1, Vi, Ai, expV, expA; };
+    static const TestCase cases[] = {
+        // Одинаковые скорость и угол → нулевой сдвиг
+        {10, 30,  10, 30,  0.0,      0.0},
+        {10, 120, 10, 120, 0.0,      0.0},
+        {10, 210, 10, 210, 0.0,      0.0},
+        {10, 300, 10, 300, 0.0,      0.0},
+        // Скорость увеличилась, угол тот же
+        {10, 30,  20, 30,  10.0,     30.0},
+        {10, 120, 20, 120, 10.0,    120.0},
+        {10, 210, 20, 210, 10.0,    210.0},
+        {10, 300, 20, 300, 10.0,    300.0},
+        // Скорость уменьшилась, угол тот же
+        {20, 30,  10, 30,  10.0,    210.0},
+        {20, 120, 10, 120, 10.0,    300.0},
+        {20, 210, 10, 210, 10.0,     30.0},
+        {20, 300, 10, 300, 10.0,    120.0},
+        // Скорость та же, угол изменился — Ai-1=30
+        {10, 30, 10,  60,  5.17638, 135.0},
+        {10, 30, 10, 120, 14.1421,  165.0},
+        {10, 30, 10, 210, 20.0,     210.0},
+        {10, 30, 10, 300, 14.1421,  255.0},
+        // Ai-1=120
+        {10, 120, 10, 150,  5.17638, 225.0},
+        {10, 120, 10, 210, 14.1421,  255.0},
+        {10, 120, 10, 300, 20.0,     300.0},
+        {10, 120, 10,  30, 14.1421,  345.0},
+        // Ai-1=210
+        {10, 210, 10, 240,  5.17638, 315.0},
+        {10, 210, 10, 300, 14.1421,  345.0},
+        {10, 210, 10,  30, 20.0,      30.0},
+        {10, 210, 10, 120, 14.1421,   75.0},
+        // Ai-1=300
+        {10, 300, 10, 330,  5.17638,  45.0},
+        {10, 300, 10,  30, 14.1421,   75.0},
+        {10, 300, 10, 120, 20.0,     120.0},
+        {10, 300, 10, 210, 14.1421,  345.0},
+    };
+
+    const int N = sizeof(cases) / sizeof(cases[0]);
+    const double EPS_V = 0.01;   // допуск ΔV, м/с
+    const double EPS_A = 0.1;    // допуск ΔA, градус
+
+    int passed = 0;
+    qDebug() << "=== WindShearCalculator self-test ===";
+    qDebug() << QString("%1 %2 %3 %4 | %5 %6 | %7 %8 | %9")
+                .arg("Vi-1",5).arg("Ai-1",5).arg("Vi",5).arg("Ai",5)
+                .arg("expΔV",8).arg("expΔA",7)
+                .arg("gotΔV",8).arg("gotΔA",7)
+                .arg("result",6);
+
+    for (int i = 0; i < N; ++i) {
+        const TestCase &c = cases[i];
+        double dV = 0, dA = 0;
+        // Высоты не важны для этого теста (используются только для shearPer30m)
+        calculateShearMethod2(c.Vi, c.Ai, c.Vi1, c.Ai1, 30.0, 0.0, dV, dA);
+
+        bool ok = (fabs(dV - c.expV) < EPS_V) && (fabs(dA - c.expA) < EPS_A);
+        if (ok) ++passed;
+
+        qDebug() << QString("%1 %2 %3 %4 | %5 %6 | %7 %8 | %9")
+                    .arg(c.Vi1, 5, 'f', 0).arg(c.Ai1, 5, 'f', 0)
+                    .arg(c.Vi,  5, 'f', 0).arg(c.Ai,  5, 'f', 0)
+                    .arg(c.expV, 8, 'f', 4).arg(c.expA, 7, 'f', 2)
+                    .arg(dV,     8, 'f', 4).arg(dA,     7, 'f', 2)
+                    .arg(ok ? "PASS" : "FAIL");
+    }
+
+    qDebug() << QString("=== Итог: %1/%2 тестов прошло ===").arg(passed).arg(N);
+    return (passed == N);
 }
 
 double WindShearCalculator::normalizeAngle(double angle)
