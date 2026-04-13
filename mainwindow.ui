@@ -133,7 +133,7 @@
               <property name="spacing">
                <number>5</number>
               </property>
-              <item row="7" column="1">
+              <item row="4" column="1">
                <widget class="QLineEdit" name="editDirectionAngle">
                 <property name="text">
                  <string>0.0</string>
@@ -143,14 +143,14 @@
                 </property>
                </widget>
               </item>
-              <item row="4" column="0">
+              <item row="2" column="0">
                <widget class="QLabel" name="lblLongitudeLabel">
                 <property name="text">
                  <string>Долгота:</string>
                 </property>
                </widget>
               </item>
-              <item row="6" column="1">
+              <item row="3" column="1">
                <widget class="QLineEdit" name="editAltitude">
                 <property name="text">
                  <string>156</string>
@@ -160,7 +160,7 @@
                 </property>
                </widget>
               </item>
-              <item row="4" column="1">
+              <item row="2" column="1">
                <layout class="QHBoxLayout" name="longitudeLayout">
                 <property name="spacing">
                  <number>4</number>
@@ -187,35 +187,35 @@
                 </item>
                </layout>
               </item>
-              <item row="2" column="0">
+              <item row="1" column="0">
                <widget class="QLabel" name="lblLatitudeLabel">
                 <property name="text">
                  <string>Широта:</string>
                 </property>
                </widget>
               </item>
-              <item row="7" column="0">
+              <item row="4" column="0">
                <widget class="QLabel" name="lblDirectionAngleLabel">
                 <property name="text">
                  <string>Дирекц. угол:</string>
                 </property>
                </widget>
               </item>
-              <item row="9" column="0">
+              <item row="6" column="0">
                <widget class="QLabel" name="lblPitchAngleLabel">
                 <property name="text">
                  <string>Угол тангажа:</string>
                 </property>
                </widget>
               </item>
-              <item row="8" column="0">
+              <item row="5" column="0">
                <widget class="QLabel" name="lblRollAngleLabel">
                 <property name="text">
                  <string>Угол крена:</string>
                 </property>
                </widget>
               </item>
-              <item row="10" column="0" colspan="2">
+              <item row="7" column="0" colspan="2">
                <widget class="QPushButton" name="btnManualInput">
                 <property name="minimumSize">
                  <size>
@@ -228,7 +228,7 @@
                 </property>
                </widget>
               </item>
-              <item row="1" column="0" colspan="2">
+              <item row="0" column="0" colspan="2">
                <layout class="QHBoxLayout" name="dateTimeLayout">
                 <property name="spacing">
                  <number>5</number>
@@ -281,7 +281,7 @@
                 </item>
                </layout>
               </item>
-              <item row="8" column="1">
+              <item row="5" column="1">
                <widget class="QLineEdit" name="editRollAngle">
                 <property name="text">
                  <string>0.0</string>
@@ -291,14 +291,14 @@
                 </property>
                </widget>
               </item>
-              <item row="6" column="0">
+              <item row="3" column="0">
                <widget class="QLabel" name="lblAltitudeLabel">
                 <property name="text">
                  <string>Высота над УМ:</string>
                 </property>
                </widget>
               </item>
-              <item row="9" column="1">
+              <item row="6" column="1">
                <widget class="QLineEdit" name="editPitchAngle">
                 <property name="text">
                  <string>0.0</string>
@@ -308,7 +308,7 @@
                 </property>
                </widget>
               </item>
-              <item row="2" column="1">
+              <item row="1" column="1">
                <layout class="QHBoxLayout" name="latitudeLayout">
                 <property name="spacing">
                  <number>4</number>
@@ -335,7 +335,7 @@
                 </item>
                </layout>
               </item>
-              <item row="11" column="0" colspan="2">
+              <item row="8" column="0" colspan="2">
                <widget class="QPushButton" name="btnNavigation">
                 <property name="text">
                  <string>Навигация</string>
