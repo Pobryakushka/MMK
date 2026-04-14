@@ -1737,23 +1737,11 @@ void MainWindow::onDownloadMapClicked()
         return;
     }
 
-    // Получаем видимые границы карты из QML
-    QQuickItem *main = ui->quickWidget->rootObject();
-    if (!main) {
-        QMessageBox::warning(this, "Ошибка", "Карта не инициализирована.");
-        return;
-    }
-
-    QVariant result;
-    QMetaObject::invokeMethod(main, "getVisibleBounds",
-                              Qt::DirectConnection,
-                              Q_RETURN_ARG(QVariant, result));
-
-    QVariantMap bounds = result.toMap();
-    double north = bounds.value("north").toDouble();
-    double south = bounds.value("south").toDouble();
-    double west  = bounds.value("west").toDouble();
-    double east  = bounds.value("east").toDouble();
+    // Читаем границы видимой области карты — они обновляются из QML в coord (QmlCoordinateProxy)
+    double north = qcp.visibleNorth();
+    double south = qcp.visibleSouth();
+    double west  = qcp.visibleWest();
+    double east  = qcp.visibleEast();
 
     if (north == 0 && south == 0 && west == 0 && east == 0) {
         QMessageBox::warning(this, "Ошибка", "Не удалось получить область карты. Убедитесь, что карта отображается.");
