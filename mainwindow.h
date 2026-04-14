@@ -111,8 +111,9 @@ private slots:
     void onAmsActualWindReceived(const QVector<WindProfileData> &data);
     void onAmsMeasuredWindReceived(const QVector<MeasuredWindData> &data);
 
-    // ИВС прогрев
+    // ИВС прогрев и проверка подключения
     void onIwsWarmupFinished();
+    void onIwsConnectTimeout();
 
     // БИНС слоты
     void onBinsConnectFromSettings();
@@ -167,6 +168,10 @@ private:
     // Прогрев ИВС — ожидание 3 минут после подключения
     QTimer *m_iwsWarmupTimer;
     bool    m_iwsWarmupDone;
+
+    // Верификация подключения ИВС — порт открыт ≠ устройство отвечает
+    QTimer *m_iwsConnectTimer = nullptr;  // таймаут ожидания первого ответа
+    bool    m_iwsDeviceActive = false;    // true только после получения реального ответа
 
     // Финальный запрос к ИВС по завершении измерения АМС
     int     m_pendingIwsRecordId;   // record_id ожидающий данных ИВС
