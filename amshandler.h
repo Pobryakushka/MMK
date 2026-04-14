@@ -145,6 +145,7 @@ private:
     // Состояние
     bool m_waitingForResponse;
     bool m_isConnecting;
+    bool m_confirmed = false;  // true только после успешного LINE_TEST
     AMSCommand m_lastCommand;
     int m_currentRecordId;
 

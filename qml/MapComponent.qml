@@ -44,11 +44,11 @@ Map {
 
     Plugin {
         id: pluginOsm
-        name: "esri"
-        PluginParameter {
-            name: "osm.mapping.host";
-            value: "http://a.tile.openstreetmap.org/"
-        }
+        name: "osm"
+        PluginParameter { name: "osm.mapping.providersrepository.disabled"; value: "true" }
+        PluginParameter { name: "osm.mapping.host";      value: "https://tile.openstreetmap.org/" }
+        PluginParameter { name: "osm.mapping.copyright"; value: "© OpenStreetMap contributors" }
+        PluginParameter { name: "osm.useragent";          value: "MMK/1.0" }
     }
 
 //        Timer {
