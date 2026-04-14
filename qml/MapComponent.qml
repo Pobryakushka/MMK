@@ -47,7 +47,6 @@ Map {
     Plugin {
         id: pluginOsm
         name: "osm"
-        PluginParameter { name: "osm.mapping.providersrepository.disabled"; value: "true" }
         PluginParameter { name: "osm.mapping.host"; value: "http://tile.openstreetmap.org/" }
         PluginParameter { name: "osm.useragent";    value: "MMK/1.0" }
     }
