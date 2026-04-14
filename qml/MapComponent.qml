@@ -42,13 +42,14 @@ Map {
         NumberAnimation {duration: 1000; easing.type: Easing.OutQuint}
     }
 
+    // Запасной плагин — используется только если карта создаётся напрямую (не через Main.qml).
+    // При нормальной работе плагин передаётся снаружи через createMapComponent().
     Plugin {
         id: pluginOsm
         name: "osm"
         PluginParameter { name: "osm.mapping.providersrepository.disabled"; value: "true" }
-        PluginParameter { name: "osm.mapping.host";      value: "https://tile.openstreetmap.org/" }
-        PluginParameter { name: "osm.mapping.copyright"; value: "© OpenStreetMap contributors" }
-        PluginParameter { name: "osm.useragent";          value: "MMK/1.0" }
+        PluginParameter { name: "osm.mapping.host"; value: "http://tile.openstreetmap.org/" }
+        PluginParameter { name: "osm.useragent";    value: "MMK/1.0" }
     }
 
 //        Timer {

@@ -41,13 +41,12 @@ Item {
             map.destroy();
         }
 
-        // Параметры кэша и офлайн-директории передаются из C++ через контекст
-        var cacheParam = (typeof mapCacheDir !== "undefined" && mapCacheDir !== "")
-            ? 'PluginParameter { name: "osm.mapping.cache.directory";        value: "' + mapCacheDir + '" } '
-            + 'PluginParameter { name: "osm.mapping.cache.disk.cost_strategy"; value: "unitary" } '
-            + 'PluginParameter { name: "osm.mapping.cache.disk.size";          value: "2147483648" } '
+        // Пути передаются из C++ как context properties (только ASCII — нельзя использовать
+        // нелатинские символы в строках Qt.createQmlObject, это ломает парсер QML).
+        var cacheParam   = (typeof mapCacheDir    !== "undefined" && mapCacheDir    !== "")
+            ? 'PluginParameter { name: "osm.mapping.cache.directory"; value: "' + mapCacheDir + '" } '
             : '';
-        var offlineParam = (typeof mapOfflineDir !== "undefined" && mapOfflineDir !== "")
+        var offlineParam = (typeof mapOfflineDir  !== "undefined" && mapOfflineDir  !== "")
             ? 'PluginParameter { name: "osm.mapping.offline.directory"; value: "' + mapOfflineDir + '" } '
             : '';
 
@@ -58,12 +57,9 @@ Item {
                                     'plugin: Plugin { ' +
                                     'id: plugin; ' +
                                     'name: "osm"; ' +
-                                    // Отключаем список внешних провайдеров — именно они показывают "API key required"
                                     'PluginParameter { name: "osm.mapping.providersrepository.disabled"; value: "true" } ' +
-                                    // Прямой OSM-сервер, без коммерческих посредников
-                                    'PluginParameter { name: "osm.mapping.host";      value: "https://tile.openstreetmap.org/" } ' +
-                                    'PluginParameter { name: "osm.mapping.copyright"; value: "© OpenStreetMap contributors" } ' +
-                                    'PluginParameter { name: "osm.useragent";          value: "MMK/1.0" } ' +
+                                    'PluginParameter { name: "osm.mapping.host"; value: "http://tile.openstreetmap.org/" } ' +
+                                    'PluginParameter { name: "osm.useragent"; value: "MMK/1.0" } ' +
                                     cacheParam +
                                     offlineParam +
                                     '}}',
