@@ -98,6 +98,8 @@ bool AMSHandler::connectToAMS(const QString &portName, qint32 baudRate,
 
 void AMSHandler::disconnectFromAMS()
 {
+    m_confirmed = false;
+
     if (m_serialPort->isOpen()) {
         m_serialPort->close();
         qInfo() << "AMSHandler: Отключено от АМС";
@@ -120,7 +122,7 @@ void AMSHandler::disconnectFromAMS()
 
 bool AMSHandler::isConnected() const
 {
-    return m_serialPort->isOpen();
+    return m_serialPort->isOpen() && m_confirmed;
 }
 
 // ===== НАСТРОЙКА БД =====
@@ -646,6 +648,7 @@ void AMSHandler::processReceivedPacket(const QByteArray &packet)
         if (ok) {
             qInfo() << "AMSHandler: Тест линии пройден успешно";
             m_isConnecting = false;
+            m_confirmed = true;
             emit connected();
             emit statusMessage("Подключено к АМС");
         } else {
@@ -882,6 +885,13 @@ void AMSHandler::onResponseTimeout()
                         .arg(static_cast<int>(m_lastCommand), 2, 16, QChar('0'));
 
     qWarning() << "AMSHandler:" << error;
+
+    // Таймаут LINE_TEST при подключении — устройство не отвечает, закрываем порт
+    if (m_isConnecting) {
+        qWarning() << "AMSHandler: LINE_TEST не прошёл (таймаут), отключаемся";
+        disconnectFromAMS();
+        return;
+    }
 
     // Если это критично для процесса измерения
     if (m_measurementStatus == STATUS_RUNNING) {

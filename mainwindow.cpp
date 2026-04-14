@@ -23,6 +23,9 @@
 #include <QStatusBar>
 #include <QDebug>
 #include <QStandardItemModel>
+#include <QStandardPaths>
+#include <QDir>
+#include "MapTileDownloader.h"
 
 
 // ====================================================================
@@ -141,7 +144,16 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->comboBox_mapTypes, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
             &qcp, &QmlCoordinateProxy::setCurrentMapType);
 
-    ui->quickWidget->engine()->rootContext()->setContextProperty("coord", &qcp);
+    // Пути к директориям тайлов карты
+    QString appData = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+    m_mapCacheDir   = appData + "/MapCache";
+    m_mapOfflineDir = appData + "/MapOffline";
+    QDir().mkpath(m_mapCacheDir);
+    QDir().mkpath(m_mapOfflineDir);
+
+    ui->quickWidget->engine()->rootContext()->setContextProperty("coord",         &qcp);
+    ui->quickWidget->engine()->rootContext()->setContextProperty("mapCacheDir",   m_mapCacheDir);
+    ui->quickWidget->engine()->rootContext()->setContextProperty("mapOfflineDir", m_mapOfflineDir);
     ui->quickWidget->setSource(QUrl("qrc:/qml/Main.qml"));
     createMapComponent("osm");
 
@@ -1672,6 +1684,40 @@ void MainWindow::setupMapItems(QQuickItem *item)
     if (item) {
         item->update();
     }
+}
+
+void MainWindow::downloadMapTiles(double north, double south,
+                                   double west,  double east,
+                                   int minZoom,  int maxZoom)
+{
+    if (!m_tileDownloader) {
+        m_tileDownloader = new MapTileDownloader(this);
+        connect(m_tileDownloader, &MapTileDownloader::progressChanged,
+                this, [this](int done, int total) {
+            statusBar()->showMessage(
+                QString("Загрузка карты: %1 / %2 тайлов...").arg(done).arg(total), 0);
+        });
+        connect(m_tileDownloader, &MapTileDownloader::finished,
+                this, [this](int downloaded, int failed) {
+            if (failed == 0) {
+                statusBar()->showMessage(
+                    QString("Карта загружена: %1 тайлов. Доступна офлайн.").arg(downloaded), 8000);
+            } else {
+                statusBar()->showMessage(
+                    QString("Карта загружена: %1 тайлов, %2 ошибок.").arg(downloaded).arg(failed), 8000);
+            }
+        });
+        connect(m_tileDownloader, &MapTileDownloader::logMessage,
+                this, [](const QString &msg) { qDebug() << "[TileDownloader]" << msg; });
+    }
+
+    if (m_tileDownloader->isDownloading()) {
+        QMessageBox::information(this, "Загрузка карты",
+                                 "Загрузка уже идёт. Дождитесь завершения.");
+        return;
+    }
+
+    m_tileDownloader->download(m_mapOfflineDir, north, south, west, east, minZoom, maxZoom);
 }
 
 void MainWindow::updateDateTime()

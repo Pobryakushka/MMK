@@ -41,17 +41,32 @@ Item {
             map.destroy();
         }
 
+        // Параметры кэша и офлайн-директории передаются из C++ через контекст
+        var cacheParam = (typeof mapCacheDir !== "undefined" && mapCacheDir !== "")
+            ? 'PluginParameter { name: "osm.mapping.cache.directory";        value: "' + mapCacheDir + '" } '
+            + 'PluginParameter { name: "osm.mapping.cache.disk.cost_strategy"; value: "unitary" } '
+            + 'PluginParameter { name: "osm.mapping.cache.disk.size";          value: "2147483648" } '
+            : '';
+        var offlineParam = (typeof mapOfflineDir !== "undefined" && mapOfflineDir !== "")
+            ? 'PluginParameter { name: "osm.mapping.offline.directory"; value: "' + mapOfflineDir + '" } '
+            : '';
+
         map = Qt.createQmlObject('import QtQuick 2.0; import QtLocation 5.9; ' +
                                     'MapComponent { ' +
                                     'objectName: "map"; ' +
                                     'zoomLevel: ' + zoomLevel + '; ' +
                                     'plugin: Plugin { ' +
                                     'id: plugin; ' +
-                                    'name: "' + pluginName + '"; ' +
-                                    'PluginParameter {' +
-                                    'name: "osm.mapping.host"; ' +
-                                    'value: "http://a.tile.openstreetmap.org/"' +
-                                    '}}}',
+                                    'name: "osm"; ' +
+                                    // Отключаем список внешних провайдеров — именно они показывают "API key required"
+                                    'PluginParameter { name: "osm.mapping.providersrepository.disabled"; value: "true" } ' +
+                                    // Прямой OSM-сервер, без коммерческих посредников
+                                    'PluginParameter { name: "osm.mapping.host";      value: "https://tile.openstreetmap.org/" } ' +
+                                    'PluginParameter { name: "osm.mapping.copyright"; value: "© OpenStreetMap contributors" } ' +
+                                    'PluginParameter { name: "osm.useragent";          value: "MMK/1.0" } ' +
+                                    cacheParam +
+                                    offlineParam +
+                                    '}}',
                                  main);
 
         if (map) {

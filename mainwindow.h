@@ -13,6 +13,7 @@
 #include "amshandler.h"
 #include "binshandler.h"
 #include "Map/InitialParameters.h"
+#include "MapTileDownloader.h"
 #include "Map/FormMapView.h"
 #include "sensorsettings.h"
 #include "surfacemeteosaver.h"
@@ -173,6 +174,11 @@ private:
     QTimer *m_iwsConnectTimer = nullptr;  // таймаут ожидания первого ответа
     bool    m_iwsDeviceActive = false;    // true только после получения реального ответа
 
+    // Карта: директории тайлов
+    QString m_mapCacheDir;    // Кэш автоматически загруженных тайлов (постоянный)
+    QString m_mapOfflineDir;  // Предзагруженные тайлы для офлайн-работы
+    MapTileDownloader *m_tileDownloader = nullptr;
+
     // Финальный запрос к ИВС по завершении измерения АМС
     int     m_pendingIwsRecordId;   // record_id ожидающий данных ИВС
     QTimer *m_iwsFinalRequestTimer; // таймаут ожидания ответа
@@ -189,6 +195,15 @@ private:
 
     void createMapComponent(const QString &pluginName);
     void setupMapItems(QQuickItem *item);
+
+    /**
+     * Скачать тайлы для заданной области и сохранить в MapOffline-директорию.
+     * После завершения карта будет работать без интернета для этого района.
+     * @param north/south/west/east  Границы в градусах
+     * @param minZoom/maxZoom        Диапазон уровней масштабирования (рекомендуется 5–14)
+     */
+    void downloadMapTiles(double north, double south, double west, double east,
+                          int minZoom = 5, int maxZoom = 14);
     void setupMapCoordinatesButton();
     void updateMapCoordinatesButtonStyle();
     void setupGnssCheckbox();
