@@ -18,6 +18,7 @@
 #include "surfacemeteosaver.h"
 #include "functionalcontroldialog.h"
 #include "workregulationdialog.h"
+#include "autoconnector.h"
 
 // Forward declaration
 class SourceData;
@@ -78,10 +79,14 @@ private slots:
     void onGnssConnectFromSettings();
     void onGnssDisconnectFromSettings();
 
-    // Настройки датчиков
-    void onSensorSettingsClicked();
+    // Подключение датчиков
+    void onConnectSensorsClicked();
     void onConnectRequested();
     void onDisconnectRequested();
+
+    // AutoConnector слоты
+    void onAutoConnectorDeviceDetected(AutoConnector::DeviceType type, const QString &port, int baudRate);
+    void onAutoConnectorFinished();
 
     // RS485
     void onSerialDataReceived();
@@ -106,8 +111,9 @@ private slots:
     void onAmsActualWindReceived(const QVector<WindProfileData> &data);
     void onAmsMeasuredWindReceived(const QVector<MeasuredWindData> &data);
 
-    // ИВС прогрев
+    // ИВС прогрев и проверка подключения
     void onIwsWarmupFinished();
+    void onIwsConnectTimeout();
 
     // БИНС слоты
     void onBinsConnectFromSettings();
@@ -120,6 +126,7 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
+    AutoConnector *m_autoConnector = nullptr;
     QTimer *timer;
     QTimer *pollTimer;
     QSerialPort *serialPort;
@@ -162,6 +169,10 @@ private:
     QTimer *m_iwsWarmupTimer;
     bool    m_iwsWarmupDone;
 
+    // Верификация подключения ИВС — порт открыт ≠ устройство отвечает
+    QTimer *m_iwsConnectTimer = nullptr;  // таймаут ожидания первого ответа
+    bool    m_iwsDeviceActive = false;    // true только после получения реального ответа
+
     // Финальный запрос к ИВС по завершении измерения АМС
     int     m_pendingIwsRecordId;   // record_id ожидающий данных ИВС
     QTimer *m_iwsFinalRequestTimer; // таймаут ожидания ответа
@@ -170,6 +181,11 @@ private:
 
     // Сохранение приземных данных ИВС в БД
     SurfaceMeteoSaver *m_surfaceMeteoSaver;
+
+    void connectSensorsFromConfig();
+    bool connectIwsPort(const QString &port, int baudRate, QSerialPort::DataBits dataBits,
+                        QSerialPort::Parity parity, QSerialPort::StopBits stopBits,
+                        int protocol, quint8 address, int pollInterval);
 
     void createMapComponent(const QString &pluginName);
     void setupMapItems(QQuickItem *item);
