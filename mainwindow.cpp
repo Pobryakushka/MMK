@@ -25,6 +25,11 @@
 #include <QStandardItemModel>
 #include <QStandardPaths>
 #include <QDir>
+#include <QDialog>
+#include <QVBoxLayout>
+#include <QLabel>
+#include <QSpinBox>
+#include <QDialogButtonBox>
 #include "MapTileDownloader.h"
 
 
@@ -88,6 +93,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->cbWorkMode, &QCheckBox::stateChanged, this, &MainWindow::onWorkModeChanged);
     connect(ui->cbStandbyMode, &QCheckBox::stateChanged, this, &MainWindow::onStandbyModeChanged);
     connect(ui->btnConnectSensors, &QPushButton::clicked, this, &MainWindow::onConnectSensorsClicked);
+    connect(ui->btnDownloadMap,    &QPushButton::clicked, this, &MainWindow::onDownloadMapClicked);
     connect(ui->btnSyncTime, &QPushButton::clicked, this, &MainWindow::onSyncTimeClicked);
     connect(ui->editDateTime, &QLineEdit::editingFinished, this, &MainWindow::onDateTimeEditingFinished);
     connect(ui->editDateTime, &QLineEdit::textEdited, this, &MainWindow::onDateTimeEditingStarted);
@@ -1699,6 +1705,8 @@ void MainWindow::downloadMapTiles(double north, double south,
         });
         connect(m_tileDownloader, &MapTileDownloader::finished,
                 this, [this](int downloaded, int failed) {
+            ui->btnDownloadMap->setText("Скачать карту");
+            ui->btnDownloadMap->setEnabled(true);
             if (failed == 0) {
                 statusBar()->showMessage(
                     QString("Карта загружена: %1 тайлов. Доступна офлайн.").arg(downloaded), 8000);
@@ -1718,6 +1726,72 @@ void MainWindow::downloadMapTiles(double north, double south,
     }
 
     m_tileDownloader->download(m_mapOfflineDir, north, south, west, east, minZoom, maxZoom);
+}
+
+void MainWindow::onDownloadMapClicked()
+{
+    if (m_tileDownloader && m_tileDownloader->isDownloading()) {
+        // Кнопка во время загрузки — отмена
+        m_tileDownloader->cancel();
+        ui->btnDownloadMap->setText("Скачать карту");
+        return;
+    }
+
+    // Получаем видимые границы карты из QML
+    QQuickItem *main = ui->quickWidget->rootObject();
+    if (!main) {
+        QMessageBox::warning(this, "Ошибка", "Карта не инициализирована.");
+        return;
+    }
+
+    QVariant result;
+    QMetaObject::invokeMethod(main, "getVisibleBounds",
+                              Qt::DirectConnection,
+                              Q_RETURN_ARG(QVariant, result));
+
+    QVariantMap bounds = result.toMap();
+    double north = bounds.value("north").toDouble();
+    double south = bounds.value("south").toDouble();
+    double west  = bounds.value("west").toDouble();
+    double east  = bounds.value("east").toDouble();
+
+    if (north == 0 && south == 0 && west == 0 && east == 0) {
+        QMessageBox::warning(this, "Ошибка", "Не удалось получить область карты. Убедитесь, что карта отображается.");
+        return;
+    }
+
+    // Диалог выбора уровней масштабирования
+    QDialog dlg(this);
+    dlg.setWindowTitle("Скачать карту");
+    dlg.setFixedSize(320, 200);
+    auto *layout = new QVBoxLayout(&dlg);
+
+    layout->addWidget(new QLabel(
+        QString("Область: %.2f°–%.2f°N, %.2f°–%.2f°E")
+            .arg(south).arg(north).arg(west).arg(east)));
+    layout->addWidget(new QLabel("Zoom от:"));
+    auto *spinMin = new QSpinBox(&dlg);
+    spinMin->setRange(0, 18); spinMin->setValue(5);
+    layout->addWidget(spinMin);
+    layout->addWidget(new QLabel("Zoom до:"));
+    auto *spinMax = new QSpinBox(&dlg);
+    spinMax->setRange(0, 18); spinMax->setValue(14);
+    layout->addWidget(spinMax);
+
+    auto *btnBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
+    layout->addWidget(btnBox);
+    connect(btnBox, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    connect(btnBox, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+
+    if (dlg.exec() != QDialog::Accepted) return;
+
+    int minZoom = spinMin->value();
+    int maxZoom = spinMax->value();
+    if (minZoom > maxZoom) qSwap(minZoom, maxZoom);
+
+    ui->btnDownloadMap->setText("Отменить загрузку");
+    downloadMapTiles(north, south, west, east, minZoom, maxZoom);
+
 }
 
 void MainWindow::updateDateTime()

@@ -714,6 +714,16 @@ QPushButton:checked {
             <widget class="QComboBox" name="comboBox_mapTypes"/>
            </item>
            <item>
+            <widget class="QPushButton" name="btnDownloadMap">
+             <property name="toolTip">
+              <string>Скачать тайлы текущего вида карты для работы без интернета</string>
+             </property>
+             <property name="text">
+              <string>Скачать карту</string>
+             </property>
+            </widget>
+           </item>
+           <item>
             <widget class="QGroupBox" name="statusGroup">
              <property name="title">
               <string/>

@@ -82,6 +82,7 @@ private slots:
 
     // Подключение датчиков
     void onConnectSensorsClicked();
+    void onDownloadMapClicked();
     void onConnectRequested();
     void onDisconnectRequested();
 

@@ -94,6 +94,22 @@ Item {
         }
     }
 
+    // Возвращает видимые границы карты как объект {north, south, west, east}.
+    // Вызывается из C++ через QMetaObject::invokeMethod с Q_RETURN_ARG(QVariant).
+    function getVisibleBounds() {
+        if (!map) return {"north": 0, "south": 0, "west": 0, "east": 0};
+        var r = map.visibleRegion;
+        if (!r.isValid) return {"north": 0, "south": 0, "west": 0, "east": 0};
+        var tl = r.topLeft;
+        var br = r.bottomRight;
+        return {
+            "north": tl.latitude,
+            "south": br.latitude,
+            "west":  tl.longitude,
+            "east":  br.longitude
+        };
+    }
+
     function createStationsMarkers(coordinate, tooltipText) {
         if (map != null)
             map.createStationsMarkers(coordinate, tooltipText);
