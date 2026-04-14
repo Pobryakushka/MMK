@@ -18,6 +18,7 @@
 #include "surfacemeteosaver.h"
 #include "functionalcontroldialog.h"
 #include "workregulationdialog.h"
+#include "autoconnector.h"
 
 // Forward declaration
 class SourceData;
@@ -78,10 +79,14 @@ private slots:
     void onGnssConnectFromSettings();
     void onGnssDisconnectFromSettings();
 
-    // Настройки датчиков
-    void onSensorSettingsClicked();
+    // Подключение датчиков
+    void onConnectSensorsClicked();
     void onConnectRequested();
     void onDisconnectRequested();
+
+    // AutoConnector слоты
+    void onAutoConnectorDeviceDetected(AutoConnector::DeviceType type, const QString &port, int baudRate);
+    void onAutoConnectorFinished();
 
     // RS485
     void onSerialDataReceived();
@@ -120,6 +125,7 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
+    AutoConnector *m_autoConnector = nullptr;
     QTimer *timer;
     QTimer *pollTimer;
     QSerialPort *serialPort;
@@ -170,6 +176,11 @@ private:
 
     // Сохранение приземных данных ИВС в БД
     SurfaceMeteoSaver *m_surfaceMeteoSaver;
+
+    void connectSensorsFromConfig();
+    bool connectIwsPort(const QString &port, int baudRate, QSerialPort::DataBits dataBits,
+                        QSerialPort::Parity parity, QSerialPort::StopBits stopBits,
+                        int protocol, quint8 address, int pollInterval);
 
     void createMapComponent(const QString &pluginName);
     void setupMapItems(QQuickItem *item);
