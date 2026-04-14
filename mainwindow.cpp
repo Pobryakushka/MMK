@@ -859,7 +859,7 @@ void MainWindow::onAmsDataWritten(int recordId)
     statusBar()->showMessage(
         QString("АМС: Данные записаны в архив (ID: %1), запрашиваем ИВС...").arg(recordId), 5000);
 
-    if (serialPort && serialPort->isOpen()) {
+    if (m_iwsDeviceActive) {
         requestIwsDataForRecord(recordId);
     } else {
         qWarning() << "MainWindow: ИВС не подключён — surface_meteo не будет заполнена";
@@ -1332,7 +1332,7 @@ void MainWindow::onConnectSensorsClicked()
     bool gnssOk = m_gnssHandler->isConnected();
     bool amsOk  = m_amsHandler && m_amsHandler->isConnected();
     bool binsOk = m_binsHandler && m_binsHandler->isConnected();
-    bool iwsOk  = serialPort && serialPort->isOpen();
+    bool iwsOk  = m_iwsDeviceActive;
     if (gnssOk && amsOk && binsOk && iwsOk) {
         QMessageBox::information(this, "Датчики", "Все датчики подключены.");
         return;
@@ -1367,9 +1367,19 @@ bool MainWindow::connectIwsPort(const QString &port, int baudRate, QSerialPort::
 
     // Пытаемся открыть порт
     if (serialPort->open(QIODevice::ReadWrite)) {
-        sensorSettingsDialog->setIwsConnectionStatus("Подключено", true);
+        // Порт открыт, но устройство ещё не подтверждено —
+        // "Подключено" выставим только после первого ответа
+        m_iwsDeviceActive = false;
+        sensorSettingsDialog->setIwsConnectionStatus("Ожидание ответа...", false);
         sensorSettingsDialog->setIwsConnectionEnabled(false);
-        updateIwsStatusLabel(true);
+
+        // Запускаем таймаут: если за 3 с нет ответа — считаем, что устройства нет
+        if (!m_iwsConnectTimer) {
+            m_iwsConnectTimer = new QTimer(this);
+            m_iwsConnectTimer->setSingleShot(true);
+            connect(m_iwsConnectTimer, &QTimer::timeout, this, &MainWindow::onIwsConnectTimeout);
+        }
+        m_iwsConnectTimer->start(3000);
 
         // Запускаем таймер прогрева ИВС (3 минуты)
         m_iwsWarmupDone = false;
@@ -1410,8 +1420,10 @@ bool MainWindow::connectIwsPort(const QString &port, int baudRate, QSerialPort::
             connect(pollTimer, &QTimer::timeout, this, &MainWindow::pollMeteoStation);
         }
         pollTimer->start(pollInterval * 1000);
+        // Немедленный зондирующий запрос для быстрой верификации устройства
+        QTimer::singleShot(200, this, &MainWindow::pollMeteoStation);
 
-        qDebug() << "RS485 connected on" << port;
+        qDebug() << "RS485 port opened on" << port << "— waiting for device response";
         return true;
     } else {
         sensorSettingsDialog->setIwsConnectionStatus("Ошибка подключения", false);
@@ -1454,6 +1466,9 @@ void MainWindow::onIwsWarmupFinished()
 
 void MainWindow::onDisconnectRequested()
 {
+    m_iwsDeviceActive = false;
+    if (m_iwsConnectTimer) m_iwsConnectTimer->stop();
+
     // Сбрасываем прогрев ИВС; ИВС отключён — восстанавливаем comboAvgTime
     if (m_iwsWarmupTimer) {
         m_iwsWarmupTimer->stop();
@@ -1486,6 +1501,15 @@ void MainWindow::onSerialDataReceived()
     QByteArray data = serialPort->readAll();
     qDebug() << "Received data:" << data.toHex(' ');
 
+    // Первый ответ от устройства — подтверждаем подключение ИВС
+    if (!m_iwsDeviceActive) {
+        m_iwsDeviceActive = true;
+        if (m_iwsConnectTimer) m_iwsConnectTimer->stop();
+        sensorSettingsDialog->setIwsConnectionStatus("Подключено", true);
+        updateIwsStatusLabel(true);
+        qDebug() << "IWS device confirmed (first response received)";
+    }
+
     // Передаём данные в GroundMeteoParams если он открыт
     GroundMeteoParams* meteoParams = GroundMeteoParams::instance();
     if (meteoParams) {
@@ -1497,6 +1521,7 @@ void MainWindow::onSerialError(QSerialPort::SerialPortError error)
 {
     if (error != QSerialPort::NoError && error != QSerialPort::TimeoutError) {
         qDebug() << "Serial port error:" << serialPort->errorString();
+        m_iwsDeviceActive = false;
 
         if (sensorSettingsDialog) {
             sensorSettingsDialog->setIwsConnectionStatus(
@@ -1505,6 +1530,25 @@ void MainWindow::onSerialError(QSerialPort::SerialPortError error)
 
         if (serialPort->isOpen()) {
             onDisconnectRequested();
+        }
+    }
+}
+
+void MainWindow::onIwsConnectTimeout()
+{
+    // Таймаут истёк — устройство не отвечает, порт открыт впустую
+    if (!m_iwsDeviceActive && serialPort && serialPort->isOpen()) {
+        qDebug() << "IWS connect timeout — no response, closing port";
+        onDisconnectRequested();
+        sensorSettingsDialog->setIwsConnectionStatus("Нет ответа от устройства", false);
+
+        // Показываем предупреждение только если AutoConnector уже не работает
+        // (чтобы не дублировать сообщение из onAutoConnectorFinished)
+        if (!m_autoConnector->isDetecting()) {
+            QMessageBox::warning(this, "ИВС не отвечает",
+                "Не удалось подключить ИВС: устройство не отвечает.\n\n"
+                "Проверьте физическое подключение кабеля и нажмите\n"
+                "«Подключить датчики» для повторной попытки.");
         }
     }
 }
@@ -1978,7 +2022,7 @@ void MainWindow::updateSensorStatusPanel()
     updateGnssStatusLabel(m_gnssHandler && m_gnssHandler->isConnected());
     updateAmsStatusLabel(m_amsHandler && m_amsHandler->isConnected());
     updateBinsStatusLabel(m_binsHandler && m_binsHandler->isConnected());
-    updateIwsStatusLabel(serialPort && serialPort->isOpen());
+    updateIwsStatusLabel(m_iwsDeviceActive);
 }
 
 void MainWindow::updateGnssStatusLabel(bool connected)
@@ -2110,7 +2154,7 @@ void MainWindow::onAutoConnectorDeviceDetected(AutoConnector::DeviceType type, c
         }
         break;
     case AutoConnector::DEVICE_IWS:
-        if (!(serialPort && serialPort->isOpen())) {
+        if (!m_iwsDeviceActive && !(serialPort && serialPort->isOpen())) {
             connectIwsPort(port, baudRate, QSerialPort::Data8, QSerialPort::NoParity, QSerialPort::OneStop,
                            IWS_PROTOCOL, 0, 5); // default address=0, pollInterval=5s
         }
@@ -2128,7 +2172,7 @@ void MainWindow::onAutoConnectorFinished()
     if (!m_gnssHandler->isConnected())                    failed << "GNSS";
     if (m_amsHandler && !m_amsHandler->isConnected())     failed << "АМС";
     if (m_binsHandler && !m_binsHandler->isConnected())   failed << "БИНС";
-    if (!(serialPort && serialPort->isOpen()))            failed << "ИВС";
+    if (!m_iwsDeviceActive)                               failed << "ИВС";
 
     if (!failed.isEmpty()) {
         QMessageBox::warning(this, "Не удалось подключить датчики",
