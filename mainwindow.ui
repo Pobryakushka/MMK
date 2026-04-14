@@ -337,6 +337,9 @@
               </item>
               <item row="8" column="0" colspan="2">
                <widget class="QPushButton" name="btnNavigation">
+                <property name="visible">
+                 <bool>false</bool>
+                </property>
                 <property name="text">
                  <string>Навигация</string>
                 </property>
