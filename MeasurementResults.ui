@@ -2368,17 +2368,11 @@ li.checked::marker { content: &quot;\2612&quot;; }
          </layout>
         </widget>
         <widget class="QWidget" name="tab_VNGO">
-         <property name="visible">
-          <bool>false</bool>
-         </property>
          <attribute name="title">
           <string>ВНГО</string>
          </attribute>
         </widget>
         <widget class="QWidget" name="tab_landingCalc">
-         <property name="visible">
-          <bool>false</bool>
-         </property>
          <attribute name="title">
           <string>Расчет на десант.</string>
          </attribute>
