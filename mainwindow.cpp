@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "RpvIndicator.h"
 #include "SourceData.h"
 #include "AlgorithmsCalc.h"
 #include "MeasurementResults.h"
@@ -22,6 +23,7 @@
 #include <QStatusBar>
 #include <QDebug>
 #include <QStandardItemModel>
+
 
 // ====================================================================
 // НАСТРОЙКА ПРОТОКОЛА IWS
@@ -993,8 +995,8 @@ void MainWindow::onAmsMeasurementProgress(int percent, float angle)
     ui->progressBarMeasurement->setValue(displayPercent);
     ui->lblProgressPercent->setText(QString("%1%").arg(displayPercent));
     ui->lblRpvAngle->setText(QString("%1°").arg(angle, 0, 'f', 1));
-    // Синхронизируем поле положения РПВ
-    ui->editRPVPosition->setText(QString::number(angle, 'f', 1));
+    // Обновляем индикатор положения РПВ
+    ui->rpvIndicator->setAngle(angle);
 
     statusBar()->showMessage(
         QString("Измерение: %1%, Угол РПВ: %2°").arg(displayPercent).arg(angle, 0, 'f', 1)

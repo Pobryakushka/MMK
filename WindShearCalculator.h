@@ -66,6 +66,14 @@ public:
      */
     static QString getSeverityText(int severityLevel);
 
+    /**
+     * @brief Самотестирование по эталонной таблице (Вариант 8 ТЗ).
+     * Вызови один раз из main() или конструктора MainWindow.
+     * Результаты печатаются через qDebug().
+     * @return true если все тесты прошли
+     */
+    static bool runSelfTest();
+
 private:
     /**
      * @brief Расчет сдвига ветра между двумя уровнями (Способ 1)

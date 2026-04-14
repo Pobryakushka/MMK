@@ -52,6 +52,10 @@ MeasurementResults::MeasurementResults(QWidget *parent)
 {
     ui->setupUi(this);
 
+    // Скрываем нереализованные вкладки
+    ui->tabWidget->removeTab(ui->tabWidget->indexOf(ui->tab_landingCalc));
+    ui->tabWidget->removeTab(ui->tabWidget->indexOf(ui->tab_VNGO));
+
     currentDateTime = QDateTime::currentDateTime();
     int minutes = currentDateTime.time().minute();
     minutes = (minutes / 10) * 10;
@@ -2007,6 +2011,18 @@ void MeasurementResults::updateMeteo11Display()
 
     if (!d) return;
 
+    // Вычисляем давность входящего бюллетеня МС относительно времени зондирования.
+    // Используется для индикации устаревшего бюллетеня и объяснения, почему уточнённый
+    // не включает данные выше АМС.
+    double stationAgeH  = -1.0;  // <0 = нет данных / нельзя вычислить
+    bool   stationStale = false;
+    if (m_meteo11FromStation.isValid && m_currentSondingTime.isValid()
+            && m_meteo11FromStation.bulletinTime.isValid()) {
+        qint64 ageSec   = m_meteo11FromStation.bulletinTime.secsTo(m_currentSondingTime);
+        stationAgeH     = qAbs(ageSec) / 3600.0;
+        stationStale    = (stationAgeH > 12.0);
+    }
+
     // Скрываем поля, не применимые к приближённому бюллетеню
     const bool isApprox = (currentButtelinType == Approximate);
     ui->lineEdit_numStation->setVisible(!isApprox);
@@ -2016,17 +2032,53 @@ void MeasurementResults::updateMeteo11Display()
 
     // Обновляем поля ГОДНЫЙ / ВРЕМЯ СОСТАВЛЕНИЯ
     if (d->isValid) {
-        ui->lineEdit_bulleten->setText("ГОДНЫЙ");
-        ui->lineEdit_bulleten->setStyleSheet("color: green; font-weight: bold;");
+        QString text, style;
+
+        if (currentButtelinType == FromMeteoStat && stationAgeH >= 0.0) {
+            // "От МС" — показываем давность и годность входящего бюллетеня
+            if (stationStale) {
+                text  = QString("УСТАРЕЛ (%1 ч)").arg(stationAgeH, 0, 'f', 1);
+                style = "color: #e65100; font-weight: bold; background-color: #fff8e1;";
+            } else {
+                text  = QString("ГОДНЫЙ (%1 ч)").arg(stationAgeH, 0, 'f', 1);
+                style = "color: #2e7d32; font-weight: bold;";
+            }
+        } else if (currentButtelinType == Updated) {
+            // "Уточнённый" — бюллетень построен, цвет всегда зелёный
+            if (!m_meteo11FromStation.isValid) {
+                text  = "ГОДНЫЙ";
+                style = "color: #2e7d32; font-weight: bold;";
+            } else if (stationStale) {
+                text  = QString("ГОДНЫЙ (МС устарел %1 ч)").arg(stationAgeH, 0, 'f', 0);
+                style = "color: #2e7d32; font-weight: bold;";
+            } else {
+                text  = "ГОДНЫЙ (с данными МС)";
+                style = "color: #2e7d32; font-weight: bold;";
+            }
+        } else {
+            text  = "ГОДНЫЙ";
+            style = "color: #2e7d32; font-weight: bold;";
+        }
+
+        ui->lineEdit_bulleten->setText(text);
+        ui->lineEdit_bulleten->setStyleSheet(style);
     } else {
         ui->lineEdit_bulleten->setText("НЕТ ДАННЫХ");
         ui->lineEdit_bulleten->setStyleSheet("color: red; font-weight: bold;");
     }
+
+    // Время составления бюллетеня — янтарный фон когда устарел
     ui->lineEdit_bulletenTime->setText(
         d->bulletinTime.isValid()
             ? d->bulletinTime.toString("dd.MM.yyyy hh:mm")
             : "—"
         );
+    if (currentButtelinType == FromMeteoStat && stationStale && d->isValid) {
+        ui->lineEdit_bulletenTime->setStyleSheet(
+            "QLineEdit { background-color: #fff3e0; color: #e65100; font-weight: bold; }");
+    } else {
+        ui->lineEdit_bulletenTime->setStyleSheet("");
+    }
 
     // Кнопки: имитируем «нажатое» состояние через стиль
     auto setPressed = [](QPushButton *btn, bool pressed) {
@@ -2049,6 +2101,21 @@ void MeasurementResults::updateMeteo11Display()
     };
     setFmtPressed(ui->pushButton_string, currentOutputFormat == String);
     setFmtPressed(ui->pushButton_table,  currentOutputFormat == Table);
+
+    // Кнопка «От МС» — янтарный/оранжевый и тултип когда бюллетень устарел
+    if (stationStale && m_meteo11FromStation.isValid) {
+        const bool sel = (currentButtelinType == FromMeteoStat);
+        ui->pushButton_fromMeteoStat->setStyleSheet(sel
+            ? "QPushButton { background-color: #e65100; color: white; font-weight: bold; "
+              "border: 2px inset #bf360c; border-radius: 4px; padding: 4px 8px; }"
+            : "QPushButton { color: #e65100; font-weight: bold; "
+              "border: 1px solid #e65100; border-radius: 4px; padding: 4px 8px; }");
+        ui->pushButton_fromMeteoStat->setToolTip(
+            QString("Бюллетень МС устарел на %1 ч (>12 ч) — не используется в уточнённом")
+                .arg(stationAgeH, 0, 'f', 1));
+    } else {
+        ui->pushButton_fromMeteoStat->setToolTip("");
+    }
 
     if (!d->isValid) {
         // Для FromMeteoStat — особое сообщение, остальные — «нет данных»
