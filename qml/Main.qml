@@ -65,9 +65,18 @@ Item {
                                  main);
 
         if (map) {
-             map.onSupportedMapTypesChanged.connect(function() {
-                 updateMapTypes();
-             });
+            map.onSupportedMapTypesChanged.connect(function() {
+                updateMapTypes();
+            });
+            map.onVisibleRegionChanged.connect(function() {
+                var r = map.visibleRegion;
+                if (r && r.isValid) {
+                    coord.visibleNorth = r.topLeft.latitude;
+                    coord.visibleSouth = r.bottomRight.latitude;
+                    coord.visibleWest  = r.topLeft.longitude;
+                    coord.visibleEast  = r.bottomRight.longitude;
+                }
+            });
             updateMapTypes();
         }
     }
