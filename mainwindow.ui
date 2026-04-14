@@ -1081,7 +1081,7 @@ QPushButton:checked {
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="btnSensorSettings">
+            <widget class="QPushButton" name="btnConnectSensors">
              <property name="minimumSize">
               <size>
                <width>0</width>
@@ -1558,7 +1558,7 @@ QPushButton:checked {
               </palette>
              </property>
              <property name="text">
-              <string>⚙ Настройки датчиков</string>
+              <string>Подключить датчики</string>
              </property>
             </widget>
            </item>
