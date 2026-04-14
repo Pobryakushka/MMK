@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>FunctionalControlDialog</class>
+ <widget class="QDialog" name="FunctionalControlDialog">
+  <property name="geometry">
+   <rect><x>0</x><y>0</y><width>480</width><height>580</height></rect>
+  </property>
+  <property name="windowTitle">
+   <string>Функциональный контроль</string>
+  </property>
+  <property name="minimumSize">
+   <size><width>420</width><height>500</height></size>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="leftMargin"><number>16</number></property>
+   <property name="topMargin"><number>16</number></property>
+   <property name="rightMargin"><number>16</number></property>
+   <property name="bottomMargin"><number>12</number></property>
+   <property name="spacing"><number>0</number></property>
+
+   <!-- ЗАГОЛОВОК -->
+   <item>
+    <widget class="QLabel" name="lblDialogTitle">
+     <property name="text"><string>Функциональный контроль АМС</string></property>
+     <property name="styleSheet">
+      <string notr="true">font-size: 13pt; font-weight: bold; padding-bottom: 8px;</string>
+     </property>
+     <property name="alignment"><set>Qt::AlignCenter</set></property>
+    </widget>
+   </item>
+
+   <item>
+    <widget class="QFrame" name="lineTitleSep">
+     <property name="frameShape"><enum>QFrame::HLine</enum></property>
+     <property name="frameShadow"><enum>QFrame::Sunken</enum></property>
+    </widget>
+   </item>
+
+   <item>
+    <spacer name="spacer0">
+     <property name="orientation"><enum>Qt::Vertical</enum></property>
+     <property name="sizeType"><enum>QSizePolicy::Fixed</enum></property>
+     <property name="sizeHint" stdset="0"><size><width>0</width><height>8</height></size></property>
+    </spacer>
+   </item>
+
+   <!-- СЕКЦИЯ: НОМЕР КОМПЛЕКСА -->
+   <item>
+    <widget class="QLabel" name="lblComplexNumberHeader">
+     <property name="text"><string>НОМЕР КОМПЛЕКСА / СЧЁТЧИК ВКЛЮЧЕНИЙ</string></property>
+     <property name="styleSheet">
+      <string notr="true">font-size: 9pt; font-weight: bold; letter-spacing: 1px; padding: 2px 0px;</string>
+     </property>
+    </widget>
+   </item>
+
+   <item>
+    <widget class="QFrame" name="lineComplexSep">
+     <property name="frameShape"><enum>QFrame::HLine</enum></property>
+     <property name="frameShadow"><enum>QFrame::Plain</enum></property>
+    </widget>
+   </item>
+
+   <item>
+    <layout class="QHBoxLayout" name="layoutComplex">
+     <property name="topMargin"><number>6</number></property>
+     <property name="bottomMargin"><number>6</number></property>
+     <item>
+      <widget class="QLabel" name="lblComplexNumberLabel">
+       <property name="text"><string>Количество включений комплекса:</string></property>
+       <property name="styleSheet">
+        <string notr="true">font-size: 10pt;</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="spacerComplex">
+       <property name="orientation"><enum>Qt::Horizontal</enum></property>
+       <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QLabel" name="lblComplexNumberValue">
+       <property name="text"><string>—</string></property>
+       <property name="styleSheet">
+        <string notr="true">font-size: 14pt; font-weight: bold;</string>
+       </property>
+       <property name="alignment"><set>Qt::AlignRight|Qt::AlignVCenter</set></property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+
+   <item>
+    <spacer name="spacer1">
+     <property name="orientation"><enum>Qt::Vertical</enum></property>
+     <property name="sizeType"><enum>QSizePolicy::Fixed</enum></property>
+     <property name="sizeHint" stdset="0"><size><width>0</width><height>10</height></size></property>
+    </spacer>
+   </item>
+
+   <!-- СЕКЦИЯ: НЕИСПРАВНОСТИ -->
+   <item>
+    <widget class="QLabel" name="lblFaultsHeader">
+     <property name="text"><string>ОБНАРУЖЕННЫЕ НЕИСПРАВНОСТИ</string></property>
+     <property name="styleSheet">
+      <string notr="true">font-size: 9pt; font-weight: bold; letter-spacing: 1px; padding: 2px 0px;</string>
+     </property>
+    </widget>
+   </item>
+
+   <item>
+    <widget class="QFrame" name="lineFaultsSep">
+     <property name="frameShape"><enum>QFrame::HLine</enum></property>
+     <property name="frameShadow"><enum>QFrame::Plain</enum></property>
+    </widget>
+   </item>
+
+   <item>
+    <widget class="QListWidget" name="listFaults">
+     <property name="minimumSize"><size><width>0</width><height>120</height></size></property>
+     <property name="editTriggers"><set>QAbstractItemView::NoEditTriggers</set></property>
+     <property name="selectionMode"><enum>QAbstractItemView::NoSelection</enum></property>
+    </widget>
+   </item>
+
+   <item>
+    <spacer name="spacer2">
+     <property name="orientation"><enum>Qt::Vertical</enum></property>
+     <property name="sizeType"><enum>QSizePolicy::Fixed</enum></property>
+     <property name="sizeHint" stdset="0"><size><width>0</width><height>10</height></size></property>
+    </spacer>
+   </item>
+
+   <!-- СЕКЦИЯ: ОШИБКИ -->
+   <item>
+    <widget class="QLabel" name="lblErrorsHeader">
+     <property name="text"><string>ОБНАРУЖЕННЫЕ ОШИБКИ</string></property>
+     <property name="styleSheet">
+      <string notr="true">font-size: 9pt; font-weight: bold; letter-spacing: 1px; padding: 2px 0px;</string>
+     </property>
+    </widget>
+   </item>
+
+   <item>
+    <widget class="QFrame" name="lineErrorsSep">
+     <property name="frameShape"><enum>QFrame::HLine</enum></property>
+     <property name="frameShadow"><enum>QFrame::Plain</enum></property>
+    </widget>
+   </item>
+
+   <item>
+    <widget class="QListWidget" name="listErrors">
+     <property name="minimumSize"><size><width>0</width><height>120</height></size></property>
+     <property name="editTriggers"><set>QAbstractItemView::NoEditTriggers</set></property>
+     <property name="selectionMode"><enum>QAbstractItemView::NoSelection</enum></property>
+    </widget>
+   </item>
+
+   <!-- РАСТЯГИВАЮЩИЙСЯ СПЕЙСЕР -->
+   <item>
+    <spacer name="spacerBottom">
+     <property name="orientation"><enum>Qt::Vertical</enum></property>
+     <property name="sizeHint" stdset="0"><size><width>0</width><height>8</height></size></property>
+    </spacer>
+   </item>
+
+   <item>
+    <widget class="QFrame" name="lineStatusSep">
+     <property name="frameShape"><enum>QFrame::HLine</enum></property>
+     <property name="frameShadow"><enum>QFrame::Sunken</enum></property>
+    </widget>
+   </item>
+
+   <!-- СТРОКА ПОСЛЕДНЕГО ОПРОСА -->
+   <item>
+    <widget class="QLabel" name="lblLastPoll">
+     <property name="text"><string>Последний опрос: —</string></property>
+     <property name="styleSheet">
+      <string notr="true">font-size: 8pt; padding: 3px 0px 0px 0px;</string>
+     </property>
+    </widget>
+   </item>
+
+   <!-- СТРОКА СОСТОЯНИЯ -->
+   <item>
+    <widget class="QLabel" name="lblStatusBar">
+     <property name="text"><string>Ожидание данных</string></property>
+     <property name="styleSheet">
+      <string notr="true">font-size: 8pt; font-style: italic; padding: 0px 0px 2px 0px;</string>
+     </property>
+    </widget>
+   </item>
+
+   <!-- КНОПКИ -->
+   <item>
+    <layout class="QHBoxLayout" name="layoutButtons">
+     <property name="spacing"><number>8</number></property>
+     <property name="topMargin"><number>6</number></property>
+     <item>
+      <spacer name="spacerBtnLeft">
+       <property name="orientation"><enum>Qt::Horizontal</enum></property>
+       <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnRefresh">
+       <property name="text"><string>Обновить</string></property>
+       <property name="minimumSize"><size><width>110</width><height>32</height></size></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnClose">
+       <property name="text"><string>Закрыть</string></property>
+       <property name="minimumSize"><size><width>110</width><height>32</height></size></property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>btnClose</sender><signal>clicked()</signal>
+   <receiver>FunctionalControlDialog</receiver><slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel"><x>350</x><y>560</y></hint>
+    <hint type="destinationlabel"><x>240</x><y>290</y></hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

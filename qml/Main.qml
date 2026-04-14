@@ -15,6 +15,23 @@ Item {
 //        }
 //    }
 //    Component.onCompleted: {createMapComponent("osm")}
+    property var gnssMarker: null
+
+    Component {
+        id: markerComponent
+        MapQuickItem {
+            anchorPoint.x: sourceItem.width / 2
+            anchorPoint.y: sourceItem.height
+            sourceItem: Rectangle {
+                width: 20
+                height: 20
+                radius: 10
+                color: "#2196F3" // Синий
+                border.color: "white"
+                border.width: 2
+            }
+        }
+    }
     function createMapComponent(pluginName) {
         console.log("createMapComponent", pluginName, map)
         var zoomLevel = 14;
@@ -79,5 +96,23 @@ Item {
     function createWarmZoneRect(topLeft, bottomRight, zoneNumber, color) {
         if (map != null)
             map.createWarmZoneRect(topLeft, bottomRight, zoneNumber, color);
+    }
+
+    function updateGnssMarker(lat, lon, enabled) {
+        if (enabled) {
+            // Создаем или обновляем маркер GNSS
+            if (!gnssMarker) {
+                gnssMarker = markerComponent.createObject(map, {
+                    coordinate: QtPositioning.coordinate(lat, lon)
+                                                          })
+            } else {
+                gnssMarker.coordinate = QtPositioning.coordinate(lat, lon)
+            }
+            gnssMarker.visible = true
+        } else {
+            if (gnssMarker) {
+                gnssMarker.visible = false
+            }
+        }
     }
 }

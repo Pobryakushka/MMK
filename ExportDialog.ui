@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ExportDialog</class>
+ <widget class="QDialog" name="ExportDialog">
+  <property name="windowTitle"><string>Экспорт данных измерений</string></property>
+  <property name="minimumSize"><size><width>540</width><height>0</height></size></property>
+  <layout class="QVBoxLayout" name="vLayout_root">
+   <property name="spacing"><number>10</number></property>
+   <property name="leftMargin"><number>12</number></property>
+   <property name="topMargin"><number>12</number></property>
+   <property name="rightMargin"><number>12</number></property>
+   <property name="bottomMargin"><number>12</number></property>
+
+   <!-- Информация о записи -->
+   <item>
+    <widget class="QGroupBox" name="groupBox_info">
+     <property name="title"><string>Текущая запись</string></property>
+     <layout class="QFormLayout" name="form_info">
+      <property name="leftMargin"><number>10</number></property>
+      <property name="topMargin"><number>8</number></property>
+      <property name="rightMargin"><number>10</number></property>
+      <property name="bottomMargin"><number>8</number></property>
+      <item row="0" column="0">
+       <widget class="QLabel" name="lbl_idTitle">
+        <property name="text"><string>Запись ID:</string></property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLabel" name="lblRecordId">
+        <property name="text"><string>—</string></property>
+        <property name="styleSheet"><string notr="true">font-weight: bold; color: #1976D2;</string></property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="lbl_dtTitle">
+        <property name="text"><string>Дата / время:</string></property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLabel" name="lblDateTime">
+        <property name="text"><string>—</string></property>
+        <property name="styleSheet"><string notr="true">font-weight: bold;</string></property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+
+   <!-- Формат файла -->
+   <item>
+    <widget class="QGroupBox" name="groupBox_format">
+     <property name="title"><string>Формат файла</string></property>
+     <layout class="QHBoxLayout" name="hLayout_format">
+      <property name="leftMargin"><number>10</number></property>
+      <property name="topMargin"><number>8</number></property>
+      <property name="rightMargin"><number>10</number></property>
+      <property name="bottomMargin"><number>8</number></property>
+      <property name="spacing"><number>16</number></property>
+      <item>
+       <widget class="QRadioButton" name="rbTxt">
+        <property name="text"><string>TXT (отчёт)</string></property>
+        <property name="checked"><bool>true</bool></property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="rbCsv">
+        <property name="text"><string>CSV</string></property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="rbJson">
+        <property name="text"><string>JSON</string></property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="rbPdf">
+        <property name="text"><string>PDF (с графиками)</string></property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="rbXlsx">
+        <property name="text"><string>Excel (XLSX)</string></property>
+       </widget>
+      </item>
+      <item>
+       <spacer>
+        <property name="orientation"><enum>Qt::Horizontal</enum></property>
+        <property name="sizeHint" stdset="0"><size><width>20</width><height>20</height></size></property>
+       </spacer>
+      </item>
+     </layout>
+    </widget>
+   </item>
+
+   <!-- Опции, зависящие от формата (переключаемые страницы) -->
+   <item>
+    <widget class="QStackedWidget" name="stackedOptions">
+
+     <!-- Страница 0: нет доп. опций (TXT, JSON, XLSX) -->
+     <widget class="QWidget" name="page_noOptions">
+      <layout class="QHBoxLayout">
+       <property name="leftMargin"><number>0</number></property>
+       <property name="topMargin"><number>0</number></property>
+       <property name="rightMargin"><number>0</number></property>
+       <property name="bottomMargin"><number>0</number></property>
+       <item>
+        <widget class="QLabel" name="lblNoOptions">
+         <property name="text"><string>Дополнительных настроек нет</string></property>
+         <property name="styleSheet"><string notr="true">color: gray; font-style: italic;</string></property>
+         <property name="alignment"><set>Qt::AlignCenter</set></property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+
+     <!-- Страница 1: опции CSV -->
+     <widget class="QWidget" name="page_csvOptions">
+      <layout class="QHBoxLayout" name="hLayout_csv">
+       <property name="leftMargin"><number>6</number></property>
+       <property name="topMargin"><number>6</number></property>
+       <property name="rightMargin"><number>6</number></property>
+       <property name="bottomMargin"><number>6</number></property>
+       <property name="spacing"><number>8</number></property>
+       <item>
+        <widget class="QLabel" name="lblCsvSep">
+         <property name="text"><string>Разделитель столбцов:</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="cmbCsvSeparator">
+         <property name="minimumSize"><size><width>170</width><height>0</height></size></property>
+         <item><property name="text"><string>Точка с запятой  ( ; )</string></property></item>
+         <item><property name="text"><string>Запятая  ( , )</string></property></item>
+         <item><property name="text"><string>Табуляция</string></property></item>
+        </widget>
+       </item>
+       <item>
+        <spacer>
+         <property name="orientation"><enum>Qt::Horizontal</enum></property>
+         <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+
+     <!-- Страница 2: опции PDF -->
+     <widget class="QWidget" name="page_pdfOptions">
+      <layout class="QHBoxLayout" name="hLayout_pdf">
+       <property name="leftMargin"><number>6</number></property>
+       <property name="topMargin"><number>6</number></property>
+       <property name="rightMargin"><number>6</number></property>
+       <property name="bottomMargin"><number>6</number></property>
+       <property name="spacing"><number>8</number></property>
+       <item>
+        <widget class="QLabel" name="lblPageSize">
+         <property name="text"><string>Размер страницы:</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="cmbPageSize">
+         <property name="minimumSize"><size><width>90</width><height>0</height></size></property>
+         <item><property name="text"><string>A4</string></property></item>
+         <item><property name="text"><string>A3</string></property></item>
+         <item><property name="text"><string>Letter</string></property></item>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="lblOrientation">
+         <property name="text"><string>Ориентация:</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="cmbOrientation">
+         <property name="minimumSize"><size><width>110</width><height>0</height></size></property>
+         <item><property name="text"><string>Книжная</string></property></item>
+         <item><property name="text"><string>Альбомная</string></property></item>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="cbPdfCharts">
+         <property name="text"><string>Включить графики</string></property>
+         <property name="checked"><bool>true</bool></property>
+        </widget>
+       </item>
+       <item>
+        <spacer>
+         <property name="orientation"><enum>Qt::Horizontal</enum></property>
+         <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+
+    </widget>
+   </item>
+
+   <!-- Разделы для экспорта -->
+   <item>
+    <widget class="QGroupBox" name="groupBox_sections">
+     <property name="title"><string>Включить разделы</string></property>
+     <layout class="QGridLayout" name="grid_sections">
+      <property name="leftMargin"><number>10</number></property>
+      <property name="topMargin"><number>8</number></property>
+      <property name="rightMargin"><number>10</number></property>
+      <property name="bottomMargin"><number>8</number></property>
+      <property name="horizontalSpacing"><number>20</number></property>
+      <property name="verticalSpacing"><number>6</number></property>
+
+      <item row="0" column="0">
+       <widget class="QCheckBox" name="cbCoordinates">
+        <property name="text"><string>Координаты станции</string></property>
+        <property name="checked"><bool>true</bool></property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QCheckBox" name="cbSurfaceMeteo">
+        <property name="text"><string>Наземные метеоусловия</string></property>
+        <property name="checked"><bool>true</bool></property>
+       </widget>
+      </item>
+
+      <item row="1" column="0">
+       <widget class="QCheckBox" name="cbAvgWind">
+        <property name="text"><string>Средний ветер</string></property>
+        <property name="checked"><bool>true</bool></property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QCheckBox" name="cbActualWind">
+        <property name="text"><string>Действительный ветер</string></property>
+        <property name="checked"><bool>true</bool></property>
+       </widget>
+      </item>
+
+      <item row="2" column="0">
+       <widget class="QCheckBox" name="cbMeasuredWind">
+        <property name="text"><string>Измеренный ветер</string></property>
+        <property name="checked"><bool>true</bool></property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QCheckBox" name="cbWindShear">
+        <property name="text"><string>Сдвиг ветра</string></property>
+        <property name="checked"><bool>true</bool></property>
+       </widget>
+      </item>
+
+      <item row="3" column="0">
+       <widget class="QCheckBox" name="cbMeteo11Updated">
+        <property name="text"><string>Метео-11 (уточнённый)</string></property>
+        <property name="checked"><bool>true</bool></property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QCheckBox" name="cbMeteo11Approx">
+        <property name="text"><string>Метео-11 (приближённый)</string></property>
+        <property name="checked"><bool>false</bool></property>
+       </widget>
+      </item>
+
+      <item row="4" column="0">
+       <widget class="QCheckBox" name="cbMeteo11Station">
+        <property name="text"><string>Метео-11 (от метеостанции)</string></property>
+        <property name="checked"><bool>false</bool></property>
+       </widget>
+      </item>
+
+     </layout>
+    </widget>
+   </item>
+
+   <!-- Кнопки -->
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation"><enum>Qt::Horizontal</enum></property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Save</set>
+     </property>
+    </widget>
+   </item>
+
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

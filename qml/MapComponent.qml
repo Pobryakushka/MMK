@@ -9,12 +9,15 @@ Map {
     objectName: "map"
     anchors.fill: parent
     plugin: pluginOsm
+//    center: coord.coordinateFrom
 //        center: QtPositioning.coordinate(54.19609, 37.61822) // Tula
 //        center: QtPositioning.coordinate(coord.latitudeFrom, coord.longitudeFrom)
     property var coordinateFrom: coord.coordinateFrom
-    onCoordinateFromChanged: polyline.updateDistance()
+    onCoordinateFromChanged: {
+        marker.coordinate = coordinateFrom;
+    }
     property var coordinateTo: coord.coordinateTo
-    onCoordinateToChanged: polyline.updateDistance()
+//  onCoordinateToChanged: polyline.updateDistance()
     property bool fitView: coord.fitView
     onFitViewChanged: geoRectangle()
     onSupportedMapTypesChanged: {
@@ -27,6 +30,10 @@ Map {
     }
 
     zoomLevel: 14
+
+    Component.onCompleted: {
+        map.center = coord.coordinateFrom;
+    }
 
     Behavior on center {
         CoordinateAnimation {duration: 1000; easing.type:  Easing.OutCubic}
@@ -147,7 +154,7 @@ Map {
         }
     }
 
-    MapPolyline {
+/*    MapPolyline {
         id: polyline
         z: marker.z - 1
         line.color: "#B200FF"
@@ -168,13 +175,13 @@ Map {
             markerCurrentStation.visible = path[0] === path[1] ? false : true;
             markerCurrentStation.coordinate = path[1]
         }
-    }
+    } */
     MapQuickItem {
         id: marker
         z: 2
         anchorPoint.x: markerImage.width/2 * markerImage.scale
         anchorPoint.y: markerImage.height * markerImage.scale
-        coordinate: polyline.path[0]
+        coordinate: coord.coordinateFrom
         sourceItem:  Image {
             id: markerImage
             source: "qrc:///dat/images/marker.png"
@@ -200,11 +207,10 @@ Map {
 //                onTriggered: console.log(geocodeModel.status, geocodeModel.errorString)
 //            }
     }
-    MarkerStation {
-        id: markerCurrentStation
-        color: "black"
-    }
-
+//    MarkerStation {
+//        id: markerCurrentStation
+//        color: "black"
+//    }
     function createStationsMarkers(coordinate, tooltipText) {
         var component = Qt.createComponent("MarkerStation.qml");
         var item = component.createObject(map, {"coordinate": coordinate, "tooltipText": tooltipText, "tooltipZ": map.z + 1});

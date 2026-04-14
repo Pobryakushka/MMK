@@ -1,7 +1,23 @@
+/**********************************************************/
+/*                                                        */
+/*             Реализация класса QwtChartZoom             */
+/*                      Версия 1.5.2                      */
+/*                                                        */
+/* Разработал Мельников Сергей Андреевич,                 */
+/* г. Каменск-Уральский Свердловской обл., 2012 г.,       */
+/* при поддержке Ю. А. Роговского, г. Новосибирск.        */
+/*                                                        */
+/* Разрешается свободное использование и распространение. */
+/* Упоминание автора обязательно.                         */
+/*                                                        */
+/**********************************************************/
+//Исправленно для версии QWT 6.1.0 (2015-03-12)
+
 #include "qwtchartzoom.h"
 
 #include <qwt_scale_widget.h>
 #include <math.h>
+#include <QDebug>
 
 // Конструктор
 QwtChartZoom::QwtChartZoom(QwtPlot *qp) :
@@ -25,7 +41,7 @@ QwtChartZoom::QwtChartZoom(QwtPlot *qp) :
 
     qp->replot();   // перестраиваем график
     // Координатная сетка
-    QwtPlotGrid *grid = nullptr;
+    QwtPlotGrid *grid = NULL;
     // оси, к которым она прикреплена
     int xAx;    // горизонтальная
     int yAx;    // вертикальная
@@ -49,7 +65,7 @@ QwtChartZoom::QwtChartZoom(QwtPlot *qp) :
         }
     }
     // если координатная сетка была найдена, то
-    if (grid != nullptr)
+    if (grid != NULL)
     {
         // назначаем основную и дополнительную шкалу, отдавая предпочтение
         // той, к которой прикреплена сетка
@@ -83,6 +99,10 @@ QwtChartZoom::QwtChartZoom(QwtPlot *qp) :
 
     // устанавливаем обработчик всех событий
     qwtp->installEventFilter(this);
+    // ИСПРАВЛЕНИЕ: также устанавливаем обработчик на canvas для двойного клика
+    if (qwtp->canvas()) {
+        qwtp->canvas()->installEventFilter(this);
+    }
     // для всех шкал графика
     for (int ax=0; ax < QwtPlot::axisCnt; ax++)
         // назначаем обработчик событий (фильтр событий)
@@ -120,7 +140,7 @@ QObject *QwtChartZoom::generalParent(QObject *p)
     // определяем родителя на текущем уровне
     QObject *tp = gp->parent();
     // пока родитель на текущем уровне не NULL
-    while (tp != nullptr)
+    while (tp != NULL)
     {
         // понижаем уровень:
         // запоминаем в качестве предыдущего родителя текущий
@@ -465,12 +485,33 @@ bool QwtChartZoom::eventFilter(QObject *target,QEvent *event)
 //        if (event->type() == QEvent::Show ||
 //            event->type() == QEvent::Resize)
 //            updatePlot();   // обновляем график
+    
+    // ИСПРАВЛЕНИЕ: обработка двойного клика для восстановления масштаба
+    // Работает как для графика, так и для canvas
+    if (event->type() == QEvent::MouseButtonDblClick)
+    {
+        QMouseEvent *mEvent = static_cast<QMouseEvent *>(event);
+        qDebug() << "QwtChartZoom: Двойной клик обнаружен, кнопка:" << mEvent->button();
+        // если двойной клик левой кнопкой мыши
+        if (mEvent->button() == Qt::LeftButton)
+        {
+            qDebug() << "QwtChartZoom: Восстановление исходного масштаба";
+            // восстанавливаем исходные границы графика
+            restBounds();
+            // перерисовываем график
+            qwtp->replot();
+            return true;  // событие обработано
+        }
+    }
+    
     // если событие произошло для графика, то
     if (target == qwtp)
+    {
         // если изменились размеры графика, то
         if (event->type() == QEvent::Show ||
                 event->type() == QEvent::Resize)
             updatePlot();   // обновляем график
+    }
     // передаем управление стандартному обработчику событий
     return QObject::eventFilter(target,event);
 }
@@ -562,6 +603,8 @@ void QScaleBounds::set(double mn,double mx)
         plot->setAxisScale(slave,ak*mn+bk,ak*mx+bk);
         emit axisScaleChanged(slave, ak*mn+bk, ak*mx+bk);
     }
+    // ИСПРАВЛЕНИЕ: обязательно перерисовываем график после изменения масштаба
+    plot->replot();
 }
 
 // Восстановление исходных границ шкалы
@@ -838,8 +881,8 @@ void QMainZoomSvc::procZoom(QMouseEvent *mEvent)
                 double tp = plt->invTransform(mY,scp_y);
                 // устанавливаем нижнюю и верхнюю границы вертикальной шкалы
                 zoom->isb_y->set(bt,tp);
-                // перестраиваем график (синхронно с остальными)
-                plt->replot();
+                // ИСПРАВЛЕНИЕ: replot() теперь вызывается внутри set(), убираем дублирование
+                // plt->replot();
             }
             // очищаем признак режима
             zoom->setRegim(QwtChartZoom::ctNone);
