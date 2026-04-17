@@ -30,7 +30,6 @@
 #include <QLabel>
 #include <QSpinBox>
 #include <QDialogButtonBox>
-#include "MapTileDownloader.h"
 #include <QFile>
 #include <QUrl>
 
@@ -95,7 +94,6 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->cbWorkMode, &QCheckBox::stateChanged, this, &MainWindow::onWorkModeChanged);
     connect(ui->cbStandbyMode, &QCheckBox::stateChanged, this, &MainWindow::onStandbyModeChanged);
     connect(ui->btnConnectSensors, &QPushButton::clicked, this, &MainWindow::onConnectSensorsClicked);
-    connect(ui->btnDownloadMap,    &QPushButton::clicked, this, &MainWindow::onDownloadMapClicked);
     connect(ui->btnSyncTime, &QPushButton::clicked, this, &MainWindow::onSyncTimeClicked);
     connect(ui->editDateTime, &QLineEdit::editingFinished, this, &MainWindow::onDateTimeEditingFinished);
     connect(ui->editDateTime, &QLineEdit::textEdited, this, &MainWindow::onDateTimeEditingStarted);
@@ -154,10 +152,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     // Пути к директориям тайлов карты
     QString appData = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
-    m_mapCacheDir   = appData + "/MapCache";
-    m_mapOfflineDir = appData + "/MapOffline";
+    m_mapCacheDir = appData + "/MapCache";
     QDir().mkpath(m_mapCacheDir);
-    QDir().mkpath(m_mapOfflineDir);
 
     // Локальная директория провайдеров тайлов — Qt OSM-плагин загружает отдельный файл
     // на каждый тип карты: {base}/street, {base}/satellite, {base}/cycle и т.д.
@@ -195,10 +191,9 @@ MainWindow::MainWindow(QWidget *parent)
     // Базовый URL директории (с завершающим слешем!) — плагин сам добавит имя файла
     QString osmProvidersUrl = QUrl::fromLocalFile(providersDir + "/").toString();
 
-    ui->quickWidget->engine()->rootContext()->setContextProperty("coord",            &qcp);
-    ui->quickWidget->engine()->rootContext()->setContextProperty("mapCacheDir",      m_mapCacheDir);
-    ui->quickWidget->engine()->rootContext()->setContextProperty("mapOfflineDir",    m_mapOfflineDir);
-    ui->quickWidget->engine()->rootContext()->setContextProperty("osmProvidersUrl",  osmProvidersUrl);
+    ui->quickWidget->engine()->rootContext()->setContextProperty("coord",           &qcp);
+    ui->quickWidget->engine()->rootContext()->setContextProperty("mapCacheDir",     m_mapCacheDir);
+    ui->quickWidget->engine()->rootContext()->setContextProperty("osmProvidersUrl", osmProvidersUrl);
     ui->quickWidget->setSource(QUrl("qrc:/qml/Main.qml"));
     createMapComponent("osm");
 
@@ -1731,95 +1726,6 @@ void MainWindow::setupMapItems(QQuickItem *item)
     }
 }
 
-void MainWindow::downloadMapTiles(double north, double south,
-                                   double west,  double east,
-                                   int minZoom,  int maxZoom)
-{
-    if (!m_tileDownloader) {
-        m_tileDownloader = new MapTileDownloader(this);
-        connect(m_tileDownloader, &MapTileDownloader::progressChanged,
-                this, [this](int done, int total) {
-            statusBar()->showMessage(
-                QString("Загрузка карты: %1 / %2 тайлов...").arg(done).arg(total), 0);
-        });
-        connect(m_tileDownloader, &MapTileDownloader::finished,
-                this, [this](int downloaded, int failed) {
-            ui->btnDownloadMap->setText("Скачать карту");
-            ui->btnDownloadMap->setEnabled(true);
-            if (failed == 0) {
-                statusBar()->showMessage(
-                    QString("Карта загружена: %1 тайлов. Доступна офлайн.").arg(downloaded), 8000);
-            } else {
-                statusBar()->showMessage(
-                    QString("Карта загружена: %1 тайлов, %2 ошибок.").arg(downloaded).arg(failed), 8000);
-            }
-        });
-        connect(m_tileDownloader, &MapTileDownloader::logMessage,
-                this, [](const QString &msg) { qDebug() << "[TileDownloader]" << msg; });
-    }
-
-    if (m_tileDownloader->isDownloading()) {
-        QMessageBox::information(this, "Загрузка карты",
-                                 "Загрузка уже идёт. Дождитесь завершения.");
-        return;
-    }
-
-    m_tileDownloader->download(m_mapOfflineDir, north, south, west, east, minZoom, maxZoom);
-}
-
-void MainWindow::onDownloadMapClicked()
-{
-    if (m_tileDownloader && m_tileDownloader->isDownloading()) {
-        // Кнопка во время загрузки — отмена
-        m_tileDownloader->cancel();
-        ui->btnDownloadMap->setText("Скачать карту");
-        return;
-    }
-
-    // Читаем границы видимой области карты — они обновляются из QML в coord (QmlCoordinateProxy)
-    double north = qcp.visibleNorth();
-    double south = qcp.visibleSouth();
-    double west  = qcp.visibleWest();
-    double east  = qcp.visibleEast();
-
-    if (north == 0 && south == 0 && west == 0 && east == 0) {
-        QMessageBox::warning(this, "Ошибка", "Не удалось получить область карты. Убедитесь, что карта отображается.");
-        return;
-    }
-
-    // Диалог выбора уровней масштабирования
-    QDialog dlg(this);
-    dlg.setWindowTitle("Скачать карту");
-    dlg.setFixedSize(320, 200);
-    auto *layout = new QVBoxLayout(&dlg);
-
-    layout->addWidget(new QLabel(
-        QString("Область: %.2f°–%.2f°N, %.2f°–%.2f°E")
-            .arg(south).arg(north).arg(west).arg(east)));
-    layout->addWidget(new QLabel("Zoom от:"));
-    auto *spinMin = new QSpinBox(&dlg);
-    spinMin->setRange(0, 18); spinMin->setValue(5);
-    layout->addWidget(spinMin);
-    layout->addWidget(new QLabel("Zoom до:"));
-    auto *spinMax = new QSpinBox(&dlg);
-    spinMax->setRange(0, 18); spinMax->setValue(14);
-    layout->addWidget(spinMax);
-
-    auto *btnBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
-    layout->addWidget(btnBox);
-    connect(btnBox, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
-    connect(btnBox, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
-
-    if (dlg.exec() != QDialog::Accepted) return;
-
-    int minZoom = spinMin->value();
-    int maxZoom = spinMax->value();
-    if (minZoom > maxZoom) qSwap(minZoom, maxZoom);
-
-    ui->btnDownloadMap->setText("Отменить загрузку");
-    downloadMapTiles(north, south, west, east, minZoom, maxZoom);
-
-}
 
 void MainWindow::updateDateTime()
 {
