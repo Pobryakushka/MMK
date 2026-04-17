@@ -159,25 +159,41 @@ MainWindow::MainWindow(QWidget *parent)
     QDir().mkpath(m_mapCacheDir);
     QDir().mkpath(m_mapOfflineDir);
 
-    // Локальный JSON-файл провайдеров тайлов — заменяет список Qt (который указывает на
-    // Thunderforest с обязательным API-ключом) на бесплатные тайлы OpenStreetMap.
-    QString osmProvidersPath = appData + "/osm_providers.json";
+    // Локальная директория провайдеров тайлов — Qt OSM-плагин загружает отдельный файл
+    // на каждый тип карты: {base}/street, {base}/satellite, {base}/cycle и т.д.
+    // Это заменяет серверы Qt (maps-redirect.qt.io → Thunderforest, требует API-ключ)
+    // на бесплатные тайлы OpenStreetMap.
+    QString providersDir = appData + "/osm_providers";
+    QDir().mkpath(providersDir);
     {
-        QFile f(osmProvidersPath);
-        if (f.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            f.write(R"json({
-    "StreetMap":      { "url": "http://tile.openstreetmap.org/${z}/${x}/${y}.png", "minimumZoomLevel": 0, "maximumZoomLevel": 19, "apiKeyRequired": false, "copyright": { "label": "OpenStreetMap contributors", "link": "http://www.openstreetmap.org/copyright" } },
-    "SatelliteMapDay":{ "url": "http://tile.openstreetmap.org/${z}/${x}/${y}.png", "minimumZoomLevel": 0, "maximumZoomLevel": 19, "apiKeyRequired": false, "copyright": { "label": "OpenStreetMap contributors", "link": "http://www.openstreetmap.org/copyright" } },
-    "TerrainMap":     { "url": "http://tile.openstreetmap.org/${z}/${x}/${y}.png", "minimumZoomLevel": 0, "maximumZoomLevel": 19, "apiKeyRequired": false, "copyright": { "label": "OpenStreetMap contributors", "link": "http://www.openstreetmap.org/copyright" } },
-    "CycleMap":       { "url": "http://tile.openstreetmap.org/${z}/${x}/${y}.png", "minimumZoomLevel": 0, "maximumZoomLevel": 19, "apiKeyRequired": false, "copyright": { "label": "OpenStreetMap contributors", "link": "http://www.openstreetmap.org/copyright" } },
-    "TransitMap":     { "url": "http://tile.openstreetmap.org/${z}/${x}/${y}.png", "minimumZoomLevel": 0, "maximumZoomLevel": 19, "apiKeyRequired": false, "copyright": { "label": "OpenStreetMap contributors", "link": "http://www.openstreetmap.org/copyright" } },
-    "NightTransitMap":{ "url": "http://tile.openstreetmap.org/${z}/${x}/${y}.png", "minimumZoomLevel": 0, "maximumZoomLevel": 19, "apiKeyRequired": false, "copyright": { "label": "OpenStreetMap contributors", "link": "http://www.openstreetmap.org/copyright" } },
-    "HikingMap":      { "url": "http://tile.openstreetmap.org/${z}/${x}/${y}.png", "minimumZoomLevel": 0, "maximumZoomLevel": 19, "apiKeyRequired": false, "copyright": { "label": "OpenStreetMap contributors", "link": "http://www.openstreetmap.org/copyright" } }
-})json");
-            f.close();
+        // Правильный формат файлов провайдеров Qt OSM-плагина (qt/qtlocation source):
+        //   UrlTemplate — шаблон с %z/%x/%y
+        //   ImageFormat, MapCopyRight, DataCopyRight — обязательные поля
+        static const QByteArray tpl = R"json({
+    "UrlTemplate":      "https://a.tile.openstreetmap.org/%z/%x/%y.png",
+    "ImageFormat":      "png",
+    "MapCopyRight":     "<a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a>",
+    "DataCopyRight":    "<a href='https://www.openstreetmap.org/copyright'>OpenStreetMap contributors</a>",
+    "MinimumZoomLevel": 0,
+    "MaximumZoomLevel": 19
+})json";
+        // Все известные имена файлов, которые Qt запрашивает у провайдеров
+        static const QStringList names = {
+            "street", "satellite", "cycle", "transit",
+            "night-transit", "terrain", "hiking",
+            "street-hires", "satellite-hires", "cycle-hires", "transit-hires",
+            "night-transit-hires", "terrain-hires", "hiking-hires"
+        };
+        for (const QString &name : names) {
+            QFile f(providersDir + "/" + name);
+            if (f.open(QIODevice::WriteOnly | QIODevice::Text)) {
+                f.write(tpl);
+                f.close();
+            }
         }
     }
-    QString osmProvidersUrl = QUrl::fromLocalFile(osmProvidersPath).toString();
+    // Базовый URL директории (с завершающим слешем!) — плагин сам добавит имя файла
+    QString osmProvidersUrl = QUrl::fromLocalFile(providersDir + "/").toString();
 
     ui->quickWidget->engine()->rootContext()->setContextProperty("coord",            &qcp);
     ui->quickWidget->engine()->rootContext()->setContextProperty("mapCacheDir",      m_mapCacheDir);
