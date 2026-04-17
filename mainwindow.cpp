@@ -31,6 +31,8 @@
 #include <QSpinBox>
 #include <QDialogButtonBox>
 #include "MapTileDownloader.h"
+#include <QFile>
+#include <QUrl>
 
 
 // ====================================================================
@@ -157,9 +159,30 @@ MainWindow::MainWindow(QWidget *parent)
     QDir().mkpath(m_mapCacheDir);
     QDir().mkpath(m_mapOfflineDir);
 
-    ui->quickWidget->engine()->rootContext()->setContextProperty("coord",         &qcp);
-    ui->quickWidget->engine()->rootContext()->setContextProperty("mapCacheDir",   m_mapCacheDir);
-    ui->quickWidget->engine()->rootContext()->setContextProperty("mapOfflineDir", m_mapOfflineDir);
+    // Локальный JSON-файл провайдеров тайлов — заменяет список Qt (который указывает на
+    // Thunderforest с обязательным API-ключом) на бесплатные тайлы OpenStreetMap.
+    QString osmProvidersPath = appData + "/osm_providers.json";
+    {
+        QFile f(osmProvidersPath);
+        if (f.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            f.write(R"json({
+    "StreetMap":      { "url": "http://tile.openstreetmap.org/${z}/${x}/${y}.png", "minimumZoomLevel": 0, "maximumZoomLevel": 19, "apiKeyRequired": false, "copyright": { "label": "OpenStreetMap contributors", "link": "http://www.openstreetmap.org/copyright" } },
+    "SatelliteMapDay":{ "url": "http://tile.openstreetmap.org/${z}/${x}/${y}.png", "minimumZoomLevel": 0, "maximumZoomLevel": 19, "apiKeyRequired": false, "copyright": { "label": "OpenStreetMap contributors", "link": "http://www.openstreetmap.org/copyright" } },
+    "TerrainMap":     { "url": "http://tile.openstreetmap.org/${z}/${x}/${y}.png", "minimumZoomLevel": 0, "maximumZoomLevel": 19, "apiKeyRequired": false, "copyright": { "label": "OpenStreetMap contributors", "link": "http://www.openstreetmap.org/copyright" } },
+    "CycleMap":       { "url": "http://tile.openstreetmap.org/${z}/${x}/${y}.png", "minimumZoomLevel": 0, "maximumZoomLevel": 19, "apiKeyRequired": false, "copyright": { "label": "OpenStreetMap contributors", "link": "http://www.openstreetmap.org/copyright" } },
+    "TransitMap":     { "url": "http://tile.openstreetmap.org/${z}/${x}/${y}.png", "minimumZoomLevel": 0, "maximumZoomLevel": 19, "apiKeyRequired": false, "copyright": { "label": "OpenStreetMap contributors", "link": "http://www.openstreetmap.org/copyright" } },
+    "NightTransitMap":{ "url": "http://tile.openstreetmap.org/${z}/${x}/${y}.png", "minimumZoomLevel": 0, "maximumZoomLevel": 19, "apiKeyRequired": false, "copyright": { "label": "OpenStreetMap contributors", "link": "http://www.openstreetmap.org/copyright" } },
+    "HikingMap":      { "url": "http://tile.openstreetmap.org/${z}/${x}/${y}.png", "minimumZoomLevel": 0, "maximumZoomLevel": 19, "apiKeyRequired": false, "copyright": { "label": "OpenStreetMap contributors", "link": "http://www.openstreetmap.org/copyright" } }
+})json");
+            f.close();
+        }
+    }
+    QString osmProvidersUrl = QUrl::fromLocalFile(osmProvidersPath).toString();
+
+    ui->quickWidget->engine()->rootContext()->setContextProperty("coord",            &qcp);
+    ui->quickWidget->engine()->rootContext()->setContextProperty("mapCacheDir",      m_mapCacheDir);
+    ui->quickWidget->engine()->rootContext()->setContextProperty("mapOfflineDir",    m_mapOfflineDir);
+    ui->quickWidget->engine()->rootContext()->setContextProperty("osmProvidersUrl",  osmProvidersUrl);
     ui->quickWidget->setSource(QUrl("qrc:/qml/Main.qml"));
     createMapComponent("osm");
 

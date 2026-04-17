@@ -41,13 +41,17 @@ Item {
             map.destroy();
         }
 
-        // Пути передаются из C++ как context properties (только ASCII — нельзя использовать
-        // нелатинские символы в строках Qt.createQmlObject, это ломает парсер QML).
-        var cacheParam   = (typeof mapCacheDir    !== "undefined" && mapCacheDir    !== "")
+        // Пути и URL передаются из C++ как context properties (только ASCII —
+        // нелатинские символы в строках Qt.createQmlObject ломают парсер QML).
+        var cacheParam     = (typeof mapCacheDir      !== "undefined" && mapCacheDir      !== "")
             ? 'PluginParameter { name: "osm.mapping.cache.directory"; value: "' + mapCacheDir + '" } '
             : '';
-        var offlineParam = (typeof mapOfflineDir  !== "undefined" && mapOfflineDir  !== "")
+        var offlineParam   = (typeof mapOfflineDir    !== "undefined" && mapOfflineDir    !== "")
             ? 'PluginParameter { name: "osm.mapping.offline.directory"; value: "' + mapOfflineDir + '" } '
+            : '';
+        // Локальный JSON-файл провайдеров: заменяет Thunderforest (платный) на OSM-тайлы
+        var providersParam = (typeof osmProvidersUrl  !== "undefined" && osmProvidersUrl  !== "")
+            ? 'PluginParameter { name: "osm.mapping.providersrepository.address"; value: "' + osmProvidersUrl + '" } '
             : '';
 
         map = Qt.createQmlObject('import QtQuick 2.0; import QtLocation 5.9; ' +
@@ -57,8 +61,8 @@ Item {
                                     'plugin: Plugin { ' +
                                     'id: plugin; ' +
                                     'name: "osm"; ' +
-                                    'PluginParameter { name: "osm.mapping.host"; value: "http://tile.openstreetmap.org/" } ' +
                                     'PluginParameter { name: "osm.useragent"; value: "MMK/1.0" } ' +
+                                    providersParam +
                                     cacheParam +
                                     offlineParam +
                                     '}}',
