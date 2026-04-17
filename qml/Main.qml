@@ -84,7 +84,7 @@ Item {
         }
     }
     // Показывать только эти типы карт в comboBox (остальные скрываем)
-    property var allowedMapTypes: ["Street Map", "Terrain Map"]
+    property var allowedMapTypes: ["Street Map"]
 
     function updateMapTypes() {
         if (!map || !map.supportedMapTypes || map.supportedMapTypes.length === 0) {
