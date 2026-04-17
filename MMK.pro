@@ -9,6 +9,7 @@ CONFIG += c++17
 DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
+    LocalTileServer.cpp \
     AlgorithmsCalc.cpp \
     ExportDialog.cpp \
     GroundMeteoParams.cpp \
@@ -40,6 +41,7 @@ SOURCES += \
     RpvIndicator.cpp
 
 HEADERS += \
+    LocalTileServer.h \
     AlgorithmsCalc.h \
     CoordHelper.h \
     ExportDialog.h \
