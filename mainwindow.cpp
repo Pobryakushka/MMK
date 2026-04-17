@@ -177,30 +177,24 @@ MainWindow::MainWindow(QWidget *parent)
     "MinimumZoomLevel": 0,
     "MaximumZoomLevel": 17
 })json";
-        // Тип отключён — не появится в comboBox
-        static const QByteArray provOff = R"json({
-    "Enabled":          false,
-    "UrlTemplate":      "https://a.tile.openstreetmap.org/%z/%x/%y.png",
-    "ImageFormat":      "png",
-    "MapCopyRight":     "",
-    "DataCopyRight":    ""
-})json";
 
         static const QList<QPair<QString, const QByteArray*>> providers = {
             {"street",              &provStreet},
             {"terrain",             &provTopo},
             {"street-hires",        &provStreet},
             {"terrain-hires",       &provTopo},
-            {"satellite",           &provOff},
-            {"satellite-hires",     &provOff},
-            {"cycle",               &provOff},
-            {"cycle-hires",         &provOff},
-            {"transit",             &provOff},
-            {"transit-hires",       &provOff},
-            {"night-transit",       &provOff},
-            {"night-transit-hires", &provOff},
-            {"hiking",              &provOff},
-            {"hiking-hires",        &provOff},
+            // Остальные типы тоже должны быть валидными (иначе Qt ломает провайдеров)
+            // — используем OSM, но они будут скрыты в comboBox через QML-фильтр
+            {"satellite",           &provStreet},
+            {"satellite-hires",     &provStreet},
+            {"cycle",               &provStreet},
+            {"cycle-hires",         &provStreet},
+            {"transit",             &provStreet},
+            {"transit-hires",       &provStreet},
+            {"night-transit",       &provStreet},
+            {"night-transit-hires", &provStreet},
+            {"hiking",              &provStreet},
+            {"hiking-hires",        &provStreet},
         };
         for (const auto &p : providers) {
             QFile f(providersDir + "/" + p.first);
