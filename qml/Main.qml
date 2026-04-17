@@ -43,14 +43,11 @@ Item {
 
         // Пути и URL передаются из C++ как context properties (только ASCII —
         // нелатинские символы в строках Qt.createQmlObject ломают парсер QML).
-        var cacheParam     = (typeof mapCacheDir      !== "undefined" && mapCacheDir      !== "")
+        var cacheParam     = (typeof mapCacheDir     !== "undefined" && mapCacheDir     !== "")
             ? 'PluginParameter { name: "osm.mapping.cache.directory"; value: "' + mapCacheDir + '" } '
             : '';
-        var offlineParam   = (typeof mapOfflineDir    !== "undefined" && mapOfflineDir    !== "")
-            ? 'PluginParameter { name: "osm.mapping.offline.directory"; value: "' + mapOfflineDir + '" } '
-            : '';
         // Локальный JSON-файл провайдеров: заменяет Thunderforest (платный) на OSM-тайлы
-        var providersParam = (typeof osmProvidersUrl  !== "undefined" && osmProvidersUrl  !== "")
+        var providersParam = (typeof osmProvidersUrl !== "undefined" && osmProvidersUrl !== "")
             ? 'PluginParameter { name: "osm.mapping.providersrepository.address"; value: "' + osmProvidersUrl + '" } '
             : '';
 
@@ -64,7 +61,6 @@ Item {
                                     'PluginParameter { name: "osm.useragent"; value: "MMK/1.0" } ' +
                                     providersParam +
                                     cacheParam +
-                                    offlineParam +
                                     '}}',
                                  main);
 

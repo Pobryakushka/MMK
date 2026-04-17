@@ -10,7 +10,6 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
     AlgorithmsCalc.cpp \
-    MapTileDownloader.cpp \
     ExportDialog.cpp \
     GroundMeteoParams.cpp \
     LandingCalculation.cpp \
@@ -42,7 +41,6 @@ SOURCES += \
 
 HEADERS += \
     AlgorithmsCalc.h \
-    MapTileDownloader.h \
     CoordHelper.h \
     ExportDialog.h \
     GroundMeteoParams.h \
