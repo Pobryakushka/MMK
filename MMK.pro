@@ -1,6 +1,6 @@
 PATH_TO_REFERENCES = ../../references
 
-QT       += core gui quick quickwidgets qml positioning serialport sql printsupport core-private
+QT       += core gui quick quickwidgets qml positioning location network serialport sql printsupport core-private
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 CONFIG += c++17

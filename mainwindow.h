@@ -173,6 +173,9 @@ private:
     QTimer *m_iwsConnectTimer = nullptr;  // таймаут ожидания первого ответа
     bool    m_iwsDeviceActive = false;    // true только после получения реального ответа
 
+    // Карта: директория кэша тайлов
+    QString m_mapCacheDir;
+
     // Финальный запрос к ИВС по завершении измерения АМС
     int     m_pendingIwsRecordId;   // record_id ожидающий данных ИВС
     QTimer *m_iwsFinalRequestTimer; // таймаут ожидания ответа
@@ -189,6 +192,13 @@ private:
 
     void createMapComponent(const QString &pluginName);
     void setupMapItems(QQuickItem *item);
+
+    /**
+     * Скачать тайлы для заданной области и сохранить в MapOffline-директорию.
+     * После завершения карта будет работать без интернета для этого района.
+     * @param north/south/west/east  Границы в градусах
+     * @param minZoom/maxZoom        Диапазон уровней масштабирования (рекомендуется 5–14)
+     */
     void setupMapCoordinatesButton();
     void updateMapCoordinatesButtonStyle();
     void setupGnssCheckbox();

@@ -41,23 +41,42 @@ Item {
             map.destroy();
         }
 
+        // Пути и URL передаются из C++ как context properties (только ASCII —
+        // нелатинские символы в строках Qt.createQmlObject ломают парсер QML).
+        var cacheParam     = (typeof mapCacheDir     !== "undefined" && mapCacheDir     !== "")
+            ? 'PluginParameter { name: "osm.mapping.cache.directory"; value: "' + mapCacheDir + '" } '
+            : '';
+        // Локальный JSON-файл провайдеров: заменяет Thunderforest (платный) на OSM-тайлы
+        var providersParam = (typeof osmProvidersUrl !== "undefined" && osmProvidersUrl !== "")
+            ? 'PluginParameter { name: "osm.mapping.providersrepository.address"; value: "' + osmProvidersUrl + '" } '
+            : '';
+
         map = Qt.createQmlObject('import QtQuick 2.0; import QtLocation 5.9; ' +
                                     'MapComponent { ' +
                                     'objectName: "map"; ' +
                                     'zoomLevel: ' + zoomLevel + '; ' +
                                     'plugin: Plugin { ' +
                                     'id: plugin; ' +
-                                    'name: "' + pluginName + '"; ' +
-                                    'PluginParameter {' +
-                                    'name: "osm.mapping.host"; ' +
-                                    'value: "http://a.tile.openstreetmap.org/"' +
-                                    '}}}',
+                                    'name: "osm"; ' +
+                                    'PluginParameter { name: "osm.useragent"; value: "MMK/1.0" } ' +
+                                    providersParam +
+                                    cacheParam +
+                                    '}}',
                                  main);
 
         if (map) {
-             map.onSupportedMapTypesChanged.connect(function() {
-                 updateMapTypes();
-             });
+            map.onSupportedMapTypesChanged.connect(function() {
+                updateMapTypes();
+            });
+            map.onVisibleRegionChanged.connect(function() {
+                var r = map.visibleRegion;
+                if (r && r.isValid) {
+                    coord.visibleNorth = r.topLeft.latitude;
+                    coord.visibleSouth = r.bottomRight.latitude;
+                    coord.visibleWest  = r.topLeft.longitude;
+                    coord.visibleEast  = r.bottomRight.longitude;
+                }
+            });
             updateMapTypes();
         }
     }
@@ -81,6 +100,22 @@ Item {
                 map.activeMapType = map.supportedMapTypes[coord.currentMapType];
             }
         }
+    }
+
+    // Возвращает видимые границы карты как объект {north, south, west, east}.
+    // Вызывается из C++ через QMetaObject::invokeMethod с Q_RETURN_ARG(QVariant).
+    function getVisibleBounds() {
+        if (!map) return {"north": 0, "south": 0, "west": 0, "east": 0};
+        var r = map.visibleRegion;
+        if (!r.isValid) return {"north": 0, "south": 0, "west": 0, "east": 0};
+        var tl = r.topLeft;
+        var br = r.bottomRight;
+        return {
+            "north": tl.latitude,
+            "south": br.latitude,
+            "west":  tl.longitude,
+            "east":  br.longitude
+        };
     }
 
     function createStationsMarkers(coordinate, tooltipText) {

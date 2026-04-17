@@ -23,6 +23,15 @@
 #include <QStatusBar>
 #include <QDebug>
 #include <QStandardItemModel>
+#include <QStandardPaths>
+#include <QDir>
+#include <QDialog>
+#include <QVBoxLayout>
+#include <QLabel>
+#include <QSpinBox>
+#include <QDialogButtonBox>
+#include <QFile>
+#include <QUrl>
 
 
 // ====================================================================
@@ -141,7 +150,50 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->comboBox_mapTypes, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
             &qcp, &QmlCoordinateProxy::setCurrentMapType);
 
-    ui->quickWidget->engine()->rootContext()->setContextProperty("coord", &qcp);
+    // Пути к директориям тайлов карты
+    QString appData = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+    m_mapCacheDir = appData + "/MapCache";
+    QDir().mkpath(m_mapCacheDir);
+
+    // Локальная директория провайдеров тайлов — Qt OSM-плагин загружает отдельный файл
+    // на каждый тип карты: {base}/street, {base}/satellite, {base}/cycle и т.д.
+    // Это заменяет серверы Qt (maps-redirect.qt.io → Thunderforest, требует API-ключ)
+    // на бесплатные тайлы OpenStreetMap.
+    QString providersDir = appData + "/osm_providers";
+    QDir().mkpath(providersDir);
+    {
+        // Правильный формат файлов провайдеров Qt OSM-плагина (qt/qtlocation source):
+        //   UrlTemplate — шаблон с %z/%x/%y
+        //   ImageFormat, MapCopyRight, DataCopyRight — обязательные поля
+        static const QByteArray tpl = R"json({
+    "UrlTemplate":      "https://a.tile.openstreetmap.org/%z/%x/%y.png",
+    "ImageFormat":      "png",
+    "MapCopyRight":     "<a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a>",
+    "DataCopyRight":    "<a href='https://www.openstreetmap.org/copyright'>OpenStreetMap contributors</a>",
+    "MinimumZoomLevel": 0,
+    "MaximumZoomLevel": 19
+})json";
+        // Все известные имена файлов, которые Qt запрашивает у провайдеров
+        static const QStringList names = {
+            "street", "satellite", "cycle", "transit",
+            "night-transit", "terrain", "hiking",
+            "street-hires", "satellite-hires", "cycle-hires", "transit-hires",
+            "night-transit-hires", "terrain-hires", "hiking-hires"
+        };
+        for (const QString &name : names) {
+            QFile f(providersDir + "/" + name);
+            if (f.open(QIODevice::WriteOnly | QIODevice::Text)) {
+                f.write(tpl);
+                f.close();
+            }
+        }
+    }
+    // Базовый URL директории (с завершающим слешем!) — плагин сам добавит имя файла
+    QString osmProvidersUrl = QUrl::fromLocalFile(providersDir + "/").toString();
+
+    ui->quickWidget->engine()->rootContext()->setContextProperty("coord",           &qcp);
+    ui->quickWidget->engine()->rootContext()->setContextProperty("mapCacheDir",     m_mapCacheDir);
+    ui->quickWidget->engine()->rootContext()->setContextProperty("osmProvidersUrl", osmProvidersUrl);
     ui->quickWidget->setSource(QUrl("qrc:/qml/Main.qml"));
     createMapComponent("osm");
 
@@ -1673,6 +1725,7 @@ void MainWindow::setupMapItems(QQuickItem *item)
         item->update();
     }
 }
+
 
 void MainWindow::updateDateTime()
 {

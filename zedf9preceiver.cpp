@@ -84,19 +84,39 @@ bool ZedF9PReceiver::connectToReceiver(const QString &portName, qint32 baudRate)
     connect(m_serialPort, &QSerialPort::readyRead, this, &ZedF9PReceiver::onReadyRead);
     connect(m_serialPort, &QSerialPort::errorOccurred, this, &ZedF9PReceiver::onErrorOccurred);
 
-    // Конфигурируем приёмник
+    // Устройство ещё не подтверждено — ждём первых данных
+    m_confirmed = false;
+
+    // Запускаем таймаут: если за 5 с нет данных — порт закрываем
+    if (!m_connectTimer) {
+        m_connectTimer = new QTimer(this);
+        m_connectTimer->setSingleShot(true);
+        connect(m_connectTimer, &QTimer::timeout, this, [this]() {
+            if (!m_confirmed && m_serialPort->isOpen()) {
+                qWarning() << "ZedF9PReceiver: таймаут — GNSS не отвечает, закрываем порт";
+                disconnectFromReceiver();
+                emit errorOccurred("GNSS устройство не отвечает");
+            }
+        });
+    }
+    m_connectTimer->start(5000);
+
+    // Конфигурируем приёмник (ответ на конфигурацию сам подтвердит устройство)
     QTimer::singleShot(500, this, [this]() {
         configureUBXProtocol();
         enableUBXMessages(true);
         setNavigationRate(1000);
     });
 
-    emit connected();
+    // connected() будет эмитирован только после получения первых данных
     return true;
 }
 
 void ZedF9PReceiver::disconnectFromReceiver()
 {
+    if (m_connectTimer) m_connectTimer->stop();
+    m_confirmed = false;
+
     if (m_serialPort->isOpen()) {
         disconnect(m_serialPort, &QSerialPort::readyRead, this, &ZedF9PReceiver::onReadyRead);
         disconnect(m_serialPort, &QSerialPort::errorOccurred, this, &ZedF9PReceiver::onErrorOccurred);
@@ -111,6 +131,15 @@ void ZedF9PReceiver::disconnectFromReceiver()
     m_buffer.clear();
     m_ubxBuffer.clear();
     m_rtcmBuffer.clear();
+}
+
+void ZedF9PReceiver::confirmConnection()
+{
+    if (m_confirmed) return;
+    m_confirmed = true;
+    if (m_connectTimer) m_connectTimer->stop();
+    qDebug() << "ZedF9PReceiver: устройство подтверждено (получены данные)";
+    emit connected();
 }
 
 bool ZedF9PReceiver::connectOutputPort(const QString &portName, qint32 baudRate){
@@ -161,7 +190,7 @@ void ZedF9PReceiver::onOutputPortErrorOccurred(QSerialPort::SerialPortError erro
 
 bool ZedF9PReceiver::isConnected() const
 {
-    return m_serialPort->isOpen();
+    return m_serialPort->isOpen() && m_confirmed;
 }
 
 QStringList ZedF9PReceiver::getAvailablePorts()
@@ -196,6 +225,7 @@ void ZedF9PReceiver::onReadyRead()
 
             QByteArray ubxMsg = m_buffer.left(totalLength);
             m_buffer.remove(0, totalLength);
+            confirmConnection(); // UBX пакет — устройство точно отвечает
             parseUBX(ubxMsg);
             continue;
         }
@@ -231,6 +261,7 @@ void ZedF9PReceiver::onReadyRead()
         m_buffer.remove(0, endIdx + 2);
 
         if (validateNMEAChecksum(sentence)) {
+            confirmConnection(); // Валидная NMEA — устройство точно отвечает
             parseNMEA(sentence);
             m_lastNMEA = sentence;
             emit nmeaReceived(sentence);
