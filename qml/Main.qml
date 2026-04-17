@@ -6,6 +6,9 @@ import "."
 Item {
     id: main
     property var map: null
+    // Маппинг: индекс в comboBox → индекс в map.supportedMapTypes
+    property var mapTypeIndices: []
+
 //    MapComponent {
 //        id: currentMap
 //        plugin: plugin
@@ -80,25 +83,51 @@ Item {
             updateMapTypes();
         }
     }
+    // Показывать только эти типы карт в comboBox (остальные скрываем)
+    property var allowedMapTypes: ["Street Map", "Terrain Map"]
+
     function updateMapTypes() {
-        if (map && map.supportedMapTypes && map.supportedMapTypes.length > 0) {
-            console.log("Map types available:", map.supportedMapTypes.length);
-            var mapTypes = [];
-            for (var i = 0; i < map.supportedMapTypes.length; i++) {
-                mapTypes.push(map.supportedMapTypes[i].name);
-            }
-            coord.mapTypes = mapTypes;
-        } else {
+        if (!map || !map.supportedMapTypes || map.supportedMapTypes.length === 0) {
             console.log("Map types not yet available");
+            return;
+        }
+        console.log("Map types available:", map.supportedMapTypes.length);
+        var names = [];
+        var indices = [];
+        for (var i = 0; i < map.supportedMapTypes.length; i++) {
+            var name = map.supportedMapTypes[i].name;
+            if (allowedMapTypes.indexOf(name) >= 0) {
+                names.push(name);
+                indices.push(i);
+            }
+        }
+        // Фолбек: если ни один из нужных типов не найден — показать все
+        if (names.length === 0) {
+            for (var j = 0; j < map.supportedMapTypes.length; j++) {
+                names.push(map.supportedMapTypes[j].name);
+                indices.push(j);
+            }
+        }
+        mapTypeIndices = indices;
+        coord.mapTypes = names;
+        // Применить текущий тип карты с правильным маппингом
+        applyMapType(coord.currentMapType);
+    }
+
+    function applyMapType(comboIndex) {
+        if (!map || !map.supportedMapTypes) return;
+        var actualIndex = (mapTypeIndices.length > comboIndex)
+            ? mapTypeIndices[comboIndex]
+            : comboIndex;
+        if (actualIndex >= 0 && actualIndex < map.supportedMapTypes.length) {
+            map.activeMapType = map.supportedMapTypes[actualIndex];
         }
     }
 
     Connections {
         target: coord
         onCurrentMapTypeChanged: {
-            if (map && map.supportedMapTypes && map.supportedMapTypes.length > coord.currentMapType) {
-                map.activeMapType = map.supportedMapTypes[coord.currentMapType];
-            }
+            applyMapType(coord.currentMapType);
         }
     }
 
