@@ -1,6 +1,7 @@
 #pragma once
 #include "tileid.h"
 #include <QtGlobal>
+#include <QVector>
 
 // Lazy iterator over all tiles in a bounding box across a zoom range.
 // Generates TileIds on demand — no large QVector allocation.

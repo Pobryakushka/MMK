@@ -18,5 +18,8 @@ inline uint qHash(const TileId &id, uint seed = 0) noexcept {
     quint64 key = (quint64(id.z & 0x1F) << 38)
                 | (quint64(id.x & 0x7FFFF) << 19)
                 | (quint64(id.y & 0x7FFFF));
-    return ::qHash(key, seed);
+    // Mix manually — avoids recursive call to this overload via ADL
+    seed ^= uint(key)       + 0x9e3779b9u + (seed << 6) + (seed >> 2);
+    seed ^= uint(key >> 32) + 0x9e3779b9u + (seed << 6) + (seed >> 2);
+    return seed;
 }

@@ -18,6 +18,7 @@
 #include <QSplitter>
 #include <QFrame>
 #include <QScrollBar>
+#include <QStatusBar>
 #include <cmath>
 
 static constexpr qint64 WARN_TILE_THRESHOLD = 500'000;

@@ -160,8 +160,9 @@ void TileDownloader::fetchTile(TileId id, int retries)
     QNetworkReply *reply = m_nam->get(req);
     m_active.append({id, retries, reply});
 
-    connect(reply, &QNetworkReply::finished,
-            this,  &TileDownloader::onReplyFinished);
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        onReplyFinished(reply);
+    });
 }
 
 void TileDownloader::onReplyFinished(QNetworkReply *reply)
