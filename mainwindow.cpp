@@ -156,16 +156,11 @@ MainWindow::MainWindow(QWidget *parent)
     QDir().mkpath(m_mapCacheDir);
 
     // Локальная директория провайдеров тайлов — Qt OSM-плагин загружает отдельный файл
-    // на каждый тип карты: {base}/street, {base}/satellite, {base}/cycle и т.д.
-    // Это заменяет серверы Qt (maps-redirect.qt.io → Thunderforest, требует API-ключ)
-    // на бесплатные тайлы OpenStreetMap.
+    // на каждый тип карты: {base}/street, {base}/terrain, {base}/satellite, и т.д.
     QString providersDir = appData + "/osm_providers";
     QDir().mkpath(providersDir);
     {
-        // Правильный формат файлов провайдеров Qt OSM-плагина (qt/qtlocation source):
-        //   UrlTemplate — шаблон с %z/%x/%y
-        //   ImageFormat, MapCopyRight, DataCopyRight — обязательные поля
-        static const QByteArray tpl = R"json({
+        static const QByteArray provStreet = R"json({
     "UrlTemplate":      "https://a.tile.openstreetmap.org/%z/%x/%y.png",
     "ImageFormat":      "png",
     "MapCopyRight":     "<a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a>",
@@ -173,17 +168,38 @@ MainWindow::MainWindow(QWidget *parent)
     "MinimumZoomLevel": 0,
     "MaximumZoomLevel": 19
 })json";
-        // Все известные имена файлов, которые Qt запрашивает у провайдеров
-        static const QStringList names = {
-            "street", "satellite", "cycle", "transit",
-            "night-transit", "terrain", "hiking",
-            "street-hires", "satellite-hires", "cycle-hires", "transit-hires",
-            "night-transit-hires", "terrain-hires", "hiking-hires"
+        // OpenTopoMap — топографическая карта с рельефом
+        static const QByteArray provTopo = R"json({
+    "UrlTemplate":      "https://a.tile.opentopomap.org/%z/%x/%y.png",
+    "ImageFormat":      "png",
+    "MapCopyRight":     "<a href='https://opentopomap.org'>OpenTopoMap</a>",
+    "DataCopyRight":    "<a href='https://www.openstreetmap.org/copyright'>OpenStreetMap contributors</a>",
+    "MinimumZoomLevel": 0,
+    "MaximumZoomLevel": 17
+})json";
+
+        static const QList<QPair<QString, const QByteArray*>> providers = {
+            {"street",              &provStreet},
+            {"terrain",             &provTopo},
+            {"street-hires",        &provStreet},
+            {"terrain-hires",       &provTopo},
+            // Остальные типы тоже должны быть валидными (иначе Qt ломает провайдеров)
+            // — используем OSM, но они будут скрыты в comboBox через QML-фильтр
+            {"satellite",           &provStreet},
+            {"satellite-hires",     &provStreet},
+            {"cycle",               &provStreet},
+            {"cycle-hires",         &provStreet},
+            {"transit",             &provStreet},
+            {"transit-hires",       &provStreet},
+            {"night-transit",       &provStreet},
+            {"night-transit-hires", &provStreet},
+            {"hiking",              &provStreet},
+            {"hiking-hires",        &provStreet},
         };
-        for (const QString &name : names) {
-            QFile f(providersDir + "/" + name);
+        for (const auto &p : providers) {
+            QFile f(providersDir + "/" + p.first);
             if (f.open(QIODevice::WriteOnly | QIODevice::Text)) {
-                f.write(tpl);
+                f.write(*p.second);
                 f.close();
             }
         }
