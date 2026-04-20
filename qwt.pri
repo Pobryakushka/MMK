@@ -33,7 +33,6 @@ win32 {
         DEBUG_SFX =
     }
     QWT_LIB = qwt$${DEBUG_SFX}$${VER_SFX}
+    INCLUDEPATH += $${QWT_INC_PATH}
+    LIBS += -L$${QWT_PATH}/lib -l$${QWT_LIB}
 }
-
-INCLUDEPATH += $${QWT_INC_PATH}
-LIBS += -L$${QWT_PATH}/lib/libqwt.a
