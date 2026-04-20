@@ -190,7 +190,6 @@ MainWindow::MainWindow(QWidget *parent)
     QString osmProvidersUrl = QUrl::fromLocalFile(providersDir + "/").toString();
 
     ui->quickWidget->engine()->rootContext()->setContextProperty("coord",           &qcp);
-    ui->quickWidget->engine()->rootContext()->setContextProperty("mapCacheDir",     m_mapCacheDir);
     ui->quickWidget->engine()->rootContext()->setContextProperty("osmProvidersUrl", osmProvidersUrl);
     ui->quickWidget->setSource(QUrl("qrc:/qml/Main.qml"));
     createMapComponent("osm");
