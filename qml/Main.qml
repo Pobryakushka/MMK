@@ -46,9 +46,11 @@ Item {
 
         // Пути и URL передаются из C++ как context properties (только ASCII —
         // нелатинские символы в строках Qt.createQmlObject ломают парсер QML).
-        var cacheParam     = (typeof mapCacheDir     !== "undefined" && mapCacheDir     !== "")
-            ? 'PluginParameter { name: "osm.mapping.cache.directory"; value: "' + mapCacheDir + '" } '
-            : '';
+        // Дисковый кэш Qt OSM-плагина отключён: кэширование тайлов ведётся
+        // исключительно в MBTiles через локальный HTTP-сервер (LocalTileServer).
+        var noDiskCache =
+            'PluginParameter { name: "osm.mapping.cache.disk.cost_strategy"; value: "Unitary" } ' +
+            'PluginParameter { name: "osm.mapping.cache.disk.size"; value: "0" } ';
         // Локальный JSON-файл провайдеров: заменяет Thunderforest (платный) на OSM-тайлы
         var providersParam = (typeof osmProvidersUrl !== "undefined" && osmProvidersUrl !== "")
             ? 'PluginParameter { name: "osm.mapping.providersrepository.address"; value: "' + osmProvidersUrl + '" } '
@@ -63,7 +65,7 @@ Item {
                                     'name: "osm"; ' +
                                     'PluginParameter { name: "osm.useragent"; value: "MMK/1.0" } ' +
                                     providersParam +
-                                    cacheParam +
+                                    noDiskCache +
                                     '}}',
                                  main);
 

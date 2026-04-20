@@ -32,6 +32,8 @@
 #include <QDialogButtonBox>
 #include <QFile>
 #include <QUrl>
+#include <QFileInfo>
+#include <QFileSystemWatcher>
 
 
 // ====================================================================
@@ -135,10 +137,11 @@ MainWindow::MainWindow(QWidget *parent)
     // Первоначальная установка времени
     updateDateTime();
 
-    connect(&qcp, &QmlCoordinateProxy::mapTypesChanged, [=](const QStringList &list) {
-        qDebug() << "mapTypesChanged received with" << list.size() << "items:" << list;
-        ui->comboBox_mapTypes->clear();
-        ui->comboBox_mapTypes->addItems(list);
+    // Когда QML сообщает о доступных типах карт — обновляем comboBox
+    connect(&qcp, &QmlCoordinateProxy::mapTypesChanged, this, [this](const QStringList &list) {
+        qDebug() << "mapTypesChanged:" << list;
+        m_osmMapTypeNames = list;
+        refreshMapCombo();
     });
 
     connect(&qcp, &QmlCoordinateProxy::coordinateFromChanged, [=](const QGeoCoordinate &c){
@@ -147,68 +150,46 @@ MainWindow::MainWindow(QWidget *parent)
         }
     });
 
-    connect(ui->comboBox_mapTypes, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
-            &qcp, &QmlCoordinateProxy::setCurrentMapType);
+    // comboBox → onMapComboChanged (вместо прямой связи с qcp)
+    connect(ui->comboBox_mapTypes,
+            static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
+            this, &MainWindow::onMapComboChanged);
 
     // Пути к директориям тайлов карты
     QString appData = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
     m_mapCacheDir = appData + "/MapCache";
     QDir().mkpath(m_mapCacheDir);
 
-    // Локальная директория провайдеров тайлов — Qt OSM-плагин загружает отдельный файл
-    // на каждый тип карты: {base}/street, {base}/terrain, {base}/satellite, и т.д.
+    // Директория провайдеров тайлов (Qt OSM-плагин читает отдельный JSON-файл на тип)
     QString providersDir = appData + "/osm_providers";
     QDir().mkpath(providersDir);
-    {
-        static const QByteArray provStreet = R"json({
-    "UrlTemplate":      "https://a.tile.openstreetmap.org/%z/%x/%y.png",
-    "ImageFormat":      "png",
-    "MapCopyRight":     "<a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a>",
-    "DataCopyRight":    "<a href='https://www.openstreetmap.org/copyright'>OpenStreetMap contributors</a>",
-    "MinimumZoomLevel": 0,
-    "MaximumZoomLevel": 19
-})json";
-        // OpenTopoMap — топографическая карта с рельефом
-        static const QByteArray provTopo = R"json({
-    "UrlTemplate":      "https://a.tile.opentopomap.org/%z/%x/%y.png",
-    "ImageFormat":      "png",
-    "MapCopyRight":     "<a href='https://opentopomap.org'>OpenTopoMap</a>",
-    "DataCopyRight":    "<a href='https://www.openstreetmap.org/copyright'>OpenStreetMap contributors</a>",
-    "MinimumZoomLevel": 0,
-    "MaximumZoomLevel": 17
-})json";
 
-        static const QList<QPair<QString, const QByteArray*>> providers = {
-            {"street",              &provStreet},
-            {"terrain",             &provTopo},
-            {"street-hires",        &provStreet},
-            {"terrain-hires",       &provTopo},
-            // Остальные типы тоже должны быть валидными (иначе Qt ломает провайдеров)
-            // — используем OSM, но они будут скрыты в comboBox через QML-фильтр
-            {"satellite",           &provStreet},
-            {"satellite-hires",     &provStreet},
-            {"cycle",               &provStreet},
-            {"cycle-hires",         &provStreet},
-            {"transit",             &provStreet},
-            {"transit-hires",       &provStreet},
-            {"night-transit",       &provStreet},
-            {"night-transit-hires", &provStreet},
-            {"hiking",              &provStreet},
-            {"hiking-hires",        &provStreet},
-        };
-        for (const auto &p : providers) {
-            QFile f(providersDir + "/" + p.first);
-            if (f.open(QIODevice::WriteOnly | QIODevice::Text)) {
-                f.write(*p.second);
-                f.close();
-            }
-        }
+    // Запускаем локальный тайл-сервер ОДИН РАЗ — порт фиксирован на всё время работы.
+    // При переключении режима (онлайн ↔ офлайн) меняется только БД через switchTo(),
+    // URL провайдеров и сам плагин карты не пересоздаются.
+    m_tileServer = new LocalTileServer(this);
+    if (m_tileServer->start()) {
+        // Провайдеры пишутся один раз с фиксированным портом
+        writeProvidersJson(providersDir, m_tileServer->tileUrlTemplate());
+        // Онлайн-режим по умолчанию: Street Map с кэшированием в MBTiles
+        m_tileServer->switchTo(m_mapCacheDir + "/Street Map.mbtiles",
+                               "https://a.tile.openstreetmap.org/%1/%2/%3.png");
+    } else {
+        // Фолбек: прямой OSM без кэширования
+        writeProvidersJson(providersDir,
+                           "https://a.tile.openstreetmap.org/%z/%x/%y.png");
     }
-    // Базовый URL директории (с завершающим слешем!) — плагин сам добавит имя файла
+
+    // Следим за новыми .mbtiles-файлами в MapCache
+    auto *watcher = new QFileSystemWatcher(QStringList{m_mapCacheDir}, this);
+    connect(watcher, &QFileSystemWatcher::directoryChanged, this, [this]() {
+        refreshMapCombo();
+    });
+
+    // Базовый URL директории провайдеров (не меняется после старта)
     QString osmProvidersUrl = QUrl::fromLocalFile(providersDir + "/").toString();
 
     ui->quickWidget->engine()->rootContext()->setContextProperty("coord",           &qcp);
-    ui->quickWidget->engine()->rootContext()->setContextProperty("mapCacheDir",     m_mapCacheDir);
     ui->quickWidget->engine()->rootContext()->setContextProperty("osmProvidersUrl", osmProvidersUrl);
     ui->quickWidget->setSource(QUrl("qrc:/qml/Main.qml"));
     createMapComponent("osm");
@@ -2249,4 +2230,110 @@ void MainWindow::onAutoConnectorFinished()
             "Проверьте физическое подключение кабелей и нажмите\n"
             "«Подключить датчики» для повторной попытки.");
     }
+}
+// ── MBTiles / LocalTileServer методы ─────────────────────────────────────────
+
+void MainWindow::writeProvidersJson(const QString &providersDir, const QString &urlTemplate)
+{
+    // Строим JSON через replace, чтобы %z/%x/%y в urlTemplate не мешал QString::arg()
+    QString tmpl =
+        "{\n"
+        "    \"UrlTemplate\":      \"TILE_URL\",\n"
+        "    \"ImageFormat\":      \"png\",\n"
+        "    \"MapCopyRight\":     \"<a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a>\",\n"
+        "    \"DataCopyRight\":    \"<a href='https://www.openstreetmap.org/copyright'>OpenStreetMap contributors</a>\",\n"
+        "    \"MinimumZoomLevel\": 0,\n"
+        "    \"MaximumZoomLevel\": 19\n"
+        "}";
+    QByteArray json = tmpl.replace("TILE_URL", urlTemplate).toUtf8();
+
+    static const QStringList types = {
+        "street", "terrain", "street-hires", "terrain-hires",
+        "satellite", "satellite-hires", "cycle", "cycle-hires",
+        "transit", "transit-hires", "night-transit", "night-transit-hires",
+        "hiking", "hiking-hires"
+    };
+    for (const QString &type : types) {
+        QFile f(providersDir + "/" + type);
+        if (f.open(QIODevice::WriteOnly | QIODevice::Text))
+            f.write(json);
+    }
+}
+
+void MainWindow::refreshMapCombo()
+{
+    QComboBox *combo = ui->comboBox_mapTypes;
+    QSignalBlocker blocker(combo);
+
+    // Запоминаем текущий выбор, чтобы восстановить его после перестройки
+    QString savedMbtiles = m_currentMbtilesPath;
+    int     savedOsmIdx  = m_osmCurrentIndex;
+
+    combo->clear();
+
+    // 1. OSM-типы
+    for (const QString &name : m_osmMapTypeNames)
+        combo->addItem(name);
+
+    // 2. .mbtiles-файлы из MapCache
+    QDir dir(m_mapCacheDir);
+    QStringList files = dir.entryList({"*.mbtiles"}, QDir::Files, QDir::Name);
+    if (!files.isEmpty()) {
+        combo->insertSeparator(combo->count());
+        for (const QString &file : files) {
+            QString label = "[офлайн] " + QFileInfo(file).completeBaseName();
+            combo->addItem(label, dir.absoluteFilePath(file));
+        }
+    }
+
+    // 3. Восстанавливаем выбор
+    if (!savedMbtiles.isEmpty()) {
+        for (int i = 0; i < combo->count(); ++i) {
+            if (combo->itemData(i).toString() == savedMbtiles) {
+                combo->setCurrentIndex(i);
+                return;
+            }
+        }
+    }
+    if (savedOsmIdx >= 0 && savedOsmIdx < m_osmMapTypeNames.size())
+        combo->setCurrentIndex(savedOsmIdx);
+}
+
+void MainWindow::onMapComboChanged(int index)
+{
+    if (index < 0) return;
+
+    QString mbtilesPath = ui->comboBox_mapTypes->itemData(index).toString();
+
+    if (!mbtilesPath.isEmpty()) {
+        // Офлайн-режим: тайлы только из MBTiles-файла
+        m_currentMbtilesPath = mbtilesPath;
+        applyMbtilesFile(mbtilesPath);
+    } else if (index < m_osmMapTypeNames.size()) {
+        // Онлайн-режим: OSM с кэшированием в MBTiles
+        m_currentMbtilesPath.clear();
+        m_osmCurrentIndex = index;
+        applyOnlineMapType(index);
+    }
+}
+
+void MainWindow::applyOnlineMapType(int osmIndex)
+{
+    // Только переключаем БД в сервере — карту не пересоздаём (порт не меняется)
+    QString mapName     = m_osmMapTypeNames.value(osmIndex, "Street Map");
+    QString mbtilesPath = m_mapCacheDir + "/" + mapName + ".mbtiles";
+
+    if (m_tileServer)
+        m_tileServer->switchTo(mbtilesPath,
+                               "https://a.tile.openstreetmap.org/%1/%2/%3.png");
+
+    // Переключаем активный тип карты в QML (сетка тайлов та же, данные из нашего сервера)
+    qcp.setCurrentMapType(osmIndex);
+}
+
+void MainWindow::applyMbtilesFile(const QString &mbtilesPath)
+{
+    // Только переключаем БД в сервере — карту не пересоздаём (порт не меняется)
+    if (m_tileServer)
+        m_tileServer->switchTo(mbtilesPath, QString()); // офлайн: нет upstream
 }

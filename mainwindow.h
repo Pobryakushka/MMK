@@ -19,6 +19,7 @@
 #include "functionalcontroldialog.h"
 #include "workregulationdialog.h"
 #include "autoconnector.h"
+#include "LocalTileServer.h"
 
 // Forward declaration
 class SourceData;
@@ -176,6 +177,12 @@ private:
     // Карта: директория кэша тайлов
     QString m_mapCacheDir;
 
+    // Локальный HTTP-сервер тайлов (MBTiles → OSM plugin)
+    LocalTileServer *m_tileServer = nullptr;
+    QStringList      m_osmMapTypeNames;  // OSM-типы, полученные от плагина
+    QString          m_currentMbtilesPath; // пусто = онлайн-режим
+    int              m_osmCurrentIndex = 0;
+
     // Финальный запрос к ИВС по завершении измерения АМС
     int     m_pendingIwsRecordId;   // record_id ожидающий данных ИВС
     QTimer *m_iwsFinalRequestTimer; // таймаут ожидания ответа
@@ -192,6 +199,13 @@ private:
 
     void createMapComponent(const QString &pluginName);
     void setupMapItems(QQuickItem *item);
+
+    // MBTiles / tile-server методы
+    void writeProvidersJson(const QString &providersDir, const QString &urlTemplate);
+    void refreshMapCombo();
+    void onMapComboChanged(int index);
+    void applyOnlineMapType(int osmIndex);
+    void applyMbtilesFile(const QString &mbtilesPath);
 
     /**
      * Скачать тайлы для заданной области и сохранить в MapOffline-директорию.
