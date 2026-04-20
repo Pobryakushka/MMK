@@ -164,14 +164,18 @@ MainWindow::MainWindow(QWidget *parent)
     QString providersDir = appData + "/osm_providers";
     QDir().mkpath(providersDir);
 
-    // Запускаем локальный тайл-сервер (онлайн-режим с кэшированием в MBTiles)
+    // Запускаем локальный тайл-сервер ОДИН РАЗ — порт фиксирован на всё время работы.
+    // При переключении режима (онлайн ↔ офлайн) меняется только БД через switchTo(),
+    // URL провайдеров и сам плагин карты не пересоздаются.
     m_tileServer = new LocalTileServer(this);
-    const QString defaultMbtiles = m_mapCacheDir + "/Street Map.mbtiles";
-    if (m_tileServer->open(defaultMbtiles,
-                           "https://a.tile.openstreetmap.org/%1/%2/%3.png")) {
+    if (m_tileServer->start()) {
+        // Провайдеры пишутся один раз с фиксированным портом
         writeProvidersJson(providersDir, m_tileServer->tileUrlTemplate());
+        // Онлайн-режим по умолчанию: Street Map с кэшированием в MBTiles
+        m_tileServer->switchTo(m_mapCacheDir + "/Street Map.mbtiles",
+                               "https://a.tile.openstreetmap.org/%1/%2/%3.png");
     } else {
-        // Фолбек: пишем провайдеры напрямую на OSM
+        // Фолбек: прямой OSM без кэширования
         writeProvidersJson(providersDir,
                            "https://a.tile.openstreetmap.org/%z/%x/%y.png");
     }
@@ -2316,32 +2320,21 @@ void MainWindow::onMapComboChanged(int index)
 
 void MainWindow::applyOnlineMapType(int osmIndex)
 {
-    QString appData     = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
-    QString providersDir = appData + "/osm_providers";
+    // Только переключаем БД в сервере — карту не пересоздаём (порт не меняется)
     QString mapName     = m_osmMapTypeNames.value(osmIndex, "Street Map");
     QString mbtilesPath = m_mapCacheDir + "/" + mapName + ".mbtiles";
 
-    if (!m_tileServer) m_tileServer = new LocalTileServer(this);
-    if (m_tileServer->open(mbtilesPath,
-                           "https://a.tile.openstreetmap.org/%1/%2/%3.png")) {
-        writeProvidersJson(providersDir, m_tileServer->tileUrlTemplate());
-    }
+    if (m_tileServer)
+        m_tileServer->switchTo(mbtilesPath,
+                               "https://a.tile.openstreetmap.org/%1/%2/%3.png");
 
+    // Переключаем активный тип карты в QML (сетка тайлов та же, данные из нашего сервера)
     qcp.setCurrentMapType(osmIndex);
-    createMapComponent("osm");
 }
 
 void MainWindow::applyMbtilesFile(const QString &mbtilesPath)
 {
-    QString appData      = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
-    QString providersDir = appData + "/osm_providers";
-
-    if (!m_tileServer) m_tileServer = new LocalTileServer(this);
-    // Офлайн: нет upstream-прокси
-    if (m_tileServer->open(mbtilesPath, QString())) {
-        writeProvidersJson(providersDir, m_tileServer->tileUrlTemplate());
-    }
-
-    qcp.setCurrentMapType(0);
-    createMapComponent("osm");
+    // Только переключаем БД в сервере — карту не пересоздаём (порт не меняется)
+    if (m_tileServer)
+        m_tileServer->switchTo(mbtilesPath, QString()); // офлайн: нет upstream
 }

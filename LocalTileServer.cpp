@@ -20,60 +20,45 @@ LocalTileServer::~LocalTileServer()
     close();
 }
 
-bool LocalTileServer::open(const QString &mbtilesPath, const QString &upstreamTemplate)
+// ── Public API ────────────────────────────────────────────────────────────────
+
+bool LocalTileServer::start()
 {
-    close();
-
-    m_upstreamTemplate = upstreamTemplate;
-
-    // Open SQLite MBTiles (created if not exists)
-    QString connName = QString("LTS_%1_%2").arg(reinterpret_cast<quintptr>(this)).arg(++m_connSeq);
-    m_db = QSqlDatabase::addDatabase("QSQLITE", connName);
-    m_db.setDatabaseName(mbtilesPath);
-    if (!m_db.open()) {
-        qWarning() << "LocalTileServer: cannot open" << mbtilesPath << m_db.lastError().text();
-        QSqlDatabase::removeDatabase(connName);
-        return false;
-    }
-
-    QSqlQuery q(m_db);
-    q.exec("PRAGMA journal_mode=WAL");
-    q.exec("PRAGMA synchronous=NORMAL");
-    q.exec("CREATE TABLE IF NOT EXISTS metadata "
-           "(name TEXT NOT NULL, value TEXT)");
-    q.exec("CREATE TABLE IF NOT EXISTS tiles "
-           "(zoom_level INTEGER, tile_column INTEGER, tile_row INTEGER, tile_data BLOB, "
-           "PRIMARY KEY (zoom_level, tile_column, tile_row))");
+    if (m_server->isListening()) return true;
 
     if (!m_server->listen(QHostAddress::LocalHost)) {
-        qWarning() << "LocalTileServer: cannot bind TCP port:" << m_server->errorString();
-        m_db.close();
-        QSqlDatabase::removeDatabase(connName);
+        qWarning() << "LocalTileServer: cannot bind:" << m_server->errorString();
         return false;
     }
     m_port = m_server->serverPort();
+    qDebug() << "LocalTileServer: started on port" << m_port;
+    return true;
+}
+
+bool LocalTileServer::switchTo(const QString &mbtilesPath, const QString &upstreamTemplate)
+{
+    closeDb();
+    m_upstreamTemplate = upstreamTemplate;
+
+    if (!openDb(mbtilesPath)) {
+        qWarning() << "LocalTileServer: cannot open DB:" << mbtilesPath;
+        return false;
+    }
 
     if (!upstreamTemplate.isEmpty() && !m_nam) {
         m_nam = new QNetworkAccessManager(this);
     }
 
-    qDebug() << "LocalTileServer: listening on port" << m_port
-             << "| db:" << mbtilesPath
+    qDebug() << "LocalTileServer: switchTo" << mbtilesPath
              << "| proxy:" << (!upstreamTemplate.isEmpty() ? "yes" : "no");
     return true;
 }
 
 void LocalTileServer::close()
 {
+    closeDb();
     if (m_server && m_server->isListening())
         m_server->close();
-
-    if (m_db.isOpen()) {
-        QString connName = m_db.connectionName();
-        m_db.close();
-        if (!connName.isEmpty())
-            QSqlDatabase::removeDatabase(connName);
-    }
     m_port = 0;
 }
 
@@ -82,13 +67,44 @@ QString LocalTileServer::tileUrlTemplate() const
     return QString("http://127.0.0.1:%1/%z/%x/%y.png").arg(m_port);
 }
 
-// ── Private slots ─────────────────────────────────────────────────────────────
+// ── Private: DB ───────────────────────────────────────────────────────────────
+
+bool LocalTileServer::openDb(const QString &path)
+{
+    QString connName = QString("LTS_%1_%2")
+        .arg(reinterpret_cast<quintptr>(this)).arg(++m_connSeq);
+    m_db = QSqlDatabase::addDatabase("QSQLITE", connName);
+    m_db.setDatabaseName(path);
+    if (!m_db.open()) {
+        QSqlDatabase::removeDatabase(connName);
+        return false;
+    }
+    QSqlQuery q(m_db);
+    q.exec("PRAGMA journal_mode=WAL");
+    q.exec("PRAGMA synchronous=NORMAL");
+    q.exec("CREATE TABLE IF NOT EXISTS metadata "
+           "(name TEXT NOT NULL, value TEXT)");
+    q.exec("CREATE TABLE IF NOT EXISTS tiles "
+           "(zoom_level INTEGER, tile_column INTEGER, tile_row INTEGER, tile_data BLOB, "
+           "PRIMARY KEY (zoom_level, tile_column, tile_row))");
+    return true;
+}
+
+void LocalTileServer::closeDb()
+{
+    if (m_db.isOpen()) {
+        QString c = m_db.connectionName();
+        m_db.close();
+        if (!c.isEmpty()) QSqlDatabase::removeDatabase(c);
+    }
+}
+
+// ── Private: network ─────────────────────────────────────────────────────────
 
 void LocalTileServer::onNewConnection()
 {
     QTcpSocket *socket = m_server->nextPendingConnection();
-
-    // One-shot readyRead: on loopback, the full request fits in one segment.
+    // One-shot: full HTTP request always fits in one loopback TCP segment
     connect(socket, &QTcpSocket::readyRead, this, [this, socket]() {
         disconnect(socket, &QTcpSocket::readyRead, nullptr, nullptr);
         handleSocket(socket, socket->readAll());
@@ -96,11 +112,9 @@ void LocalTileServer::onNewConnection()
     connect(socket, &QTcpSocket::disconnected, socket, &QTcpSocket::deleteLater);
 }
 
-// ── Private helpers ───────────────────────────────────────────────────────────
-
 void LocalTileServer::handleSocket(QTcpSocket *socket, const QByteArray &req)
 {
-    // Parse "GET /Z/X/Y.png HTTP/1.1" (extension and HTTP version optional)
+    // Parse "GET /Z/X/Y.png HTTP/1.1" – ignore extension
     static QRegularExpression re("GET /(\\d+)/(\\d+)/(\\d+)");
     auto m = re.match(req);
     if (!m.hasMatch()) {
@@ -111,24 +125,28 @@ void LocalTileServer::handleSocket(QTcpSocket *socket, const QByteArray &req)
 
     int z = m.captured(1).toInt();
     int x = m.captured(2).toInt();
-    int y = m.captured(3).toInt();
+    int y = m.captured(3).toInt();   // OSM/slippy y (0 = north)
 
     QByteArray tile = queryTile(z, x, y);
     if (!tile.isEmpty()) {
+        qDebug() << "LocalTileServer: HIT  z" << z << "x" << x << "y" << y
+                 << "yTms" << ((1<<z)-1-y) << "size" << tile.size();
         sendResponse(socket, 200, tile);
         socket->disconnectFromHost();
         return;
     }
 
-    // Cache miss
     if (m_upstreamTemplate.isEmpty()) {
+        qDebug() << "LocalTileServer: MISS (offline) z" << z << "x" << x << "y" << y
+                 << "yTms" << ((1<<z)-1-y);
         sendResponse(socket, 404, {});
         socket->disconnectFromHost();
         return;
     }
 
-    // Fetch from upstream and cache
+    // Proxy to upstream
     QUrl url(m_upstreamTemplate.arg(z).arg(x).arg(y));
+    qDebug() << "LocalTileServer: PROXY z" << z << "x" << x << "y" << y << "->" << url;
     QNetworkRequest netReq(url);
     netReq.setHeader(QNetworkRequest::UserAgentHeader, "MMK/1.0");
     netReq.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
@@ -146,6 +164,8 @@ void LocalTileServer::handleSocket(QTcpSocket *socket, const QByteArray &req)
                 safeSocket->disconnectFromHost();
             }
         } else {
+            qDebug() << "LocalTileServer: upstream error z" << z << "x" << x << "y" << y
+                     << reply->errorString();
             if (safeSocket) {
                 sendResponse(safeSocket, 502, {});
                 safeSocket->disconnectFromHost();
@@ -157,7 +177,7 @@ void LocalTileServer::handleSocket(QTcpSocket *socket, const QByteArray &req)
 QByteArray LocalTileServer::queryTile(int z, int x, int y)
 {
     if (!m_db.isOpen()) return {};
-    // MBTiles uses TMS y-convention (origin bottom-left)
+    // MBTiles stores TMS y (y=0 at south); slippy y (y=0 at north) must be flipped
     int yTms = (1 << z) - 1 - y;
     QSqlQuery q(m_db);
     q.prepare("SELECT tile_data FROM tiles "
