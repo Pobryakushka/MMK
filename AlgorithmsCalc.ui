@@ -66,6 +66,9 @@
    </item>
    <item alignment="Qt::AlignHCenter">
     <widget class="QPushButton" name="btnAlgCalcWithoutScan">
+     <property name="visible">
+      <bool>false</bool>
+     </property>
      <property name="text">
       <string>Расчет без сканирования</string>
      </property>

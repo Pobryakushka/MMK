@@ -18,6 +18,8 @@
 #include "surfacemeteosaver.h"
 #include "functionalcontroldialog.h"
 #include "workregulationdialog.h"
+#include "autoconnector.h"
+#include "LocalTileServer.h"
 
 // Forward declaration
 class SourceData;
@@ -78,10 +80,14 @@ private slots:
     void onGnssConnectFromSettings();
     void onGnssDisconnectFromSettings();
 
-    // Настройки датчиков
-    void onSensorSettingsClicked();
+    // Подключение датчиков
+    void onConnectSensorsClicked();
     void onConnectRequested();
     void onDisconnectRequested();
+
+    // AutoConnector слоты
+    void onAutoConnectorDeviceDetected(AutoConnector::DeviceType type, const QString &port, int baudRate);
+    void onAutoConnectorFinished();
 
     // RS485
     void onSerialDataReceived();
@@ -106,8 +112,9 @@ private slots:
     void onAmsActualWindReceived(const QVector<WindProfileData> &data);
     void onAmsMeasuredWindReceived(const QVector<MeasuredWindData> &data);
 
-    // ИВС прогрев
+    // ИВС прогрев и проверка подключения
     void onIwsWarmupFinished();
+    void onIwsConnectTimeout();
 
     // БИНС слоты
     void onBinsConnectFromSettings();
@@ -120,6 +127,7 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
+    AutoConnector *m_autoConnector = nullptr;
     QTimer *timer;
     QTimer *pollTimer;
     QSerialPort *serialPort;
@@ -162,6 +170,19 @@ private:
     QTimer *m_iwsWarmupTimer;
     bool    m_iwsWarmupDone;
 
+    // Верификация подключения ИВС — порт открыт ≠ устройство отвечает
+    QTimer *m_iwsConnectTimer = nullptr;  // таймаут ожидания первого ответа
+    bool    m_iwsDeviceActive = false;    // true только после получения реального ответа
+
+    // Карта: директория кэша тайлов
+    QString m_mapCacheDir;
+
+    // Локальный HTTP-сервер тайлов (MBTiles → OSM plugin)
+    LocalTileServer *m_tileServer = nullptr;
+    QStringList      m_osmMapTypeNames;  // OSM-типы, полученные от плагина
+    QString          m_currentMbtilesPath; // пусто = онлайн-режим
+    int              m_osmCurrentIndex = 0;
+
     // Финальный запрос к ИВС по завершении измерения АМС
     int     m_pendingIwsRecordId;   // record_id ожидающий данных ИВС
     QTimer *m_iwsFinalRequestTimer; // таймаут ожидания ответа
@@ -171,8 +192,27 @@ private:
     // Сохранение приземных данных ИВС в БД
     SurfaceMeteoSaver *m_surfaceMeteoSaver;
 
+    void connectSensorsFromConfig();
+    bool connectIwsPort(const QString &port, int baudRate, QSerialPort::DataBits dataBits,
+                        QSerialPort::Parity parity, QSerialPort::StopBits stopBits,
+                        int protocol, quint8 address, int pollInterval);
+
     void createMapComponent(const QString &pluginName);
     void setupMapItems(QQuickItem *item);
+
+    // MBTiles / tile-server методы
+    void writeProvidersJson(const QString &providersDir, const QString &urlTemplate);
+    void refreshMapCombo();
+    void onMapComboChanged(int index);
+    void applyOnlineMapType(int osmIndex);
+    void applyMbtilesFile(const QString &mbtilesPath);
+
+    /**
+     * Скачать тайлы для заданной области и сохранить в MapOffline-директорию.
+     * После завершения карта будет работать без интернета для этого района.
+     * @param north/south/west/east  Границы в градусах
+     * @param minZoom/maxZoom        Диапазон уровней масштабирования (рекомендуется 5–14)
+     */
     void setupMapCoordinatesButton();
     void updateMapCoordinatesButtonStyle();
     void setupGnssCheckbox();

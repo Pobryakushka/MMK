@@ -49,6 +49,10 @@ MeasurementResults::MeasurementResults(QWidget *parent)
 {
     ui->setupUi(this);
 
+    // Скрываем нереализованные вкладки
+    ui->tabWidget->removeTab(ui->tabWidget->indexOf(ui->tab_landingCalc));
+    ui->tabWidget->removeTab(ui->tabWidget->indexOf(ui->tab_VNGO));
+
     currentDateTime = QDateTime::currentDateTime();
     int minutes = currentDateTime.time().minute();
     minutes = (minutes / 10) * 10;

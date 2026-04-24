@@ -125,6 +125,11 @@ private:
     QByteArray m_rtcmBuffer;
 
     CustomProtocol *m_customProtocol;
+
+    // Верификация подключения — порт открыт ≠ устройство отвечает
+    bool    m_confirmed = false;       // true только после первого валидного NMEA/UBX
+    QTimer *m_connectTimer = nullptr;  // таймаут ожидания первого ответа
+    void confirmConnection();          // вызывается при первых данных
 };
 
 #endif // ZEDF9PRECEIVER_H
