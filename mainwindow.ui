@@ -72,13 +72,13 @@
        <item>
         <widget class="QScrollArea" name="leftScrollArea">
          <property name="frameShape">
-          <enum>QFrame::NoFrame</enum>
+          <enum>QFrame::Shape::NoFrame</enum>
          </property>
          <property name="verticalScrollBarPolicy">
-          <enum>Qt::ScrollBarAsNeeded</enum>
+          <enum>Qt::ScrollBarPolicy::ScrollBarAsNeeded</enum>
          </property>
          <property name="horizontalScrollBarPolicy">
-          <enum>Qt::ScrollBarAlwaysOff</enum>
+          <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOff</enum>
          </property>
          <property name="widgetResizable">
           <bool>true</bool>
@@ -88,8 +88,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>264</width>
-            <height>664</height>
+            <width>297</width>
+            <height>400</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_scroll">
@@ -133,7 +133,7 @@
               <property name="spacing">
                <number>5</number>
               </property>
-              <item row="4" column="1">
+              <item row="7" column="1">
                <widget class="QLineEdit" name="editDirectionAngle">
                 <property name="text">
                  <string>0.0</string>
@@ -143,14 +143,14 @@
                 </property>
                </widget>
               </item>
-              <item row="2" column="0">
+              <item row="4" column="0">
                <widget class="QLabel" name="lblLongitudeLabel">
                 <property name="text">
                  <string>Долгота:</string>
                 </property>
                </widget>
               </item>
-              <item row="3" column="1">
+              <item row="6" column="1">
                <widget class="QLineEdit" name="editAltitude">
                 <property name="text">
                  <string>156</string>
@@ -160,7 +160,7 @@
                 </property>
                </widget>
               </item>
-              <item row="2" column="1">
+              <item row="4" column="1">
                <layout class="QHBoxLayout" name="longitudeLayout">
                 <property name="spacing">
                  <number>4</number>
@@ -187,35 +187,35 @@
                 </item>
                </layout>
               </item>
-              <item row="1" column="0">
+              <item row="2" column="0">
                <widget class="QLabel" name="lblLatitudeLabel">
                 <property name="text">
                  <string>Широта:</string>
                 </property>
                </widget>
               </item>
-              <item row="4" column="0">
+              <item row="7" column="0">
                <widget class="QLabel" name="lblDirectionAngleLabel">
                 <property name="text">
                  <string>Дирекц. угол:</string>
                 </property>
                </widget>
               </item>
-              <item row="6" column="0">
+              <item row="9" column="0">
                <widget class="QLabel" name="lblPitchAngleLabel">
                 <property name="text">
                  <string>Угол тангажа:</string>
                 </property>
                </widget>
               </item>
-              <item row="5" column="0">
+              <item row="8" column="0">
                <widget class="QLabel" name="lblRollAngleLabel">
                 <property name="text">
                  <string>Угол крена:</string>
                 </property>
                </widget>
               </item>
-              <item row="7" column="0" colspan="2">
+              <item row="10" column="0" colspan="2">
                <widget class="QPushButton" name="btnManualInput">
                 <property name="minimumSize">
                  <size>
@@ -228,7 +228,7 @@
                 </property>
                </widget>
               </item>
-              <item row="0" column="0" colspan="2">
+              <item row="1" column="0" colspan="2">
                <layout class="QHBoxLayout" name="dateTimeLayout">
                 <property name="spacing">
                  <number>5</number>
@@ -281,7 +281,7 @@
                 </item>
                </layout>
               </item>
-              <item row="5" column="1">
+              <item row="8" column="1">
                <widget class="QLineEdit" name="editRollAngle">
                 <property name="text">
                  <string>0.0</string>
@@ -291,14 +291,14 @@
                 </property>
                </widget>
               </item>
-              <item row="3" column="0">
+              <item row="6" column="0">
                <widget class="QLabel" name="lblAltitudeLabel">
                 <property name="text">
                  <string>Высота над УМ:</string>
                 </property>
                </widget>
               </item>
-              <item row="6" column="1">
+              <item row="9" column="1">
                <widget class="QLineEdit" name="editPitchAngle">
                 <property name="text">
                  <string>0.0</string>
@@ -308,7 +308,7 @@
                 </property>
                </widget>
               </item>
-              <item row="1" column="1">
+              <item row="2" column="1">
                <layout class="QHBoxLayout" name="latitudeLayout">
                 <property name="spacing">
                  <number>4</number>
@@ -335,11 +335,8 @@
                 </item>
                </layout>
               </item>
-              <item row="8" column="0" colspan="2">
+              <item row="11" column="0" colspan="2">
                <widget class="QPushButton" name="btnNavigation">
-                <property name="visible">
-                 <bool>false</bool>
-                </property>
                 <property name="text">
                  <string>Навигация</string>
                 </property>
@@ -390,7 +387,7 @@
            <item>
             <spacer name="leftBottomSpacer">
              <property name="orientation">
-              <enum>Qt::Vertical</enum>
+              <enum>Qt::Orientation::Vertical</enum>
              </property>
              <property name="sizeHint" stdset="0">
               <size>
@@ -455,7 +452,7 @@ QLabel {
 }</string>
          </property>
          <property name="frameShape">
-          <enum>QFrame::NoFrame</enum>
+          <enum>QFrame::Shape::NoFrame</enum>
          </property>
          <layout class="QHBoxLayout" name="sensorStatusLayout">
           <property name="spacing">
@@ -482,7 +479,7 @@ QLabel {
              <string>GNSS: отключен</string>
             </property>
             <property name="alignment">
-             <set>Qt::AlignCenter</set>
+             <set>Qt::AlignmentFlag::AlignCenter</set>
             </property>
            </widget>
           </item>
@@ -495,7 +492,7 @@ QLabel {
              <string>АМС: отключен</string>
             </property>
             <property name="alignment">
-             <set>Qt::AlignCenter</set>
+             <set>Qt::AlignmentFlag::AlignCenter</set>
             </property>
            </widget>
           </item>
@@ -508,7 +505,7 @@ QLabel {
              <string>БИНС: отключен</string>
             </property>
             <property name="alignment">
-             <set>Qt::AlignCenter</set>
+             <set>Qt::AlignmentFlag::AlignCenter</set>
             </property>
            </widget>
           </item>
@@ -521,14 +518,14 @@ QLabel {
              <string>ИВС: отключен</string>
             </property>
             <property name="alignment">
-             <set>Qt::AlignCenter</set>
+             <set>Qt::AlignmentFlag::AlignCenter</set>
             </property>
            </widget>
           </item>
           <item>
            <spacer name="sensorStatusSpacer">
             <property name="orientation">
-             <enum>Qt::Horizontal</enum>
+             <enum>Qt::Orientation::Horizontal</enum>
             </property>
             <property name="sizeHint" stdset="0">
              <size>
@@ -608,7 +605,7 @@ QPushButton:checked {
        <item>
         <widget class="QQuickWidget" name="quickWidget">
          <property name="resizeMode">
-          <enum>QQuickWidget::SizeRootObjectToView</enum>
+          <enum>QQuickWidget::ResizeMode::SizeRootObjectToView</enum>
          </property>
         </widget>
        </item>
@@ -651,13 +648,13 @@ QPushButton:checked {
        <item>
         <widget class="QScrollArea" name="rightScrollArea">
          <property name="frameShape">
-          <enum>QFrame::NoFrame</enum>
+          <enum>QFrame::Shape::NoFrame</enum>
          </property>
          <property name="verticalScrollBarPolicy">
-          <enum>Qt::ScrollBarAsNeeded</enum>
+          <enum>Qt::ScrollBarPolicy::ScrollBarAsNeeded</enum>
          </property>
          <property name="horizontalScrollBarPolicy">
-          <enum>Qt::ScrollBarAlwaysOff</enum>
+          <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOff</enum>
          </property>
          <property name="widgetResizable">
           <bool>true</bool>
@@ -667,8 +664,8 @@ QPushButton:checked {
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>244</width>
-            <height>664</height>
+            <width>277</width>
+            <height>400</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_rightScroll">
@@ -713,7 +710,6 @@ QPushButton:checked {
            <item>
             <widget class="QComboBox" name="comboBox_mapTypes"/>
            </item>
-
            <item>
             <widget class="QGroupBox" name="statusGroup">
              <property name="title">
@@ -729,7 +725,7 @@ QPushButton:checked {
                  <string notr="true">QFrame#readinessIndicatorFrame { background-color: #E8F5E9; border-left: 4px solid #43A047; border-radius: 0px; padding: 2px 0px; }</string>
                 </property>
                 <property name="frameShape">
-                 <enum>QFrame::NoFrame</enum>
+                 <enum>QFrame::Shape::NoFrame</enum>
                 </property>
                 <layout class="QHBoxLayout" name="readinessLayout">
                  <property name="spacing">
@@ -750,10 +746,13 @@ QPushButton:checked {
                  <item>
                   <widget class="QLabel" name="lblReadinessIcon">
                    <property name="styleSheet">
-                    <string notr="true">color: #43A047; font-size: 14pt; background: transparent;</string>
+                    <string notr="true">font-size: 16pt; background: transparent;</string>
                    </property>
                    <property name="text">
                     <string>●</string>
+                   </property>
+                   <property name="styleSheet">
+                    <string notr="true">color: #43A047; font-size: 14pt; background: transparent;</string>
                    </property>
                   </widget>
                  </item>
@@ -787,7 +786,7 @@ QPushButton:checked {
                  <item>
                   <spacer name="readinessSpacer">
                    <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
+                    <enum>Qt::Orientation::Horizontal</enum>
                    </property>
                    <property name="sizeHint" stdset="0">
                     <size>
@@ -885,7 +884,7 @@ QPushButton:checked {
                 </property>
                </widget>
               </item>
-              <item alignment="Qt::AlignHCenter">
+              <item alignment="Qt::AlignmentFlag::AlignHCenter">
                <widget class="RpvIndicator" name="rpvIndicator" native="true">
                 <property name="minimumSize">
                  <size>
@@ -959,7 +958,7 @@ QPushButton:checked {
                    <item>
                     <spacer name="progressLabelSpacer">
                      <property name="orientation">
-                      <enum>Qt::Horizontal</enum>
+                      <enum>Qt::Orientation::Horizontal</enum>
                      </property>
                      <property name="sizeHint" stdset="0">
                       <size>
@@ -978,7 +977,7 @@ QPushButton:checked {
                       <string>0%</string>
                      </property>
                      <property name="alignment">
-                      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                      <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
                      </property>
                     </widget>
                    </item>
@@ -1034,7 +1033,7 @@ QPushButton:checked {
                    <item>
                     <spacer name="rpvSpacer">
                      <property name="orientation">
-                      <enum>Qt::Horizontal</enum>
+                      <enum>Qt::Orientation::Horizontal</enum>
                      </property>
                      <property name="sizeHint" stdset="0">
                       <size>
@@ -1053,7 +1052,7 @@ QPushButton:checked {
                       <string>0.0°</string>
                      </property>
                      <property name="alignment">
-                      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                      <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
                      </property>
                     </widget>
                    </item>
@@ -1082,7 +1081,7 @@ QPushButton:checked {
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="btnConnectSensors">
+            <widget class="QPushButton" name="btnSensorSettings">
              <property name="minimumSize">
               <size>
                <width>0</width>
@@ -1559,14 +1558,14 @@ QPushButton:checked {
               </palette>
              </property>
              <property name="text">
-              <string>Подключить датчики</string>
+              <string>⚙ Настройки датчиков</string>
              </property>
             </widget>
            </item>
            <item>
             <spacer name="rightBottomSpacer">
              <property name="orientation">
-              <enum>Qt::Vertical</enum>
+              <enum>Qt::Orientation::Vertical</enum>
              </property>
              <property name="sizeHint" stdset="0">
               <size>
