@@ -5,6 +5,36 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 CONFIG += c++17
 
+THIRDPARTY = $$PWD/3rdparty
+
+# Plow (PlowAlgoritm) — расчёт фактического и среднего ветра
+PLOW_DIR = $$THIRDPARTY/plow
+
+INCLUDEPATH += \
+    $$PLOW_DIR \
+    $$PLOW_DIR/InData \
+    $$PLOW_DIR/Profile \
+    $$PLOW_DIR/mhn
+
+PLOW_SOURCES = $$files($$PLOW_DIR/*.cpp, true)
+PLOW_HEADERS = $$files($$PLOW_DIR/*.h,   true)
+
+SOURCES *= $$PLOW_SOURCES
+HEADERS *= $$PLOW_HEADERS
+
+# ClimatData — климатические данные по широте/долготе/месяцу
+CLIMAT_DIR = $$THIRDPARTY/climatdata
+INCLUDEPATH += $$CLIMAT_DIR
+
+SOURCES *= \
+    $$CLIMAT_DIR/climatdata.cpp \
+    $$CLIMAT_DIR/climatdataprivate.cpp
+
+HEADERS *= \
+    $$CLIMAT_DIR/climatdata.h \
+    $$CLIMAT_DIR/climatdata_global.h \
+    $$CLIMAT_DIR/climatdataprivate.h
+
 # Warn on deprecated Qt API usage (does not break the build, just emits warnings)
 DEFINES += QT_DEPRECATED_WARNINGS
 
@@ -38,7 +68,8 @@ SOURCES += \
     WindShearCalculator.cpp \
     surfacemeteosaver.cpp \
     workregulationdialog.cpp \
-    RpvIndicator.cpp
+    RpvIndicator.cpp \
+    windprofilecalculator.cpp
 
 HEADERS += \
     LocalTileServer.h \
@@ -73,7 +104,8 @@ HEADERS += \
     WindShearCalculator.h \
     surfacemeteosaver.h \
     workregulationdialog.h \
-    RpvIndicator.h
+    RpvIndicator.h \
+    windprofilecalculator.h
 
 
 # Default rules for deployment.

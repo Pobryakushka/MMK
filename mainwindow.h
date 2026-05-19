@@ -20,6 +20,7 @@
 #include "workregulationdialog.h"
 #include "autoconnector.h"
 #include "LocalTileServer.h"
+#include "windprofilecalculator.h"
 
 // Forward declaration
 class SourceData;
@@ -230,6 +231,19 @@ private:
     // АМС методы
     void setupAmsHandler();
     void configureAmsDatabase();
+
+    // Расчёт действительного и среднего ветра на основе измеренного ветра от
+    // АМС и наземных параметров от ИВС. Вызывается из onIwsFinalDataReceived
+    // сразу после успешного сохранения surface_meteo, когда все входные данные
+    // для расчёта уже находятся в БД и в RAM.
+    WindProfileCalculator *m_windProfileCalculator = nullptr;
+
+    // Запуск расчёта профилей ветра для конкретной записи main_archive.
+    // recordId — ID записи, для которой уже сохранены: измеренный ветер,
+    // координаты станции, наземные параметры (surface_meteo).
+    // Расчётные профили сохраняются в avg_wind_profile / actual_wind_profile
+    // через AMSHandler::saveAvgWindProfile / saveActualWindProfile.
+    void performWindProfileCalculation(int recordId);
 
     void setupBinsHandler();
 

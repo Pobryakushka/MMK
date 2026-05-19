@@ -97,6 +97,17 @@ public:
     MeasurementStatus getMeasurementStatus() const { return m_measurementStatus; }
     MeasurementStage getMeasurementStage() const { return m_currentStage; }
 
+    // Сохранение профилей среднего и действительного ветра.
+    // Раньше вызывались изнутри обработчиков 0xA9/0xAA при получении данных от
+    // АМС; теперь данные от АМС только логируются, а в БД пишутся РАССЧИТАННЫЕ
+    // профили — вызовы происходят из MainWindow::performWindProfileCalculation.
+    bool saveAvgWindProfile(int recordId, const QVector<WindProfileData> &data);
+    bool saveActualWindProfile(int recordId, const QVector<WindProfileData> &data);
+
+    // Перед записью рассчитанных профилей удаляем возможные старые записи
+    // под тем же record_id (на случай повторного расчёта).
+    bool deleteCalculatedWindProfiles(int recordId);
+
 signals:
     void connected();
     void disconnected();
@@ -176,8 +187,6 @@ private:
 
     // Методы записи в БД
     int createMainArchiveRecord(const QString &notes = QString());
-    bool saveAvgWindProfile(int recordId, const QVector<WindProfileData> &data);
-    bool saveActualWindProfile(int recordId, const QVector<WindProfileData> &data);
     bool saveMeasuredWindProfile(int recordId, const QVector<MeasuredWindData> &data);
     bool saveWindProfilesReferences(int recordId, int avgProfileId, int actualProfileId,
                                     int measuredProfileId, int shearProfileId);

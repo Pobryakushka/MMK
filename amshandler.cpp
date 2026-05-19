@@ -739,8 +739,17 @@ void AMSHandler::processReceivedPacket(const QByteArray &packet)
         bool ok;
         QVector<WindProfileData> data = m_protocol->parseAvgWindResponse(packet, ok);
         if (ok) {
-            qInfo() << "AMSHandler: Получен профиль среднего ветра," << data.size() << "точек";
-            saveAvgWindProfile(m_currentRecordId, data);
+            qInfo() << "AMSHandler: Получен профиль среднего ветра от АМС,"
+                    << data.size() << "точек (только лог, в БД не сохраняем — будет рассчитан)";
+            // DEBUG-лог сырых данных от АМС — для сравнения с результатом расчёта
+            for (int i = 0; i < data.size(); ++i) {
+                qDebug() << "  AMS avg[" << i << "]: h=" << data[i].height
+                         << "V=" << data[i].windSpeed
+                         << "dir=" << data[i].windDirection;
+            }
+            // В БД больше НЕ сохраняем: средний ветер будет рассчитан
+            // в MainWindow::performWindProfileCalculation после получения IWS.
+            // saveAvgWindProfile(m_currentRecordId, data);  // ← УДАЛЕНО
             emit avgWindDataReceived(data);
 
             // Запрашиваем действительный ветер
@@ -753,8 +762,14 @@ void AMSHandler::processReceivedPacket(const QByteArray &packet)
         bool ok;
         QVector<WindProfileData> data = m_protocol->parseActualWindResponse(packet, ok);
         if (ok) {
-            qInfo() << "AMSHandler: Получен профиль действительного ветра," << data.size() << "точек";
-            saveActualWindProfile(m_currentRecordId, data);
+            qInfo() << "AMSHandler: Получен профиль действительного ветра от АМС,"
+                    << data.size() << "точек (только лог, в БД не сохраняем — будет рассчитан)";
+            for (int i = 0; i < data.size(); ++i) {
+                qDebug() << "  AMS actual[" << i << "]: h=" << data[i].height
+                         << "V=" << data[i].windSpeed
+                         << "dir=" << data[i].windDirection;
+            }
+            // saveActualWindProfile(m_currentRecordId, data);  // ← УДАЛЕНО
             emit actualWindDataReceived(data);
 
             // Все данные получены, завершаем процесс
@@ -980,6 +995,70 @@ int AMSHandler::createMainArchiveRecord(const QString &notes)
     int recordId = query.value(0).toInt();
     qInfo() << "AMSHandler: Создана запись в main_archive с ID:" << recordId;
     return recordId;
+}
+
+bool AMSHandler::deleteCalculatedWindProfiles(int recordId)
+{
+    if (!DatabaseManager::instance()->connect()) return false;
+
+    QSqlDatabase db = DatabaseManager::instance()->database();
+
+    // Получаем текущие profile_id для среднего и действительного
+    QSqlQuery refQuery(db);
+    refQuery.prepare(
+        "SELECT avg_wind_profile_id, actual_wind_profile_id "
+        "FROM wind_profiles_references WHERE record_id = :rid"
+        );
+    refQuery.bindValue(":rid", recordId);
+
+    if (!refQuery.exec() || !refQuery.next()) {
+        // Записи нет — удалять нечего, не ошибка
+        return true;
+    }
+
+    QVariant avgPidVar    = refQuery.value(0);
+    QVariant actualPidVar = refQuery.value(1);
+
+    db.transaction();
+
+    auto deletePoints = [&](const char *table, const QVariant &pidVar) -> bool {
+        if (pidVar.isNull()) return true;
+        QSqlQuery q(db);
+        q.prepare(QString("DELETE FROM %1 WHERE profile_id = :pid").arg(table));
+        q.bindValue(":pid", pidVar.toInt());
+        if (!q.exec()) {
+            qWarning() << "AMSHandler::deleteCalculatedWindProfiles:"
+                       << table << "→" << q.lastError().text();
+            return false;
+        }
+        qDebug() << "AMSHandler::deleteCalculatedWindProfiles: удалены точки из"
+                 << table << "для profile_id=" << pidVar.toInt();
+        return true;
+    };
+
+    if (!deletePoints("avg_wind_profile",    avgPidVar)    ||
+        !deletePoints("actual_wind_profile", actualPidVar)) {
+        db.rollback();
+        return false;
+    }
+
+    // Зачищаем ссылки (профильные id теперь невалидны)
+    QSqlQuery updRef(db);
+    updRef.prepare(
+        "UPDATE wind_profiles_references "
+        "SET avg_wind_profile_id = NULL, actual_wind_profile_id = NULL "
+        "WHERE record_id = :rid"
+        );
+    updRef.bindValue(":rid", recordId);
+    if (!updRef.exec()) {
+        qWarning() << "AMSHandler::deleteCalculatedWindProfiles: refs →"
+                   << updRef.lastError().text();
+        db.rollback();
+        return false;
+    }
+
+    db.commit();
+    return true;
 }
 
 bool AMSHandler::saveAvgWindProfile(int recordId, const QVector<WindProfileData> &data)
