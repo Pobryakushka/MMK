@@ -101,7 +101,7 @@ QPushButton:pressed { color: #0B5A42; }</string>
        <property name="minimumSize">
         <size>
          <width>0</width>
-         <height>100</height>
+         <height>64</height>
         </size>
        </property>
        <property name="styleSheet">
@@ -110,7 +110,7 @@ QPushButton:pressed { color: #0B5A42; }</string>
     border: 1px solid #DDE1E3;
     border-radius: 18px;
     text-align: left;
-    padding: 22px 26px;
+    padding: 0px 26px;
     font-size: 13pt;
     font-weight: 700;
     color: #1C1F22;
@@ -120,8 +120,7 @@ QPushButton:pressed {
 }</string>
        </property>
        <property name="text">
-        <string>Расчёт без сканирования
-Вычисление параметров без предварительного сканирования атмосферы</string>
+        <string>Расчёт без сканирования</string>
        </property>
       </widget>
      </item>
@@ -130,7 +129,7 @@ QPushButton:pressed {
        <property name="minimumSize">
         <size>
          <width>0</width>
-         <height>100</height>
+         <height>64</height>
         </size>
        </property>
        <property name="styleSheet">
@@ -139,7 +138,7 @@ QPushButton:pressed {
     border: 1px solid #DDE1E3;
     border-radius: 18px;
     text-align: left;
-    padding: 22px 26px;
+    padding: 0px 26px;
     font-size: 13pt;
     font-weight: 700;
     color: #1C1F22;
@@ -149,8 +148,7 @@ QPushButton:pressed {
 }</string>
        </property>
        <property name="text">
-        <string>Расчёт на десантирование
-Точка приземления, снос по ветру, параметры площадки десантирования</string>
+        <string>Расчёт на десантирование</string>
        </property>
       </widget>
      </item>

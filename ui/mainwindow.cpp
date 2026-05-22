@@ -411,7 +411,7 @@ void MainWindow::setupMapCoordinatesButton()
     // Кнопка теперь в UI файле, просто настраиваем иконку и подключаем сигнал
     QIcon markerIcon(":/dat/images/marker.png");
     ui->btnMapCoordinates->setIcon(markerIcon);
-    ui->btnMapCoordinates->setIconSize(QSize(32, 32));
+    ui->btnMapCoordinates->setIconSize(QSize(20, 20));
 
     connect(ui->btnMapCoordinates, &QPushButton::clicked, this, &MainWindow::onMapCoordinatesToggled);
 }
@@ -535,14 +535,14 @@ void MainWindow::updateMapCoordinatesButtonStyle()
 {
     QIcon markerIcon(":/dat/images/marker.png");
     ui->btnMapCoordinates->setIcon(markerIcon);
-    ui->btnMapCoordinates->setIconSize(QSize(32, 32));
+    ui->btnMapCoordinates->setIconSize(QSize(20, 20));
 
     if (m_mapCoordinatesEnabled) {
         ui->btnMapCoordinates->setStyleSheet(
             "QPushButton {"
             "   background-color: #4CAF50;"
             "   border: 3px solid #2E7D32;"
-            "   border-radius: 16px;"
+            "   border-radius: 12px;"
             "}"
             "QPushButton:hover {"
             "   background-color: #45a049;"
@@ -555,7 +555,7 @@ void MainWindow::updateMapCoordinatesButtonStyle()
             "QPushButton {"
             "   background-color: rgba(255,255,255,235);"
             "   border: none;"
-            "   border-radius: 16px;"
+            "   border-radius: 12px;"
             "}"
             "QPushButton:hover {"
             "   background-color: #f0f0f0;"
@@ -1215,8 +1215,7 @@ void MainWindow::onAmsMeasurementCompleted(int recordId)
 
     // Обновляем UI
     ui->lblStatus->setText("ГОТОВ");
-    ui->lblStatus->setStyleSheet("color: green; font-weight: bold; font-size: 14pt; "
-                                 "border: 2px solid green; padding: 5px; border-radius: 5px;");
+    ui->lblStatus->setStyleSheet("color: #2E7D32; font-weight: bold; font-size: 9pt;");
 
     ui->btnStart->setEnabled(true);
     ui->btnStop->setEnabled(false);
@@ -1246,8 +1245,7 @@ void MainWindow::onAmsMeasurementFailed(const QString &reason)
 
     // Обновляем UI
     ui->lblStatus->setText("ОШИБКА");
-    ui->lblStatus->setStyleSheet("color: red; font-weight: bold; font-size: 14pt; "
-                                 "border: 2px solid red; padding: 5px; border-radius: 5px;");
+    ui->lblStatus->setStyleSheet("color: #C62828; font-weight: bold; font-size: 9pt;");
 
     ui->btnStart->setEnabled(true);
     ui->btnStop->setEnabled(false);
@@ -1522,28 +1520,28 @@ void MainWindow::repositionMapFloatingControls()
     if (!ui->mapCanvas) return;
 
     const int margin = 16;
-    const int gap = 10;
+    const int gap = 8;
     const int canvasWidth = ui->mapCanvas->width();
 
-    // Кнопка-маркер (выбор координат с карты) — правый верхний угол
+    // Строка 1: маркер (выбор координат с карты) + GNSS справа от него
     const int markerSize = ui->btnMapCoordinates->width();
-    ui->btnMapCoordinates->move(canvasWidth - markerSize - margin, margin);
-
-    // Выбор типа карты — под маркером
-    const int comboWidth = ui->comboBox_mapTypes->width();
-    const int comboHeight = ui->comboBox_mapTypes->height();
-    int y = margin + markerSize + gap;
-    ui->comboBox_mapTypes->move(canvasWidth - comboWidth - margin, y);
-
-    // GNSS — под выбором типа карты
-    y += comboHeight + gap;
     const int gnssWidth = ui->checkboxGnss->width();
-    ui->checkboxGnss->move(canvasWidth - gnssWidth - margin, y);
+    const int row1Height = ui->btnMapCoordinates->height();
+
+    const int gnssX = canvasWidth - gnssWidth - margin;
+    const int markerX = gnssX - gap - markerSize;
+    ui->checkboxGnss->move(gnssX, margin);
+    ui->btnMapCoordinates->move(markerX, margin);
+
+    // Строка 2: выбор типа карты — под строкой 1, прижат к правому краю
+    const int comboWidth = ui->comboBox_mapTypes->width();
+    const int y2 = margin + row1Height + gap;
+    ui->comboBox_mapTypes->move(canvasWidth - comboWidth - margin, y2);
 
     // Поднимаем плавающие элементы над картой в порядке отрисовки
     ui->btnMapCoordinates->raise();
-    ui->comboBox_mapTypes->raise();
     ui->checkboxGnss->raise();
+    ui->comboBox_mapTypes->raise();
 }
 
 void MainWindow::onConnectSensorsClicked()
@@ -1926,6 +1924,7 @@ void MainWindow::updateDateTime()
     }
 
     ui->editDateTime->setText(timeString);
+    ui->lblTopDateTime->setText(timeString);
 }
 
 void MainWindow::onSyncTimeClicked()
@@ -2125,8 +2124,7 @@ void MainWindow::onStartClicked()
 
     // Обновляем UI
     ui->lblStatus->setText("РАБОТА");
-    ui->lblStatus->setStyleSheet("color: blue; font-weight: bold; font-size: 14pt; "
-                                 "border: 2px solid blue; padding: 5px; border-radius: 5px;");
+    ui->lblStatus->setStyleSheet("color: #1565C0; font-weight: bold; font-size: 9pt;");
 
     // Получаем параметры для запуска измерения
     WorkMode mode = ui->cbWorkMode->isChecked() ? MODE_WORKING : MODE_STANDBY;
@@ -2185,8 +2183,7 @@ void MainWindow::onStartClicked()
 
         // Возвращаем статус в ГОТОВ
         ui->lblStatus->setText("ГОТОВ");
-        ui->lblStatus->setStyleSheet("color: green; font-weight: bold; font-size: 14pt; "
-                                     "border: 2px solid green; padding: 5px; border-radius: 5px;");
+        ui->lblStatus->setStyleSheet("color: #2E7D32; font-weight: bold; font-size: 9pt;");
         return;
     }
 
@@ -2219,8 +2216,7 @@ void MainWindow::onStopClicked()
 
     // Обновляем UI
     ui->lblStatus->setText("ГОТОВ");
-    ui->lblStatus->setStyleSheet("color: green; font-weight: bold; font-size: 14pt; "
-                                 "border: 2px solid green; padding: 5px; border-radius: 5px;");
+    ui->lblStatus->setStyleSheet("color: #2E7D32; font-weight: bold; font-size: 9pt;");
 
     // Разблокируем кнопку старта, блокируем стоп
     ui->btnStart->setEnabled(true);
@@ -2703,21 +2699,17 @@ void MainWindow::onSurfaceStateChanged(GroundMeteoParams::SurfaceState newState)
     switch (newState) {
     case GroundMeteoParams::NoData:
         text = "НЕТ ПРИЗЕМНЫХ ДАННЫХ";
-        style = "color: red; font-weight: bold; font-size: 14pt; "
-                "border: 2px solid red; padding: 5px; border-radius: 5px;";
+        style = "color: #C62828; font-weight: bold; font-size: 9pt;";
         statusBarMsg = "Приземные данные не введены — пуск измерения заблокирован";
         break;
     case GroundMeteoParams::Fresh:
         text = "ГОТОВ";
-        style = "color: green; font-weight: bold; font-size: 14pt; "
-                "border: 2px solid green; padding: 5px; border-radius: 5px;";
+        style = "color: #2E7D32; font-weight: bold; font-size: 9pt;";
         statusBarMsg = "Приземные данные получены — система готова";
         break;
     case GroundMeteoParams::Stale:
         text = "ДАННЫЕ УСТАРЕЛИ";
-        style = "color: #e65100; font-weight: bold; font-size: 14pt; "
-                "border: 2px solid #e65100; padding: 5px; border-radius: 5px; "
-                "background-color: #fff8e1;";
+        style = "color: #e65100; font-weight: bold; font-size: 9pt;";
         statusBarMsg = "Приземные данные старше 30 минут — рекомендуется обновить";
         break;
     }

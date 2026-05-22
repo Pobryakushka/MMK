@@ -32,25 +32,19 @@
      <property name="minimumSize">
       <size>
        <width>0</width>
-       <height>52</height>
+       <height>44</height>
       </size>
      </property>
      <property name="maximumSize">
       <size>
        <width>16777215</width>
-       <height>100</height>
+       <height>56</height>
       </size>
      </property>
      <property name="styleSheet">
       <string notr="true">QFrame#topStatusBar {
     background-color: #FAFAFA;
     border-bottom: 1px solid #DADADA;
-}
-QLabel {
-    font-size: 10pt;
-    padding: 4px 12px;
-    border-radius: 4px;
-    margin: 2px;
 }</string>
      </property>
      <property name="frameShape">
@@ -58,24 +52,36 @@ QLabel {
      </property>
      <layout class="QHBoxLayout" name="topStatusBarLayout">
       <property name="spacing">
-       <number>15</number>
+       <number>10</number>
       </property>
       <property name="leftMargin">
-       <number>15</number>
+       <number>12</number>
       </property>
       <property name="topMargin">
-       <number>5</number>
+       <number>6</number>
       </property>
       <property name="rightMargin">
-       <number>15</number>
+       <number>12</number>
       </property>
       <property name="bottomMargin">
-       <number>5</number>
+       <number>6</number>
       </property>
 <item>
                <widget class="QFrame" name="readinessIndicatorFrame">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>32</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>16777215</width>
+                  <height>32</height>
+                 </size>
+                </property>
                 <property name="styleSheet">
-                 <string notr="true">QFrame#readinessIndicatorFrame { background-color: #E8F5E9; border-left: 4px solid #43A047; border-radius: 0px; padding: 2px 0px; }</string>
+                 <string notr="true">QFrame#readinessIndicatorFrame { background-color: #E8F5E9; border: 1px solid #A5D6A7; border-radius: 16px; }</string>
                 </property>
                 <property name="frameShape">
                  <enum>QFrame::NoFrame</enum>
@@ -85,21 +91,21 @@ QLabel {
                   <number>6</number>
                  </property>
                  <property name="leftMargin">
-                  <number>10</number>
+                  <number>14</number>
                  </property>
                  <property name="topMargin">
-                  <number>6</number>
+                  <number>0</number>
                  </property>
                  <property name="rightMargin">
-                  <number>10</number>
+                  <number>14</number>
                  </property>
                  <property name="bottomMargin">
-                  <number>6</number>
+                  <number>0</number>
                  </property>
                  <item>
                   <widget class="QLabel" name="lblReadinessIcon">
                    <property name="styleSheet">
-                    <string notr="true">color: #43A047; font-size: 14pt; background: transparent;</string>
+                    <string notr="true">color: #43A047; font-size: 10pt; background: transparent;</string>
                    </property>
                    <property name="text">
                     <string>●</string>
@@ -107,53 +113,24 @@ QLabel {
                   </widget>
                  </item>
                  <item>
-                  <layout class="QVBoxLayout" name="readinessTextLayout">
-                   <property name="spacing">
-                    <number>0</number>
+                  <widget class="QLabel" name="lblReadinessCaption">
+                   <property name="styleSheet">
+                    <string notr="true">font-size: 7pt; color: #555; background: transparent;</string>
                    </property>
-                   <item>
-                    <widget class="QLabel" name="lblReadinessCaption">
-                     <property name="styleSheet">
-                      <string notr="true">font-size: 8pt; color: #555; background: transparent;</string>
-                     </property>
-                     <property name="text">
-                      <string>Состояние системы</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QLabel" name="lblStatus">
-                     <property name="minimumSize">
-                      <size>
-                       <width>230</width>
-                       <height>0</height>
-                      </size>
-                     </property>
-                     <property name="styleSheet">
-                      <string notr="true">color: #2E7D32; font-weight: bold; font-size: 11pt; background: transparent;</string>
-                     </property>
-                     <property name="wordWrap">
-                      <bool>true</bool>
-                     </property>
-                     <property name="text">
-                      <string>ГОТОВ</string>
-                     </property>
-                    </widget>
-                   </item>
-                  </layout>
+                   <property name="text">
+                    <string>Состояние:</string>
+                   </property>
+                  </widget>
                  </item>
                  <item>
-                  <spacer name="readinessSpacer">
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
+                  <widget class="QLabel" name="lblStatus">
+                   <property name="styleSheet">
+                    <string notr="true">color: #2E7D32; font-weight: bold; font-size: 9pt; background: transparent;</string>
                    </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>10</width>
-                     <height>10</height>
-                    </size>
+                   <property name="text">
+                    <string>ГОТОВ</string>
                    </property>
-                  </spacer>
+                  </widget>
                  </item>
                 </layout>
                </widget>
@@ -173,8 +150,20 @@ QLabel {
       </item>
 <item>
            <widget class="QLabel" name="lblGnssStatus">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>30</height>
+             </size>
+            </property>
             <property name="styleSheet">
-             <string notr="true">background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2;</string>
+             <string notr="true">background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2; border-radius: 15px; padding: 0px 12px; font-size: 8pt;</string>
             </property>
             <property name="text">
              <string>GNSS: отключен</string>
@@ -186,8 +175,20 @@ QLabel {
           </item>
 <item>
            <widget class="QLabel" name="lblAmsStatus">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>30</height>
+             </size>
+            </property>
             <property name="styleSheet">
-             <string notr="true">background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2;</string>
+             <string notr="true">background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2; border-radius: 15px; padding: 0px 12px; font-size: 8pt;</string>
             </property>
             <property name="text">
              <string>АМС: отключен</string>
@@ -199,8 +200,20 @@ QLabel {
           </item>
 <item>
            <widget class="QLabel" name="lblBinsStatus">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>30</height>
+             </size>
+            </property>
             <property name="styleSheet">
-             <string notr="true">background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2;</string>
+             <string notr="true">background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2; border-radius: 15px; padding: 0px 12px; font-size: 8pt;</string>
             </property>
             <property name="text">
              <string>БИНС: отключен</string>
@@ -212,14 +225,51 @@ QLabel {
           </item>
 <item>
            <widget class="QLabel" name="lblIwsStatus">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>30</height>
+             </size>
+            </property>
             <property name="styleSheet">
-             <string notr="true">background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2;</string>
+             <string notr="true">background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2; border-radius: 15px; padding: 0px 12px; font-size: 8pt;</string>
             </property>
             <property name="text">
              <string>ИВС: отключен</string>
             </property>
             <property name="alignment">
              <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+<item>
+           <widget class="QLabel" name="lblTopDateTime">
+            <property name="minimumSize">
+             <size>
+              <width>150</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>150</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">font-family: "DejaVu Sans Mono", monospace; font-size: 9pt; font-weight: 600; color: #333; background: transparent; padding-left: 8px;</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignVCenter</set>
+            </property>
+            <property name="text">
+             <string>--.--.---- --:--:--</string>
             </property>
            </widget>
           </item>
@@ -235,12 +285,12 @@ QLabel {
 
     <widget class="QWidget" name="page_home">
      <layout class="QGridLayout" name="homeGridLayout">
-      <property name="horizontalSpacing"><number>16</number></property>
-      <property name="verticalSpacing"><number>16</number></property>
-      <property name="leftMargin"><number>24</number></property>
-      <property name="topMargin"><number>20</number></property>
-      <property name="rightMargin"><number>24</number></property>
-      <property name="bottomMargin"><number>20</number></property>
+      <property name="horizontalSpacing"><number>12</number></property>
+      <property name="verticalSpacing"><number>12</number></property>
+      <property name="leftMargin"><number>20</number></property>
+      <property name="topMargin"><number>16</number></property>
+      <property name="rightMargin"><number>20</number></property>
+      <property name="bottomMargin"><number>16</number></property>
       <item row="0" column="0">
         <widget class="QPushButton" name="btnFunctionalControl">
              <property name="sizePolicy">
@@ -249,8 +299,8 @@ QLabel {
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
-            <property name="minimumSize"><size><width>220</width><height>120</height></size></property>
-            <property name="maximumSize"><size><width>340</width><height>160</height></size></property>
+            <property name="minimumSize"><size><width>150</width><height>80</height></size></property>
+            <property name="maximumSize"><size><width>240</width><height>110</height></size></property>
              <property name="text">
               <string>Функциональный контроль</string>
              </property>
@@ -259,10 +309,10 @@ QLabel {
     color: #1C1F22;
     border: 1px solid #DDE1E3;
     border-radius: 16px;
-    font-size: 13pt;
+    font-size: 10pt;
     font-weight: 600;
     text-align: left;
-    padding: 18px;
+    padding: 10px;
 }
 QPushButton:pressed {
     background-color: #F0F1F2;
@@ -270,15 +320,15 @@ QPushButton:pressed {
 </widget>
        </item>
       <item row="0" column="1">
-        <widget class="QPushButton" name="btnOpenPosition"><property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Expanding"><horstretch>0</horstretch><verstretch>0</verstretch></sizepolicy></property><property name="minimumSize"><size><width>220</width><height>120</height></size></property><property name="maximumSize"><size><width>340</width><height>160</height></size></property><property name="text"><string>Положение метеокомплекса</string></property><property name="styleSheet"><string notr="true">QPushButton {
+        <widget class="QPushButton" name="btnOpenPosition"><property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Expanding"><horstretch>0</horstretch><verstretch>0</verstretch></sizepolicy></property><property name="minimumSize"><size><width>150</width><height>80</height></size></property><property name="maximumSize"><size><width>240</width><height>110</height></size></property><property name="text"><string>Положение метеокомплекса</string></property><property name="styleSheet"><string notr="true">QPushButton {
     background-color: #FFFFFF;
     color: #1C1F22;
     border: 1px solid #DDE1E3;
     border-radius: 16px;
-    font-size: 13pt;
+    font-size: 10pt;
     font-weight: 600;
     text-align: left;
-    padding: 18px;
+    padding: 10px;
 }
 QPushButton:pressed {
     background-color: #F0F1F2;
@@ -293,8 +343,8 @@ QPushButton:pressed {
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
-            <property name="minimumSize"><size><width>220</width><height>120</height></size></property>
-            <property name="maximumSize"><size><width>340</width><height>160</height></size></property>
+            <property name="minimumSize"><size><width>150</width><height>80</height></size></property>
+            <property name="maximumSize"><size><width>240</width><height>110</height></size></property>
              <property name="text">
               <string>Исходные данные</string>
              </property>
@@ -303,10 +353,10 @@ QPushButton:pressed {
     color: #1C1F22;
     border: 1px solid #DDE1E3;
     border-radius: 16px;
-    font-size: 13pt;
+    font-size: 10pt;
     font-weight: 600;
     text-align: left;
-    padding: 18px;
+    padding: 10px;
 }
 QPushButton:pressed {
     background-color: #F0F1F2;
@@ -321,8 +371,8 @@ QPushButton:pressed {
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
-            <property name="minimumSize"><size><width>220</width><height>120</height></size></property>
-            <property name="maximumSize"><size><width>340</width><height>160</height></size></property>
+            <property name="minimumSize"><size><width>150</width><height>80</height></size></property>
+            <property name="maximumSize"><size><width>240</width><height>110</height></size></property>
              <property name="text">
               <string>Расчеты</string>
              </property>
@@ -331,10 +381,10 @@ QPushButton:pressed {
     color: #1C1F22;
     border: 1px solid #DDE1E3;
     border-radius: 16px;
-    font-size: 13pt;
+    font-size: 10pt;
     font-weight: 600;
     text-align: left;
-    padding: 18px;
+    padding: 10px;
 }
 QPushButton:pressed {
     background-color: #F0F1F2;
@@ -349,8 +399,8 @@ QPushButton:pressed {
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
-            <property name="minimumSize"><size><width>220</width><height>120</height></size></property>
-            <property name="maximumSize"><size><width>340</width><height>160</height></size></property>
+            <property name="minimumSize"><size><width>150</width><height>80</height></size></property>
+            <property name="maximumSize"><size><width>240</width><height>110</height></size></property>
              <property name="text">
               <string>Архив измерений</string>
              </property>
@@ -359,10 +409,10 @@ QPushButton:pressed {
     color: #1C1F22;
     border: 1px solid #DDE1E3;
     border-radius: 16px;
-    font-size: 13pt;
+    font-size: 10pt;
     font-weight: 600;
     text-align: left;
-    padding: 18px;
+    padding: 10px;
 }
 QPushButton:pressed {
     background-color: #F0F1F2;
@@ -377,8 +427,8 @@ QPushButton:pressed {
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
-            <property name="minimumSize"><size><width>220</width><height>120</height></size></property>
-            <property name="maximumSize"><size><width>340</width><height>160</height></size></property>
+            <property name="minimumSize"><size><width>150</width><height>80</height></size></property>
+            <property name="maximumSize"><size><width>240</width><height>110</height></size></property>
              <property name="text">
               <string>Регламентные работы</string>
              </property>
@@ -387,10 +437,10 @@ QPushButton:pressed {
     color: #1C1F22;
     border: 1px solid #DDE1E3;
     border-radius: 16px;
-    font-size: 13pt;
+    font-size: 10pt;
     font-weight: 600;
     text-align: left;
-    padding: 18px;
+    padding: 10px;
 }
 QPushButton:pressed {
     background-color: #F0F1F2;
@@ -398,15 +448,15 @@ QPushButton:pressed {
 </widget>
        </item>
       <item row="2" column="0">
-        <widget class="QPushButton" name="btnOpenMap"><property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Expanding"><horstretch>0</horstretch><verstretch>0</verstretch></sizepolicy></property><property name="minimumSize"><size><width>220</width><height>120</height></size></property><property name="maximumSize"><size><width>340</width><height>160</height></size></property><property name="text"><string>Карта</string></property><property name="styleSheet"><string notr="true">QPushButton {
+        <widget class="QPushButton" name="btnOpenMap"><property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Expanding"><horstretch>0</horstretch><verstretch>0</verstretch></sizepolicy></property><property name="minimumSize"><size><width>150</width><height>80</height></size></property><property name="maximumSize"><size><width>240</width><height>110</height></size></property><property name="text"><string>Карта</string></property><property name="styleSheet"><string notr="true">QPushButton {
     background-color: #FFFFFF;
     color: #1C1F22;
     border: 1px solid #DDE1E3;
     border-radius: 16px;
-    font-size: 13pt;
+    font-size: 10pt;
     font-weight: 600;
     text-align: left;
-    padding: 18px;
+    padding: 10px;
 }
 QPushButton:pressed {
     background-color: #F0F1F2;
@@ -414,15 +464,15 @@ QPushButton:pressed {
 </widget>
        </item>
       <item row="2" column="1">
-        <widget class="QPushButton" name="btnOpenMeasure"><property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Expanding"><horstretch>0</horstretch><verstretch>0</verstretch></sizepolicy></property><property name="minimumSize"><size><width>220</width><height>120</height></size></property><property name="maximumSize"><size><width>340</width><height>160</height></size></property><property name="text"><string>Пуск измерения</string></property><property name="styleSheet"><string notr="true">QPushButton {
+        <widget class="QPushButton" name="btnOpenMeasure"><property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Expanding"><horstretch>0</horstretch><verstretch>0</verstretch></sizepolicy></property><property name="minimumSize"><size><width>150</width><height>80</height></size></property><property name="maximumSize"><size><width>240</width><height>110</height></size></property><property name="text"><string>Пуск измерения</string></property><property name="styleSheet"><string notr="true">QPushButton {
     background-color: #0F6B4F;
     color: white;
     border: 1px solid #0F6B4F;
     border-radius: 16px;
-    font-size: 13pt;
+    font-size: 10pt;
     font-weight: 600;
     text-align: left;
-    padding: 18px;
+    padding: 10px;
 }
 QPushButton:pressed {
     background-color: #0B5A42;
@@ -437,8 +487,8 @@ QPushButton:pressed {
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
-            <property name="minimumSize"><size><width>220</width><height>120</height></size></property>
-            <property name="maximumSize"><size><width>340</width><height>160</height></size></property>
+            <property name="minimumSize"><size><width>150</width><height>80</height></size></property>
+            <property name="maximumSize"><size><width>240</width><height>110</height></size></property>
              <property name="palette">
               <palette>
                <active>
@@ -916,10 +966,10 @@ QPushButton:pressed {
     color: #1C1F22;
     border: 1px solid #DDE1E3;
     border-radius: 16px;
-    font-size: 13pt;
+    font-size: 10pt;
     font-weight: 600;
     text-align: left;
-    padding: 18px;
+    padding: 10px;
 }
 QPushButton:pressed {
     background-color: #F0F1F2;
@@ -1381,22 +1431,22 @@ QPushButton:pressed { color: #0B5A42; }</string>
          <widget class="QPushButton" name="btnMapCoordinates">
           <property name="geometry">
            <rect>
-            <x>1120</x>
-            <y>16</y>
-            <width>56</width>
-            <height>56</height>
+            <x>1064</x>
+            <y>14</y>
+            <width>40</width>
+            <height>40</height>
            </rect>
           </property>
           <property name="minimumSize">
            <size>
-            <width>56</width>
-            <height>56</height>
+            <width>40</width>
+            <height>40</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
-            <width>56</width>
-            <height>56</height>
+            <width>40</width>
+            <height>40</height>
            </size>
           </property>
           <property name="toolTip">
@@ -1406,14 +1456,14 @@ QPushButton:pressed { color: #0B5A42; }</string>
            <string notr="true">QPushButton {
     background-color: rgba(255,255,255,235);
     border: none;
-    border-radius: 16px;
+    border-radius: 12px;
 }
 QPushButton:hover {
     background-color: #f0f0f0;
 }
 QPushButton:checked {
     background-color: #4CAF50;
-    border: 3px solid #2E7D32;
+    border: 2px solid #2E7D32;
 }</string>
           </property>
           <property name="text">
@@ -1423,55 +1473,28 @@ QPushButton:checked {
            <bool>true</bool>
           </property>
          </widget>
-         <widget class="QComboBox" name="comboBox_mapTypes">
-          <property name="geometry">
-           <rect>
-            <x>966</x>
-            <y>84</y>
-            <width>210</width>
-            <height>48</height>
-           </rect>
-          </property>
-          <property name="minimumSize">
-           <size>
-            <width>0</width>
-            <height>48</height>
-           </size>
-          </property>
-          <property name="styleSheet">
-           <string notr="true">QComboBox {
-    background-color: rgba(255,255,255,235);
-    border: none;
-    border-radius: 16px;
-    padding: 8px 16px;
-    font-size: 11pt;
-    font-weight: 600;
-}
-QComboBox::drop-down { border: none; width: 24px; }</string>
-          </property>
-         </widget>
          <widget class="QCheckBox" name="checkboxGnss">
           <property name="geometry">
            <rect>
-            <x>966</x>
-            <y>144</y>
-            <width>210</width>
-            <height>48</height>
+            <x>1112</x>
+            <y>14</y>
+            <width>104</width>
+            <height>40</height>
            </rect>
           </property>
           <property name="minimumSize">
            <size>
             <width>0</width>
-            <height>48</height>
+            <height>40</height>
            </size>
           </property>
           <property name="styleSheet">
            <string notr="true">QCheckBox {
     background-color: rgba(255,255,255,235);
-    padding: 8px 16px;
+    padding: 4px 12px;
     border: none;
-    border-radius: 16px;
-    font-size: 11pt;
+    border-radius: 12px;
+    font-size: 9pt;
     font-weight: 600;
 }
 QCheckBox:checked {
@@ -1481,6 +1504,33 @@ QCheckBox:checked {
           </property>
           <property name="text">
            <string>GNSS</string>
+          </property>
+         </widget>
+         <widget class="QComboBox" name="comboBox_mapTypes">
+          <property name="geometry">
+           <rect>
+            <x>1076</x>
+            <y>62</y>
+            <width>140</width>
+            <height>36</height>
+           </rect>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>36</height>
+           </size>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">QComboBox {
+    background-color: rgba(255,255,255,235);
+    border: none;
+    border-radius: 12px;
+    padding: 4px 12px;
+    font-size: 9pt;
+    font-weight: 600;
+}
+QComboBox::drop-down { border: none; width: 20px; }</string>
           </property>
          </widget>
          <layout class="QVBoxLayout" name="mapCanvasLayout">
