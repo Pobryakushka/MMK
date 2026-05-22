@@ -26,6 +26,7 @@
 
 // Forward declaration
 class SourceData;
+class AlgorithmsCalculation;
 
 namespace Ui {
 class MainWindow;
@@ -55,6 +56,12 @@ signals:
     void gnssDataSourceChanged(bool enabled);
 
 private slots:
+    // Навигация по страницам главного экрана (лаунчер для планшета)
+    void onOpenPositionPage();
+    void onOpenMapPage();
+    void onOpenMeasurePage();
+    void onBackToHome();
+
     void onFunctionalControlClicked();
     void onWorkRegulationClicked();
     void onManualInputClicked();
@@ -140,6 +147,7 @@ private:
     QSerialPort *serialPort;
     SensorSettings *sensorSettingsDialog;
     SourceData *sourceDataInstance;
+    AlgorithmsCalculation *m_algorithmsCalcWidget = nullptr;
 
     QDateTime m_manualDateTime;
     bool m_useManualDateTime;
@@ -259,6 +267,8 @@ private:
     void openMeasurementResults(int recordId = -1); // -1 = просто открыть, >0 = перейти к записи
 
     void resizeEvent(QResizeEvent *event);
+    bool eventFilter(QObject *watched, QEvent *event) override;
+    void repositionMapFloatingControls();
     QList<quint16> getRequestParameters();
 
     // Методы обновления статуса датчиков на панели
