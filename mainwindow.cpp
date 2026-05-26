@@ -34,6 +34,7 @@
 #include <QUrl>
 #include <QFileInfo>
 #include <QFileSystemWatcher>
+#include <cmath>
 
 
 // ====================================================================

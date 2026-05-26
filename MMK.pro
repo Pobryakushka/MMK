@@ -23,7 +23,7 @@ SOURCES *= $$PLOW_SOURCES
 HEADERS *= $$PLOW_HEADERS
 
 # ClimatData — климатические данные по широте/долготе/месяцу
-CLIMAT_DIR = $$THIRDPARTY/climatdata
+CLIMAT_DIR = $$THIRDPARTY/climatData
 INCLUDEPATH += $$CLIMAT_DIR
 
 SOURCES *= \
@@ -133,3 +133,10 @@ include(qwt.pri)
 include(QXlsx/QXlsx.pri)
 
 
+# ─── Копирование климатической базы рядом с исполняемым файлом ───
+# WindProfileCalculator ищет базу относительно applicationDirPath().
+# Это правило копирует 3rdparty/climatData в build-папку при сборке,
+# поэтому climatData/climat/warm0405.out оказывается рядом с бинарником.
+climat_db.files = $$PWD/3rdparty/climatData
+climat_db.path  = $$OUT_PWD
+COPIES += climat_db

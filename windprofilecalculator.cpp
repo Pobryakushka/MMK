@@ -6,6 +6,9 @@
 #include <cstring>
 #include <chrono>
 #include <ctime>
+#include <QCoreApplication>
+#include <QDir>
+#include <QFileInfo>
 
 // Внешние библиотеки расчёта профиля (plow + ClimatData).
 // Путь к Profile/profile.h — относительно корня plow. INCLUDEPATH в MMK.pro
@@ -29,8 +32,28 @@ constexpr int kOutSizePerKind = PlowAlgoritm::Constants::numStL_out;
 
 
 WindProfileCalculator::WindProfileCalculator(const QString &climatDataPath)
-    : m_climatDataPath(climatDataPath)
 {
+    // climatDataPath может быть относительным ("climatData/climat/").
+    // Относительный путь резолвим от папки ИСПОЛНЯЕМОГО ФАЙЛА, а не от
+    // рабочей директории процесса. Рабочая директория зависит от способа
+    // запуска: из Qt Creator это build-папка, из терминала — текущая папка.
+    // applicationDirPath() стабилен в обоих случаях.
+    QFileInfo fi(climatDataPath);
+    if (fi.isAbsolute()) {
+        m_climatDataPath = climatDataPath;
+    } else {
+        const QString appDir = QCoreApplication::applicationDirPath();
+        m_climatDataPath = QDir(appDir).absoluteFilePath(climatDataPath);
+    }
+
+    // ClimatData склеивает путь как (pathDataFile + nameDataFile) простой
+    // конкатенацией строк, поэтому путь ОБЯЗАН заканчиваться разделителем,
+    // иначе получится ".../climatwarm0405.out" вместо ".../climat/warm0405.out".
+    if (!m_climatDataPath.endsWith('/') && !m_climatDataPath.endsWith('\\'))
+        m_climatDataPath += '/';
+
+    qInfo() << "[WindProfileCalculator] путь к климатической базе:"
+            << m_climatDataPath;
 }
 
 WindProfileCalculator::~WindProfileCalculator() = default;
