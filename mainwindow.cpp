@@ -909,13 +909,17 @@ void MainWindow::onAmsDataWritten(int recordId)
 {
     qDebug() << "MainWindow: Данные АМС записаны в архив, record_id:" << recordId;
     statusBar()->showMessage(
-        QString("АМС: Данные записаны в архив (ID: %1), запрашиваем ИВС...").arg(recordId), 5000);
+        QString("АМС: Данные записаны в архив (ID: %1)").arg(recordId), 5000);
 
     if (m_iwsDeviceActive) {
+        // Железный ИВС подключён — запрашиваем у него свежие данные.
+        // Ответ придёт в onIwsFinalDataReceived, который вызовет tryFinalizeMeasurement.
         requestIwsDataForRecord(recordId);
     } else {
-        qWarning() << "MainWindow: ИВС не подключён — surface_meteo не будет заполнена";
-        statusBar()->showMessage("Предупреждение: ИВС не подключён, приземные данные не сохранены", 8000);
+        // Железного ИВС нет. Возможно, оператор ввёл приземные данные вручную —
+        // тогда они уже в кеше GroundMeteoParams. Финализируем без запроса к ИВС.
+        qDebug() << "MainWindow: ИВС не подключён — пробуем ручные приземные данные";
+        tryFinalizeMeasurement(recordId);
     }
 }
 
@@ -996,30 +1000,78 @@ void MainWindow::onIwsFinalDataReceived(const QMap<QString, double> &values)
     qDebug() << "MainWindow: Получены данные ИВС для финальной записи, record_id=" << recordId;
 
     m_surfaceMeteoSaver->updateLastValues(values);
+    tryFinalizeMeasurement(recordId);
+}
 
-    if (!m_surfaceMeteoSaver->hasData()) {
-        qWarning() << "MainWindow: После запроса ИВС данные всё ещё неполные —"
-                   << "расчёт ветра НЕ запускается";
-        statusBar()->showMessage("Предупреждение: данные ИВС неполные, расчёт ветра пропущен", 8000);
+// Логика:
+//   • Определяем наземный ветер. Приоритет:
+//       1) данные железного ИВС (уже в m_surfaceMeteoSaver, если IWS отвечал);
+//       2) ручной ввод (GroundMeteoParams::hasLastData()).
+//   • Если surface_meteo есть полностью (5 параметров) — сохраняем её в БД.
+//   • Если есть хотя бы наземный ВЕТЕР — запускаем расчёт профилей.
+//   • Если наземного ветра нет вовсе — расчёт пропускаем (запись измерения
+//     при этом уже сохранена: main_archive, координаты, измеренный ветер).
+
+void MainWindow::tryFinalizeMeasurement(int recordId)
+{
+    // ── 1. Сохраняем surface_meteo, если набор данных полный ────────────────
+    // (m_surfaceMeteoSaver мог быть наполнен либо из onIwsFinalDataReceived,
+    //  либо — для ручного ввода — наполним его прямо сейчас, см. ниже).
+    GroundMeteoParams *gmp = GroundMeteoParams::instance();
+
+    // Если железного ИВС не было, но есть ручной ввод — переносим ручные
+    // значения ветра в m_surfaceMeteoSaver, чтобы они тоже могли уйти в БД.
+    if (!m_iwsDeviceActive && gmp && gmp->hasLastData()) {
+        QMap<QString, double> manualValues;
+        manualValues["Wind Speed Avg"]     = gmp->lastWindSpeed();
+        manualValues["Wind Direction Avg"] = gmp->lastWindDirection();
+        // Температуру/давление/влажность ручной ввод может не содержать —
+        // updateLastValues выставит has-флаги только для переданных полей.
+        m_surfaceMeteoSaver->updateLastValues(manualValues);
+        qDebug() << "MainWindow: применены ручные приземные данные:"
+                 << "V=" << gmp->lastWindSpeed()
+                 << "dir=" << gmp->lastWindDirection();
+    }
+
+    if (m_surfaceMeteoSaver->hasData()) {
+        // hasData() == true означает, что заполнены все 5 параметров.
+        if (m_surfaceMeteoSaver->saveToDatabase(recordId)) {
+            statusBar()->showMessage(
+                QString("Приземные данные сохранены (ID: %1)").arg(recordId), 5000);
+        }
+    } else {
+        qDebug() << "MainWindow: surface_meteo неполная — таблица surface_meteo "
+                    "пропущена (для расчёта ветров достаточно наземного ветра)";
+    }
+
+    // ── 2. Определяем наземный ВЕТЕР для расчёта ─────────────────────────────
+    double surfWindSpeed = 0.0;
+    double surfWindDir   = 0.0;
+    bool   haveSurfWind  = false;
+
+    if (m_surfaceMeteoSaver->windSpeed() > 0.0 || m_surfaceMeteoSaver->windDirection() != 0) {
+        // m_surfaceMeteoSaver уже содержит ветер (от IWS либо перенесённый
+        // ручной выше). Берём оттуда.
+        surfWindSpeed = m_surfaceMeteoSaver->windSpeed();
+        surfWindDir   = m_surfaceMeteoSaver->windDirection();
+        haveSurfWind  = true;
+    } else if (gmp && gmp->hasLastData()) {
+        // Резервный путь — напрямую из GroundMeteoParams.
+        surfWindSpeed = gmp->lastWindSpeed();
+        surfWindDir   = gmp->lastWindDirection();
+        haveSurfWind  = true;
+    }
+
+    if (!haveSurfWind) {
+        qWarning() << "MainWindow: наземный ветер недоступен (ни ИВС, ни ручной ввод)"
+                   << "— расчёт профилей ветра пропущен для record_id=" << recordId;
+        statusBar()->showMessage(
+            "Расчёт ветра пропущен: нет наземного ветра (ИВС/ручной ввод)", 8000);
         return;
     }
 
-    const bool savedSurface = m_surfaceMeteoSaver->saveToDatabase(recordId);
-    if (savedSurface) {
-        statusBar()->showMessage(
-            QString("ИВС: приземные данные сохранены (ID: %1)").arg(recordId), 5000);
-    } else {
-        qWarning() << "MainWindow: ошибка сохранения surface_meteo, расчёт ветра всё равно запускаем"
-                   << "(данные ИВС есть в RAM)";
-    }
-
-    // ── Расчёт действительного и среднего ветра ──────────────────────────────
-    // На этом этапе в БД уже есть:
-    //   • measured_wind_profile (записан в обработчике CMD_MEASURED_WIND_REQUEST)
-    //   • station_coordinates   (записан в startMeasurementSequence)
-    //   • surface_meteo         (только что записан выше)
-    // → достаточно данных для запуска WindProfileCalculator.
-    performWindProfileCalculation(recordId);
+    // ── 3. Запускаем расчёт ──────────────────────────────────────────────────
+    runWindProfileCalculation(recordId, surfWindSpeed, surfWindDir);
 }
 
 void MainWindow::onAmsDatabaseError(const QString &error)
@@ -2355,16 +2407,20 @@ void MainWindow::applyMbtilesFile(const QString &mbtilesPath)
         m_tileServer->switchTo(mbtilesPath, QString()); // офлайн: нет upstream
 }
 
-void MainWindow::performWindProfileCalculation(int recordId)
+void MainWindow::runWindProfileCalculation(int recordId,
+                                           double surfaceWindSpeed,
+                                           double surfaceWindDirection)
 {
-    qInfo() << "MainWindow: Запуск расчёта профилей ветра для record_id=" << recordId;
+    qInfo() << "MainWindow: Запуск расчёта профилей ветра для record_id=" << recordId
+            << "| наземный ветер: V=" << surfaceWindSpeed
+            << "dir=" << surfaceWindDirection;
 
     if (!m_windProfileCalculator) {
-        qCritical() << "MainWindow: m_windProfileCalculator == nullptr — расчёт невозможен";
+        qCritical() << "MainWindow: m_windProfileCalculator == nullptr";
         return;
     }
     if (!m_amsHandler) {
-        qCritical() << "MainWindow: m_amsHandler == nullptr — некуда сохранять результат";
+        qCritical() << "MainWindow: m_amsHandler == nullptr";
         return;
     }
     if (!DatabaseManager::instance()->connect()) {
@@ -2374,7 +2430,7 @@ void MainWindow::performWindProfileCalculation(int recordId)
 
     QSqlDatabase db = DatabaseManager::instance()->database();
 
-    // ── 1. Читаем измеренный ветер из БД (сохранён обработчиком 0xAC) ────────
+    // ── 1. Измеренный ветер из БД (сохранён обработчиком 0xAC) ───────────────
     QVector<MeasuredWindData> measuredWind;
     {
         QSqlQuery refQuery(db);
@@ -2385,9 +2441,10 @@ void MainWindow::performWindProfileCalculation(int recordId)
         refQuery.bindValue(":rid", recordId);
 
         if (!refQuery.exec() || !refQuery.next() || refQuery.value(0).isNull()) {
-            qWarning() << "MainWindow: нет measured_wind_profile_id для record_id=" << recordId
-                       << "— расчёт невозможен";
-            statusBar()->showMessage("Расчёт ветра пропущен: нет данных измеренного ветра", 8000);
+            qWarning() << "MainWindow: нет measured_wind_profile_id для record_id="
+                       << recordId << "— расчёт невозможен";
+            statusBar()->showMessage(
+                "Расчёт ветра пропущен: нет данных измеренного ветра", 8000);
             return;
         }
 
@@ -2409,10 +2466,7 @@ void MainWindow::performWindProfileCalculation(int recordId)
             pt.height        = q.value(0).toFloat();
             pt.windSpeed     = q.value(1).toFloat();
             pt.windDirection = q.value(2).toFloat();
-            // Из БД сохраняются ВСЕ точки (включая reliability=1); чтобы не делать
-            // отдельный запрос, считаем все точки достоверными — фильтрация по NaN
-            // и здравым значениям происходит внутри WindProfileCalculator.
-            pt.reliability   = 2;
+            pt.reliability   = 2;  // все точки в БД считаем достоверными
             measuredWind.append(pt);
         }
     }
@@ -2442,8 +2496,8 @@ void MainWindow::performWindProfileCalculation(int recordId)
             longitudeDeg = q.value(1).toDouble();
             altitudeM    = q.value(2).toFloat();
         } else {
-            qWarning() << "MainWindow: нет station_coordinates для record_id=" << recordId
-                       << "— берём текущие из UI";
+            qWarning() << "MainWindow: нет station_coordinates для record_id="
+                       << recordId << "— берём текущие из UI";
             bool ok1, ok2;
             latitudeDeg  = getCoordField(ui->editLatitude,  ok1);
             longitudeDeg = getCoordField(ui->editLongitude, ok2);
@@ -2451,33 +2505,27 @@ void MainWindow::performWindProfileCalculation(int recordId)
         }
     }
 
-    // ── 3. Наземный ветер (из SurfaceMeteoSaver — уже свежие данные ИВС) ─────
-    const float surfaceWindSpeed = static_cast<float>(m_surfaceMeteoSaver->windSpeed());
-    const float surfaceWindDir   = static_cast<float>(m_surfaceMeteoSaver->windDirection());
-
-    // ── 4. Время зондирования: из поля editDateTime либо текущее ─────────────
+    // ── 3. Время зондирования ────────────────────────────────────────────────
     QDateTime sondingTime = QDateTime::fromString(
         ui->editDateTime->text(), QStringLiteral("dd.MM.yyyy hh:mm:ss"));
     if (!sondingTime.isValid())
         sondingTime = QDateTime::currentDateTime();
 
-    // ── 5. Заполняем Input и запускаем расчёт ────────────────────────────────
+    // ── 4. Заполняем Input и запускаем расчёт ────────────────────────────────
     WindProfileCalculator::Input in;
-    in.measuredWind      = measuredWind;
-    in.latitudeDeg       = latitudeDeg;
-    in.longitudeDeg      = longitudeDeg;
-    in.stationAltitudeM  = altitudeM;
-    in.surfaceWindSpeedMs = surfaceWindSpeed;
-    in.surfaceWindDirDeg  = surfaceWindDir;
-    in.groundWindHeightM  = 10.0f;     // стандартная высота установки IWS
-    in.z0                = 0.01f;      // как в примере calculateProfile.txt
-    in.sondingTime       = sondingTime;
+    in.measuredWind       = measuredWind;
+    in.latitudeDeg        = latitudeDeg;
+    in.longitudeDeg       = longitudeDeg;
+    in.stationAltitudeM   = altitudeM;
+    in.surfaceWindSpeedMs = static_cast<float>(surfaceWindSpeed);
+    in.surfaceWindDirDeg  = static_cast<float>(surfaceWindDirection);
+    in.groundWindHeightM  = 10.0f;
+    in.z0                 = 0.01f;
+    in.sondingTime        = sondingTime;
 
-    qDebug() << "MainWindow: Параметры расчёта:"
-             << "lat=" << latitudeDeg
-             << "lon=" << longitudeDeg
-             << "alt=" << altitudeM
-             << "surfaceWind=" << surfaceWindSpeed << "м/с" << surfaceWindDir << "°";
+    qDebug() << "MainWindow: Параметры расчёта: lat=" << latitudeDeg
+             << "lon=" << longitudeDeg << "alt=" << altitudeM
+             << "surfaceWind=" << surfaceWindSpeed << "м/с" << surfaceWindDirection << "°";
 
     WindProfileCalculator::Output out;
     auto t0 = QDateTime::currentDateTime();
@@ -2490,20 +2538,20 @@ void MainWindow::performWindProfileCalculation(int recordId)
                    << WindProfileCalculator::resultString(res);
         statusBar()->showMessage(
             QString("Расчёт профилей не выполнен: %1")
-                .arg(WindProfileCalculator::resultString(res)),
-            10000);
+                .arg(WindProfileCalculator::resultString(res)), 10000);
         return;
     }
 
-    // ── 6. Перед записью убираем возможные старые рассчитанные профили ──────
+    // ── 5. Убираем старые рассчитанные профили (на случай повторного расчёта) ─
     m_amsHandler->deleteCalculatedWindProfiles(recordId);
 
-    // ── 7. Сохраняем рассчитанные профили в БД ───────────────────────────────
+    // ── 6. Сохраняем рассчитанные профили в БД ───────────────────────────────
     const bool okAvg    = m_amsHandler->saveAvgWindProfile(recordId, out.avgWind);
     const bool okActual = m_amsHandler->saveActualWindProfile(recordId, out.actualWind);
 
     if (okAvg && okActual) {
-        qInfo() << "MainWindow: Рассчитанные профили сохранены в БД для record_id=" << recordId;
+        qInfo() << "MainWindow: Рассчитанные профили сохранены в БД для record_id="
+                << recordId;
         statusBar()->showMessage(
             QString("Расчёт профилей ветра завершён (ID: %1)").arg(recordId), 5000);
     } else {
