@@ -28,6 +28,23 @@ constexpr int kProfileBufferSize = 320;
 // Внутри буфера: [0..n-1] — TETA, [n..2n-1] — V (см. profile.cpp финальный цикл).
 constexpr int kOutSizePerKind = PlowAlgoritm::Constants::numStL_out;
 
+// Стандартные высоты профиля ветра библиотеки plow (Constants::numStL_out шт.).
+// Источник — getprofile__6p.cpp::GetProfileLayer():
+//   уровни 0..5  — фиксированные 25,50,75,100,150,200;
+//   уровни 6..32 — Constants::StandartLayer[1..27].
+// И средний, и действительный ветер раскладываются по этим же высотам.
+constexpr float kPlowStandardHeights[] = {
+    25.f,   50.f,   75.f,   100.f,  150.f,  200.f,
+    300.f,  400.f,  500.f,  600.f,  700.f,  800.f,  900.f,  1000.f,
+    1100.f, 1200.f, 1400.f, 1600.f, 1800.f, 2000.f, 2200.f, 2400.f,
+    2600.f, 2700.f, 3000.f, 3500.f, 4000.f, 4500.f, 5000.f, 5500.f,
+    6000.f, 7000.f, 8000.f
+};
+constexpr int kPlowStandardHeightCount =
+    static_cast<int>(sizeof(kPlowStandardHeights) / sizeof(kPlowStandardHeights[0]));
+
+static_assert(kPlowStandardHeightCount == PlowAlgoritm::Constants::numStL_out,
+              "kPlowStandardheights: число высот не совпадает с numStL_out");
 } // namespace
 
 
@@ -79,6 +96,8 @@ WindProfileCalculator::calculate(const Input &in, Output &out)
     out.actualWind.clear();
     out.avgWind.clear();
     out.debugSummary.clear();
+
+    Q_ASSERT(kPlowStandardHeightCount == PlowAlgoritm::Constants::numStL_out);
 
     // ── 1. Подготовка входного профиля (по примеру calculateProfile.txt) ─────
     // Создаём буфер на 320 точек; копируем только валидные точки (reliability == 2
@@ -196,12 +215,18 @@ WindProfileCalculator::calculate(const Input &in, Output &out)
     // Высоты совпадают со стандартными высотами действительного/среднего ветра
     // АМС — берём их из AMSProtocol, чтобы профиль был совместим с уже работающим
     // кодом (отображение, экспорт, БД).
-    const int n = PlowAlgoritm::Constants::LOW_NUM_DATA;
+    const int n = kPlowStandardHeightCount;
 
-    // Для каждого вида (действительный, средний) — отдельный список высот.
-    // АМС возвращает по 33 уровня в каждом профиле; n — то же число.
-    QVector<float> realHeights = AMSProtocol::getActualWindHeights(n);
-    QVector<float> avgHeights  = AMSProtocol::getAverageWindHeights(n);
+    //Средний и действительный ветер раскладываются по ОДНИМ И ТЕМ ЖЕ ВЫСОТАМ -
+    // профиль plow единый
+    QVector<float> realHeights;
+    QVector<float> avgHeights;
+    realHeights.reserve(n);
+    avgHeights.reserve(n);
+    for (int i = 0; i < n; i++) {
+        realHeights.append(kPlowStandardHeights[i]);
+        avgHeights.append(kPlowStandardHeights[i]);
+        }
 
     out.actualWind.reserve(n);
     out.avgWind.reserve(n);
@@ -211,7 +236,7 @@ WindProfileCalculator::calculate(const Input &in, Output &out)
     for (int i = 0; i < n; ++i) {
         // Действительный ветер
         const float realTeta = realWindBuf[i];
-        const float realV    = realWindBuf[i + n];
+        const float realV    = realWindBuf[i + kOutSizePerKind];
 
         WindProfileData rp;
         rp.height = (i < realHeights.size()) ? realHeights[i] : 0.0f;
@@ -231,7 +256,7 @@ WindProfileCalculator::calculate(const Input &in, Output &out)
 
         // Средний ветер
         const float avgTeta = avgWindBuf[i];
-        const float avgV    = avgWindBuf[i + n];
+        const float avgV    = avgWindBuf[i + kOutSizePerKind];
 
         WindProfileData ap;
         ap.height = (i < avgHeights.size()) ? avgHeights[i] : 0.0f;

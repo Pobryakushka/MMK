@@ -149,17 +149,27 @@ void MeasurementResults::loadMeasurementsFromDatabase()
     QSqlDatabase db = DatabaseManager::instance()->database();
     QSqlQuery query(db);
 
-    // Загружаем ВСЕ записи из main_archive за последние 30 дней
+    // Загружаем ВСЕ записи архива (без ограничения по дате — требование
+    // хранения не менее года). Наличие профилей ветра определяется тем же
+    // запросом через LEFT JOIN на wind_profiles_references — это убирает
+    // N отдельных запросов в цикле и делает открытие архива быстрым даже
+    // на больших объёмах.
+    //
+    // CASE WHEN ... IS NOT NULL — флаг наличия соответствующего профиля.
     QString sql =
         "SELECT "
         "   ma.record_id, "
         "   ma.completion_time, "
-        "   ma.notes "
+        "   ma.notes, "
+        "   (wpr.avg_wind_profile_id      IS NOT NULL) AS has_avg, "
+        "   (wpr.actual_wind_profile_id   IS NOT NULL) AS has_actual, "
+        "   (wpr.measured_wind_profile_id IS NOT NULL) AS has_measured "
         "FROM main_archive ma "
-        "WHERE ma.completion_time >= CURRENT_DATE - INTERVAL '30 days' "
+        "LEFT JOIN wind_profiles_references wpr "
+        "       ON wpr.record_id = ma.record_id "
         "ORDER BY ma.completion_time DESC";
 
-    qDebug() << "MeasurementResults: Выполняем запрос к main_archive...";
+    qDebug() << "MeasurementResults: Выполняем запрос к main_archive (весь архив)...";
 
     if (!query.exec(sql)) {
         qCritical() << "MeasurementResults: Ошибка SQL:" << query.lastError().text();
@@ -168,63 +178,27 @@ void MeasurementResults::loadMeasurementsFromDatabase()
     }
 
     int totalRecords = 0;
-    QMap<QDateTime, MeasurementRecord> recordsByDateTime;
 
     while (query.next()) {
         MeasurementRecord record;
-        record.recordId = query.value(0).toInt();
+        record.recordId        = query.value(0).toInt();
         record.measurementTime = query.value(1).toDateTime();
-        record.notes = query.value(2).toString();
+        record.notes           = query.value(2).toString();
 
-        // Флаги наличия данных заполним позже
-        record.hasAvgWind = false;
-        record.hasActualWind = false;
-        record.hasMeasuredWind = false;
+        // Флаги наличия профилей пришли тем же запросом — без доп. обращений к БД
+        record.hasAvgWind      = query.value(3).toBool();
+        record.hasActualWind   = query.value(4).toBool();
+        record.hasMeasuredWind = query.value(5).toBool();
 
-        recordsByDateTime[record.measurementTime] = record;
-        totalRecords++;
-
-        //        QDate date = record.measurementTime.date();
-        //        int hour = record.measurementTime.time().hour();
-        //        QString key = QString("%1_%2").arg(date.toString("yyyy-MM-dd")).arg(hour);
-
-        //        recordsByDateTime[key] = record;
-        //        totalRecords++;
-
-        qDebug() << "  Запись" << record.recordId
-                 << "от" << record.measurementTime.toString("yyyy-MM-dd hh:mm:ss");
-    }
-
-    qInfo() << "MeasurementResults: Загружено" << totalRecords << "записей из main_archive";
-
-    // Теперь проверяем наличие профилей ветра для каждой записи через wind_profiles_references
-    for (auto it = recordsByDateTime.begin(); it != recordsByDateTime.end(); ++it) {
-        int rid = it.value().recordId;
-
-        QSqlQuery refQuery(db);
-        refQuery.prepare(
-            "SELECT avg_wind_profile_id, actual_wind_profile_id, measured_wind_profile_id "
-            "FROM wind_profiles_references WHERE record_id = :rid"
-            );
-        refQuery.bindValue(":rid", rid);
-
-        if (refQuery.exec() && refQuery.next()) {
-            it.value().hasAvgWind      = !refQuery.value(0).isNull();
-            it.value().hasActualWind   = !refQuery.value(1).isNull();
-            it.value().hasMeasuredWind = !refQuery.value(2).isNull();
-        }
-        // Если строки нет в wind_profiles_references — все флаги остаются false
-    }
-
-    // Переносим в основную структуру availableMeasurements
-    for (auto it = recordsByDateTime.begin(); it != recordsByDateTime.end(); ++it) {
-        MeasurementRecord record = it.value();
-        QDate date = record.measurementTime.date();
-        int hour = record.measurementTime.time().hour();
-
+        const QDate date = record.measurementTime.date();
         availableMeasurements[date].append(record);
+        totalRecords++;
     }
 
+    qInfo() << "MeasurementResults: Загружено" << totalRecords
+            << "записей из main_archive (весь архив)";
+
+    // Сортируем записи внутри каждой даты по времени (новые сверху)
     for (auto it = availableMeasurements.begin(); it != availableMeasurements.end(); ++it) {
         std::sort(it.value().begin(), it.value().end(),
                   [](const MeasurementRecord &a, const MeasurementRecord &b) {
@@ -232,9 +206,10 @@ void MeasurementResults::loadMeasurementsFromDatabase()
                   });
     }
 
-    qInfo() << "MeasurementResults: Данные распределены по" << availableMeasurements.size() << "датам";
+    qInfo() << "MeasurementResults: Данные распределены по"
+            << availableMeasurements.size() << "датам";
 
-    // Выводим список дат для отладки
+    // Список дат для отладки
     QList<QDate> dates = availableMeasurements.keys();
     std::sort(dates.begin(), dates.end());
     qDebug() << "Доступные даты в архиве:" << dates;

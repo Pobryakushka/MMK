@@ -221,7 +221,6 @@ QVector<float> AMSProtocol::getAverageWindHeights(int count)
 QVector<float> AMSProtocol::getActualWindHeights(int count)
 {
     // Генерация стандартных высот для действительного ветра
-    // Логика из store/storetypes.h:196-212
     QVector<float> heights;
     heights.reserve(count);
 
@@ -538,18 +537,36 @@ QVector<MeasuredWindData> AMSProtocol::parseMeasuredWindResponse(const QByteArra
     QVector<MeasuredWindData> profile;
     ok = false;
 
+    // Параметры пакета измеренного ветра (0xAC) по протоколу АМС.
+    // АМС присылает 320 измерений по 16 байт. Размер пакета 0xAC = 5123 байта
+    // (подтверждено логом). Структура одной точки (16 байт):
+    //   [+0]  float  скорость ветра
+    //   [+4]  float  направление ветра
+    //   [+8]  float  высота
+    //   [+12] int    признак достоверности (reliability: 2 — достоверно, 1 — нет)
+    const int kMeasuredPointCount = 320;
+    const int kMeasuredPointSize  = 16;
+    // Минимальный размер пакета: команда(1) + данные + КС(1) + стоп(1)
+    const int kMinPacketSize =
+        1 + kMeasuredPointCount * kMeasuredPointSize + 1 + 1;   // = 5123
+
     if (!isPacketValid(data)) return profile;
     if (getPacketCommand(data) != CMD_MEASURED_WIND_REQUEST) return profile;
-    if (data.size() < 1603) return profile; // 1 + 1600 + 1 + 1
+    if (data.size() < kMinPacketSize) {
+        qWarning() << "AMSProtocol::parseMeasuredWindResponse: пакет короче ожидаемого —"
+                   << data.size() << "байт, ожидалось не менее" << kMinPacketSize;
+        return profile;
+    }
 
-    // 100 измерений по 16 байт каждое
-    for (int i = 0; i < 100; i++) {
-        int offset = 1 + i * 16;
+    profile.reserve(kMeasuredPointCount);
+
+    for (int i = 0; i < kMeasuredPointCount; i++) {
+        const int offset = 1 + i * kMeasuredPointSize;
         MeasuredWindData point;
-        point.windSpeed = bytesToFloat(data, offset);
+        point.windSpeed     = bytesToFloat(data, offset);
         point.windDirection = static_cast<int>(bytesToFloat(data, offset + 4));
-        point.height = bytesToFloat(data, offset + 8);
-        point.reliability = bytesToInt(data, offset + 12);
+        point.height        = bytesToFloat(data, offset + 8);
+        point.reliability   = bytesToInt(data, offset + 12);
         profile.append(point);
     }
 
