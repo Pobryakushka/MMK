@@ -1253,11 +1253,12 @@ bool AMSHandler::saveMeasuredWindProfile(int recordId, const QVector<MeasuredWin
     int profileId = idQuery.value(0).toInt();
     qDebug() << "AMSHandler: Сгенерирован profile_id =" << profileId << "для measured_wind_profile";
 
-    // ШАГ 2: Вставляем ВСЕ точки с ОДНИМ И ТЕМ ЖЕ profile_id
+    // ШАГ 2: Вставляем ВСЕ точки с ОДНИМ И ТЕМ ЖЕ profile_id.
+    // reliability — признак достоверности точки от АМС (1 - достоверная, 0 - нет).
     QSqlQuery query(db);
     query.prepare("INSERT INTO measured_wind_profile "
-                  "(profile_id, height, wind_speed, wind_direction, measurement_time) "
-                  "VALUES (:profile_id, :height, :speed, :direction, :time)");
+                  "(profile_id, height, wind_speed, wind_direction, measurement_time, reliability) "
+                  "VALUES (:profile_id, :height, :speed, :direction, :time, :reliability)");
 
     for (const MeasuredWindData &point : data) {
         query.bindValue(":profile_id", profileId);  // ОДИН И ТОТ ЖЕ!
@@ -1265,6 +1266,7 @@ bool AMSHandler::saveMeasuredWindProfile(int recordId, const QVector<MeasuredWin
         query.bindValue(":speed", point.windSpeed);
         query.bindValue(":direction", point.windDirection);
         query.bindValue(":time", measurementTime);
+        query.bindValue(":reliability", point.reliability);
 
         if (!query.exec()) {
             db.rollback();

@@ -353,7 +353,7 @@ QVector<MeasuredWindData> MeasurementResults::loadMeasuredWindProfile(int record
 
     QSqlQuery query(db);
     query.prepare(
-        "SELECT height, wind_speed, wind_direction "
+        "SELECT height, wind_speed, wind_direction, reliability "
         "FROM measured_wind_profile "
         "WHERE profile_id = :pid "
         "ORDER BY height ASC"
@@ -370,10 +370,10 @@ QVector<MeasuredWindData> MeasurementResults::loadMeasuredWindProfile(int record
         point.height        = query.value(0).toFloat();
         point.windSpeed     = query.value(1).toFloat();
         point.windDirection = query.value(2).toInt();
-        point.reliability   = 2; // Из БД только достоверные данные
+        // Достоверность от АМС (1 - достоверная, 0 - недостоверная)
+        point.reliability   = query.value(3).toInt();
         profile.append(point);
     }
-
     qDebug() << "MeasurementResults: Загружен профиль измеренного ветра," << profile.size()
              << "точек (record_id=" << recordId << ", profile_id=" << profileId << ")";
     return profile;

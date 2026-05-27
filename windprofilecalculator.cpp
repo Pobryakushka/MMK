@@ -109,8 +109,9 @@ WindProfileCalculator::calculate(const Input &in, Output &out)
     const int srcN = qMin(in.measuredWind.size(), kProfileBufferSize);
     for (int i = 0; i < srcN; ++i) {
         const MeasuredWindData &m = in.measuredWind.at(i);
-        // АМС возвращает reliability=2 для достоверных точек, 1 — для недостоверных.
-        const bool curr = (m.reliability == 2);
+        // Полярность достоверности по протоколу АМС: 1 — достоверная точка,
+        // 0 — недостоверная. В расчёт берём только достоверные.
+        const bool curr = (m.reliability == 1);
         if (!curr) continue;
         if (std::isnan(m.windSpeed) || std::isnan(m.height)) continue;
 

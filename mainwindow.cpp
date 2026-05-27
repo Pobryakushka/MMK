@@ -2453,7 +2453,7 @@ void MainWindow::runWindProfileCalculation(int recordId,
 
         QSqlQuery q(db);
         q.prepare(
-            "SELECT height, wind_speed, wind_direction "
+            "SELECT height, wind_speed, wind_direction, reliability "
             "FROM measured_wind_profile WHERE profile_id = :pid ORDER BY profile_id"
             );
         q.bindValue(":pid", measuredProfileId);
@@ -2467,7 +2467,9 @@ void MainWindow::runWindProfileCalculation(int recordId,
             pt.height        = q.value(0).toFloat();
             pt.windSpeed     = q.value(1).toFloat();
             pt.windDirection = q.value(2).toFloat();
-            pt.reliability   = 2;  // все точки в БД считаем достоверными
+            // Достоверность от АМС (1 - достоверная, 0 - недостоверная).
+            // Калькулятор сам отфильтрует недостоверные точки.
+            pt.reliability   = q.value(3).toInt();
             measuredWind.append(pt);
         }
     }
