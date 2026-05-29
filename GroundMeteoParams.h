@@ -5,6 +5,8 @@
 #include <QMap>
 #include <QSerialPort>
 #include <QCloseEvent>
+#include <QTimer>
+#include <QTableWidget>
 
 namespace Ui {
 class GroundMeteoParams;
@@ -18,6 +20,21 @@ public:
         MODBUS_RTU,
         UMB_PROTOCOL
     };
+
+    // Состояние приземных данных. Единая точка правды для всей программы.
+    //   NoData — НЕ ВСЕ 5 строк применены кнопкой "Применить" / получены от IWS.
+    //   Fresh  — все 5 применены, прошло < 30 минут с последнего применения.
+    //   Stale  — все 5 применены, прошло > 30 минут (данные считаются устаревшими,
+    //            но НЕ блокируют запуск измерения — только уведомление).
+    enum SurfaceState {
+        NoData,
+        Fresh,
+        Stale
+    };
+    Q_ENUM(SurfaceState)
+
+    // Длительность "свежести" данных, мс. Перезапускается при каждом применении.
+    static constexpr int kStaleTimeoutMs = 30 * 60 * 1000; // 30 минут
 
     explicit GroundMeteoParams(QWidget *parent = nullptr);
     ~GroundMeteoParams();
@@ -36,6 +53,13 @@ public:
     double lastWindDirection() const { return m_lastWindDirection; }
     bool   hasLastData() const       { return m_hasLastData; }
 
+    // ── Состояние приземных данных (единая точка правды) ────────────────────
+    SurfaceState surfaceState() const { return m_surfaceState; }
+
+    // Есть ли в таблице правки, которые ещё не применены кнопкой "Применить".
+    // Используется в closeEvent для подтверждающего диалога.
+    bool hasUnappliedChanges() const { return m_dirty; }
+
     // Создание запросов (публичные методы)
     QByteArray createModbusReadRequest(const QList<quint16>& parameters);
     QByteArray createUmbReadRequest(const QList<quint16>& parameters);
@@ -48,6 +72,8 @@ public slots:
 private slots:
     void updateTableWithData(const QMap<QString, double>& values);
     void applyManualInput();
+    void onTableItemChanged(QTableWidgetItem *item);   // отслеживание m_dirty
+    void onStaleTimerTimeout();                         // 30 мин истекли
 
 private:
     Ui::GroundMeteoParams *ui;
@@ -65,6 +91,29 @@ private:
 
     // Для отслеживания запрошенных регистров (Modbus)
     QList<quint16> m_lastRequestedRegisters;
+
+    // ── Готовность приземных данных ──────────────────────────────────────────
+    // Флаги "это значение применено" — по каждой из 5 строк таблицы.
+    // Применением считается:
+    //   • нажатие кнопки "Применить" с валидным значением в строке;
+    //   • получение значения от IWS (любой опрос).
+    // Сброс — кнопка "Очистить" / при ручном вводе пустой строки + Применить.
+    bool m_hasSpeed       = false;
+    bool m_hasDirection   = false;
+    bool m_hasPressure    = false;
+    bool m_hasHumidity    = false;
+    bool m_hasTemperature = false;
+
+    SurfaceState m_surfaceState = NoData;
+
+    QTimer *m_staleTimer = nullptr;   // singleShot на 30 мин
+
+    // Признак "в таблице есть правки, не применённые кнопкой Применить".
+    // Сбрасывается при applyManualInput / deleteDataFromTable / onDataReceived
+    // (после программной записи). Выставляется только при РУЧНОМ редактировании
+    // ячеек оператором (через сигнал itemChanged).
+    bool m_dirty = false;
+    bool m_suppressDirty = false;     // подавление itemChanged при программной записи
 
     // Парсинг ответов (приватные методы)
     bool parseModbusResponse(const QByteArray& response, QMap<QString, double>& values);
@@ -88,12 +137,21 @@ private:
     QString parameterCodeToName(quint16 code);
     QString mapParameterToTableRow(const QString& paramName);
 
+    // Пересчёт m_surfaceState из 5 флагов + эмит сигнала при изменении.
+    void recomputeSurfaceState();
+    // Перезапустить таймер 30 мин (вызывается при любом применении/приёме).
+    void restartStaleTimer();
+
 protected:
     void closeEvent(QCloseEvent *event) override;
 
 signals:
     void errorOccurred(const QString& error);
     void dataUpdated(const QMap<QString, double>& values);
+
+    // Состояние приземных данных изменилось. MainWindow слушает этот сигнал
+    // и обновляет lblStatus + доступность кнопки старта.
+    void surfaceStateChanged(GroundMeteoParams::SurfaceState newState);
 };
 
 #endif // GROUNDMETEOPARAMS_H

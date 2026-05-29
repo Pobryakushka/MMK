@@ -3,8 +3,11 @@
 #include <QDebug>
 #include <QtMath>
 #include <algorithm>  // Для std::min_element, std::max_element
+#include <QMessageBox>
 
 GroundMeteoParams* GroundMeteoParams::s_instance = nullptr;
+
+static constexpr double kHpaToMmHg = 0.750064;
 
 GroundMeteoParams::GroundMeteoParams(QWidget *parent)
     : QDialog(parent, Qt::CustomizeWindowHint)
@@ -22,7 +25,7 @@ GroundMeteoParams::GroundMeteoParams(QWidget *parent)
     qDebug() << "GroundMeteoParams initialized with Modbus RTU protocol, device address 0x01";
 
     connect(ui->btnGroundParamsClose, &QPushButton::clicked, this, [this](){
-        hide();
+        close();   // closeEvent сам решит, спрашивать ли подтверждение
     });
     connect(ui->btnGroundParamsClear, &QPushButton::clicked, this, &GroundMeteoParams::deleteDataFromTable);
     connect(ui->btnGroundParamsApply, &QPushButton::clicked, this, &GroundMeteoParams::applyManualInput);
@@ -37,6 +40,18 @@ GroundMeteoParams::GroundMeteoParams(QWidget *parent)
         }
         item->setFlags(item->flags() | Qt::ItemIsEditable);
     }
+
+    // Отслеживаем ручные правки ячеек — для m_dirty (подтверждение при закрытии).
+    // Программные записи в таблицу обёрнуты в m_suppressDirty, чтобы не путать.
+    connect(table, &QTableWidget::itemChanged,
+            this, &GroundMeteoParams::onTableItemChanged);
+
+    // Таймер устаревания. SingleShot — перезапускаем restartStaleTimer() при
+    // каждом применении (и ручном, и от IWS). По истечении → состояние Stale.
+    m_staleTimer = new QTimer(this);
+    m_staleTimer->setSingleShot(true);
+    connect(m_staleTimer, &QTimer::timeout,
+            this, &GroundMeteoParams::onStaleTimerTimeout);
 }
 
 GroundMeteoParams::~GroundMeteoParams()
@@ -51,8 +66,33 @@ GroundMeteoParams::~GroundMeteoParams()
 // Переопределяем закрытие окна: скрываем вместо удаления, чтобы кеш данных сохранялся
 void GroundMeteoParams::closeEvent(QCloseEvent *event)
 {
+    if (m_dirty) {
+        QMessageBox box(this);
+        box.setIcon(QMessageBox::Question);
+        box.setWindowTitle("Несохранённые изменения");
+        box.setText("В таблице есть изменения, не применённые кнопкой «Применить».");
+        box.setInformativeText("Применить их перед закрытием?");
+        box.setStandardButtons(QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+        box.setDefaultButton(QMessageBox::Yes);
+        box.button(QMessageBox::Yes)->setText("Применить");
+        box.button(QMessageBox::No)->setText("Не применять");
+        box.button(QMessageBox::Cancel)->setText("Отмена");
+
+        const int ret = box.exec();
+        if (ret == QMessageBox::Cancel) {
+            event->ignore();
+            return;
+        }
+        if (ret == QMessageBox::Yes) {
+            applyManualInput();   // применяем — m_dirty сбросится внутри
+        } else {
+            // "Не применять" — просто отмечаем как не-dirty, изменения теряются
+            m_dirty = false;
+        }
+    }
+
     hide();
-    event->ignore(); // Не допускаем реального закрытия/уничтожения
+    event->ignore();   // окно — синглтон, не уничтожаем
 }
 
 GroundMeteoParams* GroundMeteoParams::instance()
@@ -144,23 +184,37 @@ void GroundMeteoParams::deleteDataFromTable()
     int columnToClear = 1;
     int rowCount = ui->tableWidget_GroundParams->rowCount();
 
+    // Программная очистка ячеек — itemChanged не должен пометить m_dirty
+    m_suppressDirty = true;
     for (int row = 0; row < rowCount; ++row) {
         QTableWidgetItem *item = ui->tableWidget_GroundParams->item(row, columnToClear);
-        if (item) {
-            item->setText("");
-        }
+        if (item) item->setText("");
     }
-    // Сбрасываем кеш при очистке
+    m_suppressDirty = false;
+
+    // Сбрасываем кеш ветра
     m_lastWindSpeed    = 0.0;
     m_lastWindDirection = 0.0;
     m_hasLastData      = false;
+
+    // Сбрасываем все 5 флагов готовности
+    m_hasSpeed = m_hasDirection = m_hasPressure = m_hasHumidity = m_hasTemperature = false;
+
+    // Останавливаем таймер устаревания
+    if (m_staleTimer) m_staleTimer->stop();
+
+    // Сбрасываем dirty (после очистки правок "нет")
+    m_dirty = false;
+
+    // Пересчёт состояния → NoData → сигнал
+    recomputeSurfaceState();
 }
 
 void GroundMeteoParams::applyManualInput()
 {
     QTableWidget *table = ui->tableWidget_GroundParams;
 
-    // Строка 0 — скорость ветра, строка 1 — направление ветра
+    // Универсальный парсер ячейки: пусто → невалидно; "12,3"/"12.3" → 12.3.
     auto readRow = [&](int row) -> std::pair<bool, double> {
         QTableWidgetItem *item = table->item(row, 1);
         if (!item || item->text().trimmed().isEmpty())
@@ -172,32 +226,56 @@ void GroundMeteoParams::applyManualInput()
 
     auto [speedOk, speed] = readRow(0);
     auto [dirOk,   dir]   = readRow(1);
+    auto [presOk,  pres]  = readRow(2);   // ВРУЧНУЮ — уже мм рт.ст.
+    auto [humOk,   hum]   = readRow(3);
+    auto [tempOk,  temp]  = readRow(4);
 
-    if (speedOk) {
-        m_lastWindSpeed = speed;
-        m_hasLastData   = true;
-        qDebug() << "GroundMeteoParams: ручной ввод Wind Speed =" << m_lastWindSpeed;
-    }
-    if (dirOk) {
-        m_lastWindDirection = dir;
-        m_hasLastData       = true;
-        qDebug() << "GroundMeteoParams: ручной ввод Wind Direction =" << m_lastWindDirection;
-    }
+    // Обновляем флаги готовности по каждому параметру независимо
+    m_hasSpeed       = speedOk;
+    m_hasDirection   = dirOk;
+    m_hasPressure    = presOk;
+    m_hasHumidity    = humOk;
+    m_hasTemperature = tempOk;
 
-    if (!speedOk && !dirOk) {
+    // Кеш ветра — для совместимости с существующим кодом, который читает
+    // lastWindSpeed()/lastWindDirection() (например, runWindProfileCalculation).
+    if (speedOk) m_lastWindSpeed     = speed;
+    if (dirOk)   m_lastWindDirection = dir;
+    m_hasLastData = speedOk || dirOk;
+
+    qDebug() << "GroundMeteoParams::applyManualInput: speed=" << speed << "(" << speedOk << ")"
+             << "dir=" << dir << "(" << dirOk << ")"
+             << "pres=" << pres << "(" << presOk << ") [мм рт.ст.]"
+             << "hum=" << hum << "(" << humOk << ")"
+             << "temp=" << temp << "(" << tempOk << ")";
+
+    // Собираем values с ключами, которые понимает остальной код
+    // (SurfaceMeteoSaver, MainWindow и т.д.).
+    QMap<QString, double> values;
+    if (speedOk) values["Wind Speed Avg"]     = speed;
+    if (dirOk)   values["Wind Direction Avg"] = dir;
+    if (presOk)  values["Pressure Avg"]       = pres;     // уже мм рт.ст.
+    if (humOk)   values["Humidity Avg"]       = hum;
+    if (tempOk)  values["Temperature Avg"]    = temp;
+
+    if (values.isEmpty()) {
         qWarning() << "GroundMeteoParams: нет корректных данных для применения";
+        // Даже если ничего не введено — состояние пересчитать надо
+        // (может стать NoData, если до этого было применено).
+        recomputeSurfaceState();
         return;
     }
 
-    qDebug() << "GroundMeteoParams: применены ручные данные —"
-             << "speed =" << m_lastWindSpeed
-             << "dir =" << m_lastWindDirection
-             << "hasLastData =" << m_hasLastData;
+    // Кнопка "Применить" нажата → правки считаются применёнными
+    m_dirty = false;
 
-    // Оповещаем подписчиков так же, как при получении от датчика
-    QMap<QString, double> values;
-    if (speedOk) values["Wind Speed Avg"] = m_lastWindSpeed;
-    if (dirOk)   values["Wind Direction Avg"] = m_lastWindDirection;
+    // Перезапускаем таймер 30 мин — данные свежие
+    restartStaleTimer();
+
+    // Пересчитываем состояние и эмитим, если изменилось
+    recomputeSurfaceState();
+
+    // Оповещаем подписчиков (SurfaceMeteoSaver и т.д.)
     emit dataUpdated(values);
 }
 
@@ -297,6 +375,41 @@ void GroundMeteoParams::onDataReceived(const QByteArray& data)
             qDebug() << "  " << it.key() << "=" << it.value();
         }
 
+        // Перевод давления гПа → мм рт.ст. ПРЯМО В VALUES.
+        // IWS отдаёт давление в гПа, а внутри программы везде используется
+        // мм рт.ст. Конвертируем здесь, в одной точке — дальше во всех
+        // подписчиках (SurfaceMeteoSaver, таблица, MainWindow) давление
+        // приходит уже в мм рт.ст. Никаких *0.750064 в других местах быть
+        // не должно.
+        if (values.contains("Pressure Avg")) {
+            values["Pressure Avg"] = values["Pressure Avg"] * kHpaToMmHg;
+            qDebug() << "GroundMeteoParams: Pressure Avg переведён гПа→мм рт.ст. ="
+                     << values["Pressure Avg"];
+        }
+        if (values.contains("Pressure")) {
+            values["Pressure"] = values["Pressure"] * kHpaToMmHg;
+            qDebug() << "GroundMeteoParams: Pressure переведён гПа→мм рт.ст. ="
+                     << values["Pressure"];
+        }
+
+        // Обновляем флаги готовности для приземных параметров: данные пришли
+        // от IWS — считаем их применёнными (грань ручной/IWS стёрта).
+        if (values.contains("Wind Speed Avg") || values.contains("Wind Speed"))
+            m_hasSpeed = true;
+        if (values.contains("Wind Direction Avg") || values.contains("Wind Direction"))
+            m_hasDirection = true;
+        if (values.contains("Pressure Avg") || values.contains("Pressure"))
+            m_hasPressure = true;
+        if (values.contains("Humidity Avg") || values.contains("Humidity"))
+            m_hasHumidity = true;
+        if (values.contains("Temperature Avg") || values.contains("Temperature"))
+            m_hasTemperature = true;
+
+        // Данные пришли — таймер 30 мин обнуляем
+        restartStaleTimer();
+        // Состояние могло измениться (например, NoData → Fresh)
+        recomputeSurfaceState();
+
         // Кешируем скорость и направление ветра (для передачи в АМС)
         // Поддерживаем оба протокола: UMB (текущие) и Modbus (средние)
         if (values.contains("Wind Speed Avg")) {
@@ -336,6 +449,9 @@ void GroundMeteoParams::updateTableWithData(const QMap<QString, double>& values)
 {
     qDebug() << "updateTableWithData called with" << values.size() << "values";
 
+    // Программная запись — не помечаем как ручную правку
+    m_suppressDirty = true;
+
     for (auto it = values.begin(); it != values.end(); ++it) {
         qDebug() << "Processing parameter:" << it.key() << "=" << it.value();
 
@@ -348,7 +464,6 @@ void GroundMeteoParams::updateTableWithData(const QMap<QString, double>& values)
 
         qDebug() << "Mapped to row containing:" << rowName;
 
-        // Ищем строку в таблице
         int rowCount = ui->tableWidget_GroundParams->rowCount();
         bool found = false;
 
@@ -356,20 +471,16 @@ void GroundMeteoParams::updateTableWithData(const QMap<QString, double>& values)
             QTableWidgetItem* paramItem = ui->tableWidget_GroundParams->item(row, 0);
             if (paramItem) {
                 QString cellText = paramItem->text();
-                qDebug() << "Row" << row << "contains:" << cellText;
 
                 if (cellText.contains(rowName, Qt::CaseInsensitive)) {
-                    // Обновляем значение
                     QTableWidgetItem* valueItem = ui->tableWidget_GroundParams->item(row, 1);
                     if (!valueItem) {
                         valueItem = new QTableWidgetItem();
                         ui->tableWidget_GroundParams->setItem(row, 1, valueItem);
                     }
-                    // Давление от IWS приходит в гПа — переводим в мм рт.ст. для отображения
-                    double displayValue = cellText.contains("давлени", Qt::CaseInsensitive)
-                                         ? it.value() * 0.750064
-                                         : it.value();
-                    valueItem->setText(QString::number(displayValue, 'f', 2));
+                    // Давление в values теперь уже мм рт.ст. (перевод в onDataReceived).
+                    // Никаких пересчётов здесь — пишем значение как есть.
+                    valueItem->setText(QString::number(it.value(), 'f', 2));
                     qDebug() << "Updated row" << row << "with value:" << it.value();
                     found = true;
                     break;
@@ -382,6 +493,7 @@ void GroundMeteoParams::updateTableWithData(const QMap<QString, double>& values)
         }
     }
 
+    m_suppressDirty = false;
     qDebug() << "Table update completed";
 }
 
@@ -929,4 +1041,52 @@ bool GroundMeteoParams::convertModbusRegisterToValue(
 
     qDebug() << "Unknown register address:" << regAddr;
     return false;
+}
+
+void GroundMeteoParams::onTableItemChanged(QTableWidgetItem *item)
+{
+    Q_UNUSED(item);
+    if (m_suppressDirty) return;   // программная запись — не считаем правкой
+    m_dirty = true;
+}
+
+void GroundMeteoParams::recomputeSurfaceState()
+{
+    SurfaceState newState;
+    const bool allFive = m_hasSpeed && m_hasDirection
+                         && m_hasPressure && m_hasHumidity && m_hasTemperature;
+
+    if (!allFive) {
+        newState = NoData;
+    } else if (m_staleTimer && m_staleTimer->isActive()) {
+        // Таймер ещё тикает — данные свежие
+        newState = Fresh;
+    } else {
+        // Все 5 есть, но таймер не активен — значит уже истёк
+        newState = Stale;
+    }
+
+    if (newState != m_surfaceState) {
+        qDebug() << "GroundMeteoParams: surfaceState"
+                 << m_surfaceState << "→" << newState
+                 << "(hasSpeed=" << m_hasSpeed
+                 << "hasDir=" << m_hasDirection
+                 << "hasPres=" << m_hasPressure
+                 << "hasHum=" << m_hasHumidity
+                 << "hasTemp=" << m_hasTemperature << ")";
+        m_surfaceState = newState;
+        emit surfaceStateChanged(newState);
+    }
+}
+
+void GroundMeteoParams::restartStaleTimer()
+{
+    if (m_staleTimer) m_staleTimer->start(kStaleTimeoutMs);
+}
+
+void GroundMeteoParams::onStaleTimerTimeout()
+{
+    qDebug() << "GroundMeteoParams: таймер 30 мин истёк — данные устарели";
+    // Если данные есть — состояние станет Stale; если уже нет — останется NoData.
+    recomputeSurfaceState();
 }
