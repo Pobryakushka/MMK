@@ -272,7 +272,7 @@ QByteArray AMSProtocol::createModeTransferPacket(WorkMode mode, AveragingTime av
 QByteArray AMSProtocol::createCoordsTransferPacket(const StationCoordinates &coords)
 {
     QByteArray packet;
-    packet.append(static_cast<char>(CMD_COORDS_TRANSFER));
+    packet.append(static_cast<char>( CMD_COORDS_TRANSFER));
     packet.append(intToBytes(coords.latitude));
     packet.append(intToBytes(coords.longitude));
     packet.append(floatToBytes(coords.altitude));

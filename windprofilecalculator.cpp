@@ -125,13 +125,13 @@ WindProfileCalculator::calculate(const Input &in, Output &out)
     qDebug() << "[WindProfileCalculator] валидных точек измерения:" << h
              << "из" << in.measuredWind.size();
 
-    if (h <= 0) {
-        // Полное отсутствие измерений — расчёт по приземному ветру теоретически
-        // возможен (ProfileReal::bottomLayer), но текущая реализация требует
-        // как минимум одного валидного уровня для корректной экстраполяции.
-        out.debugSummary = QStringLiteral("Нет валидных точек измеренного ветра");
-        return ERR_NO_MEASURED_DATA;
-    }
+    // if (h <= 0) {
+    //     // Полное отсутствие измерений — расчёт по приземному ветру теоретически
+    //     // возможен (ProfileReal::bottomLayer), но текущая реализация требует
+    //     // как минимум одного валидного уровня для корректной экстраполяции.
+    //     out.debugSummary = QStringLiteral("Нет валидных точек измеренного ветра");
+    //     return ERR_NO_MEASURED_DATA;
+    // }
 
     // ── 2. Инициализация ClimatData ──────────────────────────────────────────
     ClimatData cd(m_climatDataPath.toStdString());

@@ -2522,8 +2522,8 @@ void MainWindow::runWindProfileCalculation(int recordId,
     in.stationAltitudeM   = altitudeM;
     in.surfaceWindSpeedMs = static_cast<float>(surfaceWindSpeed);
     in.surfaceWindDirDeg  = static_cast<float>(surfaceWindDirection);
-    in.groundWindHeightM  = 10.0f;
-    in.z0                 = 0.01f;
+    in.groundWindHeightM  = 8.0f;
+    in.z0                 = 0.0f;
     in.sondingTime        = sondingTime;
 
     qDebug() << "MainWindow: Параметры расчёта: lat=" << latitudeDeg
