@@ -228,6 +228,21 @@ MainWindow::MainWindow(QWidget *parent)
     sourceDataInstance = new SourceData(this);
     qDebug() << "SourceData instance created (with GroundMeteoParams inside)";
 
+    // ── Подписка на состояние приземных данных ──────────────────────────────
+    // GroundMeteoParams является единой точкой правды о готовности приземных
+    // данных. MainWindow только отображает: lblStatus + доступность btnStart.
+    if (GroundMeteoParams *gmp = GroundMeteoParams::instance()) {
+        connect(gmp, &GroundMeteoParams::surfaceStateChanged,
+                this, &MainWindow::onSurfaceStateChanged);
+        // Начальное состояние — данных ещё нет → NoData, кнопка пуска
+        // должна быть заблокирована с самого старта программы.
+        onSurfaceStateChanged(gmp->surfaceState());
+    } else {
+        qWarning() << "MainWindow: GroundMeteoParams::instance() == nullptr "
+                      "при создании SourceData — кнопка пуска не получит "
+                      "блокировку до первого появления экземпляра";
+    }
+
     setupAmsHandler();
     //    configureAmsDatabase();
 
@@ -880,32 +895,6 @@ void MainWindow::onAmsStatusMessage(const QString &message)
     statusBar()->showMessage("АМС: " + message, 3000);
 }
 
-//void MainWindow::onAmsMeasurementProgress(int percent, float angle)
-//{
-//    if (percent >= 0 && percent <= 100) {
-//        qDebug() << "MainWindow: Прогресс измерений АМС:" << percent << "%, угол:" << angle << "°";
-//        statusBar()->showMessage(
-//            QString("АМС: Измерения %1% (угол: %2°)").arg(percent).arg(angle, 0, 'f', 1),
-//            2000);
-//    } else if (percent == -1) {
-//        qDebug() << "MainWindow: Измерения АМС завершены успешно";
-//        statusBar()->showMessage("АМС: Измерения завершены успешно", 5000);
-
-//        // Можно запросить данные
-//        QTimer::singleShot(500, this, [this]() {
-//            if (m_amsHandler && m_amsHandler->isConnected()) {
-//                m_amsHandler->requestAvgWind();
-//                m_amsHandler->requestActualWind();
-//                m_amsHandler->requestMeasuredWind();
-//            }
-//        });
-//    } else if (percent == -2) {
-//        qWarning() << "MainWindow: Ошибка при измерениях АМС";
-//        statusBar()->showMessage("АМС: Ошибка при измерениях", 5000);
-//        QMessageBox::warning(this, "АМС", "Ошибка при выполнении измерений");
-//    }
-//}
-
 void MainWindow::onAmsDataWritten(int recordId)
 {
     qDebug() << "MainWindow: Данные АМС записаны в архив, record_id:" << recordId;
@@ -1198,6 +1187,16 @@ void MainWindow::onAmsMeasurementFailed(const QString &reason)
 
     ui->btnStart->setEnabled(true);
     ui->btnStop->setEnabled(false);
+
+    // Перерисовываем по актуальному состоянию приземных данных.
+    // ЗАМЕЧАНИЕ: это перепишет "ОШИБКА" обратно на "ГОТОВ"/"УСТАРЕЛИ"/"НЕТ ДАННЫХ"
+    // — то есть индикация ошибки исчезнет с lblStatus. Сообщение об ошибке
+    // оператор уже видел в QMessageBox::critical (выше в этом же методе), а в
+    // statusBar остаётся "Ошибка измерения АМС: ..." на 10 секунд. Если такое
+    // поведение нежелательно — можно эту строку НЕ добавлять, тогда "ОШИБКА"
+    // на lblStatus останется до следующего события surfaceStateChanged.
+    if (GroundMeteoParams *gmp = GroundMeteoParams::instance())
+        onSurfaceStateChanged(gmp->surfaceState());
 
     // Скрываем прогрессбар
     ui->measurementProgressWidget->setVisible(false);
@@ -2013,6 +2012,20 @@ void MainWindow::onStartClicked()
         return;
     }
 
+    // Страховочная проверка: приземные данные должны быть применены целиком
+    // (все 5 строк). По нормальной логике кнопка при NoData отключена
+    // (onSurfaceStateChanged), но мало ли — на всякий случай.
+    if (GroundMeteoParams *gmp = GroundMeteoParams::instance()) {
+        if (gmp->surfaceState() == GroundMeteoParams::NoData) {
+            QMessageBox::warning(this, "Не готово к измерению",
+                                 "Не введены приземные метеоданные.\n\n"
+                                 "Откройте «Исходные данные» и заполните все 5 строк "
+                                 "(скорость и направление ветра, давление, влажность, температура), "
+                                 "затем нажмите «Применить».");
+            return;
+        }
+    }
+
     // Обновляем UI
     ui->lblStatus->setText("РАБОТА");
     ui->lblStatus->setStyleSheet("color: blue; font-weight: bold; font-size: 14pt; "
@@ -2115,6 +2128,15 @@ void MainWindow::onStopClicked()
     // Разблокируем кнопку старта, блокируем стоп
     ui->btnStart->setEnabled(true);
     ui->btnStop->setEnabled(false);
+
+    // Измерение завершено — перерисовываем lblStatus и доступность btnStart
+    // в соответствии с актуальным состоянием приземных данных. Если за время
+    // измерения данные успели устареть — увидим "ДАННЫЕ УСТАРЕЛИ" (пуск
+    // следующего измерения при этом остаётся разрешённым). Если оператор
+    // тем временем нажал "Очистить" — увидим "НЕТ ПРИЗЕМНЫХ ДАННЫХ" и кнопка
+    // снова заблокируется.
+    if (GroundMeteoParams *gmp = GroundMeteoParams::instance())
+        onSurfaceStateChanged(gmp->surfaceState());
 
     // Скрываем прогрессбар
     ui->measurementProgressWidget->setVisible(false);
@@ -2561,5 +2583,58 @@ void MainWindow::runWindProfileCalculation(int recordId,
         qWarning() << "MainWindow: Ошибка сохранения профилей: avg=" << okAvg
                    << "actual=" << okActual;
         statusBar()->showMessage("Ошибка сохранения рассчитанных профилей", 8000);
+    }
+}
+
+void MainWindow::onSurfaceStateChanged(GroundMeteoParams::SurfaceState newState)
+{
+    const bool measurementRunning =
+        (m_amsHandler && m_amsHandler->getMeasurementStatus() == STATUS_RUNNING);
+
+    // Кнопка пуска: блокируется ТОЛЬКО при NoData. Stale разрешает пуск
+    // (по требованию: устаревание не блокирует, только уведомляет).
+    // Во время идущего измерения кнопку всё равно держим заблокированной
+    // (как и было — onStartClicked сам делает btnStart->setEnabled(false)).
+    if (!measurementRunning) {
+        ui->btnStart->setEnabled(newState != GroundMeteoParams::NoData);
+    }
+
+    // Текст и стиль состояния — для использования и сейчас, и в statusBar.
+    QString text;
+    QString style;
+    QString statusBarMsg;
+    switch (newState) {
+    case GroundMeteoParams::NoData:
+        text = "НЕТ ПРИЗЕМНЫХ ДАННЫХ";
+        style = "color: red; font-weight: bold; font-size: 14pt; "
+                "border: 2px solid red; padding: 5px; border-radius: 5px;";
+        statusBarMsg = "Приземные данные не введены — пуск измерения заблокирован";
+        break;
+    case GroundMeteoParams::Fresh:
+        text = "ГОТОВ";
+        style = "color: green; font-weight: bold; font-size: 14pt; "
+                "border: 2px solid green; padding: 5px; border-radius: 5px;";
+        statusBarMsg = "Приземные данные получены — система готова";
+        break;
+    case GroundMeteoParams::Stale:
+        text = "ДАННЫЕ УСТАРЕЛИ";
+        style = "color: #e65100; font-weight: bold; font-size: 14pt; "
+                "border: 2px solid #e65100; padding: 5px; border-radius: 5px; "
+                "background-color: #fff8e1;";
+        statusBarMsg = "Приземные данные старше 30 минут — рекомендуется обновить";
+        break;
+    }
+
+    if (measurementRunning) {
+        // Во время измерения lblStatus занят надписью "РАБОТА" — туда не пишем.
+        // Только уведомление через статус-бар.
+        statusBar()->showMessage(statusBarMsg, 8000);
+        qDebug() << "MainWindow: surfaceState изменилось во время измерения —"
+                 << text << "(показано в statusBar, lblStatus не трогаем)";
+    } else {
+        // Измерение не идёт — обновляем lblStatus в полном объёме.
+        ui->lblStatus->setText(text);
+        ui->lblStatus->setStyleSheet(style);
+        qDebug() << "MainWindow: lblStatus →" << text;
     }
 }

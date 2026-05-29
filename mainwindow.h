@@ -21,6 +21,8 @@
 #include "autoconnector.h"
 #include "LocalTileServer.h"
 #include "windprofilecalculator.h"
+#include "GroundMeteoParams.h"   // для типа GroundMeteoParams::SurfaceState в слоте
+
 
 // Forward declaration
 class SourceData;
@@ -116,6 +118,10 @@ private slots:
     // ИВС прогрев и проверка подключения
     void onIwsWarmupFinished();
     void onIwsConnectTimeout();
+
+    // Реакция на изменение состояния приземных данных
+    // (NoData / Fresh / Stale — приходит от GroundMeteoParams).
+    void onSurfaceStateChanged(GroundMeteoParams::SurfaceState newState);
 
     // БИНС слоты
     void onBinsConnectFromSettings();
