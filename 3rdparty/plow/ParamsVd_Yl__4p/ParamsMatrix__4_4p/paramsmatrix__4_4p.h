@@ -2,7 +2,7 @@
 #define PARAMSMATRIX__4_4P_H
 #include "OutData/outdata.h"
 #include "FunctionsCalc/calc_error.h"
-#include "InData/Constants.h"
+#include "InData/constants.h"
 
 class ParamsMatrix__4_4p
 {

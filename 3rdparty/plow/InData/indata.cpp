@@ -1,4 +1,4 @@
-#include "InData.h"
+#include "indata.h"
 #include "stdlib.h"
 
 #include <algorithm>

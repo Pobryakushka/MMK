@@ -15,7 +15,7 @@
 // должен указывать на корень plow и на ClimatData (см. ClimatData.pri в plow).
 #include "climatdata.h"
 #include "Profile/profile.h"
-#include "InData/Constants.h"      // PlowAlgoritm::Constants::numStL_out, LOW_NUM_DATA, UNDEF_*
+#include "InData/constants.h"      // PlowAlgoritm::Constants::numStL_out, LOW_NUM_DATA, UNDEF_*
 #include "mhn/structures.h"        // PlowAlgoritm::ProfilePoint
 
 namespace {

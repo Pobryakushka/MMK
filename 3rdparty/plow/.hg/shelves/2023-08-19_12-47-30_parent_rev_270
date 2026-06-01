@@ -1,0 +1,27 @@
+diff --git a/InData/Constants.h b/InData/Constants.h
+--- a/InData/Constants.h
++++ b/InData/Constants.h
+@@ -19,9 +19,9 @@
+      static constexpr double UNDEF_V=999.0;//Неопределенное значение для скорости
+      static constexpr double UNDEF_TETA=999.0;//Неопределенное значение для направления
+      static constexpr double UNDEF_MeteoB=99;//Неопределенное значение для параметров метеобюллетеня (возможно, изменится)
+-     static const int numStL=/*12*/28;
+-     static const int numStL_out=/*14*/33;//Кол-во уровней стандартной артилл. атмосферы (для выходных данных)
+-     static const int numStL_MB=12;//Кол-во стандартных слоев метеобюллетеня
++     static constexpr int numStL=/*12*/28;
++     static constexpr int numStL_out=/*14*/33;//Кол-во уровней стандартной артилл. атмосферы (для выходных данных)
++     static constexpr int numStL_MB=12;//Кол-во стандартных слоев метеобюллетеня
+      //static const int numMB=100;//максимальное кол-во метеобюллетеней
+      //Коэфф-ты для оценки средней временной изменчивости
+      //ветра в зависимости от сдвига по времени (по ф.26)
+@@ -30,8 +30,8 @@
+      static const int LOW_NUM_DATA=/*14*/33;//кол-во высот действительного ветра
+      static const int REAL_NUM_DATA=/*14*/33;//кол-во высот среднего ветра
+ 
+-     static double  StandartLayer[] ;
+-      static double  StandartLayerMB[] ;
++     static double  StandartLayer[] ; //numStL
++      static double  StandartLayerMB[] ; //numStL_MB
+ 
+      public:
+        Constants();

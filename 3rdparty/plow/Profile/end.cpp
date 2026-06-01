@@ -1,5 +1,5 @@
 #include "end.h"
-#include "InData/InData.h"
+#include "InData/indata.h"
 
 End::End()
 {

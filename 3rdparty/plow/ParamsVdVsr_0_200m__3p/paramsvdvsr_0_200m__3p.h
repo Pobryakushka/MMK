@@ -1,7 +1,7 @@
 #ifndef PARAMSVDVSR_0_200M__3P_H
 #define PARAMSVDVSR_0_200M__3P_H
 #include "OutData/outdata.h"
-#include "InData/InData.h"
+#include "InData/indata.h"
 #include "ParamsVdVsr_0_200m__3_1p/paramsvdvsr_0_200m__3_1p.h"
 
 class ParamsVdVsr_0_200m__3p

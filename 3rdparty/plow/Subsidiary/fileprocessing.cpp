@@ -2,7 +2,7 @@
 //#include <iostream>
 //#include <fstream>
 #include <string>
-#include <InData/InData.h>
+#include <InData/indata.h>
 
 
 #include "fileprocessing.h"

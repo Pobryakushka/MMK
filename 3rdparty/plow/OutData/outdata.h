@@ -1,6 +1,6 @@
 #ifndef OUTDATA_H
 #define OUTDATA_H
-#include "InData/Constants.h"
+#include "InData/constants.h"
 
 using namespace PlowAlgoritm;
 

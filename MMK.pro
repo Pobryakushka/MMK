@@ -7,22 +7,30 @@ CONFIG += c++17
 
 THIRDPARTY = $$PWD/3rdparty
 
-# Plow (PlowAlgoritm) — расчёт фактического и среднего ветра
+# ─── Plow (PlowAlgoritm) — расчёт фактического и среднего ветра ───
 PLOW_DIR = $$THIRDPARTY/plow
 
+# Пути к заголовкам оставляем прежними, чтобы основной проект видел инклюды
 INCLUDEPATH += \
     $$PLOW_DIR \
     $$PLOW_DIR/InData \
     $$PLOW_DIR/Profile \
     $$PLOW_DIR/mhn
 
-PLOW_SOURCES = $$files($$PLOW_DIR/*.cpp, true)
-PLOW_HEADERS = $$files($$PLOW_DIR/*.h,   true)
+# Подключаем Plow как разделяемую библиотеку (.so)
+# -L указывает директорию, где искать либу, -l задает имя (без префикса lib и расширения .so)
+# ПРИМЕЧАНИЕ: Если файл называется libPlow.so (с большой буквы), замените -lplow на -lPlow
+LIBS += -L$$PLOW_DIR -lPlowAlgoritm
 
-SOURCES *= $$PLOW_SOURCES
+# Опционально: добавляем rpath, чтобы исполняемый файл искал .so прямо в папке plow при запуске
+QMAKE_LFLAGS += -Wl,-rpath,$$PLOW_DIR
+
+# Исходники (.cpp) отсюда убраны, так как они уже скомпилированы в .so.
+# Оставляем только заголовочные файлы для корректного отображения структуры в дереве Qt Creator.
+PLOW_HEADERS = $$files($$PLOW_DIR/*.h,   true)
 HEADERS *= $$PLOW_HEADERS
 
-# ClimatData — климатические данные по широте/долготе/месяцу
+# ─── ClimatData — климатические данные по широте/долготе/месяцу ───
 CLIMAT_DIR = $$THIRDPARTY/climatData
 INCLUDEPATH += $$CLIMAT_DIR
 

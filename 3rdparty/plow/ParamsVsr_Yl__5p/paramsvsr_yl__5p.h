@@ -1,8 +1,8 @@
 #ifndef PARAMSVSR_YL__5P_H
 #define PARAMSVSR_YL__5P_H
 #include "OutData/outdata.h"
-#include "InData/Constants.h"
-#include "InData/InData.h"
+#include "InData/constants.h"
+#include "InData/indata.h"
 #include "InData/indataclimat.h"
 
 

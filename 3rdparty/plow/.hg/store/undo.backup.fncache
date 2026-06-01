@@ -75,3 +75,4 @@ data/ParamsVd_Yl__4p/ParamsMatrix__4_4p/paramsmatrix__4_4p.cpp.i
 data/InData/Constants.h.i
 data/CastH__1p/casth__1p.h.i
 data/WindShear/constantswsh.cpp.i
+data/.hgignore.i

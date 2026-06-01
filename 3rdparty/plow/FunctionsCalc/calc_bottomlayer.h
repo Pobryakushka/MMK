@@ -1,7 +1,7 @@
 #ifndef CALC_BOTTOMLAYER_H
 #define CALC_BOTTOMLAYER_H
 
-#include "InData/InData.h"
+#include "InData/indata.h"
 
 class Calc_bottomLayer
 {

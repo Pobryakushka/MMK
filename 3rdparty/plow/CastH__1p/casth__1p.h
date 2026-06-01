@@ -1,6 +1,6 @@
 #ifndef CASTH__1P_H
 #define CASTH__1P_H
-#include "InData/Constants.h"
+#include "InData/constants.h"
 #include "OutData/outdata.h"
 #include "climatdata.h"
 

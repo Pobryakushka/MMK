@@ -1,6 +1,6 @@
 #ifndef WINDSHEAR_H
 #define WINDSHEAR_H
-#include "InData/InData.h"
+#include "InData/indata.h"
 
 class WindShear
 {

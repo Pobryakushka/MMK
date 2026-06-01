@@ -7,7 +7,7 @@
 #include <algorithm>
 #include "stdlib.h"
 #include "string.h"
-#include "InData/Constants.h"
+#include "InData/constants.h"
 
 //Climat::Sigma Climat::ClimatSi[2][11][12][12];
 //OutData::V Climat::ClimatPr[2][11][12][12];

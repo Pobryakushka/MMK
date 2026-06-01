@@ -11,10 +11,10 @@
 #include "paramsvdvsr_0_200m__3_4p.h"
 #include "ParamsVdVsr_0_200m__3_3p/paramsvdvsr_0_200m__3_3p.h"
 #include "ParamsVdVsr_0_200m__3_1p/paramsvdvsr_0_200m__3_1p.h"
-#include "InData/InData.h"
+#include "InData/indata.h"
 
 #include "FunctionsCalc/functionscalc_layer.h"
-#include "InData/Constants.h"
+#include "InData/constants.h"
 #include "ParamsVdVsr_0_200m__3_2p/paramsvdvsr_0_200m__3_2p.h"
 
 ParamsVdVsr_0_200m__3_3p paramsvdvsr_0_200m__3_3p;

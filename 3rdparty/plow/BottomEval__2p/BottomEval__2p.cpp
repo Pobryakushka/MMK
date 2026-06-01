@@ -2,7 +2,7 @@
 #include "OutData/outdata.h"
 #include "FunctionsCalc/calc_bottomlayer.h"
 #include "FunctionsCalc/functionscalc.h"
-#include "InData/InData.h"
+#include "InData/indata.h"
 #include "InData/indataclimat.h"
 #include "FunctionsCalc/mathfunc.h"
 #include "FunctionsCalc/calc_error.h"

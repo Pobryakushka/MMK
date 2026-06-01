@@ -1,11 +1,11 @@
 #ifndef PROFILE_H
 #define PROFILE_H
 //#include "OutData/outdata.h"
-//#include "InData/InData.h"
+//#include "InData/indata.h"
 //#include "climatdata.h"
 //#include "InData/indataclimat.h"
 #include <vector>
-#include "../InData/Constants.h"
+#include "../InData/constants.h"
 
 //class PlowAlgoritm::ProfilePoint;
 class MBulletin;

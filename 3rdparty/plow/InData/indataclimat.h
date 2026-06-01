@@ -3,8 +3,8 @@
 
 //#include "math.h";
 #include "OutData/outdata.h"
-#include "InData/Constants.h"
-#include "InData.h"
+#include "InData/constants.h"
+#include "indata.h"
 //#include "Profile/profile.h"
 #include "climatdata.h"
 

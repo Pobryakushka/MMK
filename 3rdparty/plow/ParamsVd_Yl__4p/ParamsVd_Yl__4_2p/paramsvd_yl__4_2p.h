@@ -1,7 +1,7 @@
 #ifndef PARAMSVD_YL__4_2P_H
 #define PARAMSVD_YL__4_2P_H
 #include "OutData/outdata.h"
-#include "InData/InData.h"
+#include "InData/indata.h"
 
 class ParamsVd_Yl__4_2p
 {

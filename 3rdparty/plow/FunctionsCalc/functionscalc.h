@@ -3,7 +3,7 @@
 
 #define _USE_MATH_DEFINES
 
-#include "InData/InData.h"
+#include "InData/indata.h"
 #include "FunctionsCalc/mathfunc.h"
 #include "math.h"
 #include <math.h>

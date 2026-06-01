@@ -1,10 +1,10 @@
 #ifndef FUNCTIONSCALC_LAYER_H
 #define FUNCTIONSCALC_LAYER_H
 
-#include "InData/InData.h"
+#include "InData/indata.h"
 #include "FunctionsCalc/functionscalc.h"
 #include "OutData/outdata.h"
-#include "InData/Constants.h"
+#include "InData/constants.h"
 #include "InData/indataclimat.h"
 
 class FunctionsCalc_Layer

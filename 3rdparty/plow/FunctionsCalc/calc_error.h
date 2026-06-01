@@ -3,7 +3,7 @@
 
 //#include "math.h"
 #include <cmath>
-#include "InData/InData.h"
+#include "InData/indata.h"
 #include "InData/indataclimat.h"
 //#include "InData/climatdata.h"
 #include "mhn/structures.h"
