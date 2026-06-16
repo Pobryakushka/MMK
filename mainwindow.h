@@ -267,6 +267,8 @@ private:
     void updateAmsStatusLabel(bool connected);
     void updateBinsStatusLabel(bool connected);
     void updateIwsStatusLabel(bool connected);
+
+    void runPlowSelfTest();
 };
 
 

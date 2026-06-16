@@ -9,7 +9,7 @@ THIRDPARTY = $$PWD/3rdparty
 
 # ─── Plow (PlowAlgoritm) — расчёт фактического и среднего ветра ───
 PLOW_DIR = $$THIRDPARTY/plow
-
+rr
 # Пути к заголовкам оставляем прежними, чтобы основной проект видел инклюды
 INCLUDEPATH += \
     $$PLOW_DIR \
