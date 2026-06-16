@@ -22,7 +22,7 @@ struct MeasuredWindData {
     float height;           // Высота, м
     float windSpeed;        // Скорость ветра, м/с
     float windDirection;      // Направление ветра, градусы
-    int reliability;        // Достоверность: 1 - недействительное, 2 - действительное
+    int reliability;        // Достоверность: 0 - недействительное, 1 - действительное
 
     MeasuredWindData() : height(0), windSpeed(0), windDirection(0), reliability(0) {}
 };

@@ -72,13 +72,13 @@
        <item>
         <widget class="QScrollArea" name="leftScrollArea">
          <property name="frameShape">
-          <enum>QFrame::Shape::NoFrame</enum>
+          <enum>QFrame::NoFrame</enum>
          </property>
          <property name="verticalScrollBarPolicy">
-          <enum>Qt::ScrollBarPolicy::ScrollBarAsNeeded</enum>
+          <enum>Qt::ScrollBarAsNeeded</enum>
          </property>
          <property name="horizontalScrollBarPolicy">
-          <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOff</enum>
+          <enum>Qt::ScrollBarAlwaysOff</enum>
          </property>
          <property name="widgetResizable">
           <bool>true</bool>
@@ -713,6 +713,7 @@ QPushButton:checked {
            <item>
             <widget class="QComboBox" name="comboBox_mapTypes"/>
            </item>
+
            <item>
             <widget class="QGroupBox" name="statusGroup">
              <property name="title">
@@ -958,7 +959,7 @@ QPushButton:checked {
                    <item>
                     <spacer name="progressLabelSpacer">
                      <property name="orientation">
-                      <enum>Qt::Orientation::Horizontal</enum>
+                      <enum>Qt::Horizontal</enum>
                      </property>
                      <property name="sizeHint" stdset="0">
                       <size>
@@ -977,7 +978,7 @@ QPushButton:checked {
                       <string>0%</string>
                      </property>
                      <property name="alignment">
-                      <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+                      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                      </property>
                     </widget>
                    </item>
@@ -1033,7 +1034,7 @@ QPushButton:checked {
                    <item>
                     <spacer name="rpvSpacer">
                      <property name="orientation">
-                      <enum>Qt::Orientation::Horizontal</enum>
+                      <enum>Qt::Horizontal</enum>
                      </property>
                      <property name="sizeHint" stdset="0">
                       <size>
@@ -1052,7 +1053,7 @@ QPushButton:checked {
                       <string>0.0°</string>
                      </property>
                      <property name="alignment">
-                      <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+                      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                      </property>
                     </widget>
                    </item>
@@ -1081,7 +1082,7 @@ QPushButton:checked {
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="btnSensorSettings">
+            <widget class="QPushButton" name="btnConnectSensors">
              <property name="minimumSize">
               <size>
                <width>0</width>
@@ -1558,7 +1559,7 @@ QPushButton:checked {
               </palette>
              </property>
              <property name="text">
-              <string>⚙ Настройки датчиков</string>
+              <string>Подключить датчики</string>
              </property>
             </widget>
            </item>

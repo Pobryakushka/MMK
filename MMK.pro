@@ -1,14 +1,53 @@
 PATH_TO_REFERENCES = ../../references
 
-QT       += core gui quick quickwidgets qml positioning serialport sql printsupport core-private
+QT       += core gui quick quickwidgets qml positioning location network serialport sql printsupport core-private
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 CONFIG += c++17
+
+THIRDPARTY = $$PWD/3rdparty
+
+# ─── Plow (PlowAlgoritm) — расчёт фактического и среднего ветра ───
+PLOW_DIR = $$THIRDPARTY/plow
+rr
+# Пути к заголовкам оставляем прежними, чтобы основной проект видел инклюды
+INCLUDEPATH += \
+    $$PLOW_DIR \
+    $$PLOW_DIR/InData \
+    $$PLOW_DIR/Profile \
+    $$PLOW_DIR/mhn
+
+# Подключаем Plow как разделяемую библиотеку (.so)
+# -L указывает директорию, где искать либу, -l задает имя (без префикса lib и расширения .so)
+# ПРИМЕЧАНИЕ: Если файл называется libPlow.so (с большой буквы), замените -lplow на -lPlow
+LIBS += -L$$PLOW_DIR -lPlowAlgoritm
+
+# Опционально: добавляем rpath, чтобы исполняемый файл искал .so прямо в папке plow при запуске
+QMAKE_LFLAGS += -Wl,-rpath,$$PLOW_DIR
+
+# Исходники (.cpp) отсюда убраны, так как они уже скомпилированы в .so.
+# Оставляем только заголовочные файлы для корректного отображения структуры в дереве Qt Creator.
+PLOW_HEADERS = $$files($$PLOW_DIR/*.h,   true)
+HEADERS *= $$PLOW_HEADERS
+
+# ─── ClimatData — климатические данные по широте/долготе/месяцу ───
+CLIMAT_DIR = $$THIRDPARTY/climatData
+INCLUDEPATH += $$CLIMAT_DIR
+
+SOURCES *= \
+    $$CLIMAT_DIR/climatdata.cpp \
+    $$CLIMAT_DIR/climatdataprivate.cpp
+
+HEADERS *= \
+    $$CLIMAT_DIR/climatdata.h \
+    $$CLIMAT_DIR/climatdata_global.h \
+    $$CLIMAT_DIR/climatdataprivate.h
 
 # Warn on deprecated Qt API usage (does not break the build, just emits warnings)
 DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
+    LocalTileServer.cpp \
     AlgorithmsCalc.cpp \
     ExportDialog.cpp \
     GroundMeteoParams.cpp \
@@ -37,9 +76,11 @@ SOURCES += \
     WindShearCalculator.cpp \
     surfacemeteosaver.cpp \
     workregulationdialog.cpp \
-    RpvIndicator.cpp
+    RpvIndicator.cpp \
+    windprofilecalculator.cpp
 
 HEADERS += \
+    LocalTileServer.h \
     AlgorithmsCalc.h \
     CoordHelper.h \
     ExportDialog.h \
@@ -71,7 +112,8 @@ HEADERS += \
     WindShearCalculator.h \
     surfacemeteosaver.h \
     workregulationdialog.h \
-    RpvIndicator.h
+    RpvIndicator.h \
+    windprofilecalculator.h
 
 
 # Default rules for deployment.
@@ -99,3 +141,10 @@ include(qwt.pri)
 include(QXlsx/QXlsx.pri)
 
 
+# ─── Копирование климатической базы рядом с исполняемым файлом ───
+# WindProfileCalculator ищет базу относительно applicationDirPath().
+# Это правило копирует 3rdparty/climatData в build-папку при сборке,
+# поэтому climatData/climat/warm0405.out оказывается рядом с бинарником.
+climat_db.files = $$PWD/3rdparty/climatData
+climat_db.path  = $$OUT_PWD
+COPIES += climat_db

@@ -2,7 +2,8 @@
 #define ABSTRACTANSWERER_H
 
 #include <cclient.h>
-#include <pthread.h>
+#include <thread>
+#include <atomic>
 
 class AbstractAnswerConvertedData;
 
@@ -10,8 +11,8 @@ class AbstractAnswerer : public CClient {
     int nanoSleep;
     const AbstractAnswerConvertedData* source;
     int size;
-    pthread_t idthread;
-    bool endWork;
+    std::thread m_thread;
+    std::atomic<bool> endWork{false};
     std::string d_answererName;
 
 public:
@@ -28,8 +29,7 @@ public:
     static AbstractAnswerer* createWeatherAnswerer(CMsgProvider* owner);
 
 protected:
-    static void* threadActionCheckData(void*);
-    pthread_t getThreadID() { return idthread; }
+    void threadAction();
 
 };
 

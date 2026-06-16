@@ -19,6 +19,12 @@ class QmlCoordinateProxy : public QObject
     Q_PROPERTY(QStringList mapTypes READ mapTypes WRITE setMapTypes NOTIFY mapTypesChanged)
     Q_PROPERTY(uint currentMapType READ currentMapType WRITE setCurrentMapType NOTIFY currentMapTypeChanged)
 
+    // Видимая область карты — обновляется из QML при изменении visibleRegion
+    Q_PROPERTY(double visibleNorth READ visibleNorth WRITE setVisibleNorth NOTIFY visibleBoundsChanged)
+    Q_PROPERTY(double visibleSouth READ visibleSouth WRITE setVisibleSouth NOTIFY visibleBoundsChanged)
+    Q_PROPERTY(double visibleWest  READ visibleWest  WRITE setVisibleWest  NOTIFY visibleBoundsChanged)
+    Q_PROPERTY(double visibleEast  READ visibleEast  WRITE setVisibleEast  NOTIFY visibleBoundsChanged)
+
     QGeoCoordinate m_coordinateFrom;
     QGeoCoordinate m_coordinateTo;
 
@@ -27,9 +33,14 @@ class QmlCoordinateProxy : public QObject
     bool m_fitView;
 
     QString m_searchText;
-    QStringList m_searchResult;    
+    QStringList m_searchResult;
     QStringList m_mapTypes;
     uint m_currentMapType;
+
+    double m_visibleNorth = 0.0;
+    double m_visibleSouth = 0.0;
+    double m_visibleWest  = 0.0;
+    double m_visibleEast  = 0.0;
 
 public:
     QmlCoordinateProxy() : QObject(Q_NULLPTR),
@@ -83,6 +94,11 @@ public:
     {
         return m_currentMapType;
     }
+
+    double visibleNorth() const { return m_visibleNorth; }
+    double visibleSouth() const { return m_visibleSouth; }
+    double visibleWest()  const { return m_visibleWest;  }
+    double visibleEast()  const { return m_visibleEast;  }
 
 public slots:
     void setColdZonesVisible(bool coldZonesVisible)
@@ -164,6 +180,11 @@ public slots:
         }
     }
 
+    void setVisibleNorth(double v) { m_visibleNorth = v; }
+    void setVisibleSouth(double v) { m_visibleSouth = v; }
+    void setVisibleWest (double v) { m_visibleWest  = v; }
+    void setVisibleEast (double v) { m_visibleEast  = v; emit visibleBoundsChanged(); }
+
 signals:
     void coldZonesVisibleChanged(bool coldZonesVisible);
     void warmZonesVisibleChanged(bool warmZonesVisible);
@@ -174,6 +195,7 @@ signals:
     void coordinateToChanged(const QGeoCoordinate &coordinateTo);
     void mapTypesChanged(const QStringList &types);
     void currentMapTypeChanged(uint index);
+    void visibleBoundsChanged();
 };
 
 #endif // QMLCOORDINATEPROXY_H

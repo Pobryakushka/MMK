@@ -1,5 +1,6 @@
 #include "abstractanswerer.h"
-#include <timespec.h>
+#include <thread>
+#include <chrono>
 #include "store/store.h"
 
 extern Store dataStore;
@@ -10,37 +11,30 @@ AbstractAnswerer::AbstractAnswerer(CMsgProvider* owner,
     this->size = size;
     this->nanoSleep = nanoSleep;
     d_answererName = answererName;
-    this->endWork = false;
-    pthread_create(&idthread, nullptr, threadActionCheckData, (void*)this);
+    m_thread = std::thread(&AbstractAnswerer::threadAction, this);
     std::cout << d_answererName << " - start thread (+)" << std::endl;
 }
 
 AbstractAnswerer::~AbstractAnswerer() {
     endWork = true;
-    pthread_join(idthread, nullptr);
+    if (m_thread.joinable())
+        m_thread.join();
     std::cout << d_answererName << " - stop thread (-)" << std::endl;
 }
 
-void* AbstractAnswerer::threadActionCheckData(void* argObject) {
-    if (nullptr == argObject)
-        return nullptr;
-    AbstractAnswerer* sender = (AbstractAnswerer*)argObject;
-    struct timespec inTime;
-    inTime.tv_sec = 0;
-    inTime.tv_nsec = sender->nanoSleep;
-    while ((nullptr != sender) && (true != sender->endWork)) {
-        if (nullptr == sender->current) {
-            nanosleep(&inTime, nullptr);
+void AbstractAnswerer::threadAction() {
+    while (!endWork) {
+        if (nullptr == current) {
+            std::this_thread::sleep_for(std::chrono::nanoseconds(nanoSleep));
             continue;
         }
 
-        sender->current->setAnswerData(sender->source->data(), sender->size);
-//        sender->current->setAnswerData(sender->source->convertedData(), sender->size);
-        sender->provider->put(sender->current);
-        sender->current = nullptr;
-        sender->finishDataProcessing();
+        current->setAnswerData(source->data(), size);
+//        current->setAnswerData(source->convertedData(), size);
+        provider->put(current);
+        current = nullptr;
+        finishDataProcessing();
     }
-    return nullptr;
 }
 
 AbstractAnswerer* AbstractAnswerer::createLatitudeAnswerer(CMsgProvider *owner) {

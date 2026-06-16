@@ -123,7 +123,7 @@ int AutoConnector::baudRateForPhase(TestPhase phase)
 {
     switch (phase) {
         case PHASE_AMS_TEST:    return 115200; // АМС: 115200
-        case PHASE_GNSS_LISTEN: return 9600;  // GNSS: 19200
+        case PHASE_GNSS_LISTEN: return 9600;  // GNSS: 9600
         case PHASE_IWS_TEST:    return 19200;  // ИВС: 19200
         default:                return 9600;
     }
