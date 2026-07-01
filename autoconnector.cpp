@@ -3,7 +3,7 @@
 #include <QDebug>
 #include <QtEndian>
 #include <QDir>
-#include "amsprotocol.h"
+#include "sensors/amsprotocol.h"
 
 
 AutoConnector::AutoConnector(QObject *parent)

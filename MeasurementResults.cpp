@@ -2,9 +2,9 @@
 #include "CoordHelper.h"
 #include "ui_MeasurementResults.h"
 #include "databasemanager.h"
-#include "amsprotocol.h"
-#include "MeasurementExporter.h"
-#include "ExportDialog.h"
+#include "sensors/amsprotocol.h"
+#include "ui/MeasurementExporter.h"
+#include "ui/ExportDialog.h"
 #include <qwt_plot_renderer.h>
 #include <QFileDialog>
 #include <QCheckBox>

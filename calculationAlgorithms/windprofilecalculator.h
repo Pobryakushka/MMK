@@ -35,7 +35,7 @@
 #include <QDateTime>
 #include <QString>
 
-#include "amsprotocol.h"   // WindProfileData, MeasuredWindData
+#include "sensors/amsprotocol.h"   // WindProfileData, MeasuredWindData
 
 class WindProfileCalculator
 {

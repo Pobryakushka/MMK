@@ -2,7 +2,7 @@
 #define ALGORITHMSCALC_H
 
 #include <QDialog>
-#include "mainwindow.h"
+#include "ui/mainwindow.h"
 
 namespace Ui {
 class AlgorithmsCalculation;

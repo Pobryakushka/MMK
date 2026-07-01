@@ -4,7 +4,7 @@
 #include <QDialog>
 #include <QVector>
 #include <QDateTime>
-#include "amsprotocol.h"
+#include "sensors/amsprotocol.h"
 
 namespace Ui {
 class FunctionalControlDialog;

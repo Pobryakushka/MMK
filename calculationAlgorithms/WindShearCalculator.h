@@ -4,7 +4,7 @@
 #include <QVector>
 #include <QColor>
 #include <QString>
-#include "amsprotocol.h"
+#include "sensors/amsprotocol.h"
 
 // Структура для результата расчета сдвига ветра
 struct WindShearData {

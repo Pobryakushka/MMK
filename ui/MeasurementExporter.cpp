@@ -1,6 +1,6 @@
 #include "MeasurementExporter.h"
-#include "amsprotocol.h"
-#include "WindShearCalculator.h"
+#include "sensors/amsprotocol.h"
+#include "calculationAlgorithms/WindShearCalculator.h"
 
 #include <QStringList>
 #include <QJsonDocument>

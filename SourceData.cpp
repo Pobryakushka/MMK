@@ -1,7 +1,7 @@
 #include "SourceData.h"
 #include "ui_SourceData.h"
 #include "Meteo11.h"
-#include "GroundMeteoParams.h"
+#include "sensors/GroundMeteoParams.h"
 #include <QCloseEvent>
 #include <QDebug>
 

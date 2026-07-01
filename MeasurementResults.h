@@ -10,17 +10,17 @@
 #include <QSqlDatabase>
 #include <QSqlQuery>
 #include <QSqlError>
-#include "amsprotocol.h"
+#include "sensors/amsprotocol.h"
 #include "zoom/zoomscontainer.h"
-#include "MeasurementExporter.h"
-#include "ExportDialog.h"
+#include "ui/MeasurementExporter.h"
+#include "ui/ExportDialog.h"
 #include <qwt_plot.h>
 #include <qwt_plot_curve.h>
 #include <qwt_plot_grid.h>
 #include <qwt_legend.h>
 #include <qwt_symbol.h>
 #include <qwt_plot_canvas.h>
-#include "WindShearCalculator.h"
+#include "calculationAlgorithms/WindShearCalculator.h"
 #include <QTableWidget>
 
 namespace Ui {

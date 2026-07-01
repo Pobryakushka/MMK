@@ -5,7 +5,7 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QLabel>
-#include "amshandler.h"
+#include "sensors/amshandler.h"
 
 // ============================================================
 // Диалог «Контрольный осмотр (КО)»

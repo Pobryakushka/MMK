@@ -1,5 +1,5 @@
-#include "mainwindow.h"
-#include "WindShearCalculator.h"
+#include "ui/mainwindow.h"
+#include "calculationAlgorithms/WindShearCalculator.h"
 #include <QApplication>
 
 int main(int argc, char *argv[])

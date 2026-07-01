@@ -9,9 +9,9 @@
 #include <QSerialPort>
 #include <QSerialPortInfo>
 #include "qmlcoordinateproxy.h"
-#include "gnsshandler.h"
-#include "amshandler.h"
-#include "binshandler.h"
+#include "sensors/gnsshandler.h"
+#include "sensors/amshandler.h"
+#include "sensors/binshandler.h"
 #include "Map/InitialParameters.h"
 #include "Map/FormMapView.h"
 #include "sensorsettings.h"
@@ -20,8 +20,8 @@
 #include "workregulationdialog.h"
 #include "autoconnector.h"
 #include "LocalTileServer.h"
-#include "windprofilecalculator.h"
-#include "GroundMeteoParams.h"   // для типа GroundMeteoParams::SurfaceState в слоте
+#include "calculationAlgorithms/windprofilecalculator.h"
+#include "sensors/GroundMeteoParams.h"   // для типа GroundMeteoParams::SurfaceState в слоте
 
 
 // Forward declaration

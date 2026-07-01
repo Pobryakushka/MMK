@@ -48,72 +48,72 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
     LocalTileServer.cpp \
-    AlgorithmsCalc.cpp \
-    ExportDialog.cpp \
-    GroundMeteoParams.cpp \
-    LandingCalculation.cpp \
+    calculationAlgorithms/AlgorithmsCalc.cpp \
+    ui/ExportDialog.cpp \
+    sensors/GroundMeteoParams.cpp \
+    calculationAlgorithms/LandingCalculation.cpp \
     Map/FormMapView.cpp \
-    MeasurementExporter.cpp \
+    ui/MeasurementExporter.cpp \
     MeasurementResults.cpp \
     Meteo11.cpp \
     SourceData.cpp \
-    binshandler.cpp \
+    sensors/binshandler.cpp \
     databasemanager.cpp \
-    functionalcontroldialog.cpp \
-    gnsshandler.cpp \
+    ui/functionalcontroldialog.cpp \
+    sensors/gnsshandler.cpp \
     main.cpp \
-    mainwindow.cpp \
-    sensorsettings.cpp \
-    zedf9preceiver.cpp \
+    ui/mainwindow.cpp \
+    ui/sensorsettings.cpp \
+    sensors/zedf9preceiver.cpp \
     customprotocol.cpp \
-    amshandler.cpp \
-    amsprotocol.cpp \
+    sensors/amshandler.cpp \
+    sensors/amsprotocol.cpp \
     zoom/qaxiszoomsvc.cpp \
     zoom/qwheelzoomsvc.cpp \
     zoom/qwtchartzoom.cpp \
     zoom/zoomscontainer.cpp \
     autoconnector.cpp \
-    WindShearCalculator.cpp \
+    calculationAlgorithms/WindShearCalculator.cpp \
     surfacemeteosaver.cpp \
-    workregulationdialog.cpp \
-    RpvIndicator.cpp \
-    windprofilecalculator.cpp
+    ui/workregulationdialog.cpp \
+    ui/RpvIndicator.cpp \
+    calculationAlgorithms/windprofilecalculator.cpp
 
 HEADERS += \
     LocalTileServer.h \
-    AlgorithmsCalc.h \
+    calculationAlgorithms/AlgorithmsCalc.h \
     CoordHelper.h \
-    ExportDialog.h \
-    GroundMeteoParams.h \
-    LandingCalculation.h \
+    ui/ExportDialog.h \
+    sensors/GroundMeteoParams.h \
+    calculationAlgorithms/LandingCalculation.h \
     LandingCalculationState.h \
     Map/FormMapView.h \
     Map/InitialParameters.h \
-    MeasurementExporter.h \
+    ui/MeasurementExporter.h \
     MeasurementResults.h \
     Meteo11.h \
     SourceData.h \
-    binshandler.h \
+    sensors/binshandler.h \
     databasemanager.h \
-    functionalcontroldialog.h \
-    gnsshandler.h \
-    mainwindow.h \
+    ui/functionalcontroldialog.h \
+    sensors/gnsshandler.h \
+    ui/mainwindow.h \
     qmlcoordinateproxy.h \
-    sensorsettings.h \
-    zedf9preceiver.h \
+    ui/sensorsettings.h \
+    sensors/zedf9preceiver.h \
     customprotocol.h \
-    amshandler.h \
-    amsprotocol.h \
+    sensors/amshandler.h \
+    sensors/amsprotocol.h \
     zoom/qaxiszoomsvc.h \
     zoom/qwheelzoomsvc.h \
     zoom/qwtchartzoom.h \
     zoom/zoomscontainer.h \
     autoconnector.h \
-    WindShearCalculator.h \
+    calculationAlgorithms/WindShearCalculator.h \
     surfacemeteosaver.h \
-    workregulationdialog.h \
-    RpvIndicator.h \
-    windprofilecalculator.h
+    ui/workregulationdialog.h \
+    ui/RpvIndicator.h \
+    calculationAlgorithms/windprofilecalculator.h
 
 
 # Default rules for deployment.
