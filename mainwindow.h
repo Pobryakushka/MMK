@@ -63,8 +63,8 @@ private slots:
     void onMeasurementResultsClicked();
     void onStartClicked();
     void onStopClicked();
-    void onWorkModeChanged(int state);
-    void onStandbyModeChanged(int state);
+    // void onWorkModeChanged(bool checked);
+    // void onStandbyModeChanged(bool checked);
     void updateDateTime();
     void onSyncTimeClicked();
     void onDateTimeEditingFinished();

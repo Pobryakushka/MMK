@@ -95,8 +95,10 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->btnMeasurementResults, &QPushButton::clicked, this, &MainWindow::onMeasurementResultsClicked);
     connect(ui->btnStart, &QPushButton::clicked, this, &MainWindow::onStartClicked);
     connect(ui->btnStop, &QPushButton::clicked, this, &MainWindow::onStopClicked);
-    connect(ui->cbWorkMode, &QCheckBox::stateChanged, this, &MainWindow::onWorkModeChanged);
-    connect(ui->cbStandbyMode, &QCheckBox::stateChanged, this, &MainWindow::onStandbyModeChanged);
+    // connect(ui->cbWorkMode, &QCheckBox::stateChanged, this, &MainWindow::onWorkModeChanged);
+    // connect(ui->cbStandbyMode, &QCheckBox::stateChanged, this, &MainWindow::onStandbyModeChanged);
+    // connect(ui->cbWorkMode, &QRadioButton::toggled, this, &MainWindow::onWorkModeChanged);
+    // connect(ui->cbStandbyMode, &QRadioButton::toggled, this, &MainWindow::onStandbyModeChanged);
     connect(ui->btnConnectSensors, &QPushButton::clicked, this, &MainWindow::onConnectSensorsClicked);
     connect(ui->btnSyncTime, &QPushButton::clicked, this, &MainWindow::onSyncTimeClicked);
     connect(ui->editDateTime, &QLineEdit::editingFinished, this, &MainWindow::onDateTimeEditingFinished);
@@ -2145,19 +2147,19 @@ void MainWindow::onStopClicked()
     ui->progressBarMeasurement->setValue(0);
 }
 
-void MainWindow::onWorkModeChanged(int state)
-{
-    if (state == Qt::Checked) {
-        ui->cbStandbyMode->setChecked(false);
-    }
-}
+// void MainWindow::onWorkModeChanged(int state)
+// {
+//     if (state == Qt::Checked) {
+//         ui->cbStandbyMode->setChecked(false);
+//     }
+// }
 
-void MainWindow::onStandbyModeChanged(int state)
-{
-    if (state == Qt::Checked) {
-        ui->cbWorkMode->setChecked(false);
-    }
-}
+// void MainWindow::onStandbyModeChanged(int state)
+// {
+//     if (state == Qt::Checked) {
+//         ui->cbWorkMode->setChecked(false);
+//     }
+// }
 
 // ==================== Методы обновления статуса датчиков ====================
 

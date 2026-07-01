@@ -713,7 +713,6 @@ QPushButton:checked {
            <item>
             <widget class="QComboBox" name="comboBox_mapTypes"/>
            </item>
-
            <item>
             <widget class="QGroupBox" name="statusGroup">
              <property name="title">
@@ -869,7 +868,10 @@ QPushButton:checked {
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="cbWorkMode">
+               <widget class="QRadioButton" name="cbWorkMode">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
                 <property name="text">
                  <string>Рабочий</string>
                 </property>
@@ -879,7 +881,7 @@ QPushButton:checked {
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="cbStandbyMode">
+               <widget class="QRadioButton" name="cbStandbyMode">
                 <property name="text">
                  <string>Дежурный</string>
                 </property>
