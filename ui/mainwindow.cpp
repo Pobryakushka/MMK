@@ -86,6 +86,35 @@ MainWindow::MainWindow(QWidget *parent)
 
     updateMapCoordinatesButtonStyle();
 
+    // Навигация лаунчера (главный экран -> страницы -> назад)
+    ui->stackedWidget->setCurrentWidget(ui->page_home);
+    connect(ui->btnOpenPosition, &QPushButton::clicked, this, &MainWindow::onOpenPositionPage);
+    connect(ui->btnOpenMap, &QPushButton::clicked, this, &MainWindow::onOpenMapPage);
+    connect(ui->btnOpenMeasure, &QPushButton::clicked, this, &MainWindow::onOpenMeasurePage);
+    connect(ui->btnBackFromPosition, &QPushButton::clicked, this, &MainWindow::onBackToHome);
+    connect(ui->btnBackFromMap, &QPushButton::clicked, this, &MainWindow::onBackToHome);
+    connect(ui->btnBackFromMeasure, &QPushButton::clicked, this, &MainWindow::onBackToHome);
+
+    // Плавающие элементы управления над картой (маркер координат, тип карты, GNSS)
+    ui->mapCanvas->installEventFilter(this);
+    QTimer::singleShot(0, this, &MainWindow::repositionMapFloatingControls);
+
+    // Экран "Расчёты" — встраиваем как постоянный виджет-страницу.
+    // Класс AlgorithmsCalculation и его .ui/.cpp живут отдельно, сюда
+    // попадает только готовый виджет + навигационные сигналы.
+    m_algorithmsCalcWidget = new AlgorithmsCalculation(this);
+    ui->page_calculations->layout()->addWidget(m_algorithmsCalcWidget);
+    connect(m_algorithmsCalcWidget, &AlgorithmsCalculation::backRequested,
+            this, &MainWindow::onBackToHome);
+    connect(m_algorithmsCalcWidget, &AlgorithmsCalculation::landingCalculationRequested,
+            this, [this](){
+        // Расчёт на десантирование пока остаётся отдельным окном —
+        // его переезд на страницу будет сделан отдельно после того,
+        // как согласуем новый интерфейс самого расчёта.
+        LandingCalculation dialog(this);
+        dialog.exec();
+    });
+
     // Подключение сигналов к слотам
     connect(ui->btnFunctionalControl, &QPushButton::clicked, this, &MainWindow::onFunctionalControlClicked);
     connect(ui->btnWorkRegulation, &QPushButton::clicked, this, &MainWindow::onWorkRegulationClicked);
@@ -299,6 +328,31 @@ MainWindow::~MainWindow()
 }
 
 // =================================================
+// =================================================
+// Навигация лаунчера (главный экран планшета)
+// =================================================
+
+void MainWindow::onOpenPositionPage()
+{
+    ui->stackedWidget->setCurrentWidget(ui->page_position);
+}
+
+void MainWindow::onOpenMapPage()
+{
+    ui->stackedWidget->setCurrentWidget(ui->page_map);
+}
+
+void MainWindow::onOpenMeasurePage()
+{
+    ui->stackedWidget->setCurrentWidget(ui->page_measure);
+}
+
+void MainWindow::onBackToHome()
+{
+    ui->stackedWidget->setCurrentWidget(ui->page_home);
+}
+
+// =================================================
 // Методы работы с координатами
 // =================================================
 
@@ -482,7 +536,7 @@ void MainWindow::updateMapCoordinatesButtonStyle()
             "QPushButton {"
             "   background-color: #4CAF50;"
             "   border: 3px solid #2E7D32;"
-            "   border-radius: 20px;"
+            "   border-radius: 16px;"
             "}"
             "QPushButton:hover {"
             "   background-color: #45a049;"
@@ -493,9 +547,9 @@ void MainWindow::updateMapCoordinatesButtonStyle()
     } else {
         ui->btnMapCoordinates->setStyleSheet(
             "QPushButton {"
-            "   background-color: white;"
-            "   border: 2px solid gray;"
-            "   border-radius: 20px;"
+            "   background-color: rgba(255,255,255,235);"
+            "   border: none;"
+            "   border-radius: 16px;"
             "}"
             "QPushButton:hover {"
             "   background-color: #f0f0f0;"
@@ -1449,6 +1503,43 @@ void MainWindow::resizeEvent(QResizeEvent *event)
     // Кнопки теперь в layout панели статуса, перемещение не требуется
 }
 
+bool MainWindow::eventFilter(QObject *watched, QEvent *event)
+{
+    if (watched == ui->mapCanvas && event->type() == QEvent::Resize) {
+        repositionMapFloatingControls();
+    }
+    return QMainWindow::eventFilter(watched, event);
+}
+
+void MainWindow::repositionMapFloatingControls()
+{
+    if (!ui->mapCanvas) return;
+
+    const int margin = 16;
+    const int gap = 10;
+    const int canvasWidth = ui->mapCanvas->width();
+
+    // Кнопка-маркер (выбор координат с карты) — правый верхний угол
+    const int markerSize = ui->btnMapCoordinates->width();
+    ui->btnMapCoordinates->move(canvasWidth - markerSize - margin, margin);
+
+    // Выбор типа карты — под маркером
+    const int comboWidth = ui->comboBox_mapTypes->width();
+    const int comboHeight = ui->comboBox_mapTypes->height();
+    int y = margin + markerSize + gap;
+    ui->comboBox_mapTypes->move(canvasWidth - comboWidth - margin, y);
+
+    // GNSS — под выбором типа карты
+    y += comboHeight + gap;
+    const int gnssWidth = ui->checkboxGnss->width();
+    ui->checkboxGnss->move(canvasWidth - gnssWidth - margin, y);
+
+    // Поднимаем плавающие элементы над картой в порядке отрисовки
+    ui->btnMapCoordinates->raise();
+    ui->comboBox_mapTypes->raise();
+    ui->checkboxGnss->raise();
+}
+
 void MainWindow::onConnectSensorsClicked()
 {
     bool gnssOk = m_gnssHandler->isConnected();
@@ -1961,11 +2052,7 @@ void MainWindow::onInitialDataClicked()
 
 void MainWindow::onCalculationsClicked()
 {
-    AlgorithmsCalculation dialog(this);
-    dialog.adjustSize();
-    dialog.setMinimumSize(dialog.sizeHint());
-    dialog.setSizeGripEnabled(true);
-    dialog.exec();
+    ui->stackedWidget->setCurrentWidget(ui->page_calculations);
 }
 
 void MainWindow::onMeasurementResultsClicked()

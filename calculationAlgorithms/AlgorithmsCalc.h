@@ -1,27 +1,29 @@
 #ifndef ALGORITHMSCALC_H
 #define ALGORITHMSCALC_H
 
-#include <QDialog>
-#include "ui/mainwindow.h"
+#include <QWidget>
 
 namespace Ui {
 class AlgorithmsCalculation;
 }
 
-class AlgorithmsCalculation : public QDialog {
+// Экран выбора расчёта ("Расчёты"). Раньше был отдельным всплывающим
+// диалогом (QDialog), теперь встраивается как страница в общий стек
+// MainWindow — сам класс и его .ui/.cpp остаются в своих файлах,
+// а наружу отдаёт только сигналы навигации.
+class AlgorithmsCalculation : public QWidget {
     Q_OBJECT
 
 public:
     explicit AlgorithmsCalculation(QWidget *parent = nullptr);
     ~AlgorithmsCalculation();
 
-private slots:
-    void onLandingCalcClicked();
+signals:
+    void backRequested();
+    void landingCalculationRequested();
 
 private:
     Ui::AlgorithmsCalculation *ui;
-    MainWindow *m_mainWindow;
-
 };
 
 #endif // ALGORITHMSCALC_H
