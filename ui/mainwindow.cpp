@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include <QApplication>
 #include "RpvIndicator.h"
 #include "SourceData.h"
 #include "calculationAlgorithms/AlgorithmsCalc.h"
@@ -113,6 +114,11 @@ MainWindow::MainWindow(QWidget *parent)
         // как согласуем новый интерфейс самого расчёта.
         LandingCalculation dialog(this);
         dialog.exec();
+        // После закрытия модального окна иногда не перерисовывается
+        // содержимое под ним (особенно из-за QQuickWidget на других
+        // страницах) — принудительно обновляем.
+        this->update();
+        QApplication::processEvents();
     });
 
     // Подключение сигналов к слотам
