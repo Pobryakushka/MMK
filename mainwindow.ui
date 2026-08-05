@@ -38,7 +38,7 @@
      <property name="maximumSize">
       <size>
        <width>16777215</width>
-       <height>80</height>
+       <height>100</height>
       </size>
      </property>
      <property name="styleSheet">
@@ -125,7 +125,7 @@ QLabel {
                     <widget class="QLabel" name="lblStatus">
                      <property name="minimumSize">
                       <size>
-                       <width>170</width>
+                       <width>230</width>
                        <height>0</height>
                       </size>
                      </property>
@@ -249,7 +249,8 @@ QLabel {
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
-            <property name="minimumSize"><size><width>250</width><height>130</height></size></property>
+            <property name="minimumSize"><size><width>220</width><height>120</height></size></property>
+            <property name="maximumSize"><size><width>340</width><height>160</height></size></property>
              <property name="text">
               <string>Функциональный контроль</string>
              </property>
@@ -269,7 +270,7 @@ QPushButton:pressed {
 </widget>
        </item>
       <item row="0" column="1">
-        <widget class="QPushButton" name="btnOpenPosition"><property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Expanding"><horstretch>0</horstretch><verstretch>0</verstretch></sizepolicy></property><property name="minimumSize"><size><width>250</width><height>130</height></size></property><property name="text"><string>Положение метеокомплекса</string></property><property name="styleSheet"><string notr="true">QPushButton {
+        <widget class="QPushButton" name="btnOpenPosition"><property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Expanding"><horstretch>0</horstretch><verstretch>0</verstretch></sizepolicy></property><property name="minimumSize"><size><width>220</width><height>120</height></size></property><property name="maximumSize"><size><width>340</width><height>160</height></size></property><property name="text"><string>Положение метеокомплекса</string></property><property name="styleSheet"><string notr="true">QPushButton {
     background-color: #FFFFFF;
     color: #1C1F22;
     border: 1px solid #DDE1E3;
@@ -292,7 +293,8 @@ QPushButton:pressed {
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
-            <property name="minimumSize"><size><width>250</width><height>130</height></size></property>
+            <property name="minimumSize"><size><width>220</width><height>120</height></size></property>
+            <property name="maximumSize"><size><width>340</width><height>160</height></size></property>
              <property name="text">
               <string>Исходные данные</string>
              </property>
@@ -311,7 +313,7 @@ QPushButton:pressed {
 }</string></property>
 </widget>
        </item>
-      <item row="0" column="3">
+      <item row="1" column="0">
         <widget class="QPushButton" name="btnCalculations">
              <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -319,7 +321,8 @@ QPushButton:pressed {
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
-            <property name="minimumSize"><size><width>250</width><height>130</height></size></property>
+            <property name="minimumSize"><size><width>220</width><height>120</height></size></property>
+            <property name="maximumSize"><size><width>340</width><height>160</height></size></property>
              <property name="text">
               <string>Расчеты</string>
              </property>
@@ -338,7 +341,7 @@ QPushButton:pressed {
 }</string></property>
 </widget>
        </item>
-      <item row="1" column="0">
+      <item row="1" column="1">
         <widget class="QPushButton" name="btnMeasurementResults">
              <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -346,7 +349,8 @@ QPushButton:pressed {
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
-            <property name="minimumSize"><size><width>250</width><height>130</height></size></property>
+            <property name="minimumSize"><size><width>220</width><height>120</height></size></property>
+            <property name="maximumSize"><size><width>340</width><height>160</height></size></property>
              <property name="text">
               <string>Архив измерений</string>
              </property>
@@ -365,7 +369,7 @@ QPushButton:pressed {
 }</string></property>
 </widget>
        </item>
-      <item row="1" column="1">
+      <item row="1" column="2">
         <widget class="QPushButton" name="btnWorkRegulation">
              <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -373,7 +377,8 @@ QPushButton:pressed {
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
-            <property name="minimumSize"><size><width>250</width><height>130</height></size></property>
+            <property name="minimumSize"><size><width>220</width><height>120</height></size></property>
+            <property name="maximumSize"><size><width>340</width><height>160</height></size></property>
              <property name="text">
               <string>Регламентные работы</string>
              </property>
@@ -392,8 +397,8 @@ QPushButton:pressed {
 }</string></property>
 </widget>
        </item>
-      <item row="1" column="2">
-        <widget class="QPushButton" name="btnOpenMap"><property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Expanding"><horstretch>0</horstretch><verstretch>0</verstretch></sizepolicy></property><property name="minimumSize"><size><width>250</width><height>130</height></size></property><property name="text"><string>Карта</string></property><property name="styleSheet"><string notr="true">QPushButton {
+      <item row="2" column="0">
+        <widget class="QPushButton" name="btnOpenMap"><property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Expanding"><horstretch>0</horstretch><verstretch>0</verstretch></sizepolicy></property><property name="minimumSize"><size><width>220</width><height>120</height></size></property><property name="maximumSize"><size><width>340</width><height>160</height></size></property><property name="text"><string>Карта</string></property><property name="styleSheet"><string notr="true">QPushButton {
     background-color: #FFFFFF;
     color: #1C1F22;
     border: 1px solid #DDE1E3;
@@ -408,8 +413,8 @@ QPushButton:pressed {
 }</string></property>
 </widget>
        </item>
-      <item row="1" column="3">
-        <widget class="QPushButton" name="btnOpenMeasure"><property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Expanding"><horstretch>0</horstretch><verstretch>0</verstretch></sizepolicy></property><property name="minimumSize"><size><width>250</width><height>130</height></size></property><property name="text"><string>Пуск измерения</string></property><property name="styleSheet"><string notr="true">QPushButton {
+      <item row="2" column="1">
+        <widget class="QPushButton" name="btnOpenMeasure"><property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Expanding"><horstretch>0</horstretch><verstretch>0</verstretch></sizepolicy></property><property name="minimumSize"><size><width>220</width><height>120</height></size></property><property name="maximumSize"><size><width>340</width><height>160</height></size></property><property name="text"><string>Пуск измерения</string></property><property name="styleSheet"><string notr="true">QPushButton {
     background-color: #0F6B4F;
     color: white;
     border: 1px solid #0F6B4F;
@@ -424,7 +429,7 @@ QPushButton:pressed {
 }</string></property>
 </widget>
        </item>
-      <item row="2" column="0">
+      <item row="2" column="2">
         <widget class="QPushButton" name="btnConnectSensors">
              <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -432,7 +437,8 @@ QPushButton:pressed {
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
-            <property name="minimumSize"><size><width>250</width><height>130</height></size></property>
+            <property name="minimumSize"><size><width>220</width><height>120</height></size></property>
+            <property name="maximumSize"><size><width>340</width><height>160</height></size></property>
              <property name="palette">
               <palette>
                <active>
@@ -1319,9 +1325,6 @@ QPushButton:pressed { color: #0B5A42; }</string>
        </property>
        <property name="bottomMargin">
         <number>0</number>
-       </property>
-       <property name="stretch">
-        <string notr="true">0,1</string>
        </property>
        <item>
         <layout class="QHBoxLayout" name="mapHeaderLayout">
