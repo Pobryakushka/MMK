@@ -27,6 +27,7 @@
 // Forward declaration
 class SourceData;
 class AlgorithmsCalculation;
+class LandingCalculation;
 
 namespace Ui {
 class MainWindow;
@@ -148,6 +149,7 @@ private:
     SensorSettings *sensorSettingsDialog;
     SourceData *sourceDataInstance;
     AlgorithmsCalculation *m_algorithmsCalcWidget = nullptr;
+    LandingCalculation *m_landingCalcWidget = nullptr;
 
     QDateTime m_manualDateTime;
     bool m_useManualDateTime;

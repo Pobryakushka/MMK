@@ -109,16 +109,16 @@ MainWindow::MainWindow(QWidget *parent)
             this, &MainWindow::onBackToHome);
     connect(m_algorithmsCalcWidget, &AlgorithmsCalculation::landingCalculationRequested,
             this, [this](){
-        // Расчёт на десантирование пока остаётся отдельным окном —
-        // его переезд на страницу будет сделан отдельно после того,
-        // как согласуем новый интерфейс самого расчёта.
-        LandingCalculation dialog(this);
-        dialog.exec();
-        // После закрытия модального окна иногда не перерисовывается
-        // содержимое под ним (особенно из-за QQuickWidget на других
-        // страницах) — принудительно обновляем.
-        this->update();
-        QApplication::processEvents();
+        ui->stackedWidget->setCurrentWidget(ui->page_landing);
+    });
+
+    // Экран "Расчёт на десантирование" — тоже встраиваем как постоянный
+    // виджет-страницу, аналогично AlgorithmsCalculation.
+    m_landingCalcWidget = new LandingCalculation(this);
+    ui->page_landing->layout()->addWidget(m_landingCalcWidget);
+    connect(m_landingCalcWidget, &LandingCalculation::backRequested,
+            this, [this](){
+        ui->stackedWidget->setCurrentWidget(ui->page_calculations);
     });
 
     // Подключение сигналов к слотам

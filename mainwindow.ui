@@ -1002,6 +1002,28 @@ QPushButton:pressed {
        </property>
       </layout>
      </widget>
+     <widget class="QWidget" name="page_landing" native="true">
+      <property name="styleSheet">
+       <string notr="true">background-color: #EFF1F1;</string>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_landingPage">
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+      </layout>
+     </widget>
      <widget class="QWidget" name="page_position" native="true">
       <property name="styleSheet">
        <string notr="true">background-color: #F5F5F5;</string>
