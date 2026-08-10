@@ -21,6 +21,10 @@ LandingCalculation::LandingCalculation(QWidget *parent) :
     }
     ui->tableWindParameters->horizontalHeader()->setMinimumSectionSize(70);
 
+    // Названия вкладок не должны обрезаться ни при каком стиле/платформе
+    ui->tabWidget->tabBar()->setElideMode(Qt::ElideNone);
+    ui->tabWidgetEdit->tabBar()->setElideMode(Qt::ElideNone);
+
 //    setFixedSize(size());
 
 //    setupSizes();

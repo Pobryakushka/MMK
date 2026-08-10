@@ -1533,8 +1533,8 @@ QCheckBox:checked {
            <rect>
             <x>1076</x>
             <y>62</y>
-            <width>140</width>
-            <height>36</height>
+            <width>154</width>
+            <height>40</height>
            </rect>
           </property>
           <property name="minimumSize">

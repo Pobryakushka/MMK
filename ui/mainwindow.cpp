@@ -100,9 +100,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->mapCanvas->installEventFilter(this);
     QTimer::singleShot(0, this, &MainWindow::repositionMapFloatingControls);
 
-    // Экран "Расчёты" — встраиваем как постоянный виджет-страницу.
-    // Класс AlgorithmsCalculation и его .ui/.cpp живут отдельно, сюда
-    // попадает только готовый виджет + навигационные сигналы.
+    // Экран "Расчёты"
     m_algorithmsCalcWidget = new AlgorithmsCalculation(this);
     ui->page_calculations->layout()->addWidget(m_algorithmsCalcWidget);
     connect(m_algorithmsCalcWidget, &AlgorithmsCalculation::backRequested,
@@ -112,8 +110,7 @@ MainWindow::MainWindow(QWidget *parent)
         ui->stackedWidget->setCurrentWidget(ui->page_landing);
     });
 
-    // Экран "Расчёт на десантирование" — тоже встраиваем как постоянный
-    // виджет-страницу, аналогично AlgorithmsCalculation.
+    // Экран "Расчёт на десантирование"
     m_landingCalcWidget = new LandingCalculation(this);
     ui->page_landing->layout()->addWidget(m_landingCalcWidget);
     connect(m_landingCalcWidget, &LandingCalculation::backRequested,
