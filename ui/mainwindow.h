@@ -8,6 +8,10 @@
 #include <QComboBox>
 #include <QSerialPort>
 #include <QSerialPortInfo>
+#include <QPropertyAnimation>
+#include <QProgressBar>
+#include <QTimer>
+#include <QLabel>
 #include "qmlcoordinateproxy.h"
 #include "sensors/gnsshandler.h"
 #include "sensors/amshandler.h"
@@ -140,6 +144,17 @@ private slots:
     void onBinsStatusMessage(const QString &message);
     void onBinsDataReceived(const BINSData &data);
 
+    // Методы для работы с прогрессом подключения датчиков
+    void setupToastUI();
+    void showToast();
+    void hideToast();
+    void repositionToast();
+
+    // Слоты для работы с AutoConnector
+    void onAutoConnectorStarted();
+    void onAutoConnectorProgress(int current, int total);
+    void onAutoConnectorLog(const QString &msg);
+
 private:
     Ui::MainWindow *ui;
     AutoConnector *m_autoConnector = nullptr;
@@ -208,6 +223,15 @@ private:
 
     // Сохранение приземных данных ИВС в БД
     SurfaceMeteoSaver *m_surfaceMeteoSaver;
+
+    // Элементы окна прогресса кноки "Подключить датчики"
+    QWidget *m_toastWidget = nullptr;
+    QLabel *m_toastTitle = nullptr;
+    QLabel *m_toastPercent = nullptr;
+    QLabel *m_toastText = nullptr;
+    QProgressBar *m_toastProgress = nullptr;
+    QPropertyAnimation *m_toastAnimation = nullptr;
+    QTimer *m_toastHideTimer = nullptr;
 
     void connectSensorsFromConfig();
     bool connectIwsPort(const QString &port, int baudRate, QSerialPort::DataBits dataBits,

@@ -35,6 +35,9 @@
 #include <QUrl>
 #include <QFileInfo>
 #include <QFileSystemWatcher>
+#include <QGraphicsDropShadowEffect>
+#include <QPropertyAnimation>
+#include <QProgressBar>
 #include <cmath>
 
 
@@ -75,6 +78,8 @@ MainWindow::MainWindow(QWidget *parent)
     , m_windProfileCalculator(new WindProfileCalculator(QStringLiteral("climatData/climat/")))
 {
     ui->setupUi(this);
+
+    setupToastUI();
 
     configureAmsDatabase();
 
@@ -284,12 +289,18 @@ MainWindow::MainWindow(QWidget *parent)
     setupBinsHandler();
 
     m_autoConnector = new AutoConnector(this);
-    connect(m_autoConnector, &AutoConnector::deviceDetected, this, &MainWindow::onAutoConnectorDeviceDetected);
-    connect(m_autoConnector, &AutoConnector::detectionFinished, this, &MainWindow::onAutoConnectorFinished);
-    connect(m_autoConnector, &AutoConnector::detectionStarted, this, [this]{
-        ui->btnConnectSensors->setEnabled(false);
-        statusBar()->showMessage("Автопоиск датчиков...", 0);
-    });
+
+    connect(m_autoConnector, &AutoConnector::deviceDetected, this,
+            &MainWindow::onAutoConnectorDeviceDetected);
+    connect(m_autoConnector, &AutoConnector::detectionFinished, this,
+            &MainWindow::onAutoConnectorFinished);
+    connect(m_autoConnector, &AutoConnector::detectionStarted, this,
+            &MainWindow::onAutoConnectorStarted);
+    connect(m_autoConnector, &AutoConnector::progressUpdated, this,
+            &MainWindow::onAutoConnectorProgress);
+    connect(m_autoConnector, &AutoConnector::logMessage, this,
+            &MainWindow::onAutoConnectorLog);
+
     QTimer::singleShot(800, this, &MainWindow::connectSensorsFromConfig);
 
     // Таймер прогрева ИВС (3 минуты)
@@ -834,7 +845,7 @@ void MainWindow::configureAmsDatabase()
     int dbPort = 5432;
     QString dbName = "MMK";
     QString dbUser = "postgres";
-    QString dbPassword = "123";
+    QString dbPassword = "otdel412";
 
     qDebug() << "MainWindow: Настройка БД:" << dbName << "на" << dbHost;
 
@@ -1501,7 +1512,10 @@ void MainWindow::updateCoordinatesFromMap(double latitude, double longitude)
 void MainWindow::resizeEvent(QResizeEvent *event)
 {
     QMainWindow::resizeEvent(event);
-    // Кнопки теперь в layout панели статуса, перемещение не требуется
+
+    if(m_toastWidget) {
+        repositionToast();
+    }
 }
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event)
@@ -2400,6 +2414,9 @@ void MainWindow::onAutoConnectorFinished()
     ui->btnConnectSensors->setEnabled(true);
     statusBar()->clearMessage();
 
+    m_toastProgress->setValue(100);
+    m_toastPercent->setText("100%");
+
     QStringList failed;
     if (!m_gnssHandler->isConnected())                    failed << "GNSS";
     if (m_amsHandler && !m_amsHandler->isConnected())     failed << "АМС";
@@ -2407,12 +2424,27 @@ void MainWindow::onAutoConnectorFinished()
     if (!m_iwsDeviceActive)                               failed << "ИВС";
 
     if (!failed.isEmpty()) {
+        m_toastTitle->setText("Поиск завершнен с ошибками");
+        m_toastTitle->setStyleSheet("font-weight: bold; font-size: 10pt; color: #B71C1C; border: none; background: transparent;");
+        m_toastPercent->setStyleSheet("font-size: 10pt; font-weight: bold; color: #B71C1C; border: none; background: transparent;");
+        m_toastProgress->setStyleSheet(
+            "QProgressBar { background-color: #FFEBEE; border: none; border-radius: 3px; }"
+            "QProgressBar::chunk { background-color: #C62828; border-radius: 3px }"
+        );
+        m_toastText->setText("Не подключены: " + failed.join(", "));
+
         QMessageBox::warning(this, "Не удалось подключить датчики",
             "Не удалось подключить: " + failed.join(", ") + ".\n\n"
             "Проверьте физическое подключение кабелей и нажмите\n"
             "«Подключить датчики» для повторной попытки.");
+    } else {
+        m_toastTitle->setText("Поиск успешно завершен");
+        m_toastText->setText("Все датчики обнаружены и подключены!");
     }
+
+    m_toastHideTimer->start(4000);
 }
+
 // ── MBTiles / LocalTileServer методы ─────────────────────────────────────────
 
 void MainWindow::writeProvidersJson(const QString &providersDir, const QString &urlTemplate)
@@ -2821,4 +2853,174 @@ void MainWindow::runPlowSelfTest()
     qInfo() << "════════════════════════════════════════════════════════════";
     qInfo() << "  САМОТЕСТ ЗАВЕРШЁН (фейковые данные)";
     qInfo() << "════════════════════════════════════════════════════════════";
+}
+
+// =====================================================
+// Методы работы с уведомлением о подключении датчиков
+// =====================================================
+
+void MainWindow::setupToastUI()
+{
+    m_toastWidget = new QWidget(this);
+    m_toastWidget->setFixedSize(340, 105);
+    m_toastWidget->setStyleSheet(
+        "QWidget#toastWidget {"
+        "   background-color: #FFFFFF;"
+        "   border: 1px solid #DDE1E3;"
+        "   border-radius: 12px;"
+        "}"
+        );
+    m_toastWidget->setObjectName("toastWidget");
+
+    // Тень для окна
+    QGraphicsDropShadowEffect *shadow = new QGraphicsDropShadowEffect(this);
+    shadow->setBlurRadius(15);
+    shadow->setColor(QColor(0, 0, 0, 40));
+    shadow->setOffset(0, 4);
+    m_toastWidget->setGraphicsEffect(shadow);
+
+    QVBoxLayout *layout = new QVBoxLayout(m_toastWidget);
+    layout->setContentsMargins(16, 16, 16, 16);
+    layout->setSpacing(8);
+
+    QHBoxLayout *headerLayout = new QHBoxLayout();
+    m_toastTitle = new QLabel("Автопоиск датчиков", m_toastWidget);
+    m_toastTitle->setStyleSheet("font-weight: bold; font-size: 10pt; color: #1C1F22; border: none; background: transparent;");
+
+    m_toastPercent = new QLabel("0%", m_toastWidget);
+    m_toastPercent->setStyleSheet("font-size: 10pt; font-weight: bold; color: #0F6B4F; border: none; background: transparent;");
+    m_toastPercent->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+
+    headerLayout->addWidget(m_toastTitle);
+    headerLayout->addStretch();
+    headerLayout->addWidget(m_toastPercent);
+
+    m_toastText = new QLabel("Инициализация...", m_toastWidget);
+    m_toastText->setStyleSheet("font-size: 9pt; color: #666; font-family: monospace; border: none; background: transparent;");
+    m_toastText->setWordWrap(true);
+    m_toastText->setFixedHeight(32);
+
+    m_toastProgress = new QProgressBar(m_toastWidget);
+    m_toastProgress->setFixedHeight(6);
+    m_toastProgress->setTextVisible(false);
+    m_toastProgress->setStyleSheet(
+        "QProgressBar {"
+        "   background-color: #EFF1F1;"
+        "   border: none;"
+        "   border-radius: 3px;"
+        "}"
+        "QProgressBar::chunk {"
+        "   background-color: #0F6B4F;"
+        "   border-radius: 3px;"
+        "}"
+        );
+
+    layout->addLayout(headerLayout);
+    layout->addWidget(m_toastText);
+    layout->addWidget(m_toastProgress);
+
+    m_toastAnimation = new QPropertyAnimation(m_toastWidget, "pos", this);
+    m_toastAnimation->setDuration(400);
+    m_toastAnimation->setEasingCurve(QEasingCurve::OutBack);
+
+    m_toastHideTimer = new QTimer(this);
+    m_toastHideTimer->setSingleShot(true);
+    connect(m_toastHideTimer, &QTimer::timeout, this, &MainWindow::hideToast);
+
+    // Прячем окно за пределы экрана при создании
+    m_toastWidget->move(width() - m_toastWidget->width() - 20, height() + 10);
+    m_toastWidget->show();
+}
+
+void MainWindow::showToast()
+{
+    m_toastWidget->raise();
+
+    int targetX = width() - m_toastWidget->width() - 20;
+    int startY = height() + 10;
+    int endY = height() - m_toastWidget->height() - 20;
+
+    m_toastAnimation->stop();
+    m_toastWidget->move(targetX, startY);
+    m_toastAnimation->setStartValue(QPoint(targetX, startY));
+    m_toastAnimation->setEndValue(QPoint(targetX, endY));
+    m_toastAnimation->start();
+}
+
+void MainWindow::hideToast()
+{
+    int targetX = width() - m_toastWidget->width() - 20;
+    int startY = m_toastWidget->y();
+    int endY = height() + 10;
+
+    m_toastAnimation->stop();
+    m_toastAnimation->setStartValue(QPoint(targetX, startY));
+    m_toastAnimation->setEndValue(QPoint(targetX, endY));
+    m_toastAnimation->start();
+}
+
+void MainWindow::repositionToast()
+{
+    if (m_toastAnimation->state() == QAbstractAnimation::Running) {
+        return;
+    }
+
+    int targetX = width() - m_toastWidget->width() - 20;
+    int targetYVisible = height() - m_toastWidget->height() - 20;
+    int targetYHidden = height() + 10;
+
+    // Если Toast сейчас на экране, корректируем его видимую позицию
+    if (m_toastWidget->y() < height()) {
+        m_toastWidget->move(targetX, targetYVisible);
+    } else {
+        m_toastWidget->move(targetX, targetYHidden);
+    }
+}
+
+void MainWindow::onAutoConnectorStarted()
+{
+    ui->btnConnectSensors->setEnabled(false);
+    statusBar()->showMessage("Автопоиск датчиков...", 0);
+
+    // Сбрасываем стили к дефолтным (зеленым) на случай, если прошлая попытка завершилась ошибкой
+    m_toastTitle->setText("Автопоиск датчиков");
+    m_toastTitle->setStyleSheet("font-weight: bold; font-size: 10pt; color: #1C1F22; border: none; background: transparent;");
+    m_toastPercent->setStyleSheet("font-size: 10pt; font-weight: bold; color: #0F6B4F; border: none; background: transparent;");
+    m_toastProgress->setStyleSheet(
+        "QProgressBar { background-color: #EFF1F1; border: none; border-radius: 3px; }"
+        "QProgressBar::chunk { background-color: #0F6B4F; border-radius: 3px; }"
+        );
+
+    m_toastPercent->setText("0%");
+    m_toastProgress->setValue(0);
+    m_toastText->setText("Инициализация портов...");
+
+    showToast();
+}
+
+void MainWindow::onAutoConnectorProgress(int current, int total)
+{
+    if (total > 0) {
+        int percent = (current * 100) / total;
+        m_toastProgress->setValue(percent);
+        m_toastPercent->setText(QString("%1%").arg(percent));
+    }
+}
+
+void MainWindow::onAutoConnectorLog(const QString &msg)
+{
+    QString cleanMsg = msg.trimmed();
+
+    // Игнорируем пустые строки и чисто декоративные разделители от AutoConnector
+    if (cleanMsg.isEmpty() || cleanMsg.startsWith("===") || cleanMsg == "---") {
+        return;
+    }
+
+    // Очищаем дефисы из строк типа "--- Проверка порта COM1 (1/5) ---"
+    if (cleanMsg.startsWith("---")) {
+        cleanMsg.replace("-", "");
+        cleanMsg = cleanMsg.trimmed();
+    }
+
+    m_toastText->setText(cleanMsg);
 }
