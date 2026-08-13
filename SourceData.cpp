@@ -101,7 +101,9 @@ bool SourceData::eventFilter(QObject *watched, QEvent *event)
                         m_meteo11Dialog->raise();
                         m_meteo11Dialog->activateWindow();
                     } else {
+                        qDebug() << "[TEMP DEBUG] SourceData: before emit openGroundParamsRequested()";
                         emit openGroundParamsRequested();
+                        qDebug() << "[TEMP DEBUG] SourceData: after emit openGroundParamsRequested()";
                     }
                 });
             }

@@ -177,6 +177,14 @@ void GroundMeteoParams::closeEvent(QCloseEvent *event)
     QWidget::closeEvent(event);
 }
 
+// TEMP DEBUG — убрать после диагностики зависания
+void GroundMeteoParams::showEvent(QShowEvent *event)
+{
+    qDebug() << "[TEMP DEBUG] GroundMeteoParams::showEvent — before QWidget::showEvent";
+    QWidget::showEvent(event);
+    qDebug() << "[TEMP DEBUG] GroundMeteoParams::showEvent — after QWidget::showEvent";
+}
+
 GroundMeteoParams* GroundMeteoParams::instance()
 {
     return s_instance;

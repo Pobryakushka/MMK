@@ -129,16 +129,12 @@ void LocalTileServer::handleSocket(QTcpSocket *socket, const QByteArray &req)
 
     QByteArray tile = queryTile(z, x, y);
     if (!tile.isEmpty()) {
-        qDebug() << "LocalTileServer: HIT  z" << z << "x" << x << "y" << y
-                 << "yTms" << ((1<<z)-1-y) << "size" << tile.size();
         sendResponse(socket, 200, tile);
         socket->disconnectFromHost();
         return;
     }
 
     if (m_upstreamTemplate.isEmpty()) {
-        qDebug() << "LocalTileServer: MISS (offline) z" << z << "x" << x << "y" << y
-                 << "yTms" << ((1<<z)-1-y);
         sendResponse(socket, 404, {});
         socket->disconnectFromHost();
         return;
@@ -146,7 +142,6 @@ void LocalTileServer::handleSocket(QTcpSocket *socket, const QByteArray &req)
 
     // Proxy to upstream
     QUrl url(m_upstreamTemplate.arg(z).arg(x).arg(y));
-    qDebug() << "LocalTileServer: PROXY z" << z << "x" << x << "y" << y << "->" << url;
     QNetworkRequest netReq(url);
     netReq.setHeader(QNetworkRequest::UserAgentHeader, "MMK/1.0");
     netReq.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
@@ -164,8 +159,6 @@ void LocalTileServer::handleSocket(QTcpSocket *socket, const QByteArray &req)
                 safeSocket->disconnectFromHost();
             }
         } else {
-            qDebug() << "LocalTileServer: upstream error z" << z << "x" << x << "y" << y
-                     << reply->errorString();
             if (safeSocket) {
                 sendResponse(safeSocket, 502, {});
                 safeSocket->disconnectFromHost();

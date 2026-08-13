@@ -327,12 +327,12 @@ bool WindShearCalculator::runSelfTest()
     const double EPS_A = 0.1;    // допуск ΔA, градус
 
     int passed = 0;
-    qDebug() << "=== WindShearCalculator self-test ===";
-    qDebug() << QString("%1 %2 %3 %4 | %5 %6 | %7 %8 | %9")
-                .arg("Vi-1",5).arg("Ai-1",5).arg("Vi",5).arg("Ai",5)
-                .arg("expΔV",8).arg("expΔA",7)
-                .arg("gotΔV",8).arg("gotΔA",7)
-                .arg("result",6);
+    // qDebug() << "=== WindShearCalculator self-test ===";
+    // qDebug() << QString("%1 %2 %3 %4 | %5 %6 | %7 %8 | %9")
+    //             .arg("Vi-1",5).arg("Ai-1",5).arg("Vi",5).arg("Ai",5)
+    //             .arg("expΔV",8).arg("expΔA",7)
+    //             .arg("gotΔV",8).arg("gotΔA",7)
+    //             .arg("result",6);
 
     for (int i = 0; i < N; ++i) {
         const TestCase &c = cases[i];
@@ -345,15 +345,15 @@ bool WindShearCalculator::runSelfTest()
         bool ok = (fabs(dV - c.expV) < EPS_V) && (diffA < EPS_A);
         if (ok) ++passed;
 
-        qDebug() << QString("%1 %2 %3 %4 | %5 %6 | %7 %8 | %9")
-                    .arg(c.Vi1, 5, 'f', 0).arg(c.Ai1, 5, 'f', 0)
-                    .arg(c.Vi,  5, 'f', 0).arg(c.Ai,  5, 'f', 0)
-                    .arg(c.expV, 8, 'f', 4).arg(c.expA, 7, 'f', 2)
-                    .arg(dV,     8, 'f', 4).arg(dA,     7, 'f', 2)
-                    .arg(ok ? "PASS" : "FAIL");
+        // qDebug() << QString("%1 %2 %3 %4 | %5 %6 | %7 %8 | %9")
+        //             .arg(c.Vi1, 5, 'f', 0).arg(c.Ai1, 5, 'f', 0)
+        //             .arg(c.Vi,  5, 'f', 0).arg(c.Ai,  5, 'f', 0)
+        //             .arg(c.expV, 8, 'f', 4).arg(c.expA, 7, 'f', 2)
+        //             .arg(dV,     8, 'f', 4).arg(dA,     7, 'f', 2)
+        //             .arg(ok ? "PASS" : "FAIL");
     }
 
-    qDebug() << QString("=== Итог: %1/%2 тестов прошло ===").arg(passed).arg(N);
+    // qDebug() << QString("=== Итог: %1/%2 тестов прошло ===").arg(passed).arg(N);
     return (passed == N);
 }
 

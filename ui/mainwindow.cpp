@@ -40,6 +40,7 @@
 #include <QProgressBar>
 #include <cmath>
 
+
 // ====================================================================
 // НАСТРОЙКА ПРОТОКОЛА IWS
 // ====================================================================
@@ -279,7 +280,9 @@ MainWindow::MainWindow(QWidget *parent)
         ui->stackedWidget->addWidget(gmp);
         connect(sourceDataInstance, &SourceData::openGroundParamsRequested,
                 this, [this, gmp]() {
+            qDebug() << "[TEMP DEBUG] MainWindow: before setCurrentWidget(gmp)";
             ui->stackedWidget->setCurrentWidget(gmp);
+            qDebug() << "[TEMP DEBUG] MainWindow: after setCurrentWidget(gmp)";
         });
         connect(gmp, &GroundMeteoParams::backRequested, this, [this]() {
             ui->stackedWidget->setCurrentWidget(sourceDataInstance);
@@ -2768,100 +2771,100 @@ void MainWindow::onSurfaceStateChanged(GroundMeteoParams::SurfaceState newState)
 
 void MainWindow::runPlowSelfTest()
 {
-    qInfo() << "════════════════════════════════════════════════════════════";
-    qInfo() << "  САМОТЕСТ РАСЧЁТА ВЕТРА (ФЕЙКОВЫЙ измеренный профиль, 320 точек)";
-    qInfo() << "════════════════════════════════════════════════════════════";
+//     qInfo() << "════════════════════════════════════════════════════════════";
+//     qInfo() << "  САМОТЕСТ РАСЧЁТА ВЕТРА (ФЕЙКОВЫЙ измеренный профиль, 320 точек)";
+//     qInfo() << "════════════════════════════════════════════════════════════";
 
-    if (!m_windProfileCalculator) {
-        qWarning() << "[SelfTest] m_windProfileCalculator == nullptr — пропуск";
-        return;
-    }
+//     if (!m_windProfileCalculator) {
+//         qWarning() << "[SelfTest] m_windProfileCalculator == nullptr — пропуск";
+//         return;
+//     }
 
-    // ── Координаты станции (можно заменить на реальные) ──────────────────────
-    const double kLat = 55.75;     // широта, град
-    const double kLon = 37.62;     // долгота, град
-    const float  kAlt = 150.0f;    // высота над уровнем моря, м
+//     // ── Координаты станции (можно заменить на реальные) ──────────────────────
+//     const double kLat = 55.75;     // широта, град
+//     const double kLon = 37.62;     // долгота, град
+//     const float  kAlt = 150.0f;    // высота над уровнем моря, м
 
-    // ── Приземный ветер — ЖЁСТКО ─────────────────────────────────────────────
-    const float surfaceWindSpeed = 13.0f;
-    const float surfaceWindDir   = 351.0f;
+//     // ── Приземный ветер — ЖЁСТКО ─────────────────────────────────────────────
+//     const float surfaceWindSpeed = 13.0f;
+//     const float surfaceWindDir   = 351.0f;
 
-    // ── Генерация фейкового измеренного профиля (320 точек) ──────────────────
-    // Физичная модель:
-    //   • высота h: 25, 50, 75, ... 8000 (шаг 25 м, 320 уровней);
-    //   • скорость: логарифмический рост у земли + линейный выше
-    //     V(h) = 5 + 0.003*h  (на 8000 м ≈ 29 м/с) — типичный сдвиг;
-    //   • направление: старт 351°, плавный правый поворот с высотой
-    //     dir(h) = 351 + 0.004*h градусов (через 360 заворачиваем).
-    QVector<MeasuredWindData> measured;
-    const int N = 320;
-    measured.reserve(N);
-    for (int i = 0; i < N; ++i) {
-        const float h = 25.0f * (i + 1);            // 25 … 8000 м
+//     // ── Генерация фейкового измеренного профиля (320 точек) ──────────────────
+//     // Физичная модель:
+//     //   • высота h: 25, 50, 75, ... 8000 (шаг 25 м, 320 уровней);
+//     //   • скорость: логарифмический рост у земли + линейный выше
+//     //     V(h) = 5 + 0.003*h  (на 8000 м ≈ 29 м/с) — типичный сдвиг;
+//     //   • направление: старт 351°, плавный правый поворот с высотой
+//     //     dir(h) = 351 + 0.004*h градусов (через 360 заворачиваем).
+//     QVector<MeasuredWindData> measured;
+//     const int N = 320;
+//     measured.reserve(N);
+//     for (int i = 0; i < N; ++i) {
+//         const float h = 25.0f * (i + 1);            // 25 … 8000 м
 
-        MeasuredWindData m;
-        m.height        = h;
-        m.windSpeed     = 5.0f + 0.003f * h;        // 5 … ~29 м/с
-        float dir       = 351.0f + 0.004f * h;      // плавный поворот
-        while (dir >= 360.0f) dir -= 360.0f;
-        m.windDirection = dir;
-        m.reliability   = 1;                         // достоверная (под фильтр ==1)
-        measured.append(m);
-    }
+//         MeasuredWindData m;
+//         m.height        = h;
+//         m.windSpeed     = 5.0f + 0.003f * h;        // 5 … ~29 м/с
+//         float dir       = 351.0f + 0.004f * h;      // плавный поворот
+//         while (dir >= 360.0f) dir -= 360.0f;
+//         m.windDirection = dir;
+//         m.reliability   = 1;                         // достоверная (под фильтр ==1)
+//         measured.append(m);
+//     }
 
-    qInfo() << "[SelfTest] сгенерировано фейковых точек:" << measured.size()
-            << "| диапазон высот: 25 .. " << (25 * N) << "м";
-    qInfo() << "[SelfTest] пример точек:";
-    for (int i : {0, 39, 79, 159, 319}) {
-        if (i < measured.size())
-            qInfo("    h=%7.1f  V=%6.2f  dir=%6.2f  rel=%d",
-                  measured[i].height, measured[i].windSpeed,
-                  measured[i].windDirection, measured[i].reliability);
-    }
+//     qInfo() << "[SelfTest] сгенерировано фейковых точек:" << measured.size()
+//             << "| диапазон высот: 25 .. " << (25 * N) << "м";
+//     qInfo() << "[SelfTest] пример точек:";
+//     for (int i : {0, 39, 79, 159, 319}) {
+//         if (i < measured.size())
+//             qInfo("    h=%7.1f  V=%6.2f  dir=%6.2f  rel=%d",
+//                   measured[i].height, measured[i].windSpeed,
+//                   measured[i].windDirection, measured[i].reliability);
+//     }
 
-    // ── Собираем Input ───────────────────────────────────────────────────────
-    WindProfileCalculator::Input in;
-    in.measuredWind       = measured;
-    in.latitudeDeg        = kLat;
-    in.longitudeDeg       = kLon;
-    in.stationAltitudeM   = kAlt;
-    in.surfaceWindSpeedMs = surfaceWindSpeed;
-    in.surfaceWindDirDeg  = surfaceWindDir;
-    in.groundWindHeightM  = 8.0f;
-    in.z0                 = 0.01f;
-    in.sondingTime        = QDateTime::currentDateTime();
+//     // ── Собираем Input ───────────────────────────────────────────────────────
+//     WindProfileCalculator::Input in;
+//     in.measuredWind       = measured;
+//     in.latitudeDeg        = kLat;
+//     in.longitudeDeg       = kLon;
+//     in.stationAltitudeM   = kAlt;
+//     in.surfaceWindSpeedMs = surfaceWindSpeed;
+//     in.surfaceWindDirDeg  = surfaceWindDir;
+//     in.groundWindHeightM  = 8.0f;
+//     in.z0                 = 0.01f;
+//     in.sondingTime        = QDateTime::currentDateTime();
 
-    qInfo() << "[SelfTest] координаты: lat=" << kLat << "lon=" << kLon << "alt=" << kAlt;
-    qInfo() << "[SelfTest] приземный ветер: V=" << surfaceWindSpeed << "dir=" << surfaceWindDir;
-    qInfo() << "[SelfTest] ─── запуск calculate() ─── (ниже лог библиотеки plow)";
+//     qInfo() << "[SelfTest] координаты: lat=" << kLat << "lon=" << kLon << "alt=" << kAlt;
+//     qInfo() << "[SelfTest] приземный ветер: V=" << surfaceWindSpeed << "dir=" << surfaceWindDir;
+//     qInfo() << "[SelfTest] ─── запуск calculate() ─── (ниже лог библиотеки plow)";
 
-    WindProfileCalculator::Output out;
-    WindProfileCalculator::Result r = m_windProfileCalculator->calculate(in, out);
+//     WindProfileCalculator::Output out;
+//     WindProfileCalculator::Result r = m_windProfileCalculator->calculate(in, out);
 
-    qInfo() << "[SelfTest] результат:" << WindProfileCalculator::resultString(r);
-    if (r != WindProfileCalculator::OK) {
-        qWarning() << "[SelfTest] расчёт не выполнен";
-        return;
-    }
+//     qInfo() << "[SelfTest] результат:" << WindProfileCalculator::resultString(r);
+//     if (r != WindProfileCalculator::OK) {
+//         qWarning() << "[SelfTest] расчёт не выполнен";
+//         return;
+//     }
 
-    // ── Печать результата с полной дробной частью ────────────────────────────
-    qInfo() << "[SelfTest] ─── ДЕЙСТВИТЕЛЬНЫЙ ветер ───";
-    for (int i = 0; i < out.actualWind.size(); ++i) {
-        const WindProfileData &p = out.actualWind[i];
-        qInfo("  #%2d  h=%8.2f  V=%15.6f  dir=%15.6f  valid=%d",
-              i, p.height, p.windSpeed, p.windDirection, int(p.isValid));
-    }
+//     // ── Печать результата с полной дробной частью ────────────────────────────
+//     qInfo() << "[SelfTest] ─── ДЕЙСТВИТЕЛЬНЫЙ ветер ───";
+//     for (int i = 0; i < out.actualWind.size(); ++i) {
+//         const WindProfileData &p = out.actualWind[i];
+//         qInfo("  #%2d  h=%8.2f  V=%15.6f  dir=%15.6f  valid=%d",
+//               i, p.height, p.windSpeed, p.windDirection, int(p.isValid));
+//     }
 
-    qInfo() << "[SelfTest] ─── СРЕДНИЙ ветер ───";
-    for (int i = 0; i < out.avgWind.size(); ++i) {
-        const WindProfileData &p = out.avgWind[i];
-        qInfo("  #%2d  h=%8.2f  V=%15.6f  dir=%15.6f  valid=%d",
-              i, p.height, p.windSpeed, p.windDirection, int(p.isValid));
-    }
+//     qInfo() << "[SelfTest] ─── СРЕДНИЙ ветер ───";
+//     for (int i = 0; i < out.avgWind.size(); ++i) {
+//         const WindProfileData &p = out.avgWind[i];
+//         qInfo("  #%2d  h=%8.2f  V=%15.6f  dir=%15.6f  valid=%d",
+//               i, p.height, p.windSpeed, p.windDirection, int(p.isValid));
+//     }
 
-    qInfo() << "════════════════════════════════════════════════════════════";
-    qInfo() << "  САМОТЕСТ ЗАВЕРШЁН (фейковые данные)";
-    qInfo() << "════════════════════════════════════════════════════════════";
+//     qInfo() << "════════════════════════════════════════════════════════════";
+//     qInfo() << "  САМОТЕСТ ЗАВЕРШЁН (фейковые данные)";
+//     qInfo() << "════════════════════════════════════════════════════════════";
 }
 
 // =====================================================
