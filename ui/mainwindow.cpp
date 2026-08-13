@@ -40,7 +40,6 @@
 #include <QProgressBar>
 #include <cmath>
 
-
 // ====================================================================
 // НАСТРОЙКА ПРОТОКОЛА IWS
 // ====================================================================
@@ -263,14 +262,29 @@ MainWindow::MainWindow(QWidget *parent)
             this, &MainWindow::onFunctionalControlClicked);
 
     // Создаём постоянный экземпляр SourceData (внутри создастся GroundMeteoParams)
-    // Не показываем его, просто держим в памяти для доступа к данным
+    // Встраиваем страницей в общий stackedWidget — как экран "Расчёты"
+    // (AlgorithmsCalculation) — а не показываем отдельным всплывающим окном.
     sourceDataInstance = new SourceData(this);
+    ui->stackedWidget->addWidget(sourceDataInstance);
+    connect(sourceDataInstance, &SourceData::backRequested,
+            this, &MainWindow::onBackToHome);
     qDebug() << "SourceData instance created (with GroundMeteoParams inside)";
 
-    // ── Подписка на состояние приземных данных ──────────────────────────────
+    // ── Подписка на состояние приземных данных + встраивание страницы ──────
     // GroundMeteoParams является единой точкой правды о готовности приземных
-    // данных. MainWindow только отображает: lblStatus + доступность btnStart.
+    // данных. MainWindow отображает: lblStatus + доступность btnStart, и
+    // держит саму страницу в общем стеке (как "Расчёты") — отдельным
+    // всплывающим QDialog она больше не является.
     if (GroundMeteoParams *gmp = GroundMeteoParams::instance()) {
+        ui->stackedWidget->addWidget(gmp);
+        connect(sourceDataInstance, &SourceData::openGroundParamsRequested,
+                this, [this, gmp]() {
+            ui->stackedWidget->setCurrentWidget(gmp);
+        });
+        connect(gmp, &GroundMeteoParams::backRequested, this, [this]() {
+            ui->stackedWidget->setCurrentWidget(sourceDataInstance);
+        });
+
         connect(gmp, &GroundMeteoParams::surfaceStateChanged,
                 this, &MainWindow::onSurfaceStateChanged);
         // Начальное состояние — данных ещё нет → NoData, кнопка пуска
@@ -2058,12 +2072,7 @@ void MainWindow::onManualInputClicked()
 
 void MainWindow::onInitialDataClicked()
 {
-    //    SourceData dialog(this);
-    sourceDataInstance->adjustSize();
-    sourceDataInstance->setMinimumSize(sourceDataInstance->sizeHint());
-    sourceDataInstance->setSizeGripEnabled(true);
-    sourceDataInstance->show();
-    //    dialog.exec();
+    ui->stackedWidget->setCurrentWidget(sourceDataInstance);
 }
 
 void MainWindow::onCalculationsClicked()

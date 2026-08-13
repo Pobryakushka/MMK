@@ -1,16 +1,72 @@
 #include "GroundMeteoParams.h"
 #include "ui_GroundMeteoParams.h"
+#include "VirtualKeyboard.h"
 #include <QDebug>
 #include <QtMath>
 #include <algorithm>  // Для std::min_element, std::max_element
 #include <QMessageBox>
+#include <QLineEdit>
 
 GroundMeteoParams* GroundMeteoParams::s_instance = nullptr;
 
 static constexpr double kHpaToMmHg = 0.750064;
 
+// ── Формат ввода для 5 строк таблицы (индекс = номер строки) ──────────────
+// Только формат (знак/десятичные разряды) — БЕЗ ограничения диапазона
+// значений: специально не ограничиваем min/max, чтобы не мешать вводу
+// реальных показаний.
+namespace {
+struct RowFormat { int decimals; bool allowNegative; };
+constexpr RowFormat kRowFormat[5] = {
+    { 1, false },  // 0: скорость ветра, м/с
+    { 0, false },  // 1: направление ветра, град
+    { 1, false },  // 2: давление, мм рт. ст.
+    { 0, false },  // 3: относительная влажность, %
+    { 1, true  },  // 4: температура, °C
+};
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// GroundParamValueDelegate
+// ─────────────────────────────────────────────────────────────────────────
+
+GroundParamValueDelegate::GroundParamValueDelegate(QObject *parent)
+    : QStyledItemDelegate(parent)
+{
+}
+
+QWidget* GroundParamValueDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &option,
+                                                 const QModelIndex &index) const
+{
+    auto *editor = new QLineEdit(parent);
+    editor->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    editor->setFont(option.font);
+
+    const int row = index.row();
+    if (row >= 0 && row < 5) {
+        const RowFormat &fmt = kRowFormat[row];
+        VirtualKeyboard::Constraints c;
+        c.allowNegative   = fmt.allowNegative;
+        c.allowDecimal    = fmt.decimals > 0;
+        c.maxDecimals     = fmt.decimals;
+        c.maxLength       = 7;
+        c.allowModeSwitch = false;   // строго числовые поля — переключение на буквы не нужно
+        // Диапазон значений (minValue/maxValue) намеренно не ограничиваем.
+        VirtualKeyboard::attach(editor, VirtualKeyboard::Mode::Numeric, c);
+    }
+
+    return editor;
+}
+
+void GroundParamValueDelegate::destroyEditor(QWidget *editor, const QModelIndex &index) const
+{
+    if (auto *le = qobject_cast<QLineEdit*>(editor))
+        VirtualKeyboard::detach(le);
+    QStyledItemDelegate::destroyEditor(editor, index);
+}
+
 GroundMeteoParams::GroundMeteoParams(QWidget *parent)
-    : QDialog(parent, Qt::CustomizeWindowHint)
+    : QWidget(parent)
     , ui(new Ui::GroundMeteoParams)
     , m_protocol(MODBUS_RTU)
     , m_deviceAddress(0x70)
@@ -25,7 +81,10 @@ GroundMeteoParams::GroundMeteoParams(QWidget *parent)
     qDebug() << "GroundMeteoParams initialized with Modbus RTU protocol, device address 0x01";
 
     connect(ui->btnGroundParamsClose, &QPushButton::clicked, this, [this](){
-        close();   // closeEvent сам решит, спрашивать ли подтверждение
+        if (!confirmDiscardIfDirty())
+            return; // оператор нажал "Отмена" — остаёмся на странице
+        VirtualKeyboard::hideKeyboard(); // на случай, если ячейка ещё редактировалась
+        emit backRequested();
     });
     connect(ui->btnGroundParamsClear, &QPushButton::clicked, this, &GroundMeteoParams::deleteDataFromTable);
     connect(ui->btnGroundParamsApply, &QPushButton::clicked, this, &GroundMeteoParams::applyManualInput);
@@ -41,6 +100,10 @@ GroundMeteoParams::GroundMeteoParams(QWidget *parent)
         item->setFlags(item->flags() | Qt::ItemIsEditable);
     }
 
+    // Валидированный редактор + автопривязка экранной клавиатуры для ячеек
+    // столбца "Значение" (см. GroundParamValueDelegate выше).
+    table->setItemDelegateForColumn(1, new GroundParamValueDelegate(table));
+
     // Отслеживаем ручные правки ячеек — для m_dirty (подтверждение при закрытии).
     // Программные записи в таблицу обёрнуты в m_suppressDirty, чтобы не путать.
     connect(table, &QTableWidget::itemChanged,
@@ -52,6 +115,12 @@ GroundMeteoParams::GroundMeteoParams(QWidget *parent)
     m_staleTimer->setSingleShot(true);
     connect(m_staleTimer, &QTimer::timeout,
             this, &GroundMeteoParams::onStaleTimerTimeout);
+
+    connect(this, &GroundMeteoParams::surfaceStateChanged,
+            this, &GroundMeteoParams::updateStatusPill);
+
+    applyVisualStyle();
+    updateStatusPill(m_surfaceState); // начальное состояние пилюли ("Нет данных")
 }
 
 GroundMeteoParams::~GroundMeteoParams()
@@ -63,36 +132,49 @@ GroundMeteoParams::~GroundMeteoParams()
     delete ui;
 }
 
-// Переопределяем закрытие окна: скрываем вместо удаления, чтобы кеш данных сохранялся
+// Общая логика подтверждения при уходе со страницы с неприменёнными правками
+// (используется и кнопкой "Закрыть", и closeEvent как защитный запасной путь).
+bool GroundMeteoParams::confirmDiscardIfDirty()
+{
+    if (!m_dirty)
+        return true;
+
+    QMessageBox box(this);
+    box.setIcon(QMessageBox::Question);
+    box.setWindowTitle("Несохранённые изменения");
+    box.setText("В таблице есть изменения, не применённые кнопкой «Применить».");
+    box.setInformativeText("Применить их перед закрытием?");
+    box.setStandardButtons(QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+    box.setDefaultButton(QMessageBox::Yes);
+    box.button(QMessageBox::Yes)->setText("Применить");
+    box.button(QMessageBox::No)->setText("Не применять");
+    box.button(QMessageBox::Cancel)->setText("Отмена");
+
+    const int ret = box.exec();
+    if (ret == QMessageBox::Cancel)
+        return false;
+
+    if (ret == QMessageBox::Yes) {
+        applyManualInput();   // применяем — m_dirty сбросится внутри
+    } else {
+        // "Не применять" — просто отмечаем как не-dirty, изменения теряются
+        m_dirty = false;
+    }
+    return true;
+}
+
+// closeEvent оставлен как защитный запасной путь на случай, если что-то
+// всё же вызовет close() программно — в обычной работе страницы этот путь
+// не используется, уход "назад" идёт через кнопку "Закрыть" (см. конструктор).
 void GroundMeteoParams::closeEvent(QCloseEvent *event)
 {
-    if (m_dirty) {
-        QMessageBox box(this);
-        box.setIcon(QMessageBox::Question);
-        box.setWindowTitle("Несохранённые изменения");
-        box.setText("В таблице есть изменения, не применённые кнопкой «Применить».");
-        box.setInformativeText("Применить их перед закрытием?");
-        box.setStandardButtons(QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
-        box.setDefaultButton(QMessageBox::Yes);
-        box.button(QMessageBox::Yes)->setText("Применить");
-        box.button(QMessageBox::No)->setText("Не применять");
-        box.button(QMessageBox::Cancel)->setText("Отмена");
-
-        const int ret = box.exec();
-        if (ret == QMessageBox::Cancel) {
-            event->ignore();
-            return;
-        }
-        if (ret == QMessageBox::Yes) {
-            applyManualInput();   // применяем — m_dirty сбросится внутри
-        } else {
-            // "Не применять" — просто отмечаем как не-dirty, изменения теряются
-            m_dirty = false;
-        }
+    if (!confirmDiscardIfDirty()) {
+        event->ignore();
+        return;
     }
 
-    hide();
-    event->ignore();   // окно — синглтон, не уничтожаем
+    VirtualKeyboard::hideKeyboard();
+    QWidget::closeEvent(event);
 }
 
 GroundMeteoParams* GroundMeteoParams::instance()
@@ -1089,4 +1171,66 @@ void GroundMeteoParams::onStaleTimerTimeout()
     qDebug() << "GroundMeteoParams: таймер 30 мин истёк — данные устарели";
     // Если данные есть — состояние станет Stale; если уже нет — останется NoData.
     recomputeSurfaceState();
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Визуальный стиль (единожды из конструктора) и обновление статус-пилюли
+// ─────────────────────────────────────────────────────────────────────────
+
+void GroundMeteoParams::applyVisualStyle()
+{
+    setStyleSheet(
+        "QWidget#GroundMeteoParams { background:#EFF1F1; }"
+        "QGroupBox { background:transparent; }"
+        "QLabel#lblGroundParams { color:#1C1F22; }"
+        "QTableWidget#tableWidget_GroundParams {"
+        "  background:#FFFFFF; border:1px solid #DDE1E3; border-radius:12px;"
+        "  gridline-color:#F0F1F2; font-size:11pt;"
+        "}"
+        "QTableWidget#tableWidget_GroundParams::item { padding:6px 10px; }"
+        "QHeaderView::section {"
+        "  background:#F5F6F6; color:#6B7278; border:none; border-bottom:1px solid #DDE1E3;"
+        "  padding:8px 10px; font-weight:600;"
+        "}"
+        "QPushButton#btnGroundParamsApply {"
+        "  background:#0F6B4F; color:#FFFFFF; border:none; border-radius:10px;"
+        "  padding:0 22px; font-weight:700;"
+        "}"
+        "QPushButton#btnGroundParamsApply:pressed { background:#0B5A41; }"
+        "QPushButton#btnGroundParamsClear, QPushButton#btnGroundParamsClose {"
+        "  background:#FFFFFF; color:#1C1F22; border:1px solid #DDE1E3; border-radius:10px;"
+        "  padding:0 20px; font-weight:700;"
+        "}"
+        "QPushButton#btnGroundParamsClear:pressed, QPushButton#btnGroundParamsClose:pressed {"
+        "  background:#F0F1F2;"
+        "}"
+        "QLabel#lblStatusPill { border-radius:14px; padding:6px 18px; font-weight:700; font-size:9.5pt; }"
+    );
+
+    ui->lblStatusPill->setAttribute(Qt::WA_StyledBackground, true);
+}
+
+void GroundMeteoParams::updateStatusPill(GroundMeteoParams::SurfaceState state)
+{
+    QString text;
+    QString style;
+    switch (state) {
+    case NoData:
+        text = QString::fromUtf8("● НЕТ ПРИЗЕМНЫХ ДАННЫХ");
+        style = "QLabel#lblStatusPill { background:#FFEBEE; color:#C62828; border:1px solid #FFCDD2; }";
+        break;
+    case Stale:
+        text = QString::fromUtf8("● ДАННЫЕ УСТАРЕЛИ (>30 МИН)");
+        style = "QLabel#lblStatusPill { background:#FFF3E0; color:#E65100; border:1px solid #FFE0B2; }";
+        break;
+    case Fresh:
+        text = QString::fromUtf8("● ПРИЗЕМНЫЕ ДАННЫЕ АКТУАЛЬНЫ");
+        style = "QLabel#lblStatusPill { background:#E8F5E9; color:#0F6B4F; border:1px solid #C8E6C9; }";
+        break;
+    }
+    ui->lblStatusPill->setText(text);
+    // Локальный стиль пилюли добавляется поверх общего QSS диалога (тот уже
+    // задаёт radius/padding/шрифт — здесь только цвет состояния).
+    ui->lblStatusPill->setStyleSheet(style +
+        " QLabel#lblStatusPill { border-radius:14px; padding:6px 18px; font-weight:700; font-size:9.5pt; }");
 }

@@ -1,18 +1,33 @@
 #ifndef GROUNDMETEOPARAMS_H
 #define GROUNDMETEOPARAMS_H
 
-#include <QDialog>
+#include <QWidget>
 #include <QMap>
 #include <QSerialPort>
 #include <QCloseEvent>
 #include <QTimer>
 #include <QTableWidget>
+#include <QStyledItemDelegate>
 
 namespace Ui {
 class GroundMeteoParams;
 }
 
-class GroundMeteoParams : public QDialog {
+// Делегат ячейки таблицы "Значение": создаёт QLineEdit-редактор с
+// ограничениями конкретной строки (диапазон/точность/знак) и привязывает
+// к нему VirtualKeyboard, чтобы клавиатура появлялась автоматически и не
+// перекрывала таблицу.
+class GroundParamValueDelegate : public QStyledItemDelegate
+{
+    Q_OBJECT
+public:
+    explicit GroundParamValueDelegate(QObject *parent = nullptr);
+    QWidget* createEditor(QWidget *parent, const QStyleOptionViewItem &option,
+                          const QModelIndex &index) const override;
+    void destroyEditor(QWidget *editor, const QModelIndex &index) const override;
+};
+
+class GroundMeteoParams : public QWidget {
     Q_OBJECT
 
 public:
@@ -74,6 +89,7 @@ private slots:
     void applyManualInput();
     void onTableItemChanged(QTableWidgetItem *item);   // отслеживание m_dirty
     void onStaleTimerTimeout();                         // 30 мин истекли
+    void updateStatusPill(GroundMeteoParams::SurfaceState state); // обновление пилюли статуса
 
 private:
     Ui::GroundMeteoParams *ui;
@@ -142,6 +158,18 @@ private:
     // Перезапустить таймер 30 мин (вызывается при любом применении/приёме).
     void restartStaleTimer();
 
+    // Применяет визуальный стиль (карточка/пилюля/таблица/кнопки) — вызывается
+    // один раз из конструктора.
+    void applyVisualStyle();
+
+    // Если в таблице есть неприменённые правки (m_dirty) — спрашивает
+    // подтверждение (применить/отменить/не уходить). Возвращает true, если
+    // можно продолжать переход "назад" (правки применены или сброшены),
+    // false — если оператор нажал "Отмена" и остаётся на странице.
+    // Общий код для кнопки "Закрыть" и для closeEvent (на случай, если
+    // что-то всё же вызовет close() программно).
+    bool confirmDiscardIfDirty();
+
 protected:
     void closeEvent(QCloseEvent *event) override;
 
@@ -152,6 +180,11 @@ signals:
     // Состояние приземных данных изменилось. MainWindow слушает этот сигнал
     // и обновляет lblStatus + доступность кнопки старта.
     void surfaceStateChanged(GroundMeteoParams::SurfaceState newState);
+
+    // Запрос вернуться на предыдущую страницу (аналог
+    // AlgorithmsCalculation::backRequested()) — MainWindow переключает
+    // stackedWidget обратно на страницу "Исходные данные".
+    void backRequested();
 };
 
 #endif // GROUNDMETEOPARAMS_H
