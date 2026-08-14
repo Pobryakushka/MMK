@@ -3,7 +3,7 @@
 #include "VirtualKeyboard.h"
 #include <QDebug>
 #include <QtMath>
-#include <algorithm>  // Для std::min_element, std::max_element
+#include <algorithm>
 #include <QMessageBox>
 #include <QLineEdit>
 
@@ -42,6 +42,9 @@ QWidget* GroundParamValueDelegate::createEditor(QWidget *parent, const QStyleOpt
     editor->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     editor->setFont(option.font);
 
+    editor->setAutoFillBackground(true);
+    editor->setStyleSheet("background-color: #FFFFFF; border: none; padding: 0 4px;");
+
     const int row = index.row();
     if (row >= 0 && row < 5) {
         const RowFormat &fmt = kRowFormat[row];
@@ -56,6 +59,14 @@ QWidget* GroundParamValueDelegate::createEditor(QWidget *parent, const QStyleOpt
     }
 
     return editor;
+}
+
+void GroundParamValueDelegate::setEditorData(QWidget *editor, const QModelIndex &index) const
+{
+    QStyledItemDelegate::setEditorData(editor, index);
+
+    if (auto *le = qobject_cast<QLineEdit*>(editor))
+        le->selectAll();
 }
 
 void GroundParamValueDelegate::destroyEditor(QWidget *editor, const QModelIndex &index) const

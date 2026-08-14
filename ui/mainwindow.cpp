@@ -1531,6 +1531,10 @@ void MainWindow::resizeEvent(QResizeEvent *event)
     if(m_toastWidget) {
         repositionToast();
     }
+
+    if (m_stopConfirmOverlay) {
+        m_stopConfirmOverlay->setGeometry(rect());
+    }
 }
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event)
@@ -2424,6 +2428,8 @@ void MainWindow::onAutoConnectorFinished()
     ui->btnConnectSensors->setEnabled(true);
     statusBar()->clearMessage();
 
+    m_toastCloseBtn->hide();
+
     m_toastProgress->setValue(100);
     m_toastPercent->setText("100%");
 
@@ -2929,6 +2935,32 @@ void MainWindow::setupToastUI()
     layout->addWidget(m_toastText);
     layout->addWidget(m_toastProgress);
 
+    // Маленькая красная кнопка остановки поиска — в правом верхнем углу окна
+    m_toastCloseBtn = new QPushButton("\u2715", m_toastWidget);
+    m_toastCloseBtn->setFixedSize(12, 12);
+    m_toastCloseBtn->setCursor(Qt::PointingHandCursor);
+    m_toastCloseBtn->setToolTip("Остановить поиск датчиков");
+    m_toastCloseBtn->setStyleSheet(
+        "QPushButton {"
+        "   background-color: #E53935;"
+        "   color: #FFFFFF;"
+        "   border: none;"
+        "   border-radius: 6px;"
+        "   font-size: 10pt;"
+        "   font-weight: bold;"
+        "   padding: 0px;"
+        "}"
+        "QPushButton:hover { background-color: #C62828; }"
+        "QPushButton:pressed { background-color: #B71C1C; }"
+        );
+    // Позиционируем поверх карточки, в углу — вне общего layout
+    m_toastCloseBtn->move(m_toastWidget->width() - m_toastCloseBtn->width() - 8, 8);
+    m_toastCloseBtn->raise();
+    m_toastCloseBtn->hide(); // видна только пока идёт активный поиск
+    connect(m_toastCloseBtn, &QPushButton::clicked, this, &MainWindow::onToastCloseClicked);
+
+    setupStopConfirmOverlay();
+
     m_toastAnimation = new QPropertyAnimation(m_toastWidget, "pos", this);
     m_toastAnimation->setDuration(400);
     m_toastAnimation->setEasingCurve(QEasingCurve::OutBack);
@@ -2987,6 +3019,192 @@ void MainWindow::repositionToast()
     }
 }
 
+// =====================================================
+// Окно подтверждения остановки поиска датчиков
+// =====================================================
+
+void MainWindow::setupStopConfirmOverlay()
+{
+    // Полупрозрачный оверлей на всё окно — затемняет фон, перехватывает клики "мимо"
+    m_stopConfirmOverlay = new QWidget(this);
+    m_stopConfirmOverlay->setObjectName("stopConfirmOverlay");
+    m_stopConfirmOverlay->setStyleSheet(
+        "QWidget#stopConfirmOverlay { background-color: rgba(28, 31, 34, 140); }"
+        );
+    m_stopConfirmOverlay->setAttribute(Qt::WA_StyledBackground, true);
+    m_stopConfirmOverlay->setGeometry(rect());
+    m_stopConfirmOverlay->hide();
+
+    // Карточка подтверждения — в стиле остальных всплывающих окон приложения
+    m_stopConfirmCard = new QWidget(m_stopConfirmOverlay);
+    m_stopConfirmCard->setObjectName("stopConfirmCard");
+    m_stopConfirmCard->setFixedSize(360, 210);
+    m_stopConfirmCard->setStyleSheet(
+        "QWidget#stopConfirmCard {"
+        "   background-color: #FFFFFF;"
+        "   border-radius: 20px;"
+        "}"
+        );
+
+    QGraphicsDropShadowEffect *cardShadow = new QGraphicsDropShadowEffect(m_stopConfirmCard);
+    cardShadow->setBlurRadius(30);
+    cardShadow->setColor(QColor(0, 0, 0, 90));
+    cardShadow->setOffset(0, 8);
+    m_stopConfirmCard->setGraphicsEffect(cardShadow);
+
+    QVBoxLayout *cardLayout = new QVBoxLayout(m_stopConfirmCard);
+    cardLayout->setContentsMargins(24, 22, 24, 20);
+    cardLayout->setSpacing(10);
+
+    QLabel *icon = new QLabel("\u26A0", m_stopConfirmCard);
+    icon->setFixedSize(48, 48);
+    icon->setAlignment(Qt::AlignCenter);
+    icon->setStyleSheet(
+        "font-size: 20pt; color: #B71C1C; background-color: #FFEBEE; border-radius: 24px;"
+        );
+    QHBoxLayout *iconRow = new QHBoxLayout();
+    iconRow->addStretch();
+    iconRow->addWidget(icon);
+    iconRow->addStretch();
+
+    QLabel *title = new QLabel("Остановить поиск датчиков?", m_stopConfirmCard);
+    title->setAlignment(Qt::AlignCenter);
+    title->setWordWrap(true);
+    title->setStyleSheet(
+        "font-weight: bold; font-size: 12pt; color: #1C1F22; border: none; background: transparent;"
+        );
+
+    QLabel *subtitle = new QLabel(
+        "Уже найденные датчики останутся подключены,\nостальные придётся искать заново.",
+        m_stopConfirmCard);
+    subtitle->setAlignment(Qt::AlignCenter);
+    subtitle->setWordWrap(true);
+    subtitle->setStyleSheet(
+        "font-size: 9pt; color: #666666; border: none; background: transparent;"
+        );
+
+    QHBoxLayout *btnRow = new QHBoxLayout();
+    btnRow->setSpacing(12);
+
+    QPushButton *btnYes = new QPushButton("Да, остановить", m_stopConfirmCard);
+    btnYes->setCursor(Qt::PointingHandCursor);
+    btnYes->setFixedHeight(44);
+    btnYes->setStyleSheet(
+        "QPushButton {"
+        "   background-color: #FFFFFF;"
+        "   color: #B71C1C;"
+        "   border: 1px solid #FFCDD2;"
+        "   border-radius: 14px;"
+        "   font-size: 10pt;"
+        "   font-weight: bold;"
+        "}"
+        "QPushButton:hover { background-color: #FFEBEE; }"
+        "QPushButton:pressed { background-color: #FFCDD2; }"
+        );
+
+    QPushButton *btnNo = new QPushButton("Нет, продолжить", m_stopConfirmCard);
+    btnNo->setCursor(Qt::PointingHandCursor);
+    btnNo->setFixedHeight(44);
+    btnNo->setStyleSheet(
+        "QPushButton {"
+        "   background-color: #0F6B4F;"
+        "   color: #FFFFFF;"
+        "   border: none;"
+        "   border-radius: 14px;"
+        "   font-size: 10pt;"
+        "   font-weight: bold;"
+        "}"
+        "QPushButton:hover { background-color: #0B5A42; }"
+        "QPushButton:pressed { background-color: #094B37; }"
+        );
+
+    btnRow->addWidget(btnYes);
+    btnRow->addWidget(btnNo);
+
+    cardLayout->addLayout(iconRow);
+    cardLayout->addWidget(title);
+    cardLayout->addWidget(subtitle);
+    cardLayout->addStretch();
+    cardLayout->addLayout(btnRow);
+
+    // Карточка центрируется в оверлее автоматически при любом размере окна
+    QVBoxLayout *overlayLayout = new QVBoxLayout(m_stopConfirmOverlay);
+    overlayLayout->addWidget(m_stopConfirmCard, 0, Qt::AlignCenter);
+
+    connect(btnYes, &QPushButton::clicked, this, &MainWindow::onStopSearchConfirmed);
+    connect(btnNo, &QPushButton::clicked, this, &MainWindow::onStopSearchCancelled);
+
+    // Плавное появление/исчезновение затемнения
+    m_stopConfirmOpacity = new QGraphicsOpacityEffect(m_stopConfirmOverlay);
+    m_stopConfirmOverlay->setGraphicsEffect(m_stopConfirmOpacity);
+    m_stopConfirmOpacity->setOpacity(0.0);
+
+    m_stopConfirmAnimation = new QPropertyAnimation(m_stopConfirmOpacity, "opacity", this);
+    m_stopConfirmAnimation->setDuration(200);
+    connect(m_stopConfirmAnimation, &QPropertyAnimation::finished, this, [this]() {
+        if (m_stopConfirmOpacity->opacity() < 0.01)
+            m_stopConfirmOverlay->hide();
+    });
+}
+
+void MainWindow::showStopConfirmOverlay()
+{
+    if (!m_stopConfirmOverlay) return;
+
+    m_stopConfirmOverlay->setGeometry(rect());
+    m_stopConfirmOverlay->show();
+    m_stopConfirmOverlay->raise();
+
+    m_stopConfirmAnimation->stop();
+    m_stopConfirmAnimation->setStartValue(m_stopConfirmOpacity->opacity());
+    m_stopConfirmAnimation->setEndValue(1.0);
+    m_stopConfirmAnimation->start();
+}
+
+void MainWindow::hideStopConfirmOverlay()
+{
+    if (!m_stopConfirmOverlay) return;
+
+    m_stopConfirmAnimation->stop();
+    m_stopConfirmAnimation->setStartValue(m_stopConfirmOpacity->opacity());
+    m_stopConfirmAnimation->setEndValue(0.0);
+    m_stopConfirmAnimation->start();
+}
+
+void MainWindow::onToastCloseClicked()
+{
+    // Крестик активен только пока идёт реальный поиск
+    if (!m_autoConnector->isDetecting()) return;
+    showStopConfirmOverlay();
+}
+
+void MainWindow::onStopSearchConfirmed()
+{
+    hideStopConfirmOverlay();
+
+    m_autoConnector->stopDetection();
+
+    ui->btnConnectSensors->setEnabled(true);
+    statusBar()->clearMessage();
+    m_toastCloseBtn->hide();
+
+    m_toastTitle->setText("Поиск остановлен");
+    m_toastTitle->setStyleSheet("font-weight: bold; font-size: 10pt; color: #B71C1C; border: none; background: transparent;");
+    m_toastPercent->setStyleSheet("font-size: 10pt; font-weight: bold; color: #B71C1C; border: none; background: transparent;");
+    m_toastProgress->setStyleSheet(
+        "QProgressBar { background-color: #FFEBEE; border: none; border-radius: 3px; }"
+        "QProgressBar::chunk { background-color: #C62828; border-radius: 3px; }"
+        );
+    m_toastText->setText("Поиск остановлен пользователем");
+
+    m_toastHideTimer->start(2000);
+}
+
+void MainWindow::onStopSearchCancelled()
+{
+    hideStopConfirmOverlay();
+}
+
 void MainWindow::onAutoConnectorStarted()
 {
     ui->btnConnectSensors->setEnabled(false);
@@ -3004,6 +3222,9 @@ void MainWindow::onAutoConnectorStarted()
     m_toastPercent->setText("0%");
     m_toastProgress->setValue(0);
     m_toastText->setText("Инициализация портов...");
+
+    m_toastCloseBtn->show();
+    m_toastCloseBtn->raise();
 
     showToast();
 }

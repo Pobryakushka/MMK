@@ -142,6 +142,26 @@ QString VirtualKeyboard::numericPattern(const Constraints &c)
 
 bool VirtualKeyboard::eventFilter(QObject *watched, QEvent *event)
 {
+    if (isVisible() && watched == m_watchedWindow && event->type() == QEvent::MouseButtonPress){
+        auto *me = static_cast<QMouseEvent*>(event);
+        const QPoint pos =
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+            me->position().toPoint();
+#else
+            me->pos();
+#endif
+        const bool onKeyboard = geometry().contains(pos);
+        bool onTarget = false;
+        if(m_target){
+            const QPoint targetTopLeft = m_target->mapTo(m_watchedWindow, QPoint(0, 0));
+            onTarget = QRect(targetTopLeft, m_target->size()).contains(pos);
+        }
+        if (!onKeyboard && !onTarget) {
+            commitAndClose();
+        }
+        return QWidget::eventFilter(watched, event);
+    }
+
     auto *target = qobject_cast<QLineEdit*>(watched);
     if (!target)
         return QWidget::eventFilter(watched, event);
@@ -203,6 +223,14 @@ void VirtualKeyboard::showFor(QLineEdit *target)
         setParent(topLevel); // setParent() скрывает виджет — show() ниже вернёт его
     }
 
+    if (m_watchedWindow != topLevel) {
+        if (m_watchedWindow)
+            m_watchedWindow->removeEventFilter(this);
+        m_watchedWindow = topLevel;
+        if (m_watchedWindow)
+            m_watchedWindow->installEventFilter(this);
+    }
+
     rebuildLayout();
     updateHint();
     repositionFor(target);
@@ -216,20 +244,21 @@ void VirtualKeyboard::repositionFor(QWidget *target)
     if (!topLevel)
         return;
 
-    // Границы считаем от РАБОЧЕЙ ОБЛАСТИ ОКНА, в котором находится поле
-    // (а не от физического экрана) — так клавиатура всегда умещается в
-    // пределах своего диалога/главного окна и автоматически подстраивается
-    // под текущий размер этого окна (в т.ч. при будущей поддержке поворота
-    // экрана — сейчас ориентация преимущественно альбомная).
     const QRect avail = topLevel->rect();
 
-    // Оптимальный размер: не более 92% ширины окна и не более 38% его высоты —
-    // клавиатура остаётся крупной и удобной для пальца на планшете, но
-    // гарантированно не перекрывает поле ввода и не занимает всё окно.
-    int kbWidth  = (m_shownMode == Mode::Text)
-                       ? qMin(avail.width() * 92 / 100, 980)
-                       : qMin(avail.width() * 55 / 100, 520);
-    int kbHeight = qMin(avail.height() * 38 / 100, m_shownMode == Mode::Text ? 340 : 300);
+    if (QLayout *l = layout())
+        l->activate();
+    const QSize hint = sizeHint();
+    const QSize minHint = minimumSizeHint();
+
+    int maxWidth = (m_shownMode == Mode::Text)
+        ? qMin(avail.width() * 92 / 100, 980)
+        : qMin(avail.width() * 70 / 100, 560);
+
+    int maxHeight = qMin(avail.height() * 55 / 100, m_shownMode == Mode::Text ? 380 : 340);
+
+    int kbWidth  = qMax(minHint.width(), qMin(hint.width(), maxWidth));
+    int kbHeight = qMax(minHint.height(), qMin(hint.height(), maxHeight));
 
     resize(kbWidth, kbHeight);
 

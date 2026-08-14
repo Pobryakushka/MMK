@@ -100,6 +100,7 @@ private:
     void updateHint();
 
     QPointer<QLineEdit> m_target;
+    QPointer<QWidget> m_watchedWindow;
     AttachInfo   m_current;
     Mode         m_shownMode = Mode::Numeric;
     bool         m_shift = false;

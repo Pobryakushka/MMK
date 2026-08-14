@@ -12,6 +12,8 @@
 #include <QProgressBar>
 #include <QTimer>
 #include <QLabel>
+#include <QPushButton>
+#include <QGraphicsOpacityEffect>
 #include "qmlcoordinateproxy.h"
 #include "sensors/gnsshandler.h"
 #include "sensors/amshandler.h"
@@ -155,6 +157,11 @@ private slots:
     void onAutoConnectorProgress(int current, int total);
     void onAutoConnectorLog(const QString &msg);
 
+    // Остановка поиска датчиков (крестик на toast + окно подтверждения)
+    void onToastCloseClicked();
+    void onStopSearchConfirmed();
+    void onStopSearchCancelled();
+
 private:
     Ui::MainWindow *ui;
     AutoConnector *m_autoConnector = nullptr;
@@ -232,6 +239,17 @@ private:
     QProgressBar *m_toastProgress = nullptr;
     QPropertyAnimation *m_toastAnimation = nullptr;
     QTimer *m_toastHideTimer = nullptr;
+    QPushButton *m_toastCloseBtn = nullptr; // маленькая красная кнопка остановки поиска
+
+    // Окно подтверждения остановки поиска датчиков (оверлей поверх всего окна)
+    QWidget *m_stopConfirmOverlay = nullptr;
+    QWidget *m_stopConfirmCard = nullptr;
+    QGraphicsOpacityEffect *m_stopConfirmOpacity = nullptr;
+    QPropertyAnimation *m_stopConfirmAnimation = nullptr;
+
+    void setupStopConfirmOverlay();
+    void showStopConfirmOverlay();
+    void hideStopConfirmOverlay();
 
     void connectSensorsFromConfig();
     bool connectIwsPort(const QString &port, int baudRate, QSerialPort::DataBits dataBits,

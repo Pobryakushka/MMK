@@ -2,12 +2,6 @@
 <ui version="4.0">
  <class>GroundMeteoParams</class>
  <widget class="QWidget" name="GroundMeteoParams">
-  <property name="sizePolicy">
-   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-    <horstretch>0</horstretch>
-    <verstretch>0</verstretch>
-   </sizepolicy>
-  </property>
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -15,6 +9,12 @@
     <width>970</width>
     <height>460</height>
    </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
   </property>
   <property name="minimumSize">
    <size>
@@ -69,11 +69,11 @@
      </item>
      <item row="0" column="0" colspan="3">
       <widget class="QGroupBox" name="groupBox">
-       <property name="title">
-        <string/>
-       </property>
        <property name="styleSheet">
         <string notr="true">QGroupBox { border: none; }</string>
+       </property>
+       <property name="title">
+        <string/>
        </property>
        <layout class="QGridLayout" name="gridLayout">
         <item row="0" column="0" colspan="2">
@@ -107,7 +107,6 @@
           <property name="font">
            <font>
             <pointsize>14</pointsize>
-            <weight>75</weight>
             <bold>true</bold>
            </font>
           </property>
@@ -188,14 +187,14 @@
           <attribute name="verticalHeaderVisible">
            <bool>false</bool>
           </attribute>
+          <attribute name="verticalHeaderDefaultSectionSize">
+           <number>48</number>
+          </attribute>
           <attribute name="verticalHeaderShowSortIndicator" stdset="0">
            <bool>false</bool>
           </attribute>
           <attribute name="verticalHeaderStretchLastSection">
            <bool>false</bool>
-          </attribute>
-          <attribute name="verticalHeaderDefaultSectionSize">
-           <number>48</number>
           </attribute>
           <row>
            <property name="text">
