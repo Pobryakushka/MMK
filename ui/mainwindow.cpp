@@ -38,6 +38,9 @@
 #include <QGraphicsDropShadowEffect>
 #include <QPropertyAnimation>
 #include <QProgressBar>
+#include <QHBoxLayout>
+#include <QMouseEvent>
+#include <QEasingCurve>
 #include <cmath>
 
 
@@ -50,6 +53,33 @@
 // ====================================================================
 const int IWS_PROTOCOL = 1;  // 1 = Modbus RTU по умолчанию
 // ====================================================================
+
+// ─────────────────────────────────────────────────────────────────────────
+// ClickableFrame
+// ─────────────────────────────────────────────────────────────────────────
+
+ClickableFrame::ClickableFrame(QWidget *parent)
+    : QFrame(parent)
+{
+    setCursor(Qt::PointingHandCursor);
+}
+
+void ClickableFrame::mousePressEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton)
+        m_pressed = true;
+    QFrame::mousePressEvent(event);
+}
+
+void ClickableFrame::mouseReleaseEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton && m_pressed) {
+        m_pressed = false;
+        if (rect().contains(event->pos()))
+            emit clicked();
+    }
+    QFrame::mouseReleaseEvent(event);
+}
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -296,6 +326,12 @@ MainWindow::MainWindow(QWidget *parent)
                       "при создании SourceData — кнопка пуска не получит "
                       "блокировку до первого появления экземпляра";
     }
+
+    // Всплывающая карточка у индикатора состояния приземных данных
+    // ("Состояние: ..."), выезжает из readinessIndicatorFrame по клику.
+    setupReadinessPopup();
+    connect(ui->readinessIndicatorFrame, &ClickableFrame::clicked,
+            this, &MainWindow::onReadinessIndicatorClicked);
 
     setupAmsHandler();
     //    configureAmsDatabase();
@@ -1534,6 +1570,18 @@ void MainWindow::resizeEvent(QResizeEvent *event)
 
     if (m_stopConfirmOverlay) {
         m_stopConfirmOverlay->setGeometry(rect());
+        if (m_stopConfirmCard && m_stopConfirmCard->isVisible()) {
+            m_stopConfirmCard->move((width() - m_stopConfirmCard->width()) / 2,
+                                    (height() - m_stopConfirmCard->height()) / 2);
+        }
+    }
+
+    if (m_readinessPopup && m_readinessPopup->isVisible()) {
+        // Без анимации — просто пересчитываем позицию под индикатором,
+        // чтобы не "гонять" карточку туда-сюда на каждый ресайз.
+        const QPoint frameBottomLeft = ui->readinessIndicatorFrame->mapTo(
+            this, QPoint(0, ui->readinessIndicatorFrame->height()));
+        m_readinessPopup->move(frameBottomLeft.x(), frameBottomLeft.y() + 8);
     }
 }
 
@@ -1542,6 +1590,22 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
     if (watched == ui->mapCanvas && event->type() == QEvent::Resize) {
         repositionMapFloatingControls();
     }
+
+    // Закрытие карточки-уведомления о приземных данных по клику мимо неё и
+    // мимо самого индикатора. Событие НЕ поглощается — клик продолжает
+    // обрабатываться как обычно, закрытие попапа лишь побочный эффект.
+    if (watched == qApp && event->type() == QEvent::MouseButtonPress &&
+        m_readinessPopup && m_readinessPopup->isVisible()) {
+        auto *me = static_cast<QMouseEvent*>(event);
+        const QPoint globalPos = me->globalPos();
+        const bool insidePopup = m_readinessPopup->rect().contains(
+            m_readinessPopup->mapFromGlobal(globalPos));
+        const bool insideIndicator = ui->readinessIndicatorFrame->rect().contains(
+            ui->readinessIndicatorFrame->mapFromGlobal(globalPos));
+        if (!insidePopup && !insideIndicator)
+            hideReadinessPopup();
+    }
+
     return QMainWindow::eventFilter(watched, event);
 }
 
@@ -2726,6 +2790,10 @@ void MainWindow::runWindProfileCalculation(int recordId,
 
 void MainWindow::onSurfaceStateChanged(GroundMeteoParams::SurfaceState newState)
 {
+    // Последнее известное состояние приземных данных — используется попапом
+    // индикатора даже когда lblStatus сейчас занят текстом "РАБОТА"/"ОШИБКА".
+    m_lastKnownSurfaceState = newState;
+
     const bool measurementRunning =
         (m_amsHandler && m_amsHandler->getMeasurementStatus() == STATUS_RUNNING);
 
@@ -2741,23 +2809,38 @@ void MainWindow::onSurfaceStateChanged(GroundMeteoParams::SurfaceState newState)
     QString text;
     QString style;
     QString statusBarMsg;
+    QString pillStyle;   // фон+рамка всей плашки readinessIndicatorFrame
+    QString dotColor;    // цвет точки lblReadinessIcon
     switch (newState) {
     case GroundMeteoParams::NoData:
         text = "НЕТ ПРИЗЕМНЫХ ДАННЫХ";
-        style = "color: #C62828; font-weight: bold; font-size: 9pt;";
+        style = "color: #C62828; font-weight: bold; font-size: 9pt; background: transparent;";
         statusBarMsg = "Приземные данные не введены — пуск измерения заблокирован";
+        pillStyle = "QFrame#readinessIndicatorFrame { background-color: #FFEBEE; border: 1px solid #FFCDD2; border-radius: 16px; }";
+        dotColor = "#C62828";
         break;
     case GroundMeteoParams::Fresh:
         text = "ГОТОВ";
-        style = "color: #2E7D32; font-weight: bold; font-size: 9pt;";
+        style = "color: #2E7D32; font-weight: bold; font-size: 9pt; background: transparent;";
         statusBarMsg = "Приземные данные получены — система готова";
+        pillStyle = "QFrame#readinessIndicatorFrame { background-color: #E8F5E9; border: 1px solid #A5D6A7; border-radius: 16px; }";
+        dotColor = "#43A047";
         break;
     case GroundMeteoParams::Stale:
         text = "ДАННЫЕ УСТАРЕЛИ";
-        style = "color: #e65100; font-weight: bold; font-size: 9pt;";
+        style = "color: #e65100; font-weight: bold; font-size: 9pt; background: transparent;";
         statusBarMsg = "Приземные данные старше 30 минут — рекомендуется обновить";
+        pillStyle = "QFrame#readinessIndicatorFrame { background-color: #FFF3E0; border: 1px solid #FFE0B2; border-radius: 16px; }";
+        dotColor = "#E65100";
         break;
     }
+
+    // Сама плашка (фон+рамка+точка) отражает состояние приземных данных
+    // ВСЕГДА, независимо от того, идёт ли сейчас измерение — в отличие от
+    // lblStatus, у которого текст на время измерения занят под "РАБОТА".
+    ui->readinessIndicatorFrame->setStyleSheet(pillStyle);
+    ui->lblReadinessIcon->setStyleSheet(
+        QString("color: %1; font-size: 10pt; background: transparent;").arg(dotColor));
 
     if (measurementRunning) {
         // Во время измерения lblStatus занят надписью "РАБОТА" — туда не пишем.
@@ -2771,6 +2854,12 @@ void MainWindow::onSurfaceStateChanged(GroundMeteoParams::SurfaceState newState)
         ui->lblStatus->setStyleSheet(style);
         qDebug() << "MainWindow: lblStatus →" << text;
     }
+
+    // Если попап сейчас открыт — освежаем его содержимое под новое состояние
+    // (чтобы не показывать устаревший текст, если данные поменялись прямо
+    // во время просмотра уведомления).
+    if (m_readinessPopup && m_readinessPopup->isVisible())
+        populateReadinessPopupContent();
 }
 
 void MainWindow::runPlowSelfTest()
@@ -3035,8 +3124,27 @@ void MainWindow::setupStopConfirmOverlay()
     m_stopConfirmOverlay->setGeometry(rect());
     m_stopConfirmOverlay->hide();
 
-    // Карточка подтверждения — в стиле остальных всплывающих окон приложения
-    m_stopConfirmCard = new QWidget(m_stopConfirmOverlay);
+    // Плавное появление/исчезновение затемнения. ВАЖНО: этот эффект висит
+    // ТОЛЬКО на затемняющем фоне, а не на карточке с кнопками (см. ниже) —
+    // иначе Qt рендерит весь поддерево через закэшированный офскрин-буфер,
+    // который не обновляется на :hover у кнопок, и они визуально "пропадают"
+    // при наведении курсора. Это была причина бага.
+    m_stopConfirmOpacity = new QGraphicsOpacityEffect(m_stopConfirmOverlay);
+    m_stopConfirmOverlay->setGraphicsEffect(m_stopConfirmOpacity);
+    m_stopConfirmOpacity->setOpacity(0.0);
+
+    m_stopConfirmAnimation = new QPropertyAnimation(m_stopConfirmOpacity, "opacity", this);
+    m_stopConfirmAnimation->setDuration(200);
+    connect(m_stopConfirmAnimation, &QPropertyAnimation::finished, this, [this]() {
+        if (m_stopConfirmOpacity->opacity() < 0.01)
+            m_stopConfirmOverlay->hide();
+    });
+
+    // Карточка подтверждения — в стиле остальных всплывающих окон приложения.
+    // Дочерний виджет MainWindow (НЕ m_stopConfirmOverlay!) — намеренно, по
+    // причине, описанной выше. Позиционируется/поднимается поверх оверлея
+    // вручную в showStopConfirmOverlay()/resizeEvent().
+    m_stopConfirmCard = new QWidget(this);
     m_stopConfirmCard->setObjectName("stopConfirmCard");
     m_stopConfirmCard->setFixedSize(360, 210);
     m_stopConfirmCard->setStyleSheet(
@@ -3045,6 +3153,7 @@ void MainWindow::setupStopConfirmOverlay()
         "   border-radius: 20px;"
         "}"
         );
+    m_stopConfirmCard->hide();
 
     QGraphicsDropShadowEffect *cardShadow = new QGraphicsDropShadowEffect(m_stopConfirmCard);
     cardShadow->setBlurRadius(30);
@@ -3127,33 +3236,24 @@ void MainWindow::setupStopConfirmOverlay()
     cardLayout->addStretch();
     cardLayout->addLayout(btnRow);
 
-    // Карточка центрируется в оверлее автоматически при любом размере окна
-    QVBoxLayout *overlayLayout = new QVBoxLayout(m_stopConfirmOverlay);
-    overlayLayout->addWidget(m_stopConfirmCard, 0, Qt::AlignCenter);
-
     connect(btnYes, &QPushButton::clicked, this, &MainWindow::onStopSearchConfirmed);
     connect(btnNo, &QPushButton::clicked, this, &MainWindow::onStopSearchCancelled);
-
-    // Плавное появление/исчезновение затемнения
-    m_stopConfirmOpacity = new QGraphicsOpacityEffect(m_stopConfirmOverlay);
-    m_stopConfirmOverlay->setGraphicsEffect(m_stopConfirmOpacity);
-    m_stopConfirmOpacity->setOpacity(0.0);
-
-    m_stopConfirmAnimation = new QPropertyAnimation(m_stopConfirmOpacity, "opacity", this);
-    m_stopConfirmAnimation->setDuration(200);
-    connect(m_stopConfirmAnimation, &QPropertyAnimation::finished, this, [this]() {
-        if (m_stopConfirmOpacity->opacity() < 0.01)
-            m_stopConfirmOverlay->hide();
-    });
 }
 
 void MainWindow::showStopConfirmOverlay()
 {
-    if (!m_stopConfirmOverlay) return;
+    if (!m_stopConfirmOverlay || !m_stopConfirmCard) return;
 
     m_stopConfirmOverlay->setGeometry(rect());
     m_stopConfirmOverlay->show();
     m_stopConfirmOverlay->raise();
+
+    // Карточка больше не в layout'е оверлея (она вообще не его потомок) —
+    // центрируем вручную и поднимаем НАД оверлеем.
+    m_stopConfirmCard->move((width() - m_stopConfirmCard->width()) / 2,
+                            (height() - m_stopConfirmCard->height()) / 2);
+    m_stopConfirmCard->show();
+    m_stopConfirmCard->raise();
 
     m_stopConfirmAnimation->stop();
     m_stopConfirmAnimation->setStartValue(m_stopConfirmOpacity->opacity());
@@ -3164,6 +3264,9 @@ void MainWindow::showStopConfirmOverlay()
 void MainWindow::hideStopConfirmOverlay()
 {
     if (!m_stopConfirmOverlay) return;
+
+    if (m_stopConfirmCard)
+        m_stopConfirmCard->hide(); // сразу — карточка не участвует в фейде фона
 
     m_stopConfirmAnimation->stop();
     m_stopConfirmAnimation->setStartValue(m_stopConfirmOpacity->opacity());
@@ -3203,6 +3306,155 @@ void MainWindow::onStopSearchConfirmed()
 void MainWindow::onStopSearchCancelled()
 {
     hideStopConfirmOverlay();
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Всплывающая карточка у индикатора состояния приземных данных
+// ─────────────────────────────────────────────────────────────────────────
+
+void MainWindow::setupReadinessPopup()
+{
+    m_readinessPopup = new QWidget(this);
+    m_readinessPopup->setObjectName("readinessPopup");
+    m_readinessPopup->setFixedWidth(300);
+    m_readinessPopup->setStyleSheet(
+        "QWidget#readinessPopup {"
+        "   background-color: #FFFFFF;"
+        "   border: 1px solid #DDE1E3;"
+        "   border-radius: 14px;"
+        "}"
+        );
+
+    QGraphicsDropShadowEffect *shadow = new QGraphicsDropShadowEffect(this);
+    shadow->setBlurRadius(18);
+    shadow->setColor(QColor(0, 0, 0, 50));
+    shadow->setOffset(0, 6);
+    m_readinessPopup->setGraphicsEffect(shadow);
+
+    QVBoxLayout *layout = new QVBoxLayout(m_readinessPopup);
+    layout->setContentsMargins(18, 16, 18, 16);
+    layout->setSpacing(8);
+
+    m_readinessPopupTitle = new QLabel(m_readinessPopup);
+    m_readinessPopupTitle->setWordWrap(true);
+    m_readinessPopupTitle->setStyleSheet(
+        "font-weight: bold; font-size: 10pt; color: #1C1F22; background: transparent; border: none;");
+
+    m_readinessPopupSubtitle = new QLabel(m_readinessPopup);
+    m_readinessPopupSubtitle->setWordWrap(true);
+    m_readinessPopupSubtitle->setStyleSheet(
+        "font-size: 9pt; color: #6B7278; background: transparent; border: none;");
+
+    QHBoxLayout *btnRow = new QHBoxLayout();
+    m_readinessPopupNo = new QPushButton("Нет", m_readinessPopup);
+    m_readinessPopupNo->setStyleSheet(
+        "QPushButton { background:#FFFFFF; color:#1C1F22; border:1px solid #DDE1E3;"
+        " border-radius:8px; padding:6px 18px; font-weight:600; }"
+        "QPushButton:pressed { background:#F0F1F2; }");
+    m_readinessPopupYes = new QPushButton("Да", m_readinessPopup);
+    m_readinessPopupYes->setStyleSheet(
+        "QPushButton { background:#0F6B4F; color:#FFFFFF; border:none;"
+        " border-radius:8px; padding:6px 18px; font-weight:700; }"
+        "QPushButton:pressed { background:#0B5A41; }");
+    btnRow->addStretch();
+    btnRow->addWidget(m_readinessPopupNo);
+    btnRow->addWidget(m_readinessPopupYes);
+
+    layout->addWidget(m_readinessPopupTitle);
+    layout->addWidget(m_readinessPopupSubtitle);
+    layout->addLayout(btnRow);
+
+    m_readinessPopup->hide();
+
+    m_readinessPopupAnimation = new QPropertyAnimation(m_readinessPopup, "pos", this);
+    m_readinessPopupAnimation->setDuration(300);
+    m_readinessPopupAnimation->setEasingCurve(QEasingCurve::OutBack);
+
+    connect(m_readinessPopupYes, &QPushButton::clicked, this, [this]() {
+        hideReadinessPopup();
+        if (GroundMeteoParams *gmp = GroundMeteoParams::instance())
+            ui->stackedWidget->setCurrentWidget(gmp);
+    });
+    connect(m_readinessPopupNo, &QPushButton::clicked, this, [this]() {
+        hideReadinessPopup();
+    });
+
+    // Закрытие по клику вне уведомления и вне самого индикатора — фильтр
+    // ставится один раз на приложение, работает только пока попап виден.
+    qApp->installEventFilter(this);
+}
+
+void MainWindow::populateReadinessPopupContent()
+{
+    const bool measurementRunning =
+        (m_amsHandler && m_amsHandler->getMeasurementStatus() == STATUS_RUNNING);
+
+    if (measurementRunning) {
+        m_readinessPopupTitle->setText("Идёт измерение АМС");
+        m_readinessPopupSubtitle->clear();
+        m_readinessPopupYes->setVisible(false);
+        m_readinessPopupNo->setVisible(false);
+    } else {
+        switch (m_lastKnownSurfaceState) {
+        case GroundMeteoParams::NoData:
+            m_readinessPopupTitle->setText("Приземных данных нет");
+            m_readinessPopupSubtitle->setText("Перейти к их заполнению вручную?");
+            m_readinessPopupYes->setVisible(true);
+            m_readinessPopupNo->setVisible(true);
+            break;
+        case GroundMeteoParams::Stale:
+            m_readinessPopupTitle->setText("Приземные данные устарели");
+            m_readinessPopupSubtitle->setText("Перейти к их заполнению вручную?");
+            m_readinessPopupYes->setVisible(true);
+            m_readinessPopupNo->setVisible(true);
+            break;
+        case GroundMeteoParams::Fresh:
+            m_readinessPopupTitle->setText("Приземные данные актуальны");
+            m_readinessPopupSubtitle->clear();
+            m_readinessPopupYes->setVisible(false);
+            m_readinessPopupNo->setVisible(false);
+            break;
+        }
+    }
+
+    m_readinessPopup->adjustSize();
+    m_readinessPopup->setFixedWidth(300); // adjustSize мог сжать по ширине — держим фиксированную
+}
+
+void MainWindow::onReadinessIndicatorClicked()
+{
+    if (m_readinessPopup->isVisible()) {
+        hideReadinessPopup();
+        return;
+    }
+
+    populateReadinessPopupContent();
+    showReadinessPopup();
+}
+
+void MainWindow::showReadinessPopup()
+{
+    const QPoint frameBottomLeft = ui->readinessIndicatorFrame->mapTo(
+        this, QPoint(0, ui->readinessIndicatorFrame->height()));
+    const int targetX = frameBottomLeft.x();
+    const int targetY = frameBottomLeft.y() + 8;
+    const int startY  = frameBottomLeft.y() - 20; // "выезжает" из-под индикатора
+
+    m_readinessPopup->raise();
+    m_readinessPopupAnimation->stop();
+    m_readinessPopup->move(targetX, startY);
+    m_readinessPopup->show();
+    m_readinessPopupAnimation->setStartValue(QPoint(targetX, startY));
+    m_readinessPopupAnimation->setEndValue(QPoint(targetX, targetY));
+    m_readinessPopupAnimation->start();
+}
+
+void MainWindow::hideReadinessPopup()
+{
+    if (!m_readinessPopup->isVisible())
+        return;
+    m_readinessPopupAnimation->stop();
+    m_readinessPopup->hide();
 }
 
 void MainWindow::onAutoConnectorStarted()

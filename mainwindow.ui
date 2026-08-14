@@ -67,7 +67,7 @@
        <number>6</number>
       </property>
 <item>
-               <widget class="QFrame" name="readinessIndicatorFrame">
+               <widget class="ClickableFrame" name="readinessIndicatorFrame">
                 <property name="minimumSize">
                  <size>
                   <width>0</width>
@@ -2024,6 +2024,11 @@ QPushButton:pressed { color: #0B5A42; }</string>
    <class>RpvIndicator</class>
    <extends>QWidget</extends>
    <header>ui/RpvIndicator.h</header>
+  </customwidget>
+  <customwidget>
+   <class>ClickableFrame</class>
+   <extends>QFrame</extends>
+   <header>ui/mainwindow.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

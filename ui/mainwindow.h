@@ -14,6 +14,7 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QGraphicsOpacityEffect>
+#include <QFrame>
 #include "qmlcoordinateproxy.h"
 #include "sensors/gnsshandler.h"
 #include "sensors/amshandler.h"
@@ -38,6 +39,31 @@ class LandingCalculation;
 namespace Ui {
 class MainWindow;
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// ClickableFrame — обычный QFrame с сигналом clicked(). Реализовано через
+// прямое переопределение mousePressEvent/mouseReleaseEvent (НЕ через
+// installEventFilter — на этой платформе перехват мышиных событий через
+// eventFilter уже приводил к зависанию приложения в другом месте интерфейса,
+// поэтому для кликабельных элементов используем только штатный, надёжный
+// путь — тот же, что использует сам Qt внутри QAbstractButton).
+// ─────────────────────────────────────────────────────────────────────────
+class ClickableFrame : public QFrame
+{
+    Q_OBJECT
+public:
+    explicit ClickableFrame(QWidget *parent = nullptr);
+
+signals:
+    void clicked();
+
+protected:
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
+
+private:
+    bool m_pressed = false;
+};
 
 class MainWindow : public QMainWindow
 {
@@ -162,6 +188,9 @@ private slots:
     void onStopSearchConfirmed();
     void onStopSearchCancelled();
 
+    // Всплывающая карточка при клике на индикатор состояния приземных данных
+    void onReadinessIndicatorClicked();
+
 private:
     Ui::MainWindow *ui;
     AutoConnector *m_autoConnector = nullptr;
@@ -250,6 +279,25 @@ private:
     void setupStopConfirmOverlay();
     void showStopConfirmOverlay();
     void hideStopConfirmOverlay();
+
+    // ── Всплывающая карточка у индикатора состояния приземных данных ───────
+    // "Выезжает" из readinessIndicatorFrame (левый верхний угол), по тому же
+    // принципу, что и m_toastWidget, но со своей геометрией/анимацией.
+    QWidget      *m_readinessPopup = nullptr;
+    QLabel       *m_readinessPopupTitle = nullptr;
+    QLabel       *m_readinessPopupSubtitle = nullptr;
+    QPushButton  *m_readinessPopupYes = nullptr;
+    QPushButton  *m_readinessPopupNo = nullptr;
+    QPropertyAnimation *m_readinessPopupAnimation = nullptr;
+    // Последнее известное состояние приземных данных — хранится отдельно от
+    // текста lblStatus, т.к. во время измерения АМС в lblStatus временно
+    // показывается "РАБОТА"/"ОШИБКА" поверх этого состояния.
+    GroundMeteoParams::SurfaceState m_lastKnownSurfaceState = GroundMeteoParams::NoData;
+
+    void setupReadinessPopup();
+    void showReadinessPopup();
+    void hideReadinessPopup();
+    void populateReadinessPopupContent();
 
     void connectSensorsFromConfig();
     bool connectIwsPort(const QString &port, int baudRate, QSerialPort::DataBits dataBits,
