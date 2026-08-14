@@ -15,19 +15,6 @@
 QHash<QLineEdit*, VirtualKeyboard::AttachInfo> VirtualKeyboard::s_registry;
 VirtualKeyboard* VirtualKeyboard::s_instance = nullptr;
 
-// ─────────────────────────────────────────────────────────────────────────
-// Конструктор / синглтон
-// ─────────────────────────────────────────────────────────────────────────
-//
-// ВАЖНО: клавиатура — это ОБЫЧНЫЙ дочерний QWidget, а НЕ отдельное
-// top-level окно (раньше был Qt::Tool — из-за этого на планшете при показе
-// нового окна поле мгновенно теряло фокус, клавиатура открывалась и тут же
-// пряталась обратно). Вместо этого при каждом показе она перепривязывается
-// (setParent) к тому же top-level окну, где находится поле ввода, и
-// рисуется поверх остального содержимого этого окна как оверлей —
-// никакого отдельного окна и, соответственно, никакой борьбы за фокус
-// с оконным менеджером/композитором.
-
 VirtualKeyboard::VirtualKeyboard(QWidget *parent)
     : QWidget(parent)
 {
@@ -335,7 +322,7 @@ void VirtualKeyboard::buildNumericLayout()
         {"7", "8", "9"},
         {"4", "5", "6"},
         {"1", "2", "3"},
-        {c.allowNegative ? "-" : "", "0", c.allowDecimal ? "," : ""}
+        {c.allowNegative ? "-" : "", "0", c.allowDecimal ? "." : ""}
     };
 
     for (int r = 0; r < 4; ++r) {
@@ -532,7 +519,9 @@ void VirtualKeyboard::commitAndClose()
         const auto &c = m_current.constraints;
         QString text = target->text();
         text.replace(',', '.');
-        if (!text.isEmpty() && text != "-" && text != ".") {
+        text = normalizeNumericText(text);
+
+        if (!text.isEmpty()) {
             bool ok = false;
             double value = text.toDouble(&ok);
             if (ok) {
@@ -540,17 +529,55 @@ void VirtualKeyboard::commitAndClose()
                     if (c.clampOnDone) {
                         value = qBound(c.minValue, value, c.maxValue);
                         int decimals = c.maxDecimals >= 0 ? c.maxDecimals : 1;
-                        target->setText(QString::number(value, 'f', decimals));
+                        text = QString::number(value, 'f', decimals);
                     } else {
-                        target->clear();
+                        text.clear();
                     }
                 }
             } else {
-                target->clear(); // осталась незавершённая запись вроде "-" — считаем полем пустым
+                text.clear(); // осталась незавершённая запись вроде "-" — считаем полем пустым
             }
         }
+
+        target->setText(text);
     }
 
     hide();
     emit doneEditing(target);
+}
+
+QString VirtualKeyboard::normalizeNumericText(const QString &input)
+{
+    if (input.isEmpty())
+        return input;
+
+    QString text = input;
+    if (text.endsWith('.'))
+        text.chop(1);
+
+    const bool negative = text.startsWith('-');
+    QString body = negative ? text.mid(1) : text;
+
+    if (body.isEmpty() || body == ".")
+        return QString();
+
+    const int dotPos = body.indexOf('.');
+    QString intPart = (dotPos >= 0) ? body.left(dotPos) : body;
+    QString fracPart = (dotPos >= 0) ? body.mid(dotPos) : QString();
+
+    if (intPart.isEmpty())
+        intPart = "0";
+
+    int firstNonZero = 0;
+    while (firstNonZero < intPart.length() - 1 && intPart.at(firstNonZero) == '0')
+        ++firstNonZero;
+    intPart = intPart.mid(firstNonZero);
+
+    text = intPart + fracPart;
+
+    bool ok = false;
+    const double value = text.toDouble(&ok);
+    const bool keepSign = negative && (!ok || value != 0.0);
+
+    return keepSign ? ('-' + text) : text;
 }
