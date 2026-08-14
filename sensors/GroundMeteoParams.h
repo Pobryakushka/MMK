@@ -5,7 +5,6 @@
 #include <QMap>
 #include <QSerialPort>
 #include <QCloseEvent>
-#include <QShowEvent>
 #include <QTimer>
 #include <QTableWidget>
 #include <QStyledItemDelegate>
@@ -173,7 +172,6 @@ private:
 
 protected:
     void closeEvent(QCloseEvent *event) override;
-    void showEvent(QShowEvent *event) override; // TEMP DEBUG — убрать после диагностики
 
 signals:
     void errorOccurred(const QString& error);

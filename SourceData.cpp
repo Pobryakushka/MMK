@@ -3,10 +3,127 @@
 #include "Meteo11.h"
 #include "sensors/GroundMeteoParams.h"
 #include <QShowEvent>
-#include <QMouseEvent>
+#include <QPaintEvent>
+#include <QPainter>
+#include <QFontMetrics>
 #include <QDebug>
-#include <QStyle>
-#include <QTimer>
+
+// ─────────────────────────────────────────────────────────────────────────
+// SourceDataTile
+// ─────────────────────────────────────────────────────────────────────────
+
+SourceDataTile::SourceDataTile(QWidget *parent)
+    : QAbstractButton(parent)
+{
+    setCursor(Qt::PointingHandCursor);
+    setFocusPolicy(Qt::NoFocus);
+    setMinimumHeight(72);
+}
+
+void SourceDataTile::setTitle(const QString &title)
+{
+    m_title = title;
+    update();
+}
+
+void SourceDataTile::setDescription(const QString &description)
+{
+    m_description = description;
+    update();
+}
+
+void SourceDataTile::setBadge(const QString &text, const QColor &fg, const QColor &bg)
+{
+    m_badgeText = text;
+    m_badgeFg = fg;
+    m_badgeBg = bg;
+    update();
+}
+
+QSize SourceDataTile::sizeHint() const
+{
+    return QSize(400, 72);
+}
+
+void SourceDataTile::paintEvent(QPaintEvent *)
+{
+    QPainter p(this);
+    p.setRenderHint(QPainter::Antialiasing, true);
+
+    // Фон карточки: белый обычно, чуть темнее при нажатии (isDown() —
+    // штатное состояние QAbstractButton, ничего вручную отслеживать не надо)
+    const QRectF r = rect().adjusted(0, 0, -1, -1);
+    p.setPen(QPen(QColor("#DDE1E3"), 1));
+    p.setBrush(isDown() ? QColor("#F0F1F2") : QColor("#FFFFFF"));
+    p.drawRoundedRect(r, 18, 18);
+
+    const int leftPad = 26;
+    const int rightPad = 22;
+    const int chevronWidth = 18;
+
+    // Бейдж — считаем его геометрию первым, он "заякорен" от правого края
+    QFont badgeFont = font();
+    badgeFont.setPointSizeF(8.0);
+    badgeFont.setBold(true);
+    QFontMetrics bfm(badgeFont);
+    const int badgePadH = 10;
+    const int badgeH = 22;
+    const int badgeTextW = m_badgeText.isEmpty() ? 0 : bfm.horizontalAdvance(m_badgeText);
+    const int badgeW = m_badgeText.isEmpty() ? 0 : badgeTextW + badgePadH * 2;
+    const int badgeRight = width() - rightPad - chevronWidth - 10;
+    const QRectF badgeRect(badgeRight - badgeW, (height() - badgeH) / 2.0, badgeW, badgeH);
+
+    if (!m_badgeText.isEmpty()) {
+        p.setPen(Qt::NoPen);
+        p.setBrush(m_badgeBg);
+        p.drawRoundedRect(badgeRect, badgeH / 2.0, badgeH / 2.0);
+        p.setPen(m_badgeFg);
+        p.setFont(badgeFont);
+        p.drawText(badgeRect, Qt::AlignCenter, m_badgeText);
+    }
+
+    // Шеврон
+    QFont chevronFont = font();
+    chevronFont.setPointSizeF(12);
+    p.setFont(chevronFont);
+    p.setPen(QColor("#6B7278"));
+    const QRectF chevronRect(width() - rightPad - chevronWidth, 0, chevronWidth, height());
+    p.drawText(chevronRect, Qt::AlignVCenter | Qt::AlignLeft, QString::fromUtf8("\u203A"));
+
+    // Текстовая колонка (заголовок + описание), занимает всё оставшееся
+    // место слева от бейджа
+    const qreal textRight = badgeRect.left() - 14;
+    const QRectF textRect(leftPad, 0, textRight - leftPad, height());
+
+    QFont titleFont = font();
+    titleFont.setPointSizeF(13);
+    titleFont.setBold(true);
+    QFontMetrics tfm(titleFont);
+
+    QFont descFont = font();
+    descFont.setPointSizeF(9);
+    QFontMetrics dfm(descFont);
+
+    const int titleH = tfm.height();
+    const int gap = 2;
+    const int descH = dfm.height();
+    const int totalTextH = titleH + gap + descH;
+    const qreal textTop = (height() - totalTextH) / 2.0;
+
+    p.setPen(QColor("#1C1F22"));
+    p.setFont(titleFont);
+    p.drawText(QRectF(textRect.left(), textTop, textRect.width(), titleH),
+               Qt::AlignLeft | Qt::AlignVCenter, m_title);
+
+    p.setPen(QColor("#6B7278"));
+    p.setFont(descFont);
+    p.drawText(QRectF(textRect.left(), textTop + titleH + gap, textRect.width(), descH),
+               Qt::AlignLeft | Qt::AlignVCenter, m_description);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// SourceData
+// ─────────────────────────────────────────────────────────────────────────
 
 SourceData::SourceData(QWidget *parent)
     : QWidget(parent)
@@ -16,6 +133,12 @@ SourceData::SourceData(QWidget *parent)
 {
     ui->setupUi(this);
 
+    ui->rowMeteo11->setTitle(QString::fromUtf8("Бюллетень «Метео-11»"));
+    ui->rowMeteo11->setDescription(QString::fromUtf8("Ввод/просмотр закодированного бюллетеня"));
+
+    ui->rowGroundParams->setTitle(QString::fromUtf8("Параметры приземного слоя"));
+    ui->rowGroundParams->setDescription(QString::fromUtf8("Ветер, давление, влажность, температура у земли"));
+
     groundMeteoParams = new GroundMeteoParams(this);
     qDebug() << "GroundMeteoParams instance created in SourceData";
 
@@ -23,13 +146,18 @@ SourceData::SourceData(QWidget *parent)
     // между открытиями диалога и сохраняются до нажатия «Пуск»
     m_meteo11Dialog = new Meteo11(this);
 
-    // Плитки (rowMeteo11 / rowGroundParams) целиком описаны в SourceData.ui.
-    // У обычного QWidget-контейнера нет сигнала clicked() — ловим клик через
-    // eventFilter, как это принято для некликабельных по умолчанию виджетов.
-    ui->rowMeteo11->setCursor(Qt::PointingHandCursor);
-    ui->rowMeteo11->installEventFilter(this);
-    ui->rowGroundParams->setCursor(Qt::PointingHandCursor);
-    ui->rowGroundParams->installEventFilter(this);
+    // Обычные сигналы QAbstractButton::clicked — тот же механизм, что и у
+    // btnAlgLandingCalc в AlgorithmsCalculation, никакой ручной обработки
+    // мышиных событий.
+    connect(ui->rowMeteo11, &QAbstractButton::clicked, this, [this]() {
+        m_meteo11Dialog->show();
+        m_meteo11Dialog->raise();
+        m_meteo11Dialog->activateWindow();
+    });
+
+    connect(ui->rowGroundParams, &QAbstractButton::clicked, this, [this]() {
+        emit openGroundParamsRequested();
+    });
 
     // Бейдж приземного слоя обновляется мгновенно при изменении состояния,
     // даже если сам диалог параметров сейчас не в фокусе.
@@ -58,95 +186,23 @@ void SourceData::showEvent(QShowEvent *event)
     updateBadges();
 }
 
-void SourceData::setRowPressed(QWidget *row, bool pressed)
-{
-    row->setProperty("pressed", pressed);
-    row->style()->unpolish(row);
-    row->style()->polish(row);
-}
-
-bool SourceData::eventFilter(QObject *watched, QEvent *event)
-{
-    QWidget *row = qobject_cast<QWidget*>(watched);
-    if (row != ui->rowMeteo11 && row != ui->rowGroundParams)
-        return QWidget::eventFilter(watched, event);
-
-    if (event->type() == QEvent::MouseButtonPress) {
-        auto *me = static_cast<QMouseEvent*>(event);
-        if (me->button() == Qt::LeftButton)
-            setRowPressed(row, true);
-        return false; // не глотаем событие — пусть доходит и до дочерних QLabel
-    }
-
-    if (event->type() == QEvent::MouseButtonRelease) {
-        auto *me = static_cast<QMouseEvent*>(event);
-        if (me->button() == Qt::LeftButton) {
-            const bool wasPressed = row->property("pressed").toBool();
-            setRowPressed(row, false);
-            if (wasPressed && row->rect().contains(me->pos())) {
-                // ВАЖНО: GroundMeteoParams больше не отдельный QDialog, а
-                // встроенная страница (как AlgorithmsCalculation) — именно
-                // открытие отдельного top-level окна вызывало зависание на
-                // этой платформе. Здесь только просим MainWindow переключить
-                // stackedWidget; сама навигация — в MainWindow.
-                //
-                // Meteo11 пока остаётся отдельным QDialog (его файлов у меня
-                // нет) — при открытии бюллетеня зависание, скорее всего,
-                // повторится тем же образом, пока и его не переведут на
-                // страницу по этому же паттерну.
-                const bool isMeteo11 = (row == ui->rowMeteo11);
-                QTimer::singleShot(0, this, [this, isMeteo11]() {
-                    if (isMeteo11) {
-                        m_meteo11Dialog->show();
-                        m_meteo11Dialog->raise();
-                        m_meteo11Dialog->activateWindow();
-                    } else {
-                        qDebug() << "[TEMP DEBUG] SourceData: before emit openGroundParamsRequested()";
-                        emit openGroundParamsRequested();
-                        qDebug() << "[TEMP DEBUG] SourceData: after emit openGroundParamsRequested()";
-                    }
-                });
-            }
-        }
-        return false;
-    }
-
-    return QWidget::eventFilter(watched, event);
-}
-
 void SourceData::updateBadges()
 {
-    if (hasMeteo11Bulletin()) {
-        ui->badgeMeteo11->setText(QString::fromUtf8("Загружен"));
-        ui->badgeMeteo11->setStyleSheet(
-            "font-size:8pt; font-weight:700; padding:4px 10px; border-radius:10px;"
-            "color:#0F6B4F; background-color:#E8F5E9;");
-    } else {
-        ui->badgeMeteo11->setText(QString::fromUtf8("Не загружен"));
-        ui->badgeMeteo11->setStyleSheet(
-            "font-size:8pt; font-weight:700; padding:4px 10px; border-radius:10px;"
-            "color:#C62828; background-color:#FFEBEE;");
-    }
+    if (hasMeteo11Bulletin())
+        ui->rowMeteo11->setBadge(QString::fromUtf8("Загружен"), QColor("#0F6B4F"), QColor("#E8F5E9"));
+    else
+        ui->rowMeteo11->setBadge(QString::fromUtf8("Не загружен"), QColor("#C62828"), QColor("#FFEBEE"));
 
     if (groundMeteoParams) {
         switch (groundMeteoParams->surfaceState()) {
         case GroundMeteoParams::NoData:
-            ui->badgeGroundParams->setText(QString::fromUtf8("Нет данных"));
-            ui->badgeGroundParams->setStyleSheet(
-                "font-size:8pt; font-weight:700; padding:4px 10px; border-radius:10px;"
-                "color:#C62828; background-color:#FFEBEE;");
+            ui->rowGroundParams->setBadge(QString::fromUtf8("Нет данных"), QColor("#C62828"), QColor("#FFEBEE"));
             break;
         case GroundMeteoParams::Stale:
-            ui->badgeGroundParams->setText(QString::fromUtf8("Устарели"));
-            ui->badgeGroundParams->setStyleSheet(
-                "font-size:8pt; font-weight:700; padding:4px 10px; border-radius:10px;"
-                "color:#E65100; background-color:#FFF3E0;");
+            ui->rowGroundParams->setBadge(QString::fromUtf8("Устарели"), QColor("#E65100"), QColor("#FFF3E0"));
             break;
         case GroundMeteoParams::Fresh:
-            ui->badgeGroundParams->setText(QString::fromUtf8("Актуальны"));
-            ui->badgeGroundParams->setStyleSheet(
-                "font-size:8pt; font-weight:700; padding:4px 10px; border-radius:10px;"
-                "color:#0F6B4F; background-color:#E8F5E9;");
+            ui->rowGroundParams->setBadge(QString::fromUtf8("Актуальны"), QColor("#0F6B4F"), QColor("#E8F5E9"));
             break;
         }
     }
