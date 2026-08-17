@@ -66,9 +66,16 @@ public:
     QString     meteo11ValidityPeriod() const;
     void        resetMeteo11Applied();   // вызвать после сохранения в БД
 
+    // Виджеты страниц для встраивания в QStackedWidget MainWindow
+    // (Meteo11 больше не всплывающее окно — MainWindow добавляет их
+    // в стек так же, как это уже сделано для GroundMeteoParams).
+    Meteo11           *meteo11Widget() const { return m_meteo11Dialog; }
+    GroundMeteoParams *groundMeteoParamsWidget() const { return groundMeteoParams; }
+
 signals:
     void backRequested();
     void openGroundParamsRequested();
+    void openMeteo11Requested();
 
 protected:
     void showEvent(QShowEvent *event) override;

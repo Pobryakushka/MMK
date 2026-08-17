@@ -1,7 +1,7 @@
 #ifndef METEO11_H
 #define METEO11_H
 
-#include <QDialog>
+#include <QWidget>
 #include <QDateTime>
 #include <QJsonObject>
 #include <QJsonArray>
@@ -10,7 +10,11 @@ namespace Ui {
 class Meteo11;
 }
 
-class Meteo11 : public QDialog {
+// Страница "Метео-11" — встраивается в общий стек MainWindow (QStackedWidget),
+// как и SourceData/GroundMeteoParams, а не открывается отдельным окном.
+// Наружу отдаёт сигнал навигации backRequested(); переключение страниц
+// делает MainWindow.
+class Meteo11 : public QWidget {
     Q_OBJECT
 
 public:
@@ -50,12 +54,17 @@ public:
     /** Сбросить флаг «применён» после сохранения в БД. */
     void resetApplied() { m_applied = false; }
 
+signals:
+    void backRequested();
+
 private slots:
     void onApplyClicked();
     void onParseClicked();   // разобрать сырую строку → заполнить поля
     void onClearClicked();
 
 private:
+    void updateStatusPill();
+
     Ui::Meteo11 *ui;
 
     bool        m_applied;

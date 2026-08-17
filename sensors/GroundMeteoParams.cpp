@@ -127,11 +127,7 @@ GroundMeteoParams::GroundMeteoParams(QWidget *parent)
     connect(m_staleTimer, &QTimer::timeout,
             this, &GroundMeteoParams::onStaleTimerTimeout);
 
-    connect(this, &GroundMeteoParams::surfaceStateChanged,
-            this, &GroundMeteoParams::updateStatusPill);
-
     applyVisualStyle();
-    updateStatusPill(m_surfaceState); // начальное состояние пилюли ("Нет данных")
 }
 
 GroundMeteoParams::~GroundMeteoParams()
@@ -1217,31 +1213,4 @@ void GroundMeteoParams::applyVisualStyle()
         "}"
         "QLabel#lblStatusPill { border-radius:14px; padding:6px 18px; font-weight:700; font-size:9.5pt; }"
     );
-
-    ui->lblStatusPill->setAttribute(Qt::WA_StyledBackground, true);
-}
-
-void GroundMeteoParams::updateStatusPill(GroundMeteoParams::SurfaceState state)
-{
-    QString text;
-    QString style;
-    switch (state) {
-    case NoData:
-        text = QString::fromUtf8("● НЕТ ПРИЗЕМНЫХ ДАННЫХ");
-        style = "QLabel#lblStatusPill { background:#FFEBEE; color:#C62828; border:1px solid #FFCDD2; }";
-        break;
-    case Stale:
-        text = QString::fromUtf8("● ДАННЫЕ УСТАРЕЛИ (>30 МИН)");
-        style = "QLabel#lblStatusPill { background:#FFF3E0; color:#E65100; border:1px solid #FFE0B2; }";
-        break;
-    case Fresh:
-        text = QString::fromUtf8("● ПРИЗЕМНЫЕ ДАННЫЕ АКТУАЛЬНЫ");
-        style = "QLabel#lblStatusPill { background:#E8F5E9; color:#0F6B4F; border:1px solid #C8E6C9; }";
-        break;
-    }
-    ui->lblStatusPill->setText(text);
-    // Локальный стиль пилюли добавляется поверх общего QSS диалога (тот уже
-    // задаёт radius/padding/шрифт — здесь только цвет состояния).
-    ui->lblStatusPill->setStyleSheet(style +
-        " QLabel#lblStatusPill { border-radius:14px; padding:6px 18px; font-weight:700; font-size:9.5pt; }");
 }

@@ -143,16 +143,16 @@ SourceData::SourceData(QWidget *parent)
     qDebug() << "GroundMeteoParams instance created in SourceData";
 
     // Создаём ПОСТОЯННЫЙ экземпляр Meteo11 — данные не теряются
-    // между открытиями диалога и сохраняются до нажатия «Пуск»
+    // между открытиями страницы и сохраняются до нажатия «Пуск».
+    // Meteo11 — обычный QWidget, встраивается в стек MainWindow через
+    // meteo11Widget(), а не показывается отдельным окном.
     m_meteo11Dialog = new Meteo11(this);
 
     // Обычные сигналы QAbstractButton::clicked — тот же механизм, что и у
     // btnAlgLandingCalc в AlgorithmsCalculation, никакой ручной обработки
     // мышиных событий.
     connect(ui->rowMeteo11, &QAbstractButton::clicked, this, [this]() {
-        m_meteo11Dialog->show();
-        m_meteo11Dialog->raise();
-        m_meteo11Dialog->activateWindow();
+        emit openMeteo11Requested();
     });
 
     connect(ui->rowGroundParams, &QAbstractButton::clicked, this, [this]() {

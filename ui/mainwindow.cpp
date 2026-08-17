@@ -3,6 +3,7 @@
 #include <QApplication>
 #include "RpvIndicator.h"
 #include "SourceData.h"
+#include "Meteo11.h"
 #include "calculationAlgorithms/AlgorithmsCalc.h"
 #include "MeasurementResults.h"
 #include "sensors/GroundMeteoParams.h"
@@ -331,6 +332,23 @@ MainWindow::MainWindow(QWidget *parent)
         qWarning() << "MainWindow: GroundMeteoParams::instance() == nullptr "
                       "при создании SourceData — кнопка пуска не получит "
                       "блокировку до первого появления экземпляра";
+    }
+
+    // ── Метео-11: та же схема, что и у GroundMeteoParams выше, но экземпляр
+    // не синглтон, а живёт внутри SourceData (данные не теряются между
+    // открытиями страницы) и отдаётся через SourceData::meteo11Widget().
+    if (Meteo11 *met11 = sourceDataInstance->meteo11Widget()) {
+        ui->stackedWidget->addWidget(met11);
+        connect(sourceDataInstance, &SourceData::openMeteo11Requested,
+                this, [this, met11]() {
+            ui->stackedWidget->setCurrentWidget(met11);
+        });
+        connect(met11, &Meteo11::backRequested, this, [this]() {
+            ui->stackedWidget->setCurrentWidget(sourceDataInstance);
+        });
+    } else {
+        qWarning() << "MainWindow: SourceData::meteo11Widget() == nullptr "
+                      "при создании SourceData — страница Метео-11 не будет доступна";
     }
 
     // Всплывающая карточка у индикатора состояния приземных данных

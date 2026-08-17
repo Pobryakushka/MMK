@@ -90,7 +90,6 @@ private slots:
     void applyManualInput();
     void onTableItemChanged(QTableWidgetItem *item);   // отслеживание m_dirty
     void onStaleTimerTimeout();                         // 30 мин истекли
-    void updateStatusPill(GroundMeteoParams::SurfaceState state); // обновление пилюли статуса
 
 private:
     Ui::GroundMeteoParams *ui;
