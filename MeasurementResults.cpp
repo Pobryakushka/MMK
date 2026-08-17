@@ -47,6 +47,7 @@ MeasurementResults::MeasurementResults(QWidget *parent)
     , m_currentAvgWind()
     , m_currentActualWind()
     , m_currentMeasuredWind()
+    , m_gribPipeline(new GribMeteo11Pipeline(this))
 //    , m_dbPort(5432)
 //    , m_dbConfigured(false)
 {
@@ -68,6 +69,15 @@ MeasurementResults::MeasurementResults(QWidget *parent)
     connect(ui->pushButton_updated, &QPushButton::clicked, this, &MeasurementResults::onUpdatedButtonClicked);
     connect(ui->pushButton_approximate, &QPushButton::clicked, this, &MeasurementResults::onApproximateButtonClicked);
     connect(ui->pushButton_fromMeteoStat, &QPushButton::clicked, this, &MeasurementResults::onFromMeteoStatButtonClicked);
+    connect(ui->pushButton_fromGrib, &QPushButton::clicked, this, &MeasurementResults::onFromGribButtonClicked);
+
+    // TODO: заменить на реальные пути после интеграции (сборочный каталог
+    // Mushroom, место скрипта на этой машине) — сейчас относительные
+    // значения по умолчанию из GribConfig.
+    connect(m_gribPipeline, &GribMeteo11Pipeline::logLine, this,
+            [](const QString &line) { qDebug() << "[GRIB]" << line; });
+    connect(m_gribPipeline, &GribMeteo11Pipeline::finished,
+            this, &MeasurementResults::onGribPipelineFinished);
 
     connect(ui->pushButton_string, &QPushButton::clicked, this, &MeasurementResults::onStringFormatClicked);
     connect(ui->pushButton_table, &QPushButton::clicked, this, &MeasurementResults::onTableFormatClicked);
@@ -883,6 +893,48 @@ void MeasurementResults::onFromMeteoStatButtonClicked()
     currentButtelinType = FromMeteoStat;
     switchMeteo11Display();
     updateWindShearDisplay();
+}
+
+void MeasurementResults::onFromGribButtonClicked()
+{
+    currentButtelinType = FromGrib;
+    m_meteo11FromGrib = Meteo11Data(); // сбрасываем, чтобы не показать устаревший результат, пока считается новый
+    switchMeteo11Display();
+    updateWindShearDisplay();
+
+    // Координаты и время берём из уже загруженной записи (m_currentLatitude/
+    // m_currentLongitude/m_currentSondingTime — те же, что использует
+    // остальная часть вкладки). Приземный ветер — с реального датчика
+    // (m_currentWindDirSurface/m_currentWindSpeedSurface), без ручного ввода.
+    if (!m_currentSondingTime.isValid()) {
+        m_meteo11FromGrib = Meteo11Data();
+        updateMeteo11Display();
+        return;
+    }
+
+    m_gribPipeline->run(m_currentLatitude, m_currentLongitude, m_currentSondingTime,
+                        m_currentWindSpeedSurface, m_currentWindDirSurface);
+}
+
+void MeasurementResults::onGribPipelineFinished(bool success, const QVector<WindProfileData> &profile,
+                                                const QString &error)
+{
+    if (!success) {
+        qWarning() << "GRIB Метео-11: ошибка —" << error;
+        m_meteo11FromGrib = Meteo11Data();
+        if (currentButtelinType == FromGrib)
+            updateMeteo11Display();
+        return;
+    }
+
+    const Meteo11Data *oldBulletin = m_meteo11FromStation.isValid ? &m_meteo11FromStation : nullptr;
+
+    m_meteo11FromGrib = buildMeteo11(profile, m_currentStationAltitude, m_currentPressureMmHg,
+                                     m_currentTempC, m_currentSondingTime,
+                                     /*useActual=*/true, oldBulletin);
+
+    if (currentButtelinType == FromGrib)
+        updateMeteo11Display();
 }
 
 void MeasurementResults::onStringFormatClicked()
@@ -1982,6 +2034,7 @@ void MeasurementResults::updateMeteo11Display()
     case Updated:      d = &m_meteo11Updated;     break;
     case Approximate:  d = &m_meteo11Approximate; break;
     case FromMeteoStat:d = &m_meteo11FromStation;  break;
+    case FromGrib:     d = &m_meteo11FromGrib;     break;
     }
 
     if (!d) return;
@@ -2066,6 +2119,7 @@ void MeasurementResults::updateMeteo11Display()
     setPressed(ui->pushButton_updated,       currentButtelinType == Updated);
     setPressed(ui->pushButton_approximate,   currentButtelinType == Approximate);
     setPressed(ui->pushButton_fromMeteoStat, currentButtelinType == FromMeteoStat);
+    setPressed(ui->pushButton_fromGrib,      currentButtelinType == FromGrib);
 
     auto setFmtPressed = [](QPushButton *btn, bool pressed) {
         if (!btn) return;

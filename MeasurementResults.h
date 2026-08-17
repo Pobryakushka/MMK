@@ -22,6 +22,7 @@
 #include <qwt_plot_canvas.h>
 #include "calculationAlgorithms/WindShearCalculator.h"
 #include <QTableWidget>
+#include "Meteo11Grib/GribMeteo11Pipeline.h"
 
 namespace Ui {
 class MeasurementResults;
@@ -60,6 +61,8 @@ private slots:
     void onUpdatedButtonClicked();
     void onApproximateButtonClicked();
     void onFromMeteoStatButtonClicked();
+    void onFromGribButtonClicked();
+    void onGribPipelineFinished(bool success, const QVector<WindProfileData> &profile, const QString &error);
 
     void onStringFormatClicked();
     void onTableFormatClicked();
@@ -79,7 +82,7 @@ private:
     // Карта доступных измерений: дата -> (час -> список записей)
     QMap<QDate, QVector<MeasurementRecord>> availableMeasurements;
 
-    enum BulletinType { Updated, Approximate, FromMeteoStat };
+    enum BulletinType { Updated, Approximate, FromMeteoStat, FromGrib };
     enum OutputFormat { String, Table };
 
     BulletinType currentButtelinType;
@@ -208,6 +211,9 @@ private:
     Meteo11Data m_meteo11Updated;     // Уточнённый (после измерения АМС)
     Meteo11Data m_meteo11Approximate; // Приближённый (без данных метеостанции)
     Meteo11Data m_meteo11FromStation; // От метеостанции (исходный)
+    Meteo11Data m_meteo11FromGrib;    // Из GRIB (прогностическое поле)
+
+    GribMeteo11Pipeline *m_gribPipeline;
 
     // Вычисление и отображение
     void computeMeteo11(int recordId,
