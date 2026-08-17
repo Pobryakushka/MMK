@@ -71,11 +71,33 @@ MeasurementResults::MeasurementResults(QWidget *parent)
     connect(ui->pushButton_fromMeteoStat, &QPushButton::clicked, this, &MeasurementResults::onFromMeteoStatButtonClicked);
     connect(ui->pushButton_fromGrib, &QPushButton::clicked, this, &MeasurementResults::onFromGribButtonClicked);
 
-    // TODO: заменить на реальные пути после интеграции (сборочный каталог
-    // Mushroom, место скрипта на этой машине) — сейчас относительные
-    // значения по умолчанию из GribConfig.
+    // Статус GRIB-расчёта отображается прямо под кнопкой (одна строка,
+    // обновляется по мере выполнения) — без отдельного окна лога, чтобы
+    // не загромождать вкладку. Полный лог по-прежнему дублируется в
+    // qDebug() для отладки из Qt Creator.
+    ui->labelGribStatus->setVisible(false);
     connect(m_gribPipeline, &GribMeteo11Pipeline::logLine, this,
-            [](const QString &line) { qDebug() << "[GRIB]" << line; });
+            [this](const QString &line) {
+                qDebug() << "[GRIB]" << line;
+                ui->labelGribStatus->setStyleSheet("color: #666; font-size: 10px;");
+                ui->labelGribStatus->setText(line);
+                ui->labelGribStatus->setVisible(true);
+            });
+    connect(m_gribPipeline, &GribMeteo11Pipeline::finished, this,
+            [this](bool success, const QVector<WindProfileData> &, const QString &error) {
+                ui->pushButton_fromGrib->setEnabled(true);
+                ui->pushButton_fromGrib->setText("Из GRIB");
+                if (success) {
+                    ui->labelGribStatus->setStyleSheet("color: #2e7d32; font-size: 10px;"); // зелёный
+                    ui->labelGribStatus->setText("Готово");
+                } else {
+                    ui->labelGribStatus->setStyleSheet("color: #c62828; font-size: 10px;"); // красный
+                    ui->labelGribStatus->setText("Ошибка: " + error);
+                }
+                ui->labelGribStatus->setVisible(true);
+            });
+    // Отдельно — реальная обработка результата (сборка Meteo11Data через
+    // buildMeteo11 и обновление таблицы/строки, если открыта вкладка GRIB)
     connect(m_gribPipeline, &GribMeteo11Pipeline::finished,
             this, &MeasurementResults::onGribPipelineFinished);
 
@@ -897,6 +919,9 @@ void MeasurementResults::onFromMeteoStatButtonClicked()
 
 void MeasurementResults::onFromGribButtonClicked()
 {
+    if (!ui->pushButton_fromGrib->isEnabled())
+        return; // защита от повторного нажатия, пока идёт предыдущий расчёт
+
     currentButtelinType = FromGrib;
     m_meteo11FromGrib = Meteo11Data(); // сбрасываем, чтобы не показать устаревший результат, пока считается новый
     switchMeteo11Display();
@@ -911,6 +936,10 @@ void MeasurementResults::onFromGribButtonClicked()
         updateMeteo11Display();
         return;
     }
+
+    ui->pushButton_fromGrib->setEnabled(false);
+    ui->pushButton_fromGrib->setText("Идёт расчёт...");
+    ui->labelGribStatus->setVisible(false);
 
     m_gribPipeline->run(m_currentLatitude, m_currentLongitude, m_currentSondingTime,
                         m_currentWindSpeedSurface, m_currentWindDirSurface);
