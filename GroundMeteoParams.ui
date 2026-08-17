@@ -45,9 +45,12 @@
       <widget class="QPushButton" name="btnGroundParamsClose">
        <property name="minimumSize">
         <size>
-         <width>0</width>
-         <height>40</height>
+         <width>220</width>
+         <height>56</height>
         </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">font-size: 12pt;</string>
        </property>
        <property name="text">
         <string>Закрыть</string>
@@ -136,6 +139,12 @@
         </item>
         <item row="2" column="0" colspan="6">
          <widget class="QTableWidget" name="tableWidget_GroundParams">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <property name="minimumSize">
            <size>
             <width>0</width>
@@ -296,9 +305,12 @@
           </property>
           <property name="minimumSize">
            <size>
-            <width>0</width>
-            <height>40</height>
+            <width>200</width>
+            <height>56</height>
            </size>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">font-size: 12pt;</string>
           </property>
           <property name="text">
            <string>Очистить</string>
@@ -322,9 +334,12 @@
          <widget class="QPushButton" name="btnGroundParamsApply">
           <property name="minimumSize">
            <size>
-            <width>0</width>
-            <height>40</height>
+            <width>240</width>
+            <height>56</height>
            </size>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">font-size: 12pt; font-weight: bold;</string>
           </property>
           <property name="text">
            <string>Применить</string>

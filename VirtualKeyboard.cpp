@@ -289,7 +289,7 @@ void VirtualKeyboard::repositionFor(QWidget *target)
         y = qBound(avail.top(), y, avail.bottom() - kbHeight);
     }
 
-    int x = targetRect.left();
+    int x = targetRect.center().x() - kbWidth / 2;
     if (x + kbWidth > avail.right())
         x = avail.right() - kbWidth;
     if (x < avail.left())

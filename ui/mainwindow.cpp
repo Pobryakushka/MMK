@@ -166,6 +166,12 @@ MainWindow::MainWindow(QWidget *parent)
     // connect(ui->cbStandbyMode, &QCheckBox::stateChanged, this, &MainWindow::onStandbyModeChanged);
     // connect(ui->cbWorkMode, &QRadioButton::toggled, this, &MainWindow::onWorkModeChanged);
     // connect(ui->cbStandbyMode, &QRadioButton::toggled, this, &MainWindow::onStandbyModeChanged);
+    // NoFocus: кнопка часто переключается setEnabled(false/true) во время
+    // поиска датчиков — если она в этот момент в фокусе, Qt перекидывает
+    // фокус на следующий по табуляции виджет ("Функциональный контроль"),
+    // и там появляется видимая рамка фокуса. См. также m_toastCloseBtn и
+    // кнопки попапов ниже — та же причина.
+    ui->btnConnectSensors->setFocusPolicy(Qt::NoFocus);
     connect(ui->btnConnectSensors, &QPushButton::clicked, this, &MainWindow::onConnectSensorsClicked);
     connect(ui->btnSyncTime, &QPushButton::clicked, this, &MainWindow::onSyncTimeClicked);
     connect(ui->editDateTime, &QLineEdit::editingFinished, this, &MainWindow::onDateTimeEditingFinished);
@@ -1594,7 +1600,12 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
     // Закрытие карточки-уведомления о приземных данных по клику мимо неё и
     // мимо самого индикатора. Событие НЕ поглощается — клик продолжает
     // обрабатываться как обычно, закрытие попапа лишь побочный эффект.
-    if (watched == qApp && event->type() == QEvent::MouseButtonPress &&
+    //
+    // ВАЖНО: при qApp->installEventFilter(this) в watched приходит
+    // КОНКРЕТНЫЙ виджет-получатель события (кнопка, поле и т.д.), а не сам
+    // qApp — раньше здесь стояла проверка "watched == qApp", которая была
+    // всегда false, и клик "мимо" вообще не отслеживался.
+    if (event->type() == QEvent::MouseButtonPress &&
         m_readinessPopup && m_readinessPopup->isVisible()) {
         auto *me = static_cast<QMouseEvent*>(event);
         const QPoint globalPos = me->globalPos();
@@ -3026,6 +3037,7 @@ void MainWindow::setupToastUI()
 
     // Маленькая красная кнопка остановки поиска — в правом верхнем углу окна
     m_toastCloseBtn = new QPushButton("\u2715", m_toastWidget);
+    m_toastCloseBtn->setFocusPolicy(Qt::NoFocus);
     m_toastCloseBtn->setFixedSize(12, 12);
     m_toastCloseBtn->setCursor(Qt::PointingHandCursor);
     m_toastCloseBtn->setToolTip("Остановить поиск датчиков");
@@ -3065,6 +3077,13 @@ void MainWindow::setupToastUI()
 
 void MainWindow::showToast()
 {
+    // Если toast прятался по таймеру после предыдущей отмены/завершения
+    // поиска (см. onStopSearchConfirmed/onAutoConnectorFinished), а поиск
+    // запустили заново раньше, чем этот таймер сработал — он всё равно
+    // "выстрелит" через оставшееся время и спрячет уже НОВЫЙ toast. Поэтому
+    // при каждом показе гарантированно останавливаем отложенное скрытие.
+    m_toastHideTimer->stop();
+
     m_toastWidget->raise();
 
     int targetX = width() - m_toastWidget->width() - 20;
@@ -3196,6 +3215,7 @@ void MainWindow::setupStopConfirmOverlay()
     btnRow->setSpacing(12);
 
     QPushButton *btnYes = new QPushButton("Да, остановить", m_stopConfirmCard);
+    btnYes->setFocusPolicy(Qt::NoFocus);
     btnYes->setCursor(Qt::PointingHandCursor);
     btnYes->setFixedHeight(44);
     btnYes->setStyleSheet(
@@ -3212,6 +3232,7 @@ void MainWindow::setupStopConfirmOverlay()
         );
 
     QPushButton *btnNo = new QPushButton("Нет, продолжить", m_stopConfirmCard);
+    btnNo->setFocusPolicy(Qt::NoFocus);
     btnNo->setCursor(Qt::PointingHandCursor);
     btnNo->setFixedHeight(44);
     btnNo->setStyleSheet(
@@ -3347,11 +3368,13 @@ void MainWindow::setupReadinessPopup()
 
     QHBoxLayout *btnRow = new QHBoxLayout();
     m_readinessPopupNo = new QPushButton("Нет", m_readinessPopup);
+    m_readinessPopupNo->setFocusPolicy(Qt::NoFocus);
     m_readinessPopupNo->setStyleSheet(
         "QPushButton { background:#FFFFFF; color:#1C1F22; border:1px solid #DDE1E3;"
         " border-radius:8px; padding:6px 18px; font-weight:600; }"
         "QPushButton:pressed { background:#F0F1F2; }");
     m_readinessPopupYes = new QPushButton("Да", m_readinessPopup);
+    m_readinessPopupYes->setFocusPolicy(Qt::NoFocus);
     m_readinessPopupYes->setStyleSheet(
         "QPushButton { background:#0F6B4F; color:#FFFFFF; border:none;"
         " border-radius:8px; padding:6px 18px; font-weight:700; }"

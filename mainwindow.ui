@@ -1284,6 +1284,16 @@ QPushButton:pressed { color: #0B5A42; }</string>
                   <property name="text">
                    <string/>
                   </property>
+                  <property name="icon">
+                   <iconset resource="resources.qrc">
+                    <normaloff>:/icons/clock_manual_time.svg</normaloff>:/icons/clock_manual_time.svg</iconset>
+                  </property>
+                  <property name="iconSize">
+                   <size>
+                    <width>18</width>
+                    <height>18</height>
+                   </size>
+                  </property>
                  </widget>
                 </item>
                </layout>
@@ -2031,6 +2041,8 @@ QPushButton:pressed { color: #0B5A42; }</string>
    <header>ui/mainwindow.h</header>
   </customwidget>
  </customwidgets>
- <resources/>
+ <resources>
+  <include location="resources.qrc"/>
+ </resources>
  <connections/>
 </ui>
