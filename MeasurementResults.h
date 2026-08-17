@@ -10,18 +10,19 @@
 #include <QSqlDatabase>
 #include <QSqlQuery>
 #include <QSqlError>
-#include "amsprotocol.h"
+#include "sensors/amsprotocol.h"
 #include "zoom/zoomscontainer.h"
-#include "MeasurementExporter.h"
-#include "ExportDialog.h"
+#include "ui/MeasurementExporter.h"
+#include "ui/ExportDialog.h"
 #include <qwt_plot.h>
 #include <qwt_plot_curve.h>
 #include <qwt_plot_grid.h>
 #include <qwt_legend.h>
 #include <qwt_symbol.h>
 #include <qwt_plot_canvas.h>
-#include "WindShearCalculator.h"
+#include "calculationAlgorithms/WindShearCalculator.h"
 #include <QTableWidget>
+#include "Meteo11Grib/GribMeteo11Pipeline.h"
 
 namespace Ui {
 class MeasurementResults;
@@ -60,15 +61,18 @@ private slots:
     void onUpdatedButtonClicked();
     void onApproximateButtonClicked();
     void onFromMeteoStatButtonClicked();
+    void onFromGribButtonClicked();
+    void onGribPipelineFinished(bool success, const QVector<WindProfileData> &profile, const QString &error);
 
     void onStringFormatClicked();
     void onTableFormatClicked();
+
+    void onExportClicked();
 
 public slots:
     void updateCoordinatesFromMainWindow(double latitude, double longitude);
     void setMapCoordinatesMode(bool enabled);
     void navigateToRecord(int recordId); // Перейти к записи по record_id
-    void onExportClicked();
 
 private:
     Ui::MeasurementResults *ui;
@@ -78,7 +82,7 @@ private:
     // Карта доступных измерений: дата -> (час -> список записей)
     QMap<QDate, QVector<MeasurementRecord>> availableMeasurements;
 
-    enum BulletinType { Updated, Approximate, FromMeteoStat };
+    enum BulletinType { Updated, Approximate, FromMeteoStat, FromGrib };
     enum OutputFormat { String, Table };
 
     BulletinType currentButtelinType;
@@ -103,7 +107,6 @@ private:
     void loadMeasurementData(const QDateTime &dateTime);
     QVector<MeasurementRecord> getRecordsForDate(const QDate &date);
     MeasurementRecord findClosestRecord(const QDate &date, int hour);
-    void setupMockData();
 
     void switchMeteo11Display();
 
@@ -208,6 +211,9 @@ private:
     Meteo11Data m_meteo11Updated;     // Уточнённый (после измерения АМС)
     Meteo11Data m_meteo11Approximate; // Приближённый (без данных метеостанции)
     Meteo11Data m_meteo11FromStation; // От метеостанции (исходный)
+    Meteo11Data m_meteo11FromGrib;    // Из GRIB (прогностическое поле)
+
+    GribMeteo11Pipeline *m_gribPipeline;
 
     // Вычисление и отображение
     void computeMeteo11(int recordId,
@@ -258,6 +264,11 @@ private:
     double m_currentLatitude;
     double m_currentLongitude;
     QDateTime m_currentSondingTime;
+
+    // Кеш профилей ветра текущей записи
+    QVector<WindProfileData> m_currentAvgWind;
+    QVector<WindProfileData> m_currentActualWind;
+    QVector<MeasuredWindData> m_currentMeasuredWind;
 };
 
 #endif // MEASUREMENTRESULTS_H

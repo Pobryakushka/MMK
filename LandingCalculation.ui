@@ -1,1681 +1,2369 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>LandingCalculation</class>
- <widget class="QDialog" name="LandingCalculation">
-  <property name="enabled">
-   <bool>true</bool>
-  </property>
+ <widget class="QWidget" name="LandingCalculation">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1372</width>
-    <height>815</height>
+    <width>1180</width>
+    <height>720</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Расчет на десантирование</string>
+   <string>Расчёт на десантирование</string>
   </property>
-  <property name="sizeGripEnabled">
-   <bool>false</bool>
+  <property name="styleSheet">
+   <string notr="true">background-color: #EFF1F1;</string>
   </property>
-  <widget class="QStackedWidget" name="stackedWidget">
-   <property name="geometry">
-    <rect>
-     <x>11</x>
-     <y>11</y>
-     <width>1358</width>
-     <height>800</height>
-    </rect>
-   </property>
-   <property name="minimumSize">
-    <size>
-     <width>1190</width>
-     <height>686</height>
-    </size>
-   </property>
-   <property name="currentIndex">
+  <layout class="QVBoxLayout" name="rootLayout">
+   <property name="spacing">
     <number>0</number>
    </property>
-   <widget class="QWidget" name="pageNormalMode">
-    <layout class="QVBoxLayout" name="verticalLayout">
-     <item>
-      <widget class="QLabel" name="lblTitle">
-       <property name="font">
-        <font>
-         <pointsize>16</pointsize>
-         <weight>75</weight>
-         <bold>true</bold>
-        </font>
-       </property>
-       <property name="text">
-        <string>Расчет на десантирование</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignCenter</set>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QTabWidget" name="tabWidget">
-       <property name="currentIndex">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item>
+    <widget class="QStackedWidget" name="stackedWidget">
+     <widget class="QWidget" name="pageNormalMode">
+      <layout class="QVBoxLayout" name="verticalLayoutNormal">
+       <property name="spacing">
         <number>0</number>
        </property>
-       <widget class="QWidget" name="tabInitialData">
-        <attribute name="title">
-         <string>Исходные данные</string>
-        </attribute>
-        <layout class="QVBoxLayout" name="verticalLayout_2">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item>
+        <layout class="QHBoxLayout" name="landingHeaderLayout">
+         <property name="leftMargin">
+          <number>6</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
          <item>
-          <layout class="QHBoxLayout" name="horizontalLayoutMain">
-           <item>
-            <layout class="QVBoxLayout" name="verticalLayoutLeft">
-             <item>
-              <widget class="QGroupBox" name="groupInitialParams">
-               <property name="title">
-                <string>Параметры парашютной системы</string>
-               </property>
-               <layout class="QGridLayout" name="gridLayoutParams">
-                <item row="0" column="0" colspan="3">
-                 <widget class="QComboBox" name="comboBox">
-                  <property name="enabled">
-                   <bool>false</bool>
-                  </property>
-                  <item>
-                   <property name="text">
-                    <string>Парашютная система</string>
-                   </property>
-                  </item>
-                 </widget>
-                </item>
-                <item row="1" column="0">
-                 <widget class="QLabel" name="lblTimeVP">
-                  <property name="text">
-                   <string>Время падения (tпад):</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="1">
-                 <widget class="QLineEdit" name="editTimeVP">
-                  <property name="text">
-                   <string>00</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="2">
-                 <widget class="QLabel" name="lblTimeVPUnit">
-                  <property name="text">
-                   <string>с</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="2" column="0">
-                 <widget class="QLabel" name="lblLossPV">
-                  <property name="text">
-                   <string>Потеря h по наполнения (hнап):</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="2" column="1">
-                 <widget class="QLineEdit" name="editLossPV">
-                  <property name="text">
-                   <string>0.00</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="2" column="2">
-                 <widget class="QLabel" name="lblLossPVUnit">
-                  <property name="text">
-                   <string>м</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="3" column="0">
-                 <widget class="QLabel" name="lblSpeedDescent">
-                  <property name="text">
-                   <string>Скорость снижения ДО (vсн):</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="3" column="1">
-                 <widget class="QLineEdit" name="editSpeedDescent">
-                  <property name="text">
-                   <string>00,00</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="3" column="2">
-                 <widget class="QLabel" name="lblSpeedDescentUnit">
-                  <property name="text">
-                   <string>м/с</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="4" column="0">
-                 <widget class="QLabel" name="lblStaffTime">
-                  <property name="text">
-                   <string>Штилевой относ (A0):</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="4" column="1">
-                 <widget class="QLineEdit" name="editStaffTime">
-                  <property name="text">
-                   <string>00.00</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="4" column="2">
-                 <widget class="QLabel" name="lblStaffTimeUnit">
-                  <property name="text">
-                   <string>м</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="5" column="1">
-                 <widget class="QPushButton" name="btnLandingCalcEdit">
-                  <property name="text">
-                   <string>Изменить</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </widget>
-             </item>
-             <item>
-              <widget class="QGroupBox" name="groupCUP">
-               <property name="title">
-                <string>Координаты ТПП</string>
-               </property>
-               <layout class="QGridLayout" name="gridLayoutCUP">
-                <item row="0" column="0">
-                 <widget class="QLabel" name="lblLatCUP">
-                  <property name="text">
-                   <string>Широта:</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="1">
-                 <widget class="QLineEdit" name="editLatCUP">
-                  <property name="placeholderText">
-                   <string>__ __ __</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="2">
-                 <widget class="QLabel" name="lblLatCUPNS">
-                  <property name="text">
-                   <string>Север</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="3">
-                 <widget class="QComboBox" name="comboLatCUP">
-                  <item>
-                   <property name="text">
-                    <string>N</string>
-                   </property>
-                  </item>
-                  <item>
-                   <property name="text">
-                    <string>S</string>
-                   </property>
-                  </item>
-                 </widget>
-                </item>
-                <item row="1" column="0">
-                 <widget class="QLabel" name="lblLonCUP">
-                  <property name="text">
-                   <string>Долгота:</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="1">
-                 <widget class="QLineEdit" name="editLonCUP">
-                  <property name="placeholderText">
-                   <string>__ __ __</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="2">
-                 <widget class="QLabel" name="lblLonCUPEW">
-                  <property name="text">
-                   <string>Восток</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="3">
-                 <widget class="QComboBox" name="comboLonCUP">
-                  <item>
-                   <property name="text">
-                    <string>E</string>
-                   </property>
-                  </item>
-                  <item>
-                   <property name="text">
-                    <string>W</string>
-                   </property>
-                  </item>
-                 </widget>
-                </item>
-                <item row="2" column="0">
-                 <widget class="QLabel" name="lblHeightUM">
-                  <property name="text">
-                   <string>Высота на УМ:</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="2" column="1">
-                 <widget class="QLineEdit" name="editHeightUM">
-                  <property name="placeholderText">
-                   <string>0000</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="2" column="2">
-                 <widget class="QLabel" name="lblHeightUMUnit">
-                  <property name="text">
-                   <string>м</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="3" column="0">
-                 <widget class="QLabel" name="lblTrueBearing">
-                  <property name="text">
-                   <string>Истинный путевой (дирекционный) угол площадки приземления:</string>
-                  </property>
-                  <property name="wordWrap">
-                   <bool>true</bool>
-                  </property>
-                 </widget>
-                </item>
-                <item row="3" column="1">
-                 <widget class="QLineEdit" name="editTrueBearing">
-                  <property name="text">
-                   <string>000</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="3" column="2">
-                 <widget class="QLabel" name="lblTrueBearingUnit">
-                  <property name="text">
-                   <string>°</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </widget>
-             </item>
-             <item>
-              <layout class="QHBoxLayout" name="layoutHvhod">
-               <item>
-                <widget class="QLabel" name="lblHvhod">
-                 <property name="text">
-                  <string>Высота десантирования (Hдес):</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLineEdit" name="editHvhod">
-                 <property name="text">
-                  <string>0000</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLabel" name="lblHvhodUnit">
-                 <property name="text">
-                  <string>м</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <spacer name="horizontalSpacer1">
-                 <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
-                 </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>40</width>
-                   <height>20</height>
-                  </size>
-                 </property>
-                </spacer>
-               </item>
-              </layout>
-             </item>
-             <item>
-              <spacer name="verticalSpacer">
-               <property name="orientation">
-                <enum>Qt::Vertical</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>20</width>
-                 <height>40</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
-            </layout>
-           </item>
-           <item>
-            <layout class="QVBoxLayout" name="verticalLayoutRight">
-             <item>
-              <widget class="QGroupBox" name="groupMethod">
-               <property name="title">
-                <string>Метеоусловия</string>
-               </property>
-               <layout class="QGridLayout" name="gridLayout_5">
-                <item row="0" column="0">
-                 <widget class="QTableWidget" name="tableResults">
-                  <property name="maximumSize">
-                   <size>
-                    <width>16777215</width>
-                    <height>462</height>
-                   </size>
-                  </property>
-                  <property name="alternatingRowColors">
-                   <bool>true</bool>
-                  </property>
-                  <attribute name="horizontalHeaderCascadingSectionResizes">
-                   <bool>true</bool>
-                  </attribute>
-                  <attribute name="horizontalHeaderDefaultSectionSize">
-                   <number>285</number>
-                  </attribute>
-                  <attribute name="verticalHeaderDefaultSectionSize">
-                   <number>85</number>
-                  </attribute>
-                  <row>
-                   <property name="text">
-                    <string/>
-                   </property>
-                  </row>
-                  <row>
-                   <property name="text">
-                    <string/>
-                   </property>
-                  </row>
-                  <row>
-                   <property name="text">
-                    <string/>
-                   </property>
-                  </row>
-                  <row>
-                   <property name="text">
-                    <string/>
-                   </property>
-                  </row>
-                  <row>
-                   <property name="text">
-                    <string/>
-                   </property>
-                  </row>
-                  <column>
-                   <property name="text">
-                    <string>Параметр</string>
-                   </property>
-                  </column>
-                  <column>
-                   <property name="text">
-                    <string>Значение</string>
-                   </property>
-                  </column>
-                  <item row="0" column="0">
-                   <property name="text">
-                    <string>Скорость ветра у земли</string>
-                   </property>
-                   <property name="flags">
-                    <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
-                   </property>
-                  </item>
-                  <item row="0" column="1">
-                   <property name="text">
-                    <string>00,00 м/с</string>
-                   </property>
-                   <property name="textAlignment">
-                    <set>AlignCenter</set>
-                   </property>
-                  </item>
-                  <item row="1" column="0">
-                   <property name="text">
-                    <string>Скорость ветра на высоте 50 м</string>
-                   </property>
-                   <property name="flags">
-                    <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
-                   </property>
-                  </item>
-                  <item row="1" column="1">
-                   <property name="text">
-                    <string>00,00 м/с</string>
-                   </property>
-                   <property name="textAlignment">
-                    <set>AlignCenter</set>
-                   </property>
-                  </item>
-                  <item row="2" column="0">
-                   <property name="text">
-                    <string>Скорость ветра на высоте 100 м</string>
-                   </property>
-                   <property name="flags">
-                    <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
-                   </property>
-                  </item>
-                  <item row="2" column="1">
-                   <property name="text">
-                    <string>00,00 м/с</string>
-                   </property>
-                   <property name="textAlignment">
-                    <set>AlignCenter</set>
-                   </property>
-                  </item>
-                  <item row="3" column="0">
-                   <property name="text">
-                    <string>Скорость ветра до Ндес</string>
-                   </property>
-                   <property name="flags">
-                    <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
-                   </property>
-                  </item>
-                  <item row="3" column="1">
-                   <property name="text">
-                    <string>00,00 м/с</string>
-                   </property>
-                   <property name="textAlignment">
-                    <set>AlignCenter</set>
-                   </property>
-                  </item>
-                  <item row="4" column="0">
-                   <property name="text">
-                    <string>ВНГО</string>
-                   </property>
-                   <property name="flags">
-                    <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
-                   </property>
-                  </item>
-                  <item row="4" column="1">
-                   <property name="text">
-                    <string>0000 м</string>
-                   </property>
-                   <property name="textAlignment">
-                    <set>AlignCenter</set>
-                   </property>
-                  </item>
-                 </widget>
-                </item>
-               </layout>
-              </widget>
-             </item>
-             <item>
-              <widget class="QCheckBox" name="cbManualInput">
-               <property name="text">
-                <string>Ручной ввод параметров ветра в слое дисантирования</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <layout class="QHBoxLayout" name="layoutAdditional">
-               <item>
-                <widget class="QLabel" name="lblDistance">
-                 <property name="text">
-                  <string>Скорость:</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLineEdit" name="editDistance">
-                 <property name="text">
-                  <string>00.00</string>
-                 </property>
-                 <property name="readOnly">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLabel" name="lblDistanceUnit">
-                 <property name="text">
-                  <string>м/с</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <spacer name="horizontalSpacer2">
-                 <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
-                 </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>13</width>
-                   <height>13</height>
-                  </size>
-                 </property>
-                </spacer>
-               </item>
-               <item>
-                <widget class="QLabel" name="lblDirection">
-                 <property name="text">
-                  <string>Направление:</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLineEdit" name="editDirection">
-                 <property name="text">
-                  <string>000</string>
-                 </property>
-                 <property name="readOnly">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLabel" name="lblDirectionUnit">
-                 <property name="text">
-                  <string>°</string>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </item>
-             <item>
-              <widget class="QPushButton" name="btnCalculate">
-               <property name="font">
-                <font>
-                 <pointsize>11</pointsize>
-                 <weight>75</weight>
-                 <bold>true</bold>
-                </font>
-               </property>
-               <property name="text">
-                <string>Рассчитать</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-          </layout>
+          <widget class="QPushButton" name="btnLandingBack">
+           <property name="minimumSize">
+            <size>
+             <width>80</width>
+             <height>32</height>
+            </size>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QPushButton { font-size: 12pt; font-weight: bold; border: none; background: transparent; color: #0F6B4F; }
+QPushButton:pressed { color: #0B5A42; }</string>
+           </property>
+           <property name="text">
+            <string>‹ Назад</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="lblTitle">
+           <property name="styleSheet">
+            <string notr="true">font-size: 11pt; font-weight: bold; padding-left: 6px;</string>
+           </property>
+           <property name="text">
+            <string>Расчёт на десантирование</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="landingHeaderSpacer">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
          </item>
         </layout>
-       </widget>
-       <widget class="QWidget" name="tabResults">
-        <attribute name="title">
-         <string>Результаты</string>
-        </attribute>
-        <layout class="QVBoxLayout" name="verticalLayoutResults">
-         <item>
-          <layout class="QHBoxLayout" name="horizontalLayoutResultsTop">
+       </item>
+       <item>
+        <widget class="QTabWidget" name="tabWidget">
+         <property name="styleSheet">
+          <string notr="true">QTabWidget::pane { border: none; }
+QTabBar::tab { background: transparent; padding: 8px 18px; min-width: 90px; font-size: 9pt; font-weight: 600; color: #6B7278; border-bottom: 2px solid transparent; }
+QTabBar::tab:selected { color: #0F6B4F; border-bottom: 2px solid #0F6B4F; }</string>
+         </property>
+         <widget class="QWidget" name="tabInitialData">
+          <attribute name="title">
+           <string>Исходные данные</string>
+          </attribute>
+          <layout class="QVBoxLayout" name="verticalLayoutTabInitial">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
            <item>
-            <widget class="QGroupBox" name="groupTNV">
-             <property name="minimumSize">
-              <size>
-               <width>651</width>
-               <height>247</height>
-              </size>
+            <widget class="QScrollArea" name="scrollAreaInitialData">
+             <property name="styleSheet">
+              <string notr="true">QScrollArea { background: transparent; }</string>
              </property>
-             <property name="title">
-              <string>Координаты ТНВ</string>
+             <property name="frameShape">
+              <enum>QFrame::NoFrame</enum>
              </property>
-             <layout class="QGridLayout" name="gridLayout_4">
-              <item row="0" column="1">
-               <widget class="QLineEdit" name="editLatTNV">
-                <property name="alignment">
-                 <set>Qt::AlignCenter</set>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-                <property name="placeholderText">
-                 <string>__°__'__&quot;</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QLineEdit" name="editLonTNV">
-                <property name="alignment">
-                 <set>Qt::AlignCenter</set>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-                <property name="placeholderText">
-                 <string>__°__'__&quot;</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="1">
-               <widget class="QLineEdit" name="editHeightTNV">
-                <property name="alignment">
-                 <set>Qt::AlignCenter</set>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-                <property name="placeholderText">
-                 <string>0000 м</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <widget class="QLabel" name="lblHeightTNV">
-                <property name="text">
-                 <string>Высота Нтнв:</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="0">
-               <widget class="QLabel" name="lblLatTNV">
-                <property name="text">
-                 <string>Широта:</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="lblLonTNV">
-                <property name="text">
-                 <string>Долгота:</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="2">
-               <widget class="QComboBox" name="comboBox_2">
-                <item>
-                 <property name="text">
-                  <string>Северная</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>Южная</string>
-                 </property>
-                </item>
-               </widget>
-              </item>
-              <item row="1" column="2">
-               <widget class="QComboBox" name="comboBox_3">
-                <item>
-                 <property name="text">
-                  <string>Восточная</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>Южная</string>
-                 </property>
-                </item>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-           <item>
-            <widget class="QGroupBox" name="groupPositionTNV">
-             <property name="title">
-              <string>Положение метеопоста относительно ТНВ</string>
+             <property name="widgetResizable">
+              <bool>true</bool>
              </property>
-             <layout class="QGridLayout" name="gridLayoutPositionTNV">
-              <item row="1" column="1">
-               <widget class="QLineEdit" name="editAngleTNV">
-                <property name="alignment">
-                 <set>Qt::AlignCenter</set>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-                <property name="placeholderText">
-                 <string>000 град.</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="QLineEdit" name="editDistanceTNV">
-                <property name="alignment">
-                 <set>Qt::AlignCenter</set>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-                <property name="placeholderText">
-                 <string>000000 м</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="0">
-               <widget class="QLabel" name="lblDistanceTNV">
-                <property name="text">
-                 <string>Расстояние (Dтнв):</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="lblAngleTNV">
-                <property name="text">
-                 <string>Дирекционный угол (Aтнв):</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0" colspan="2">
-               <widget class="QGroupBox" name="groupPositionTPP">
-                <property name="title">
-                 <string>Положение метеопоста относительно ТПП</string>
-                </property>
-                <layout class="QGridLayout" name="gridLayoutPositionTPP">
-                 <item row="0" column="0">
-                  <widget class="QLabel" name="lblDistanceTPP">
+             <widget class="QWidget" name="scrollContentInitialData">
+              <property name="geometry">
+               <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>1180</width>
+                <height>601</height>
+               </rect>
+              </property>
+              <layout class="QHBoxLayout" name="horizontalLayoutMain">
+               <property name="spacing">
+                <number>14</number>
+               </property>
+               <property name="leftMargin">
+                <number>14</number>
+               </property>
+               <property name="topMargin">
+                <number>12</number>
+               </property>
+               <property name="rightMargin">
+                <number>14</number>
+               </property>
+               <property name="bottomMargin">
+                <number>12</number>
+               </property>
+               <item>
+                <layout class="QVBoxLayout" name="verticalLayoutLeft">
+                 <property name="spacing">
+                  <number>12</number>
+                 </property>
+                 <item>
+                  <widget class="QFrame" name="groupInitialParams">
+                   <property name="styleSheet">
+                    <string notr="true">QFrame#groupInitialParams { background-color: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 10px; }</string>
+                   </property>
+                   <property name="frameShape">
+                    <enum>QFrame::NoFrame</enum>
+                   </property>
+                   <layout class="QVBoxLayout" name="groupInitialParamsOuterLayout">
+                    <property name="spacing">
+                     <number>8</number>
+                    </property>
+                    <property name="leftMargin">
+                     <number>12</number>
+                    </property>
+                    <property name="topMargin">
+                     <number>10</number>
+                    </property>
+                    <property name="rightMargin">
+                     <number>12</number>
+                    </property>
+                    <property name="bottomMargin">
+                     <number>10</number>
+                    </property>
+                    <item>
+                     <widget class="QLabel" name="groupInitialParamsTitle">
+                      <property name="styleSheet">
+                       <string notr="true">font-size: 8pt; text-transform: uppercase; color: #6B7278; font-weight: 700; border: none; background: transparent;</string>
+                      </property>
+                      <property name="text">
+                       <string>Параметры парашютной системы</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <layout class="QGridLayout" name="gridLayoutParams">
+                      <property name="leftMargin">
+                       <number>10</number>
+                      </property>
+                      <property name="topMargin">
+                       <number>4</number>
+                      </property>
+                      <property name="rightMargin">
+                       <number>10</number>
+                      </property>
+                      <property name="bottomMargin">
+                       <number>8</number>
+                      </property>
+                      <property name="spacing">
+                       <number>6</number>
+                      </property>
+                      <item row="0" column="0" colspan="3">
+                       <widget class="QComboBox" name="comboBox">
+                        <property name="enabled">
+                         <bool>false</bool>
+                        </property>
+                        <property name="minimumSize">
+                         <size>
+                          <width>160</width>
+                          <height>28</height>
+                         </size>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">
+QComboBox { border:1px solid #DDE1E3; border-radius:7px; padding:0 6px; font-size:9pt; background:#fff; }
+QComboBox::drop-down { border: none; width: 20px; border-top-right-radius: 7px; border-bottom-right-radius: 7px; }
+QComboBox QAbstractItemView { border:1px solid #DDE1E3; border-radius:7px; background:#fff; outline:none; selection-background-color:#E8F5E9; selection-color:#0F6B4F; }
+</string>
+                        </property>
+                        <item>
+                         <property name="text">
+                          <string>Парашютная система</string>
+                         </property>
+                        </item>
+                       </widget>
+                      </item>
+                      <item row="1" column="0">
+                       <widget class="QLabel" name="lblTimeVP">
+                        <property name="styleSheet">
+                         <string notr="true">font-size: 8.5pt; color: #1C1F22; background: transparent;</string>
+                        </property>
+                        <property name="text">
+                         <string>Время падения (tпад):</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="1">
+                       <widget class="QLineEdit" name="editTimeVP">
+                        <property name="minimumSize">
+                         <size>
+                          <width>68</width>
+                          <height>28</height>
+                         </size>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">border:1px solid #DDE1E3; border-radius:7px; padding:0 7px; font-size:9pt; background:#fff;</string>
+                        </property>
+                        <property name="text">
+                         <string>00</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="2">
+                       <widget class="QLabel" name="lblTimeVPUnit">
+                        <property name="styleSheet">
+                         <string notr="true">font-size: 8pt; color: #6B7278; background: transparent;</string>
+                        </property>
+                        <property name="text">
+                         <string>с</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="0">
+                       <widget class="QLabel" name="lblLossPV">
+                        <property name="styleSheet">
+                         <string notr="true">font-size: 8.5pt; color: #1C1F22; background: transparent;</string>
+                        </property>
+                        <property name="text">
+                         <string>Потеря h по наполнения (hнап):</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="1">
+                       <widget class="QLineEdit" name="editLossPV">
+                        <property name="minimumSize">
+                         <size>
+                          <width>68</width>
+                          <height>28</height>
+                         </size>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">border:1px solid #DDE1E3; border-radius:7px; padding:0 7px; font-size:9pt; background:#fff;</string>
+                        </property>
+                        <property name="text">
+                         <string>0.00</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="2">
+                       <widget class="QLabel" name="lblLossPVUnit">
+                        <property name="styleSheet">
+                         <string notr="true">font-size: 8pt; color: #6B7278; background: transparent;</string>
+                        </property>
+                        <property name="text">
+                         <string>м</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="3" column="0">
+                       <widget class="QLabel" name="lblSpeedDescent">
+                        <property name="styleSheet">
+                         <string notr="true">font-size: 8.5pt; color: #1C1F22; background: transparent;</string>
+                        </property>
+                        <property name="text">
+                         <string>Скорость снижения ДО (vсн):</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="3" column="1">
+                       <widget class="QLineEdit" name="editSpeedDescent">
+                        <property name="minimumSize">
+                         <size>
+                          <width>68</width>
+                          <height>28</height>
+                         </size>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">border:1px solid #DDE1E3; border-radius:7px; padding:0 7px; font-size:9pt; background:#fff;</string>
+                        </property>
+                        <property name="text">
+                         <string>00,00</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="3" column="2">
+                       <widget class="QLabel" name="lblSpeedDescentUnit">
+                        <property name="styleSheet">
+                         <string notr="true">font-size: 8pt; color: #6B7278; background: transparent;</string>
+                        </property>
+                        <property name="text">
+                         <string>м/с</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="4" column="0">
+                       <widget class="QLabel" name="lblStaffTime">
+                        <property name="styleSheet">
+                         <string notr="true">font-size: 8.5pt; color: #1C1F22; background: transparent;</string>
+                        </property>
+                        <property name="text">
+                         <string>Штилевой относ (A0):</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="4" column="1">
+                       <widget class="QLineEdit" name="editStaffTime">
+                        <property name="minimumSize">
+                         <size>
+                          <width>68</width>
+                          <height>28</height>
+                         </size>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">border:1px solid #DDE1E3; border-radius:7px; padding:0 7px; font-size:9pt; background:#fff;</string>
+                        </property>
+                        <property name="text">
+                         <string>00.00</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="4" column="2">
+                       <widget class="QLabel" name="lblStaffTimeUnit">
+                        <property name="styleSheet">
+                         <string notr="true">font-size: 8pt; color: #6B7278; background: transparent;</string>
+                        </property>
+                        <property name="text">
+                         <string>м</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="5" column="0" colspan="3">
+                       <widget class="QPushButton" name="btnLandingCalcEdit">
+                        <property name="minimumSize">
+                         <size>
+                          <width>0</width>
+                          <height>32</height>
+                         </size>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">border:1px solid #DDE1E3; border-radius:8px; background:#fff; font-size:9pt; font-weight:600; padding:0 12px;</string>
+                        </property>
+                        <property name="text">
+                         <string>Изменить</string>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </item>
+                   </layout>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QFrame" name="groupCUP">
+                   <property name="styleSheet">
+                    <string notr="true">QFrame#groupCUP { background-color: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 10px; }</string>
+                   </property>
+                   <property name="frameShape">
+                    <enum>QFrame::NoFrame</enum>
+                   </property>
+                   <layout class="QVBoxLayout" name="groupCUPOuterLayout">
+                    <property name="spacing">
+                     <number>8</number>
+                    </property>
+                    <property name="leftMargin">
+                     <number>12</number>
+                    </property>
+                    <property name="topMargin">
+                     <number>10</number>
+                    </property>
+                    <property name="rightMargin">
+                     <number>12</number>
+                    </property>
+                    <property name="bottomMargin">
+                     <number>10</number>
+                    </property>
+                    <item>
+                     <widget class="QLabel" name="groupCUPTitle">
+                      <property name="styleSheet">
+                       <string notr="true">font-size: 8pt; text-transform: uppercase; color: #6B7278; font-weight: 700; border: none; background: transparent;</string>
+                      </property>
+                      <property name="text">
+                       <string>Координаты ТПП</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <layout class="QGridLayout" name="gridLayoutCUP">
+                      <property name="leftMargin">
+                       <number>10</number>
+                      </property>
+                      <property name="topMargin">
+                       <number>4</number>
+                      </property>
+                      <property name="rightMargin">
+                       <number>10</number>
+                      </property>
+                      <property name="bottomMargin">
+                       <number>8</number>
+                      </property>
+                      <property name="spacing">
+                       <number>6</number>
+                      </property>
+                      <item row="0" column="0">
+                       <widget class="QLabel" name="lblLatCUP">
+                        <property name="styleSheet">
+                         <string notr="true">font-size: 8.5pt; color: #1C1F22; background: transparent;</string>
+                        </property>
+                        <property name="text">
+                         <string>Широта:</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QLineEdit" name="editLatCUP">
+                        <property name="minimumSize">
+                         <size>
+                          <width>68</width>
+                          <height>28</height>
+                         </size>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">border:1px solid #DDE1E3; border-radius:7px; padding:0 7px; font-size:9pt; background:#fff;</string>
+                        </property>
+                        <property name="placeholderText">
+                         <string>__ __ __</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="2">
+                       <widget class="QComboBox" name="comboLatCUP">
+                        <property name="minimumSize">
+                         <size>
+                          <width>64</width>
+                          <height>28</height>
+                         </size>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">
+QComboBox { border:1px solid #DDE1E3; border-radius:7px; padding:0 6px; font-size:9pt; background:#fff; }
+QComboBox::drop-down { border: none; width: 20px; border-top-right-radius: 7px; border-bottom-right-radius: 7px; }
+QComboBox QAbstractItemView { border:1px solid #DDE1E3; border-radius:7px; background:#fff; outline:none; selection-background-color:#E8F5E9; selection-color:#0F6B4F; }
+</string>
+                        </property>
+                        <item>
+                         <property name="text">
+                          <string>N</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>S</string>
+                         </property>
+                        </item>
+                       </widget>
+                      </item>
+                      <item row="1" column="0">
+                       <widget class="QLabel" name="lblLonCUP">
+                        <property name="styleSheet">
+                         <string notr="true">font-size: 8.5pt; color: #1C1F22; background: transparent;</string>
+                        </property>
+                        <property name="text">
+                         <string>Долгота:</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="1">
+                       <widget class="QLineEdit" name="editLonCUP">
+                        <property name="minimumSize">
+                         <size>
+                          <width>68</width>
+                          <height>28</height>
+                         </size>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">border:1px solid #DDE1E3; border-radius:7px; padding:0 7px; font-size:9pt; background:#fff;</string>
+                        </property>
+                        <property name="placeholderText">
+                         <string>__ __ __</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="2">
+                       <widget class="QComboBox" name="comboLonCUP">
+                        <property name="minimumSize">
+                         <size>
+                          <width>64</width>
+                          <height>28</height>
+                         </size>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">
+QComboBox { border:1px solid #DDE1E3; border-radius:7px; padding:0 6px; font-size:9pt; background:#fff; }
+QComboBox::drop-down { border: none; width: 20px; border-top-right-radius: 7px; border-bottom-right-radius: 7px; }
+QComboBox QAbstractItemView { border:1px solid #DDE1E3; border-radius:7px; background:#fff; outline:none; selection-background-color:#E8F5E9; selection-color:#0F6B4F; }
+</string>
+                        </property>
+                        <item>
+                         <property name="text">
+                          <string>E</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>W</string>
+                         </property>
+                        </item>
+                       </widget>
+                      </item>
+                      <item row="2" column="0">
+                       <widget class="QLabel" name="lblHeightUM">
+                        <property name="styleSheet">
+                         <string notr="true">font-size: 8.5pt; color: #1C1F22; background: transparent;</string>
+                        </property>
+                        <property name="text">
+                         <string>Высота на УМ:</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="1">
+                       <widget class="QLineEdit" name="editHeightUM">
+                        <property name="minimumSize">
+                         <size>
+                          <width>68</width>
+                          <height>28</height>
+                         </size>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">border:1px solid #DDE1E3; border-radius:7px; padding:0 7px; font-size:9pt; background:#fff;</string>
+                        </property>
+                        <property name="placeholderText">
+                         <string>0000</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="2">
+                       <widget class="QLabel" name="lblHeightUMUnit">
+                        <property name="styleSheet">
+                         <string notr="true">font-size: 8pt; color: #6B7278; background: transparent;</string>
+                        </property>
+                        <property name="text">
+                         <string>м</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="3" column="0">
+                       <widget class="QLabel" name="lblTrueBearing">
+                        <property name="styleSheet">
+                         <string notr="true">font-size: 8.5pt; color: #1C1F22; background: transparent;</string>
+                        </property>
+                        <property name="text">
+                         <string>Истинный путевой (дирекционный) угол площадки приземления:</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="3" column="1">
+                       <widget class="QLineEdit" name="editTrueBearing">
+                        <property name="minimumSize">
+                         <size>
+                          <width>68</width>
+                          <height>28</height>
+                         </size>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">border:1px solid #DDE1E3; border-radius:7px; padding:0 7px; font-size:9pt; background:#fff;</string>
+                        </property>
+                        <property name="text">
+                         <string>000</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="3" column="2">
+                       <widget class="QLabel" name="lblTrueBearingUnit">
+                        <property name="styleSheet">
+                         <string notr="true">font-size: 8pt; color: #6B7278; background: transparent;</string>
+                        </property>
+                        <property name="text">
+                         <string>°</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="4" column="0">
+                       <widget class="QLabel" name="lblHvhod">
+                        <property name="styleSheet">
+                         <string notr="true">font-size: 8.5pt; color: #1C1F22; background: transparent;</string>
+                        </property>
+                        <property name="text">
+                         <string>Высота десантирования (Hдес):</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="4" column="1">
+                       <widget class="QLineEdit" name="editHvhod">
+                        <property name="minimumSize">
+                         <size>
+                          <width>68</width>
+                          <height>28</height>
+                         </size>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">border:1px solid #DDE1E3; border-radius:7px; padding:0 7px; font-size:9pt; background:#fff;</string>
+                        </property>
+                        <property name="text">
+                         <string>0000</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="4" column="2">
+                       <widget class="QLabel" name="lblHvhodUnit">
+                        <property name="styleSheet">
+                         <string notr="true">font-size: 8pt; color: #6B7278; background: transparent;</string>
+                        </property>
+                        <property name="text">
+                         <string>м</string>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </item>
+                   </layout>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="lblLonCUPEW">
+                   <property name="visible">
+                    <bool>false</bool>
+                   </property>
                    <property name="text">
-                    <string>Расстояние (Dтпп):</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="1">
-                  <widget class="QLineEdit" name="editDistanceTPP">
-                   <property name="alignment">
-                    <set>Qt::AlignCenter</set>
-                   </property>
-                   <property name="readOnly">
-                    <bool>true</bool>
-                   </property>
-                   <property name="placeholderText">
-                    <string>000000 м</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="0">
-                  <widget class="QLabel" name="lblAngleTPP">
-                   <property name="text">
-                    <string>Дирекционный угол (Aтпп):</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="1">
-                  <widget class="QLineEdit" name="editAngleTPP">
-                   <property name="alignment">
-                    <set>Qt::AlignCenter</set>
-                   </property>
-                   <property name="readOnly">
-                    <bool>true</bool>
-                   </property>
-                   <property name="placeholderText">
-                    <string>000 град.</string>
+                    <string>Восток</string>
                    </property>
                   </widget>
                  </item>
                 </layout>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <layout class="QHBoxLayout" name="horizontalLayoutResultsMiddle">
-           <item>
-            <widget class="QGroupBox" name="groupMeteoConditions">
-             <property name="title">
-              <string>Метеоусловия</string>
-             </property>
-             <layout class="QVBoxLayout" name="verticalLayoutMeteo">
-              <item>
-               <widget class="QTableWidget" name="tableMeteoConditions">
-                <property name="alternatingRowColors">
-                 <bool>true</bool>
-                </property>
-                <property name="columnCount">
-                 <number>3</number>
-                </property>
-                <attribute name="horizontalHeaderMinimumSectionSize">
-                 <number>25</number>
-                </attribute>
-                <attribute name="horizontalHeaderDefaultSectionSize">
-                 <number>196</number>
-                </attribute>
-                <attribute name="verticalHeaderDefaultSectionSize">
-                 <number>45</number>
-                </attribute>
-                <row>
-                 <property name="text">
-                  <string/>
+               </item>
+               <item>
+                <layout class="QVBoxLayout" name="verticalLayoutRight">
+                 <property name="spacing">
+                  <number>12</number>
                  </property>
-                </row>
-                <row>
-                 <property name="text">
-                  <string/>
-                 </property>
-                </row>
-                <row>
-                 <property name="text">
-                  <string/>
-                 </property>
-                </row>
-                <row>
-                 <property name="text">
-                  <string/>
-                 </property>
-                </row>
-                <row>
-                 <property name="text">
-                  <string/>
-                 </property>
-                </row>
-                <column>
-                 <property name="text">
-                  <string>Параметр</string>
-                 </property>
-                </column>
-                <column>
-                 <property name="text">
-                  <string>Текущее</string>
-                 </property>
-                </column>
-                <column>
-                 <property name="text">
-                  <string>Приемлемое</string>
-                 </property>
-                </column>
-                <item row="0" column="0">
-                 <property name="text">
-                  <string>Скорость ветра у земли, м/с</string>
-                 </property>
-                </item>
-                <item row="0" column="1">
-                 <property name="text">
-                  <string>00</string>
-                 </property>
-                 <property name="textAlignment">
-                  <set>AlignCenter</set>
-                 </property>
-                </item>
-                <item row="0" column="2">
-                 <property name="text">
-                  <string>00</string>
-                 </property>
-                 <property name="textAlignment">
-                  <set>AlignCenter</set>
-                 </property>
-                </item>
-                <item row="1" column="0">
-                 <property name="text">
-                  <string>Скорость ветра на высоте 50 м, м/с</string>
-                 </property>
-                </item>
-                <item row="1" column="1">
-                 <property name="text">
-                  <string>00</string>
-                 </property>
-                 <property name="textAlignment">
-                  <set>AlignCenter</set>
-                 </property>
-                </item>
-                <item row="1" column="2">
-                 <property name="text">
-                  <string>00</string>
-                 </property>
-                 <property name="textAlignment">
-                  <set>AlignCenter</set>
-                 </property>
-                </item>
-                <item row="2" column="0">
-                 <property name="text">
-                  <string>Скорость ветра на высоте 100 м, м/с</string>
-                 </property>
-                </item>
-                <item row="2" column="1">
-                 <property name="text">
-                  <string>00</string>
-                 </property>
-                 <property name="textAlignment">
-                  <set>AlignCenter</set>
-                 </property>
-                </item>
-                <item row="2" column="2">
-                 <property name="text">
-                  <string>00</string>
-                 </property>
-                 <property name="textAlignment">
-                  <set>AlignCenter</set>
-                 </property>
-                </item>
-                <item row="3" column="0">
-                 <property name="text">
-                  <string>Скорость ветра до Ндес м/с</string>
-                 </property>
-                </item>
-                <item row="3" column="1">
-                 <property name="text">
-                  <string>00</string>
-                 </property>
-                 <property name="textAlignment">
-                  <set>AlignCenter</set>
-                 </property>
-                </item>
-                <item row="3" column="2">
-                 <property name="text">
-                  <string>00</string>
-                 </property>
-                 <property name="textAlignment">
-                  <set>AlignCenter</set>
-                 </property>
-                </item>
-                <item row="4" column="0">
-                 <property name="text">
-                  <string>ВНГО, м</string>
-                 </property>
-                </item>
-                <item row="4" column="1">
-                 <property name="text">
-                  <string>00 00</string>
-                 </property>
-                 <property name="textAlignment">
-                  <set>AlignCenter</set>
-                 </property>
-                </item>
-                <item row="4" column="2">
-                 <property name="text">
-                  <string>0000</string>
-                 </property>
-                 <property name="textAlignment">
-                  <set>AlignCenter</set>
-                 </property>
-                </item>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-           <item>
-            <widget class="QGroupBox" name="groupBorderLayer">
-             <property name="title">
-              <string>Приземный слой</string>
-             </property>
-             <layout class="QGridLayout" name="gridLayoutBorderLayer">
-              <item row="0" column="0">
-               <widget class="QLabel" name="lblWindSpeed">
-                <property name="text">
-                 <string>Скорость ветра V, м/с</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <widget class="QLabel" name="lblDistanceKm">
-                <property name="text">
-                 <string>Дальние Р, мм. рт. ст.</string>
-                </property>
-               </widget>
-              </item>
-              <item row="4" column="0">
-               <widget class="QLabel" name="lblTemperature">
-                <property name="text">
-                 <string>Температура Т, С°</string>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="1">
-               <widget class="QLineEdit" name="editRelativeHumidity">
-                <property name="alignment">
-                 <set>Qt::AlignCenter</set>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="1">
-               <widget class="QLineEdit" name="editDistanceKm">
-                <property name="alignment">
-                 <set>Qt::AlignCenter</set>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="lblWindDirection">
-                <property name="text">
-                 <string>Направление ветра А, град</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QLineEdit" name="editWindDirection">
-                <property name="alignment">
-                 <set>Qt::AlignCenter</set>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="0">
-               <widget class="QLabel" name="lblRelativeHumidity">
-                <property name="text">
-                 <string>Относительная влажность воздуха r, %</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="QLineEdit" name="editWindSpeed">
-                <property name="alignment">
-                 <set>Qt::AlignCenter</set>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="4" column="1">
-               <widget class="QLineEdit" name="editTemperature">
-                <property name="alignment">
-                 <set>Qt::AlignCenter</set>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <widget class="QGroupBox" name="groupWindParameters">
-           <property name="title">
-            <string>Параметры ветра</string>
-           </property>
-           <layout class="QVBoxLayout" name="verticalLayoutWindParams">
-            <item>
-             <widget class="QTableWidget" name="tableWindParameters">
-              <property name="alternatingRowColors">
-               <bool>true</bool>
-              </property>
-              <property name="columnCount">
-               <number>5</number>
-              </property>
-              <attribute name="horizontalHeaderDefaultSectionSize">
-               <number>250</number>
-              </attribute>
-              <row>
-               <property name="text">
-                <string/>
-               </property>
-              </row>
-              <row>
-               <property name="text">
-                <string/>
-               </property>
-              </row>
-              <row>
-               <property name="text">
-                <string/>
-               </property>
-              </row>
-              <row>
-               <property name="text">
-                <string/>
-               </property>
-              </row>
-              <column>
-               <property name="text">
-                <string>Высота Н, м</string>
-               </property>
-              </column>
-              <column>
-               <property name="text">
-                <string>Скорость д. Vд, м/с</string>
-               </property>
-              </column>
-              <column>
-               <property name="text">
-                <string>Направление д. Ад, град</string>
-               </property>
-              </column>
-              <column>
-               <property name="text">
-                <string>Скорость ср. Vср, м/с</string>
-               </property>
-              </column>
-              <column>
-               <property name="text">
-                <string>Направление ср. Ас, град.</string>
-               </property>
-              </column>
+                 <item>
+                  <widget class="QFrame" name="groupMethod">
+                   <property name="styleSheet">
+                    <string notr="true">QFrame#groupMethod { background-color: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 10px; }</string>
+                   </property>
+                   <property name="frameShape">
+                    <enum>QFrame::NoFrame</enum>
+                   </property>
+                   <layout class="QVBoxLayout" name="groupMethodOuterLayout">
+                    <property name="spacing">
+                     <number>8</number>
+                    </property>
+                    <property name="leftMargin">
+                     <number>12</number>
+                    </property>
+                    <property name="topMargin">
+                     <number>10</number>
+                    </property>
+                    <property name="rightMargin">
+                     <number>12</number>
+                    </property>
+                    <property name="bottomMargin">
+                     <number>10</number>
+                    </property>
+                    <item>
+                     <widget class="QLabel" name="groupMethodTitle">
+                      <property name="styleSheet">
+                       <string notr="true">font-size: 8pt; text-transform: uppercase; color: #6B7278; font-weight: 700; border: none; background: transparent;</string>
+                      </property>
+                      <property name="text">
+                       <string>Метеоусловия</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <layout class="QGridLayout" name="gridLayout_5">
+                      <property name="leftMargin">
+                       <number>4</number>
+                      </property>
+                      <property name="topMargin">
+                       <number>4</number>
+                      </property>
+                      <property name="rightMargin">
+                       <number>4</number>
+                      </property>
+                      <property name="bottomMargin">
+                       <number>6</number>
+                      </property>
+                      <item row="0" column="0">
+                       <widget class="QTableWidget" name="tableResults">
+                        <property name="minimumSize">
+                         <size>
+                          <width>0</width>
+                          <height>150</height>
+                         </size>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">QTableWidget { border: none; font-size: 9pt; }
+QHeaderView::section { background-color: #F5F6F6; border: none; border-bottom: 1px solid #DDE1E3; padding: 6px; font-size: 8.5pt; color: #6B7278; font-weight: 600; }</string>
+                        </property>
+                        <column>
+                         <property name="text">
+                          <string>Параметр</string>
+                         </property>
+                        </column>
+                        <column>
+                         <property name="text">
+                          <string>Значение</string>
+                         </property>
+                        </column>
+                       </widget>
+                      </item>
+                     </layout>
+                    </item>
+                   </layout>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QFrame" name="groupManualWind">
+                   <property name="styleSheet">
+                    <string notr="true">QFrame#groupManualWind { background-color: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 10px; }</string>
+                   </property>
+                   <property name="frameShape">
+                    <enum>QFrame::NoFrame</enum>
+                   </property>
+                   <layout class="QVBoxLayout" name="groupManualWindOuterLayout">
+                    <property name="spacing">
+                     <number>8</number>
+                    </property>
+                    <property name="leftMargin">
+                     <number>12</number>
+                    </property>
+                    <property name="topMargin">
+                     <number>10</number>
+                    </property>
+                    <property name="rightMargin">
+                     <number>12</number>
+                    </property>
+                    <property name="bottomMargin">
+                     <number>10</number>
+                    </property>
+                    <item>
+                     <widget class="QLabel" name="groupManualWindTitle">
+                      <property name="styleSheet">
+                       <string notr="true">font-size: 8pt; text-transform: uppercase; color: #6B7278; font-weight: 700; border: none; background: transparent;</string>
+                      </property>
+                      <property name="text">
+                       <string>Ручной ввод ветра</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <layout class="QGridLayout" name="gridLayoutManualWind">
+                      <property name="leftMargin">
+                       <number>10</number>
+                      </property>
+                      <property name="topMargin">
+                       <number>4</number>
+                      </property>
+                      <property name="rightMargin">
+                       <number>10</number>
+                      </property>
+                      <property name="bottomMargin">
+                       <number>8</number>
+                      </property>
+                      <property name="spacing">
+                       <number>6</number>
+                      </property>
+                      <item row="0" column="0" colspan="3">
+                       <widget class="QCheckBox" name="cbManualInput">
+                        <property name="styleSheet">
+                         <string notr="true">font-size:9pt;</string>
+                        </property>
+                        <property name="text">
+                         <string>Ручной ввод параметров ветра в слое десантирования</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="0">
+                       <widget class="QLabel" name="lblDistance">
+                        <property name="styleSheet">
+                         <string notr="true">font-size: 8.5pt; color: #1C1F22; background: transparent;</string>
+                        </property>
+                        <property name="text">
+                         <string>Скорость:</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="1">
+                       <widget class="QLineEdit" name="editDistance">
+                        <property name="minimumSize">
+                         <size>
+                          <width>68</width>
+                          <height>28</height>
+                         </size>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">border:1px solid #DDE1E3; border-radius:7px; padding:0 7px; font-size:9pt; background:#fff;</string>
+                        </property>
+                        <property name="text">
+                         <string>00.00</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="2">
+                       <widget class="QLabel" name="lblDistanceUnit">
+                        <property name="styleSheet">
+                         <string notr="true">font-size: 8pt; color: #6B7278; background: transparent;</string>
+                        </property>
+                        <property name="text">
+                         <string>м/с</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="0">
+                       <widget class="QLabel" name="lblDirection">
+                        <property name="styleSheet">
+                         <string notr="true">font-size: 8.5pt; color: #1C1F22; background: transparent;</string>
+                        </property>
+                        <property name="text">
+                         <string>Направление:</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="1">
+                       <widget class="QLineEdit" name="editDirection">
+                        <property name="minimumSize">
+                         <size>
+                          <width>68</width>
+                          <height>28</height>
+                         </size>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">border:1px solid #DDE1E3; border-radius:7px; padding:0 7px; font-size:9pt; background:#fff;</string>
+                        </property>
+                        <property name="text">
+                         <string>000</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="2">
+                       <widget class="QLabel" name="lblDirectionUnit">
+                        <property name="styleSheet">
+                         <string notr="true">font-size: 8pt; color: #6B7278; background: transparent;</string>
+                        </property>
+                        <property name="text">
+                         <string>°</string>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </item>
+                   </layout>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+              </layout>
              </widget>
-            </item>
-           </layout>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="tabResults">
+          <attribute name="title">
+           <string>Результаты</string>
+          </attribute>
+          <layout class="QVBoxLayout" name="verticalLayoutTabResults">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QScrollArea" name="scrollAreaResults">
+             <property name="styleSheet">
+              <string notr="true">QScrollArea { background: transparent; }</string>
+             </property>
+             <property name="frameShape">
+              <enum>QFrame::NoFrame</enum>
+             </property>
+             <property name="widgetResizable">
+              <bool>true</bool>
+             </property>
+             <widget class="QWidget" name="scrollContentResults">
+              <property name="geometry">
+               <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>1170</width>
+                <height>661</height>
+               </rect>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayoutResults">
+               <property name="spacing">
+                <number>12</number>
+               </property>
+               <property name="leftMargin">
+                <number>14</number>
+               </property>
+               <property name="topMargin">
+                <number>12</number>
+               </property>
+               <property name="rightMargin">
+                <number>14</number>
+               </property>
+               <property name="bottomMargin">
+                <number>12</number>
+               </property>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayoutResultsTop">
+                 <property name="spacing">
+                  <number>14</number>
+                 </property>
+                 <item>
+                  <layout class="QVBoxLayout" name="verticalLayoutResultsLeft">
+                   <property name="spacing">
+                    <number>12</number>
+                   </property>
+                   <item>
+                    <widget class="QFrame" name="groupTNV">
+                     <property name="styleSheet">
+                      <string notr="true">QFrame#groupTNV { background-color: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 10px; }</string>
+                     </property>
+                     <property name="frameShape">
+                      <enum>QFrame::NoFrame</enum>
+                     </property>
+                     <layout class="QVBoxLayout" name="groupTNVOuterLayout">
+                      <property name="spacing">
+                       <number>8</number>
+                      </property>
+                      <property name="leftMargin">
+                       <number>12</number>
+                      </property>
+                      <property name="topMargin">
+                       <number>10</number>
+                      </property>
+                      <property name="rightMargin">
+                       <number>12</number>
+                      </property>
+                      <property name="bottomMargin">
+                       <number>10</number>
+                      </property>
+                      <item>
+                       <widget class="QLabel" name="groupTNVTitle">
+                        <property name="styleSheet">
+                         <string notr="true">font-size: 8pt; text-transform: uppercase; color: #6B7278; font-weight: 700; border: none; background: transparent;</string>
+                        </property>
+                        <property name="text">
+                         <string>Координаты ТНВ</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <layout class="QGridLayout" name="gridLayout_4">
+                        <property name="leftMargin">
+                         <number>10</number>
+                        </property>
+                        <property name="topMargin">
+                         <number>4</number>
+                        </property>
+                        <property name="rightMargin">
+                         <number>10</number>
+                        </property>
+                        <property name="bottomMargin">
+                         <number>8</number>
+                        </property>
+                        <property name="spacing">
+                         <number>6</number>
+                        </property>
+                        <item row="0" column="0">
+                         <widget class="QLabel" name="lblLatTNV">
+                          <property name="styleSheet">
+                           <string notr="true">font-size: 8.5pt; color: #1C1F22; background: transparent;</string>
+                          </property>
+                          <property name="text">
+                           <string>Широта:</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="0" column="1">
+                         <widget class="QLineEdit" name="editLatTNV">
+                          <property name="minimumSize">
+                           <size>
+                            <width>68</width>
+                            <height>28</height>
+                           </size>
+                          </property>
+                          <property name="styleSheet">
+                           <string notr="true">border:1px solid #DDE1E3; border-radius:7px; padding:0 7px; font-size:9pt; background:#fff;</string>
+                          </property>
+                          <property name="placeholderText">
+                           <string>__ __ __</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="0" column="2">
+                         <widget class="QComboBox" name="comboBox_2">
+                          <property name="minimumSize">
+                           <size>
+                            <width>64</width>
+                            <height>28</height>
+                           </size>
+                          </property>
+                          <property name="styleSheet">
+                           <string notr="true">
+QComboBox { border:1px solid #DDE1E3; border-radius:7px; padding:0 6px; font-size:9pt; background:#fff; }
+QComboBox::drop-down { border: none; width: 20px; border-top-right-radius: 7px; border-bottom-right-radius: 7px; }
+QComboBox QAbstractItemView { border:1px solid #DDE1E3; border-radius:7px; background:#fff; outline:none; selection-background-color:#E8F5E9; selection-color:#0F6B4F; }
+</string>
+                          </property>
+                          <item>
+                           <property name="text">
+                            <string>N</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>S</string>
+                           </property>
+                          </item>
+                         </widget>
+                        </item>
+                        <item row="1" column="0">
+                         <widget class="QLabel" name="lblLonTNV">
+                          <property name="styleSheet">
+                           <string notr="true">font-size: 8.5pt; color: #1C1F22; background: transparent;</string>
+                          </property>
+                          <property name="text">
+                           <string>Долгота:</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="1" column="1">
+                         <widget class="QLineEdit" name="editLonTNV">
+                          <property name="minimumSize">
+                           <size>
+                            <width>68</width>
+                            <height>28</height>
+                           </size>
+                          </property>
+                          <property name="styleSheet">
+                           <string notr="true">border:1px solid #DDE1E3; border-radius:7px; padding:0 7px; font-size:9pt; background:#fff;</string>
+                          </property>
+                          <property name="placeholderText">
+                           <string>__ __ __</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="1" column="2">
+                         <widget class="QComboBox" name="comboBox_3">
+                          <property name="minimumSize">
+                           <size>
+                            <width>64</width>
+                            <height>28</height>
+                           </size>
+                          </property>
+                          <property name="styleSheet">
+                           <string notr="true">
+QComboBox { border:1px solid #DDE1E3; border-radius:7px; padding:0 6px; font-size:9pt; background:#fff; }
+QComboBox::drop-down { border: none; width: 20px; border-top-right-radius: 7px; border-bottom-right-radius: 7px; }
+QComboBox QAbstractItemView { border:1px solid #DDE1E3; border-radius:7px; background:#fff; outline:none; selection-background-color:#E8F5E9; selection-color:#0F6B4F; }
+</string>
+                          </property>
+                          <item>
+                           <property name="text">
+                            <string>E</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>W</string>
+                           </property>
+                          </item>
+                         </widget>
+                        </item>
+                        <item row="2" column="0">
+                         <widget class="QLabel" name="lblHeightTNV">
+                          <property name="styleSheet">
+                           <string notr="true">font-size: 8.5pt; color: #1C1F22; background: transparent;</string>
+                          </property>
+                          <property name="text">
+                           <string>Высота Нтнв:</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="2" column="1">
+                         <widget class="QLineEdit" name="editHeightTNV">
+                          <property name="minimumSize">
+                           <size>
+                            <width>68</width>
+                            <height>28</height>
+                           </size>
+                          </property>
+                          <property name="styleSheet">
+                           <string notr="true">border:1px solid #DDE1E3; border-radius:7px; padding:0 7px; font-size:9pt; background:#fff;</string>
+                          </property>
+                          <property name="placeholderText">
+                           <string>0000 м</string>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                     </layout>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QFrame" name="groupPositionTNV">
+                     <property name="styleSheet">
+                      <string notr="true">QFrame#groupPositionTNV { background-color: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 10px; }</string>
+                     </property>
+                     <property name="frameShape">
+                      <enum>QFrame::NoFrame</enum>
+                     </property>
+                     <layout class="QVBoxLayout" name="groupPositionTNVOuterLayout">
+                      <property name="spacing">
+                       <number>8</number>
+                      </property>
+                      <property name="leftMargin">
+                       <number>12</number>
+                      </property>
+                      <property name="topMargin">
+                       <number>10</number>
+                      </property>
+                      <property name="rightMargin">
+                       <number>12</number>
+                      </property>
+                      <property name="bottomMargin">
+                       <number>10</number>
+                      </property>
+                      <item>
+                       <widget class="QLabel" name="groupPositionTNVTitle">
+                        <property name="styleSheet">
+                         <string notr="true">font-size: 8pt; text-transform: uppercase; color: #6B7278; font-weight: 700; border: none; background: transparent;</string>
+                        </property>
+                        <property name="text">
+                         <string>Положение метеопоста относительно ТНВ</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <layout class="QGridLayout" name="gridLayoutPositionTNV">
+                        <property name="leftMargin">
+                         <number>10</number>
+                        </property>
+                        <property name="topMargin">
+                         <number>4</number>
+                        </property>
+                        <property name="rightMargin">
+                         <number>10</number>
+                        </property>
+                        <property name="bottomMargin">
+                         <number>8</number>
+                        </property>
+                        <property name="spacing">
+                         <number>6</number>
+                        </property>
+                        <item row="0" column="0">
+                         <widget class="QLabel" name="lblDistanceTNV">
+                          <property name="styleSheet">
+                           <string notr="true">font-size: 8.5pt; color: #1C1F22; background: transparent;</string>
+                          </property>
+                          <property name="text">
+                           <string>Расстояние (Dтнв):</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="0" column="1">
+                         <widget class="QLineEdit" name="editDistanceTNV">
+                          <property name="minimumSize">
+                           <size>
+                            <width>68</width>
+                            <height>28</height>
+                           </size>
+                          </property>
+                          <property name="styleSheet">
+                           <string notr="true">border:1px solid #DDE1E3; border-radius:7px; padding:0 7px; font-size:9pt; background:#fff;</string>
+                          </property>
+                          <property name="text">
+                           <string>0000</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="0" column="2">
+                         <widget class="QLabel" name="lblDistanceTNVUnit">
+                          <property name="styleSheet">
+                           <string notr="true">font-size: 8pt; color: #6B7278; background: transparent;</string>
+                          </property>
+                          <property name="text">
+                           <string>м</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="1" column="0">
+                         <widget class="QLabel" name="lblAngleTNV">
+                          <property name="styleSheet">
+                           <string notr="true">font-size: 8.5pt; color: #1C1F22; background: transparent;</string>
+                          </property>
+                          <property name="text">
+                           <string>Дирекционный угол (Aтнв):</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="1" column="1">
+                         <widget class="QLineEdit" name="editAngleTNV">
+                          <property name="minimumSize">
+                           <size>
+                            <width>68</width>
+                            <height>28</height>
+                           </size>
+                          </property>
+                          <property name="styleSheet">
+                           <string notr="true">border:1px solid #DDE1E3; border-radius:7px; padding:0 7px; font-size:9pt; background:#fff;</string>
+                          </property>
+                          <property name="text">
+                           <string>000</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="1" column="2">
+                         <widget class="QLabel" name="lblAngleTNVUnit">
+                          <property name="styleSheet">
+                           <string notr="true">font-size: 8pt; color: #6B7278; background: transparent;</string>
+                          </property>
+                          <property name="text">
+                           <string>°</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="2" column="0" colspan="3">
+                         <widget class="QFrame" name="groupPositionTPP">
+                          <property name="styleSheet">
+                           <string notr="true">QFrame#groupPositionTPP { background-color: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 10px; }</string>
+                          </property>
+                          <property name="frameShape">
+                           <enum>QFrame::NoFrame</enum>
+                          </property>
+                          <layout class="QVBoxLayout" name="groupPositionTPPOuterLayout">
+                           <property name="spacing">
+                            <number>8</number>
+                           </property>
+                           <property name="leftMargin">
+                            <number>12</number>
+                           </property>
+                           <property name="topMargin">
+                            <number>10</number>
+                           </property>
+                           <property name="rightMargin">
+                            <number>12</number>
+                           </property>
+                           <property name="bottomMargin">
+                            <number>10</number>
+                           </property>
+                           <item>
+                            <widget class="QLabel" name="groupPositionTPPTitle">
+                             <property name="styleSheet">
+                              <string notr="true">font-size: 8pt; text-transform: uppercase; color: #6B7278; font-weight: 700; border: none; background: transparent;</string>
+                             </property>
+                             <property name="text">
+                              <string>Положение метеопоста относительно ТПП</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item>
+                            <layout class="QGridLayout" name="gridLayoutPositionTPP">
+                             <property name="leftMargin">
+                              <number>10</number>
+                             </property>
+                             <property name="topMargin">
+                              <number>4</number>
+                             </property>
+                             <property name="rightMargin">
+                              <number>10</number>
+                             </property>
+                             <property name="bottomMargin">
+                              <number>8</number>
+                             </property>
+                             <property name="spacing">
+                              <number>6</number>
+                             </property>
+                             <item row="0" column="0">
+                              <widget class="QLabel" name="lblDistanceTPP">
+                               <property name="styleSheet">
+                                <string notr="true">font-size: 8.5pt; color: #1C1F22; background: transparent;</string>
+                               </property>
+                               <property name="text">
+                                <string>Расстояние (Dтпп):</string>
+                               </property>
+                              </widget>
+                             </item>
+                             <item row="0" column="1">
+                              <widget class="QLineEdit" name="editDistanceTPP">
+                               <property name="minimumSize">
+                                <size>
+                                 <width>68</width>
+                                 <height>28</height>
+                                </size>
+                               </property>
+                               <property name="styleSheet">
+                                <string notr="true">border:1px solid #DDE1E3; border-radius:7px; padding:0 7px; font-size:9pt; background:#fff;</string>
+                               </property>
+                               <property name="text">
+                                <string>0000</string>
+                               </property>
+                              </widget>
+                             </item>
+                             <item row="0" column="2">
+                              <widget class="QLabel" name="lblDistanceTPPUnit">
+                               <property name="styleSheet">
+                                <string notr="true">font-size: 8pt; color: #6B7278; background: transparent;</string>
+                               </property>
+                               <property name="text">
+                                <string>м</string>
+                               </property>
+                              </widget>
+                             </item>
+                             <item row="1" column="0">
+                              <widget class="QLabel" name="lblAngleTPP">
+                               <property name="styleSheet">
+                                <string notr="true">font-size: 8.5pt; color: #1C1F22; background: transparent;</string>
+                               </property>
+                               <property name="text">
+                                <string>Дирекционный угол (Aтпп):</string>
+                               </property>
+                              </widget>
+                             </item>
+                             <item row="1" column="1">
+                              <widget class="QLineEdit" name="editAngleTPP">
+                               <property name="minimumSize">
+                                <size>
+                                 <width>68</width>
+                                 <height>28</height>
+                                </size>
+                               </property>
+                               <property name="styleSheet">
+                                <string notr="true">border:1px solid #DDE1E3; border-radius:7px; padding:0 7px; font-size:9pt; background:#fff;</string>
+                               </property>
+                               <property name="text">
+                                <string>000</string>
+                               </property>
+                              </widget>
+                             </item>
+                             <item row="1" column="2">
+                              <widget class="QLabel" name="lblAngleTPPUnit">
+                               <property name="styleSheet">
+                                <string notr="true">font-size: 8pt; color: #6B7278; background: transparent;</string>
+                               </property>
+                               <property name="text">
+                                <string>°</string>
+                               </property>
+                              </widget>
+                             </item>
+                            </layout>
+                           </item>
+                          </layout>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                     </layout>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                 <item>
+                  <layout class="QVBoxLayout" name="verticalLayoutResultsRight">
+                   <property name="spacing">
+                    <number>12</number>
+                   </property>
+                   <item>
+                    <widget class="QFrame" name="groupMeteoConditions">
+                     <property name="styleSheet">
+                      <string notr="true">QFrame#groupMeteoConditions { background-color: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 10px; }</string>
+                     </property>
+                     <property name="frameShape">
+                      <enum>QFrame::NoFrame</enum>
+                     </property>
+                     <layout class="QVBoxLayout" name="groupMeteoConditionsOuterLayout">
+                      <property name="spacing">
+                       <number>8</number>
+                      </property>
+                      <property name="leftMargin">
+                       <number>12</number>
+                      </property>
+                      <property name="topMargin">
+                       <number>10</number>
+                      </property>
+                      <property name="rightMargin">
+                       <number>12</number>
+                      </property>
+                      <property name="bottomMargin">
+                       <number>10</number>
+                      </property>
+                      <item>
+                       <widget class="QLabel" name="groupMeteoConditionsTitle">
+                        <property name="styleSheet">
+                         <string notr="true">font-size: 8pt; text-transform: uppercase; color: #6B7278; font-weight: 700; border: none; background: transparent;</string>
+                        </property>
+                        <property name="text">
+                         <string>Метеоусловия</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <layout class="QGridLayout" name="gridLayoutMeteoConditions">
+                        <property name="leftMargin">
+                         <number>4</number>
+                        </property>
+                        <property name="topMargin">
+                         <number>4</number>
+                        </property>
+                        <property name="rightMargin">
+                         <number>4</number>
+                        </property>
+                        <property name="bottomMargin">
+                         <number>6</number>
+                        </property>
+                        <item row="0" column="0">
+                         <widget class="QTableWidget" name="tableMeteoConditions">
+                          <property name="minimumSize">
+                           <size>
+                            <width>0</width>
+                            <height>140</height>
+                           </size>
+                          </property>
+                          <property name="styleSheet">
+                           <string notr="true">QTableWidget { border: none; font-size: 9pt; }
+QHeaderView::section { background-color: #F5F6F6; border: none; border-bottom: 1px solid #DDE1E3; padding: 6px; font-size: 8.5pt; color: #6B7278; font-weight: 600; }</string>
+                          </property>
+                          <column>
+                           <property name="text">
+                            <string>Параметр</string>
+                           </property>
+                          </column>
+                          <column>
+                           <property name="text">
+                            <string>Текущее</string>
+                           </property>
+                          </column>
+                          <column>
+                           <property name="text">
+                            <string>Приемлемое</string>
+                           </property>
+                          </column>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                     </layout>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QFrame" name="groupBorderLayer">
+                     <property name="styleSheet">
+                      <string notr="true">QFrame#groupBorderLayer { background-color: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 10px; }</string>
+                     </property>
+                     <property name="frameShape">
+                      <enum>QFrame::NoFrame</enum>
+                     </property>
+                     <layout class="QVBoxLayout" name="groupBorderLayerOuterLayout">
+                      <property name="spacing">
+                       <number>8</number>
+                      </property>
+                      <property name="leftMargin">
+                       <number>12</number>
+                      </property>
+                      <property name="topMargin">
+                       <number>10</number>
+                      </property>
+                      <property name="rightMargin">
+                       <number>12</number>
+                      </property>
+                      <property name="bottomMargin">
+                       <number>10</number>
+                      </property>
+                      <item>
+                       <widget class="QLabel" name="groupBorderLayerTitle">
+                        <property name="styleSheet">
+                         <string notr="true">font-size: 8pt; text-transform: uppercase; color: #6B7278; font-weight: 700; border: none; background: transparent;</string>
+                        </property>
+                        <property name="text">
+                         <string>Приземный слой</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <layout class="QGridLayout" name="gridLayoutBorderLayer">
+                        <property name="leftMargin">
+                         <number>10</number>
+                        </property>
+                        <property name="topMargin">
+                         <number>4</number>
+                        </property>
+                        <property name="rightMargin">
+                         <number>10</number>
+                        </property>
+                        <property name="bottomMargin">
+                         <number>8</number>
+                        </property>
+                        <property name="spacing">
+                         <number>6</number>
+                        </property>
+                        <item row="0" column="0">
+                         <widget class="QLabel" name="lblWindSpeed">
+                          <property name="styleSheet">
+                           <string notr="true">font-size: 8.5pt; color: #1C1F22; background: transparent;</string>
+                          </property>
+                          <property name="text">
+                           <string>Скорость ветра V, м/с</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="0" column="1">
+                         <widget class="QLineEdit" name="editWindSpeed">
+                          <property name="minimumSize">
+                           <size>
+                            <width>68</width>
+                            <height>28</height>
+                           </size>
+                          </property>
+                          <property name="styleSheet">
+                           <string notr="true">border:1px solid #DDE1E3; border-radius:7px; padding:0 7px; font-size:9pt; background:#fff;</string>
+                          </property>
+                          <property name="text">
+                           <string>00.00</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="1" column="0">
+                         <widget class="QLabel" name="lblWindDirection">
+                          <property name="styleSheet">
+                           <string notr="true">font-size: 8.5pt; color: #1C1F22; background: transparent;</string>
+                          </property>
+                          <property name="text">
+                           <string>Направление ветра А, град</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="1" column="1">
+                         <widget class="QLineEdit" name="editWindDirection">
+                          <property name="minimumSize">
+                           <size>
+                            <width>68</width>
+                            <height>28</height>
+                           </size>
+                          </property>
+                          <property name="styleSheet">
+                           <string notr="true">border:1px solid #DDE1E3; border-radius:7px; padding:0 7px; font-size:9pt; background:#fff;</string>
+                          </property>
+                          <property name="text">
+                           <string>000</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="2" column="0">
+                         <widget class="QLabel" name="lblTemperature">
+                          <property name="styleSheet">
+                           <string notr="true">font-size: 8.5pt; color: #1C1F22; background: transparent;</string>
+                          </property>
+                          <property name="text">
+                           <string>Температура Т, С°</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="2" column="1">
+                         <widget class="QLineEdit" name="editTemperature">
+                          <property name="minimumSize">
+                           <size>
+                            <width>68</width>
+                            <height>28</height>
+                           </size>
+                          </property>
+                          <property name="styleSheet">
+                           <string notr="true">border:1px solid #DDE1E3; border-radius:7px; padding:0 7px; font-size:9pt; background:#fff;</string>
+                          </property>
+                          <property name="text">
+                           <string>00.0</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="3" column="0">
+                         <widget class="QLabel" name="lblRelativeHumidity">
+                          <property name="styleSheet">
+                           <string notr="true">font-size: 8.5pt; color: #1C1F22; background: transparent;</string>
+                          </property>
+                          <property name="text">
+                           <string>Относительная влажность воздуха r, %</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="3" column="1">
+                         <widget class="QLineEdit" name="editRelativeHumidity">
+                          <property name="minimumSize">
+                           <size>
+                            <width>68</width>
+                            <height>28</height>
+                           </size>
+                          </property>
+                          <property name="styleSheet">
+                           <string notr="true">border:1px solid #DDE1E3; border-radius:7px; padding:0 7px; font-size:9pt; background:#fff;</string>
+                          </property>
+                          <property name="text">
+                           <string>00</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="4" column="0">
+                         <widget class="QLabel" name="lblDistanceKm">
+                          <property name="styleSheet">
+                           <string notr="true">font-size: 8.5pt; color: #1C1F22; background: transparent;</string>
+                          </property>
+                          <property name="text">
+                           <string>Дальние Р, мм. рт. ст.</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="4" column="1">
+                         <widget class="QLineEdit" name="editDistanceKm">
+                          <property name="minimumSize">
+                           <size>
+                            <width>68</width>
+                            <height>28</height>
+                           </size>
+                          </property>
+                          <property name="styleSheet">
+                           <string notr="true">border:1px solid #DDE1E3; border-radius:7px; padding:0 7px; font-size:9pt; background:#fff;</string>
+                          </property>
+                          <property name="text">
+                           <string>0.0</string>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                     </layout>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <widget class="QFrame" name="groupWindParameters">
+                 <property name="styleSheet">
+                  <string notr="true">QFrame#groupWindParameters { background-color: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 10px; }</string>
+                 </property>
+                 <property name="frameShape">
+                  <enum>QFrame::NoFrame</enum>
+                 </property>
+                 <layout class="QVBoxLayout" name="groupWindParametersOuterLayout">
+                  <property name="spacing">
+                   <number>8</number>
+                  </property>
+                  <property name="leftMargin">
+                   <number>12</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>10</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>12</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>10</number>
+                  </property>
+                  <item>
+                   <widget class="QLabel" name="groupWindParametersTitle">
+                    <property name="styleSheet">
+                     <string notr="true">font-size: 8pt; text-transform: uppercase; color: #6B7278; font-weight: 700; border: none; background: transparent;</string>
+                    </property>
+                    <property name="text">
+                     <string>Параметры ветра</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <layout class="QGridLayout" name="gridLayoutWindParameters">
+                    <property name="leftMargin">
+                     <number>4</number>
+                    </property>
+                    <property name="topMargin">
+                     <number>4</number>
+                    </property>
+                    <property name="rightMargin">
+                     <number>4</number>
+                    </property>
+                    <property name="bottomMargin">
+                     <number>6</number>
+                    </property>
+                    <item row="0" column="0">
+                     <widget class="QTableWidget" name="tableWindParameters">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>150</height>
+                       </size>
+                      </property>
+                      <property name="styleSheet">
+                       <string notr="true">QTableWidget { border: none; font-size: 9pt; }
+QHeaderView::section { background-color: #F5F6F6; border: none; border-bottom: 1px solid #DDE1E3; padding: 6px 4px; font-size: 8pt; color: #6B7278; font-weight: 600; }</string>
+                      </property>
+                      <column>
+                       <property name="text">
+                        <string>Высота
+Н, м</string>
+                       </property>
+                      </column>
+                      <column>
+                       <property name="text">
+                        <string>Скорость д.
+Vд, м/с</string>
+                       </property>
+                      </column>
+                      <column>
+                       <property name="text">
+                        <string>Направление д.
+Ад, град</string>
+                       </property>
+                      </column>
+                      <column>
+                       <property name="text">
+                        <string>Скорость ср.
+Vср, м/с</string>
+                       </property>
+                      </column>
+                      <column>
+                       <property name="text">
+                        <string>Направление ср.
+Ас, град.</string>
+                       </property>
+                      </column>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="landingBottomBarLayout">
+         <property name="leftMargin">
+          <number>18</number>
+         </property>
+         <property name="topMargin">
+          <number>10</number>
+         </property>
+         <property name="rightMargin">
+          <number>18</number>
+         </property>
+         <property name="bottomMargin">
+          <number>10</number>
+         </property>
+         <item>
+          <spacer name="bottomBarSpacer">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btnCalculate">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>34</height>
+            </size>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QPushButton { background-color: #0F6B4F; color: white; border: none; border-radius: 9px; padding: 0 18px; font-size: 9.5pt; font-weight: 700; }
+QPushButton:pressed { background-color: #0B5A42; }</string>
+           </property>
+           <property name="text">
+            <string>Рассчитать</string>
+           </property>
           </widget>
          </item>
         </layout>
-       </widget>
-      </widget>
-     </item>
-     <item>
-      <layout class="QHBoxLayout" name="layoutButtons">
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="pagePasswordInput">
+      <layout class="QVBoxLayout" name="verticalLayoutPassword">
        <item>
-        <spacer name="horizontalSpacer3">
+        <spacer name="pwTopSpacer">
          <property name="orientation">
-          <enum>Qt::Horizontal</enum>
+          <enum>Qt::Vertical</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
-           <width>13</width>
-           <height>13</height>
+           <width>20</width>
+           <height>40</height>
           </size>
          </property>
         </spacer>
        </item>
        <item>
-        <widget class="QPushButton" name="btnClose">
-         <property name="text">
-          <string>Закрыть</string>
+        <layout class="QHBoxLayout" name="pwCenterLayout">
+         <item>
+          <spacer name="pwLeftSpacer">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QWidget" name="passwordWidget" native="true">
+           <property name="minimumSize">
+            <size>
+             <width>360</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>420</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QWidget#passwordWidget { background-color: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 16px; }</string>
+           </property>
+           <layout class="QVBoxLayout" name="passwordCardLayout">
+            <property name="spacing">
+             <number>10</number>
+            </property>
+            <property name="leftMargin">
+             <number>26</number>
+            </property>
+            <property name="topMargin">
+             <number>26</number>
+            </property>
+            <property name="rightMargin">
+             <number>26</number>
+            </property>
+            <property name="bottomMargin">
+             <number>26</number>
+            </property>
+            <item>
+             <widget class="QLabel" name="lblPasswordTitle">
+              <property name="styleSheet">
+               <string notr="true">font-size: 13pt; font-weight: bold;</string>
+              </property>
+              <property name="text">
+               <string>Требуется пароль</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="lblPasswordPrompt">
+              <property name="styleSheet">
+               <string notr="true">font-size: 9.5pt; color: #6B7278;</string>
+              </property>
+              <property name="text">
+               <string>Введите пароль для доступа к режиму редактирования:</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="editPassword">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>38</height>
+               </size>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">border:1px solid #DDE1E3; border-radius:10px; padding:0 12px; font-size:11pt;</string>
+              </property>
+              <property name="echoMode">
+               <enum>QLineEdit::Password</enum>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="pwButtonsLayout">
+              <property name="spacing">
+               <number>10</number>
+              </property>
+              <property name="topMargin">
+               <number>6</number>
+              </property>
+              <item>
+               <widget class="QPushButton" name="btnPasswordCancel">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>38</height>
+                 </size>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">border:1px solid #DDE1E3; border-radius:10px; background:#fff; font-size:10pt; font-weight:600;</string>
+                </property>
+                <property name="text">
+                 <string>Отмена</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="btnPasswordSubmit">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>38</height>
+                 </size>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">background-color:#0F6B4F; color:white; border:none; border-radius:10px; font-size:10pt; font-weight:700;</string>
+                </property>
+                <property name="text">
+                 <string>Ввести</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <spacer name="pwRightSpacer">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <spacer name="pwBottomSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
          </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="pageEditMode">
+      <layout class="QVBoxLayout" name="verticalLayoutEdit">
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item>
+        <layout class="QHBoxLayout" name="editHeaderLayout">
+         <property name="leftMargin">
+          <number>6</number>
+         </property>
+         <item>
+          <widget class="QPushButton" name="btnEditClose">
+           <property name="minimumSize">
+            <size>
+             <width>80</width>
+             <height>32</height>
+            </size>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QPushButton { font-size: 12pt; font-weight: bold; border: none; background: transparent; color: #0F6B4F; }
+QPushButton:pressed { color: #0B5A42; }</string>
+           </property>
+           <property name="text">
+            <string>‹ Назад</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="lblEditTitle">
+           <property name="styleSheet">
+            <string notr="true">font-size: 11pt; font-weight: bold; padding-left: 6px;</string>
+           </property>
+           <property name="text">
+            <string>Редактирование параметров</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="editHeaderSpacer">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QTabWidget" name="tabWidgetEdit">
+         <property name="styleSheet">
+          <string notr="true">QTabWidget::pane { border: none; }
+QTabBar::tab { background: transparent; padding: 8px 18px; min-width: 90px; font-size: 10pt; font-weight: 600; color: #6B7278; border-bottom: 2px solid transparent; }
+QTabBar::tab:selected { color: #0F6B4F; border-bottom: 2px solid #0F6B4F; }</string>
+         </property>
+         <widget class="QWidget" name="tabEditInitialData">
+          <attribute name="title">
+           <string>Параметры</string>
+          </attribute>
+          <layout class="QVBoxLayout" name="verticalLayoutEditInitial">
+           <property name="spacing">
+            <number>10</number>
+           </property>
+           <property name="leftMargin">
+            <number>14</number>
+           </property>
+           <property name="topMargin">
+            <number>12</number>
+           </property>
+           <property name="rightMargin">
+            <number>14</number>
+           </property>
+           <property name="bottomMargin">
+            <number>14</number>
+           </property>
+           <item>
+            <widget class="QTableWidget" name="tableEditParams">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>220</height>
+              </size>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">QTableWidget { border: 1px solid #DDE1E3; border-radius: 12px; font-size: 9.5pt; background: #fff; }
+QHeaderView::section { background-color: #F5F6F6; border: none; border-bottom: 1px solid #DDE1E3; padding: 6px; font-size: 8.5pt; color: #6B7278; font-weight: 600; }</string>
+             </property>
+             <column>
+              <property name="text">
+               <string>Наименование</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>tпад, C</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>hнап, м</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>Vсн, м/с</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>(A0), м</string>
+              </property>
+             </column>
+            </widget>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="editToolbarLayout">
+             <property name="spacing">
+              <number>8</number>
+             </property>
+             <item>
+              <widget class="QPushButton" name="btnTableAdd">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>34</height>
+                </size>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">border:1px solid #DDE1E3; border-radius:9px; background:#fff; font-size:9pt; font-weight:600; padding:0 12px;</string>
+               </property>
+               <property name="text">
+                <string>Добавить</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="btnTableDelete">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>34</height>
+                </size>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">border:1px solid #DDE1E3; border-radius:9px; background:#fff; font-size:9pt; font-weight:600; padding:0 12px;</string>
+               </property>
+               <property name="text">
+                <string>Удалить</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="btnTableEdit">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>34</height>
+                </size>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">border:1px solid #DDE1E3; border-radius:9px; background:#fff; font-size:9pt; font-weight:600; padding:0 12px;</string>
+               </property>
+               <property name="text">
+                <string>Изменить ячейку</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QFrame" name="groupBox">
+               <property name="styleSheet">
+                <string notr="true">QFrame#groupBox { background-color: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 10px; }</string>
+               </property>
+               <property name="frameShape">
+                <enum>QFrame::NoFrame</enum>
+               </property>
+               <layout class="QVBoxLayout" name="groupBoxOuterLayout">
+                <property name="spacing">
+                 <number>8</number>
+                </property>
+                <property name="leftMargin">
+                 <number>12</number>
+                </property>
+                <property name="topMargin">
+                 <number>10</number>
+                </property>
+                <property name="rightMargin">
+                 <number>12</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>10</number>
+                </property>
+                <item>
+                 <widget class="QLabel" name="groupBoxTitle">
+                  <property name="styleSheet">
+                   <string notr="true">font-size: 8pt; text-transform: uppercase; color: #6B7278; font-weight: 700; border: none; background: transparent;</string>
+                  </property>
+                  <property name="text">
+                   <string>Порядок</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="horizontalLayoutOrder">
+                  <property name="spacing">
+                   <number>6</number>
+                  </property>
+                  <property name="leftMargin">
+                   <number>6</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>4</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>6</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>6</number>
+                  </property>
+                  <item>
+                   <widget class="QPushButton" name="btnTableUp">
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>34</height>
+                     </size>
+                    </property>
+                    <property name="styleSheet">
+                     <string notr="true">border:1px solid #DDE1E3; border-radius:9px; background:#fff; font-size:9pt; font-weight:600; padding:0 12px;</string>
+                    </property>
+                    <property name="text">
+                     <string>&amp;#8593;</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QPushButton" name="btnTableDown">
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>34</height>
+                     </size>
+                    </property>
+                    <property name="styleSheet">
+                     <string notr="true">border:1px solid #DDE1E3; border-radius:9px; background:#fff; font-size:9pt; font-weight:600; padding:0 12px;</string>
+                    </property>
+                    <property name="text">
+                     <string>&amp;#8595;</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item>
+              <spacer name="editToolbarSpacer">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item>
+              <widget class="QPushButton" name="btnTableApply">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>34</height>
+                </size>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">background-color:#0F6B4F; color:white; border:none; border-radius:9px; font-size:9pt; font-weight:700; padding:0 16px;</string>
+               </property>
+               <property name="text">
+                <string>Применить</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="tabEditResults">
+          <attribute name="title">
+           <string>Результаты</string>
+          </attribute>
+          <layout class="QVBoxLayout" name="verticalLayoutEditResults">
+           <item>
+            <widget class="QLabel" name="lblEditResultsPlaceholder">
+             <property name="styleSheet">
+              <string notr="true">color: #6B7278; font-size: 10pt;</string>
+             </property>
+             <property name="text">
+              <string>Редактирование результатов пока недоступно</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
         </widget>
        </item>
       </layout>
-     </item>
-    </layout>
-   </widget>
-   <widget class="QWidget" name="pagePasswordInput">
-    <layout class="QGridLayout" name="gridLayout">
-     <item row="0" column="1">
-      <spacer name="verticalSpacerTop">
-       <property name="orientation">
-        <enum>Qt::Vertical</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>20</width>
-         <height>40</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item row="1" column="0">
-      <spacer name="horizontalSpacer">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>382</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item row="1" column="1">
-      <widget class="QWidget" name="passwordWidget" native="true">
-       <property name="maximumSize">
-        <size>
-         <width>400</width>
-         <height>200</height>
-        </size>
-       </property>
-       <layout class="QGridLayout" name="gridLayout_3">
-        <item row="0" column="0" colspan="2">
-         <widget class="QLabel" name="lblPasswordTitle">
-          <property name="font">
-           <font>
-            <pointsize>14</pointsize>
-            <weight>75</weight>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>Требуется пароль</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="0" colspan="2">
-         <widget class="QLabel" name="lblPasswordPrompt">
-          <property name="text">
-           <string>Введите пароль для доступа к режиму редактирования:</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-          <property name="wordWrap">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="0" colspan="2">
-         <widget class="QLineEdit" name="editPassword">
-          <property name="echoMode">
-           <enum>QLineEdit::Password</enum>
-          </property>
-          <property name="placeholderText">
-           <string>Введите пароль</string>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="0">
-         <widget class="QPushButton" name="btnPasswordSubmit">
-          <property name="text">
-           <string>Ввести</string>
-          </property>
-          <property name="default">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="1">
-         <widget class="QPushButton" name="btnPasswordCancel">
-          <property name="text">
-           <string>Отмена</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-     </item>
-     <item row="2" column="1">
-      <spacer name="verticalSpacerBottom">
-       <property name="orientation">
-        <enum>Qt::Vertical</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>20</width>
-         <height>40</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item row="1" column="2">
-      <spacer name="horizontalSpacer_2">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>382</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-    </layout>
-   </widget>
-   <widget class="QWidget" name="pageEditMode">
-    <layout class="QVBoxLayout" name="verticalLayoutEdit">
-     <item>
-      <widget class="QLabel" name="lblEditTitle">
-       <property name="font">
-        <font>
-         <pointsize>16</pointsize>
-         <weight>75</weight>
-         <bold>true</bold>
-        </font>
-       </property>
-       <property name="text">
-        <string>Изменение параметров парашютной системы</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignCenter</set>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QTabWidget" name="tabWidgetEdit">
-       <property name="currentIndex">
-        <number>0</number>
-       </property>
-       <widget class="QWidget" name="tabEditInitialData">
-        <attribute name="title">
-         <string>Исходные данные</string>
-        </attribute>
-        <layout class="QGridLayout" name="gridLayout_2">
-         <item row="1" column="2">
-          <widget class="QGroupBox" name="groupBox_2">
-           <property name="title">
-            <string/>
-           </property>
-           <widget class="QPushButton" name="btnTableAdd">
-            <property name="geometry">
-             <rect>
-              <x>40</x>
-              <y>30</y>
-              <width>108</width>
-              <height>31</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>Добавить</string>
-            </property>
-           </widget>
-           <widget class="QPushButton" name="btnTableDelete">
-            <property name="geometry">
-             <rect>
-              <x>40</x>
-              <y>80</y>
-              <width>108</width>
-              <height>31</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>Удалить</string>
-            </property>
-           </widget>
-           <widget class="QPushButton" name="btnTableApply">
-            <property name="geometry">
-             <rect>
-              <x>40</x>
-              <y>190</y>
-              <width>108</width>
-              <height>51</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>Применить</string>
-            </property>
-           </widget>
-           <widget class="QPushButton" name="btnTableEdit">
-            <property name="geometry">
-             <rect>
-              <x>40</x>
-              <y>130</y>
-              <width>108</width>
-              <height>31</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>Изменить</string>
-            </property>
-           </widget>
-          </widget>
-         </item>
-         <item row="2" column="2">
-          <widget class="QPushButton" name="btnEditClose">
-           <property name="text">
-            <string>Закрыть</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="0">
-          <layout class="QVBoxLayout" name="verticalLayoutEditLeft"/>
-         </item>
-         <item row="0" column="2">
-          <widget class="QGroupBox" name="groupBox">
-           <property name="title">
-            <string>Изменить порядок</string>
-           </property>
-           <widget class="QPushButton" name="btnTableUp">
-            <property name="geometry">
-             <rect>
-              <x>40</x>
-              <y>90</y>
-              <width>108</width>
-              <height>31</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>Вверх</string>
-            </property>
-           </widget>
-           <widget class="QPushButton" name="btnTableDown">
-            <property name="geometry">
-             <rect>
-              <x>40</x>
-              <y>140</y>
-              <width>108</width>
-              <height>31</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>Вниз</string>
-            </property>
-           </widget>
-          </widget>
-         </item>
-         <item row="0" column="1" rowspan="3">
-          <widget class="QTableWidget" name="tableEditParams">
-           <property name="alternatingRowColors">
-            <bool>true</bool>
-           </property>
-           <attribute name="horizontalHeaderCascadingSectionResizes">
-            <bool>true</bool>
-           </attribute>
-           <attribute name="horizontalHeaderDefaultSectionSize">
-            <number>181</number>
-           </attribute>
-           <row>
-            <property name="text">
-             <string/>
-            </property>
-           </row>
-           <row>
-            <property name="text">
-             <string/>
-            </property>
-           </row>
-           <row>
-            <property name="text">
-             <string/>
-            </property>
-           </row>
-           <row>
-            <property name="text">
-             <string/>
-            </property>
-           </row>
-           <row>
-            <property name="text">
-             <string/>
-            </property>
-           </row>
-           <row>
-            <property name="text">
-             <string/>
-            </property>
-           </row>
-           <row>
-            <property name="text">
-             <string/>
-            </property>
-           </row>
-           <row>
-            <property name="text">
-             <string/>
-            </property>
-           </row>
-           <row>
-            <property name="text">
-             <string/>
-            </property>
-           </row>
-           <row>
-            <property name="text">
-             <string/>
-            </property>
-           </row>
-           <row>
-            <property name="text">
-             <string/>
-            </property>
-           </row>
-           <row>
-            <property name="text">
-             <string/>
-            </property>
-           </row>
-           <row>
-            <property name="text">
-             <string/>
-            </property>
-           </row>
-           <row>
-            <property name="text">
-             <string/>
-            </property>
-           </row>
-           <row>
-            <property name="text">
-             <string/>
-            </property>
-           </row>
-           <row>
-            <property name="text">
-             <string/>
-            </property>
-           </row>
-           <column>
-            <property name="text">
-             <string>Наименование</string>
-            </property>
-           </column>
-           <column>
-            <property name="text">
-             <string>tпад, C</string>
-            </property>
-           </column>
-           <column>
-            <property name="text">
-             <string>hнап, м</string>
-            </property>
-           </column>
-           <column>
-            <property name="text">
-             <string>Vсн, м/с</string>
-            </property>
-           </column>
-           <column>
-            <property name="text">
-             <string>(A0), м</string>
-            </property>
-           </column>
-           <item row="0" column="0">
-            <property name="text">
-             <string>П1</string>
-            </property>
-            <property name="textAlignment">
-             <set>AlignCenter</set>
-            </property>
-           </item>
-           <item row="1" column="0">
-            <property name="text">
-             <string>П2</string>
-            </property>
-            <property name="textAlignment">
-             <set>AlignCenter</set>
-            </property>
-           </item>
-           <item row="2" column="0">
-            <property name="text">
-             <string>П3</string>
-            </property>
-            <property name="textAlignment">
-             <set>AlignCenter</set>
-            </property>
-           </item>
-           <item row="3" column="0">
-            <property name="text">
-             <string>П1_1</string>
-            </property>
-            <property name="textAlignment">
-             <set>AlignCenter</set>
-            </property>
-           </item>
-           <item row="4" column="0">
-            <property name="text">
-             <string>П1_2</string>
-            </property>
-            <property name="textAlignment">
-             <set>AlignCenter</set>
-            </property>
-           </item>
-           <item row="5" column="0">
-            <property name="text">
-             <string>ПП4</string>
-            </property>
-            <property name="textAlignment">
-             <set>AlignCenter</set>
-            </property>
-           </item>
-           <item row="6" column="0">
-            <property name="text">
-             <string/>
-            </property>
-           </item>
-           <item row="7" column="0">
-            <property name="text">
-             <string/>
-            </property>
-           </item>
-           <item row="8" column="0">
-            <property name="text">
-             <string/>
-            </property>
-           </item>
-           <item row="9" column="0">
-            <property name="text">
-             <string/>
-            </property>
-           </item>
-           <item row="10" column="0">
-            <property name="text">
-             <string/>
-            </property>
-           </item>
-           <item row="11" column="0">
-            <property name="text">
-             <string/>
-            </property>
-           </item>
-           <item row="12" column="0">
-            <property name="text">
-             <string/>
-            </property>
-           </item>
-           <item row="13" column="0">
-            <property name="text">
-             <string/>
-            </property>
-           </item>
-           <item row="14" column="0">
-            <property name="text">
-             <string/>
-            </property>
-           </item>
-           <item row="15" column="0">
-            <property name="text">
-             <string/>
-            </property>
-           </item>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-       <widget class="QWidget" name="tabEditResults">
-        <attribute name="title">
-         <string>Результаты</string>
-        </attribute>
-        <layout class="QVBoxLayout" name="verticalLayout_6">
-         <item>
-          <widget class="QLabel" name="lblEditResultsPlaceholder">
-           <property name="text">
-            <string>Результаты будут отображены здесь</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignCenter</set>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </widget>
-     </item>
-     <item>
-      <layout class="QHBoxLayout" name="horizontalLayoutEditButtons"/>
-     </item>
-    </layout>
-   </widget>
-  </widget>
+     </widget>
+    </widget>
+   </item>
+  </layout>
  </widget>
  <resources/>
  <connections/>

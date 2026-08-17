@@ -1,0 +1,3038 @@
+#include "mainwindow.h"
+#include "ui_mainwindow.h"
+#include <QApplication>
+#include "RpvIndicator.h"
+#include "SourceData.h"
+#include "calculationAlgorithms/AlgorithmsCalc.h"
+#include "MeasurementResults.h"
+#include "sensors/GroundMeteoParams.h"
+#include "calculationAlgorithms/LandingCalculation.h"
+#include "sensors/amshandler.h"
+#include "databasemanager.h"
+#include "CoordHelper.h"
+#include "surfacemeteosaver.h"
+#include <QDateTime>
+#include <QTimer>
+#include <QQuickItem>
+#include <QQmlEngine>
+#include <QQmlContext>
+#include <QMessageBox>
+#include <QtPositioning/QGeoCoordinate>
+#include <QPushButton>
+#include <QCheckBox>
+#include <QIcon>
+#include <QStatusBar>
+#include <QDebug>
+#include <QStandardItemModel>
+#include <QStandardPaths>
+#include <QDir>
+#include <QDialog>
+#include <QVBoxLayout>
+#include <QLabel>
+#include <QSpinBox>
+#include <QDialogButtonBox>
+#include <QFile>
+#include <QUrl>
+#include <QFileInfo>
+#include <QFileSystemWatcher>
+#include <QGraphicsDropShadowEffect>
+#include <QPropertyAnimation>
+#include <QProgressBar>
+#include <cmath>
+
+
+// ====================================================================
+// НАСТРОЙКА ПРОТОКОЛА IWS
+// ====================================================================
+// Измените эту константу для выбора протокола связи с IWS:
+// 0 = UMB Protocol (текущие значения)
+// 1 = Modbus RTU (средние значения) - рекомендуется для IWS
+// ====================================================================
+const int IWS_PROTOCOL = 1;  // 1 = Modbus RTU по умолчанию
+// ====================================================================
+
+MainWindow::MainWindow(QWidget *parent)
+    : QMainWindow(parent)
+    , ui(new Ui::MainWindow)
+    , pollTimer(nullptr)
+    , serialPort(nullptr)
+    , sensorSettingsDialog(nullptr)
+    , sourceDataInstance(nullptr)
+    , m_useManualDateTime(false)
+    , m_isEditingDateTime(false)
+    , m_manualDateTimeSet(false)
+    , m_mapCoordinatesEnabled(false)
+    , m_gnssEnabled(false)
+    , m_manualInputEnabled(false)
+    , m_gnssHandler(new GNSSHandler(this))
+    , m_gnssComPort("")
+    , m_gnssBaudRate(19200)
+    , m_amsHandler(nullptr)
+    , m_amsComPort("")
+    , m_amsBaudRate(9600)
+    , m_iwsWarmupTimer(nullptr)
+    , m_iwsWarmupDone(false)
+    , m_pendingIwsRecordId(-1)
+    , m_iwsFinalRequestTimer(nullptr)
+    , m_surfaceMeteoSaver(new SurfaceMeteoSaver(this))
+    , m_windProfileCalculator(new WindProfileCalculator(QStringLiteral("climatData/climat/")))
+{
+    ui->setupUi(this);
+
+    setupToastUI();
+
+    configureAmsDatabase();
+
+    fMapView = new FormMapView(this);
+
+    setupMapCoordinatesButton();
+    setupGnssCheckbox();
+
+    //    setupGnssSettingsButton();
+
+    updateMapCoordinatesButtonStyle();
+
+    // Навигация лаунчера (главный экран -> страницы -> назад)
+    ui->stackedWidget->setCurrentWidget(ui->page_home);
+    connect(ui->btnOpenPosition, &QPushButton::clicked, this, &MainWindow::onOpenPositionPage);
+    connect(ui->btnOpenMap, &QPushButton::clicked, this, &MainWindow::onOpenMapPage);
+    connect(ui->btnOpenMeasure, &QPushButton::clicked, this, &MainWindow::onOpenMeasurePage);
+    connect(ui->btnBackFromPosition, &QPushButton::clicked, this, &MainWindow::onBackToHome);
+    connect(ui->btnBackFromMap, &QPushButton::clicked, this, &MainWindow::onBackToHome);
+    connect(ui->btnBackFromMeasure, &QPushButton::clicked, this, &MainWindow::onBackToHome);
+
+    // Плавающие элементы управления над картой (маркер координат, тип карты, GNSS)
+    ui->mapCanvas->installEventFilter(this);
+    QTimer::singleShot(0, this, &MainWindow::repositionMapFloatingControls);
+
+    // Экран "Расчёты"
+    m_algorithmsCalcWidget = new AlgorithmsCalculation(this);
+    ui->page_calculations->layout()->addWidget(m_algorithmsCalcWidget);
+    connect(m_algorithmsCalcWidget, &AlgorithmsCalculation::backRequested,
+            this, &MainWindow::onBackToHome);
+    connect(m_algorithmsCalcWidget, &AlgorithmsCalculation::landingCalculationRequested,
+            this, [this](){
+        ui->stackedWidget->setCurrentWidget(ui->page_landing);
+    });
+
+    // Экран "Расчёт на десантирование"
+    m_landingCalcWidget = new LandingCalculation(this);
+    ui->page_landing->layout()->addWidget(m_landingCalcWidget);
+    connect(m_landingCalcWidget, &LandingCalculation::backRequested,
+            this, [this](){
+        ui->stackedWidget->setCurrentWidget(ui->page_calculations);
+    });
+
+    // Подключение сигналов к слотам
+    connect(ui->btnFunctionalControl, &QPushButton::clicked, this, &MainWindow::onFunctionalControlClicked);
+    connect(ui->btnWorkRegulation, &QPushButton::clicked, this, &MainWindow::onWorkRegulationClicked);
+    connect(ui->btnManualInput, &QPushButton::clicked, this, &MainWindow::onManualInputClicked);
+    connect(ui->btnInitialData, &QPushButton::clicked, this, &MainWindow::onInitialDataClicked);
+    connect(ui->btnCalculations, &QPushButton::clicked, this, &MainWindow::onCalculationsClicked);
+    connect(ui->btnMeasurementResults, &QPushButton::clicked, this, &MainWindow::onMeasurementResultsClicked);
+    connect(ui->btnStart, &QPushButton::clicked, this, &MainWindow::onStartClicked);
+    connect(ui->btnStop, &QPushButton::clicked, this, &MainWindow::onStopClicked);
+    // connect(ui->cbWorkMode, &QCheckBox::stateChanged, this, &MainWindow::onWorkModeChanged);
+    // connect(ui->cbStandbyMode, &QCheckBox::stateChanged, this, &MainWindow::onStandbyModeChanged);
+    // connect(ui->cbWorkMode, &QRadioButton::toggled, this, &MainWindow::onWorkModeChanged);
+    // connect(ui->cbStandbyMode, &QRadioButton::toggled, this, &MainWindow::onStandbyModeChanged);
+    connect(ui->btnConnectSensors, &QPushButton::clicked, this, &MainWindow::onConnectSensorsClicked);
+    connect(ui->btnSyncTime, &QPushButton::clicked, this, &MainWindow::onSyncTimeClicked);
+    connect(ui->editDateTime, &QLineEdit::editingFinished, this, &MainWindow::onDateTimeEditingFinished);
+    connect(ui->editDateTime, &QLineEdit::textEdited, this, &MainWindow::onDateTimeEditingStarted);
+
+    // GNSS сигналы
+    connect(m_gnssHandler, &GNSSHandler::dataReceived, this, &MainWindow::onGnssDataReceived);
+    connect(m_gnssHandler, &GNSSHandler::connected, this, &MainWindow::onGnssConnected);
+    connect(m_gnssHandler, &GNSSHandler::disconnected, this, &MainWindow::onGnssDisconnected);
+    connect(m_gnssHandler, &GNSSHandler::errorOccurred, this, &MainWindow::onGnssError);
+    connect(m_gnssHandler, &GNSSHandler::nmeaReceived, this, &MainWindow::onNmeaReceived);
+
+    connect(m_gnssHandler, &GNSSHandler::coordinatesUpdated, this, [this](int id){
+        statusBar()->showMessage(
+            QString("GNSS: координаты обновлены в БД (record_id: %1)").arg(id), 5000);
+    });
+    connect(m_gnssHandler, &GNSSHandler::dbError, this, [this](const QString &err){
+        qWarning() << "MainWindow: Ошибка GNSS БД:" << err;
+        statusBar()->showMessage("Ошибка GNSS БД: " + err, 8000);
+    });
+
+    connect(ui->editLatitude, &QLineEdit::textEdited, this, [this](){ onCoordTextEdited(ui->editLatitude); });
+    connect(ui->editLongitude, &QLineEdit::textEdited, this, [this](){ onCoordTextEdited(ui->editLongitude); });
+
+    setCoordField(ui->editLatitude, 55.7558);
+    setCoordField(ui->editLongitude, 37.6173);
+
+    ui->editAltitude->setEnabled(false);
+    ui->editDirectionAngle->setEnabled(false);
+    ui->editLatitude->setEnabled(false);
+    ui->editLongitude->setEnabled(false);
+    ui->editPitchAngle->setEnabled(false);
+    ui->editRollAngle->setEnabled(false);
+
+    // Настройка таймера для обновления времени
+    timer = new QTimer(this);
+    connect(timer, &QTimer::timeout, this, &MainWindow::updateDateTime);
+    timer->start(1000);
+
+    // Первоначальная установка времени
+    updateDateTime();
+
+    // Когда QML сообщает о доступных типах карт — обновляем comboBox
+    connect(&qcp, &QmlCoordinateProxy::mapTypesChanged, this, [this](const QStringList &list) {
+        qDebug() << "mapTypesChanged:" << list;
+        m_osmMapTypeNames = list;
+        refreshMapCombo();
+    });
+
+    connect(&qcp, &QmlCoordinateProxy::coordinateFromChanged, [=](const QGeoCoordinate &c){
+        if (m_mapCoordinatesEnabled){
+            updateCoordinatesFromMap(c.latitude(), c.longitude());
+        }
+    });
+
+    // comboBox → onMapComboChanged (вместо прямой связи с qcp)
+    connect(ui->comboBox_mapTypes,
+            static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
+            this, &MainWindow::onMapComboChanged);
+
+    // Пути к директориям тайлов карты
+    QString appData = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+    m_mapCacheDir = appData + "/MapCache";
+    QDir().mkpath(m_mapCacheDir);
+
+    // Директория провайдеров тайлов (Qt OSM-плагин читает отдельный JSON-файл на тип)
+    QString providersDir = appData + "/osm_providers";
+    QDir().mkpath(providersDir);
+
+    // Запускаем локальный тайл-сервер ОДИН РАЗ — порт фиксирован на всё время работы.
+    // При переключении режима (онлайн ↔ офлайн) меняется только БД через switchTo(),
+    // URL провайдеров и сам плагин карты не пересоздаются.
+    m_tileServer = new LocalTileServer(this);
+    if (m_tileServer->start()) {
+        // Провайдеры пишутся один раз с фиксированным портом
+        writeProvidersJson(providersDir, m_tileServer->tileUrlTemplate());
+        // Онлайн-режим по умолчанию: Street Map с кэшированием в MBTiles
+        m_tileServer->switchTo(m_mapCacheDir + "/Street Map.mbtiles",
+                               "https://a.tile.openstreetmap.org/%1/%2/%3.png");
+    } else {
+        // Фолбек: прямой OSM без кэширования
+        writeProvidersJson(providersDir,
+                           "https://a.tile.openstreetmap.org/%z/%x/%y.png");
+    }
+
+    // Следим за новыми .mbtiles-файлами в MapCache
+    auto *watcher = new QFileSystemWatcher(QStringList{m_mapCacheDir}, this);
+    connect(watcher, &QFileSystemWatcher::directoryChanged, this, [this]() {
+        refreshMapCombo();
+    });
+
+    // Базовый URL директории провайдеров (не меняется после старта)
+    QString osmProvidersUrl = QUrl::fromLocalFile(providersDir + "/").toString();
+
+    ui->quickWidget->engine()->rootContext()->setContextProperty("coord",           &qcp);
+    ui->quickWidget->engine()->rootContext()->setContextProperty("osmProvidersUrl", osmProvidersUrl);
+    ui->quickWidget->setSource(QUrl("qrc:/qml/Main.qml"));
+    createMapComponent("osm");
+
+    // Создаём окно настроек датчиков
+    sensorSettingsDialog = new SensorSettings(this);
+    // Подгоняем размер под содержимое и фиксируем минимум
+    sensorSettingsDialog->adjustSize();
+    sensorSettingsDialog->setMinimumSize(sensorSettingsDialog->sizeHint());
+    sensorSettingsDialog->setSizeGripEnabled(true);
+    connect(sensorSettingsDialog, &SensorSettings::connectRequested, this, &MainWindow::onConnectRequested);
+    connect(sensorSettingsDialog, &SensorSettings::disconnectRequested, this, &MainWindow::onDisconnectRequested);
+
+    connect(sensorSettingsDialog, &SensorSettings::gnssConnectRequested, this, &MainWindow::onGnssConnectFromSettings);
+    connect(sensorSettingsDialog, &SensorSettings::gnssDisconnectRequested, this, &MainWindow::onGnssDisconnectFromSettings);
+
+    connect(sensorSettingsDialog, &SensorSettings::amsConnectRequested, this, &MainWindow::onAmsConnectFromSettings);
+    connect(sensorSettingsDialog, &SensorSettings::amsDisconnectRequested, this, &MainWindow::onAmsDisconnectFromSettings);
+
+    connect(sensorSettingsDialog, &SensorSettings::binsConnectRequested, this, &MainWindow::onBinsConnectFromSettings);
+    connect(sensorSettingsDialog, &SensorSettings::binsDisconnectRequested, this, &MainWindow::onBinsDisconnectFromSettings);
+
+    m_functionalControlDialog = new FunctionalControlDialog(this);
+    m_functionalControlDialog->setSensorType(FunctionalControlDialog::AMS);
+    m_functionalControlDialog->adjustSize();
+    m_functionalControlDialog->setMinimumSize(m_functionalControlDialog->sizeHint());
+    m_functionalControlDialog->setSizeGripEnabled(true);
+
+    connect(m_functionalControlDialog, &FunctionalControlDialog::refreshRequested,
+            this, &MainWindow::onFunctionalControlClicked);
+
+    // Создаём постоянный экземпляр SourceData (внутри создастся GroundMeteoParams)
+    // Встраиваем страницей в общий stackedWidget — как экран "Расчёты"
+    // (AlgorithmsCalculation) — а не показываем отдельным всплывающим окном.
+    sourceDataInstance = new SourceData(this);
+    ui->stackedWidget->addWidget(sourceDataInstance);
+    connect(sourceDataInstance, &SourceData::backRequested,
+            this, &MainWindow::onBackToHome);
+    qDebug() << "SourceData instance created (with GroundMeteoParams inside)";
+
+    // ── Подписка на состояние приземных данных + встраивание страницы ──────
+    // GroundMeteoParams является единой точкой правды о готовности приземных
+    // данных. MainWindow отображает: lblStatus + доступность btnStart, и
+    // держит саму страницу в общем стеке (как "Расчёты") — отдельным
+    // всплывающим QDialog она больше не является.
+    if (GroundMeteoParams *gmp = GroundMeteoParams::instance()) {
+        ui->stackedWidget->addWidget(gmp);
+        connect(sourceDataInstance, &SourceData::openGroundParamsRequested,
+                this, [this, gmp]() {
+            qDebug() << "[TEMP DEBUG] MainWindow: before setCurrentWidget(gmp)";
+            ui->stackedWidget->setCurrentWidget(gmp);
+            qDebug() << "[TEMP DEBUG] MainWindow: after setCurrentWidget(gmp)";
+        });
+        connect(gmp, &GroundMeteoParams::backRequested, this, [this]() {
+            ui->stackedWidget->setCurrentWidget(sourceDataInstance);
+        });
+
+        connect(gmp, &GroundMeteoParams::surfaceStateChanged,
+                this, &MainWindow::onSurfaceStateChanged);
+        // Начальное состояние — данных ещё нет → NoData, кнопка пуска
+        // должна быть заблокирована с самого старта программы.
+        onSurfaceStateChanged(gmp->surfaceState());
+    } else {
+        qWarning() << "MainWindow: GroundMeteoParams::instance() == nullptr "
+                      "при создании SourceData — кнопка пуска не получит "
+                      "блокировку до первого появления экземпляра";
+    }
+
+    setupAmsHandler();
+    //    configureAmsDatabase();
+
+    m_binsHandler = new BINSHandler(this);
+    setupBinsHandler();
+
+    m_autoConnector = new AutoConnector(this);
+
+    connect(m_autoConnector, &AutoConnector::deviceDetected, this,
+            &MainWindow::onAutoConnectorDeviceDetected);
+    connect(m_autoConnector, &AutoConnector::detectionFinished, this,
+            &MainWindow::onAutoConnectorFinished);
+    connect(m_autoConnector, &AutoConnector::detectionStarted, this,
+            &MainWindow::onAutoConnectorStarted);
+    connect(m_autoConnector, &AutoConnector::progressUpdated, this,
+            &MainWindow::onAutoConnectorProgress);
+    connect(m_autoConnector, &AutoConnector::logMessage, this,
+            &MainWindow::onAutoConnectorLog);
+
+    QTimer::singleShot(800, this, &MainWindow::connectSensorsFromConfig);
+
+    // Таймер прогрева ИВС (3 минуты)
+    m_iwsWarmupTimer = new QTimer(this);
+    m_iwsWarmupTimer->setSingleShot(true);
+    connect(m_iwsWarmupTimer, &QTimer::timeout, this, &MainWindow::onIwsWarmupFinished);
+
+    // 3 мин доступны по умолчанию; блокируется только после подключения ИВС
+    // на 3 минуты прогрева (см. onConnectRequested / onDisconnectRequested)
+    ui->comboAvgTime->setEnabled(true);
+    ui->comboAvgTime->setToolTip("");
+
+    // Литера 2 по умолчанию (индекс 1)
+    ui->comboLitera->setCurrentIndex(1);
+
+    // Инициализация панели статуса датчиков
+    updateSensorStatusPanel();
+
+    runPlowSelfTest();
+}
+
+MainWindow::~MainWindow()
+{
+    if (serialPort && serialPort->isOpen()) {
+        serialPort->close();
+    }
+    if (pollTimer) {
+        pollTimer->stop();
+    }
+    if (m_amsHandler && m_amsHandler->isConnected()) {
+        m_amsHandler->disconnectFromAMS();
+    }
+    if (m_binsHandler && m_binsHandler->isConnected()) {
+        m_binsHandler->disconnectFromBINS();
+    }
+    delete m_windProfileCalculator;
+    m_windProfileCalculator = nullptr;
+    delete ui;
+}
+
+// =================================================
+// =================================================
+// Навигация лаунчера (главный экран планшета)
+// =================================================
+
+void MainWindow::onOpenPositionPage()
+{
+    ui->stackedWidget->setCurrentWidget(ui->page_position);
+}
+
+void MainWindow::onOpenMapPage()
+{
+    ui->stackedWidget->setCurrentWidget(ui->page_map);
+}
+
+void MainWindow::onOpenMeasurePage()
+{
+    ui->stackedWidget->setCurrentWidget(ui->page_measure);
+}
+
+void MainWindow::onBackToHome()
+{
+    ui->stackedWidget->setCurrentWidget(ui->page_home);
+}
+
+// =================================================
+// Методы работы с координатами
+// =================================================
+
+void MainWindow::setCoordField(QLineEdit *edit, double dec_deg)
+{
+    if (!edit) return;
+
+    // Конвертируем десятичные градусы
+    QString dmsString = CoordHelper::toDisplayDMS(dec_deg);
+    edit->setText(dmsString);
+}
+
+double MainWindow::getCoordField(QLineEdit *edit, bool &ok) const
+{
+    ok = false;
+    if (!edit) return 0.0;
+
+    QString text = edit->text().trimmed();
+    if (text.isEmpty()) return 0.0;
+
+    double degrees = 0.0;
+    ok = CoordHelper::parseDMS(text, degrees);
+
+    return ok ? degrees : 0.0;
+}
+
+void MainWindow::onCoordTextEdited(QLineEdit *edit)
+{
+    if (!edit) return;
+
+    static bool isProcessing = false;
+    if (isProcessing) return;
+    isProcessing = true;
+
+    QString rawText = edit->text();
+    int cursorPos = edit->cursorPosition();
+
+    QString formatted = CoordHelper::formatInput(rawText, cursorPos);
+
+    if (formatted != rawText) {
+        edit->setText(formatted);
+        edit->setCursorPosition(cursorPos);
+    }
+
+    isProcessing = false;
+}
+
+void MainWindow::setupMapCoordinatesButton()
+{
+    // Кнопка теперь в UI файле, просто настраиваем иконку и подключаем сигнал
+    QIcon markerIcon(":/dat/images/marker.png");
+    ui->btnMapCoordinates->setIcon(markerIcon);
+    ui->btnMapCoordinates->setIconSize(QSize(20, 20));
+
+    connect(ui->btnMapCoordinates, &QPushButton::clicked, this, &MainWindow::onMapCoordinatesToggled);
+}
+
+void MainWindow::setupGnssCheckbox()
+{
+    // Чекбокс теперь в UI файле, просто подключаем сигнал
+    connect(ui->checkboxGnss, &QCheckBox::toggled, this, &MainWindow::onGnssCheckboxToggled);
+}
+
+//void MainWindow::setupGnssSettingsButton()
+//{
+//    m_btnGnssSettings = new QPushButton("⚙", this);
+//    m_btnGnssSettings->setFixedSize(30, 30);
+//    m_btnGnssSettings->setToolTip("Настройки GNSS");
+//    m_btnGnssSettings->setStyleSheet(
+//                "QPushButton {"
+//                "   background-color: white;"
+//                "   border: 2px solid gray;"
+//                "   border-radius: 15px;"
+//                "   font-size: 16px;"
+//                "}"
+//                "QPushButton:hover {"
+//                "   background-color: #f0f0f0;"
+//                "}");
+
+//    m_btnGnssSettings->move(width() - 210, 23);
+//    m_btnGnssSettings->raise();
+
+//    connect(m_btnGnssSettings, &QPushButton::clicked, this,
+//            &MainWindow::onGnssSettingsClicked);
+//}
+
+//void MainWindow::onGnssSettingsClicked()
+//{
+//    if (!sensorSettingsDialog) return;
+
+//    sensorSettingsDialog->findChild<QTabWidget*>("tabWidget")->setCurrentIndex(1);
+
+//    if (m_gnssReceiver->isConnected()) {
+//        sensorSettingsDialog->setConnectionStatus("Подключено", true);
+//        sensorSettingsDialog->setConnectionEnabled(false);
+//    } else {
+//        sensorSettingsDialog->setConnectionStatus("Отключено", false);
+//        sensorSettingsDialog->setConnectionEnabled(true);
+//    }
+
+//    sensorSettingsDialog->show();
+//    sensorSettingsDialog->raise();
+//    sensorSettingsDialog->activateWindow();
+////    SensorSettings dialog(this);
+
+////    connect(&dialog, &SensorSettings::connectRequested, this, [this, &dialog]() {
+////        qDebug() << "MainWindow: Запрос на подключение GNSS из настроек";
+////        m_gnssComPort = dialog.getIwsComPort();
+////        m_gnssBaudRate = dialog.getIwsBaudRate();
+
+////        if (m_gnssReceiver->connectToReceiver(m_gnssComPort, m_gnssBaudRate)) {
+////                dialog.setConnectionStatus("Подключено", true);
+////                dialog.setConnectionEnabled(false);
+////                m_gnssEnabled = true;
+////                m_checkboxGnss->setChecked(true);
+////            } else {
+////                dialog.setConnectionStatus("Ошибка подключения", false);
+////            }
+////    });
+
+////    connect(&dialog, &SensorSettings::disconnectRequested, this, [this, &dialog]() {
+////         qDebug() << "MainWindow: Запрос на отключение GNSS из настроек";
+////         disconnectFromGnss();
+////         dialog.setConnectionStatus("Отключено", false);
+////         dialog.setConnectionEnabled(true);
+////    });
+
+////    if (m_gnssReceiver->isConnected()) {
+////        dialog.setConnectionStatus("Подключено", true);
+////        dialog.setConnectionEnabled(false);
+////    }
+
+////    dialog.exec();
+//}
+
+void MainWindow::onGnssConnectFromSettings()
+{
+    if (!sensorSettingsDialog) return;
+
+    m_gnssComPort = sensorSettingsDialog->getGnssComPort();
+    m_gnssBaudRate = sensorSettingsDialog->getGnssBaudRate();
+
+    if (m_gnssHandler->connectToGnss(m_gnssComPort, m_gnssBaudRate)){
+        sensorSettingsDialog->setGnssConnectionStatus("Подключено", true);
+        sensorSettingsDialog->setGnssConnectionEnabled(false);
+        m_gnssEnabled = true;
+        ui->checkboxGnss->setChecked(true);
+    } else {
+        sensorSettingsDialog->setGnssConnectionStatus("Ошибка подключения", false);
+    }
+}
+
+void MainWindow::onGnssDisconnectFromSettings()
+{
+    disconnectFromGnss();
+    if (sensorSettingsDialog){
+        sensorSettingsDialog->setGnssConnectionStatus("Отключено", false);
+        sensorSettingsDialog->setGnssConnectionEnabled(true);
+    }
+}
+
+void MainWindow::updateGnssMarkerOnMap(double latitude, double longitude)
+{
+    QQuickItem* main = ui->quickWidget->rootObject();
+    if (main) {
+        QMetaObject::invokeMethod(main, "updateGnssMarker", Qt::DirectConnection,
+                                  Q_ARG(QVariant, latitude),
+                                  Q_ARG(QVariant, longitude),
+                                  Q_ARG(QVariant, m_gnssEnabled));
+    }
+}
+
+void MainWindow::updateMapCoordinatesButtonStyle()
+{
+    QIcon markerIcon(":/dat/images/marker.png");
+    ui->btnMapCoordinates->setIcon(markerIcon);
+    ui->btnMapCoordinates->setIconSize(QSize(20, 20));
+
+    if (m_mapCoordinatesEnabled) {
+        ui->btnMapCoordinates->setStyleSheet(
+            "QPushButton {"
+            "   background-color: #4CAF50;"
+            "   border: 3px solid #2E7D32;"
+            "   border-radius: 12px;"
+            "}"
+            "QPushButton:hover {"
+            "   background-color: #45a049;"
+            "   border: 3px solid #1B5E20;"
+            "}"
+            );
+        ui->btnMapCoordinates->setToolTip("Режим координат с карты активен (нажмите для отключения)");
+    } else {
+        ui->btnMapCoordinates->setStyleSheet(
+            "QPushButton {"
+            "   background-color: rgba(255,255,255,235);"
+            "   border: none;"
+            "   border-radius: 12px;"
+            "}"
+            "QPushButton:hover {"
+            "   background-color: #f0f0f0;"
+            "}"
+            );
+        ui->btnMapCoordinates->setToolTip("Использовать координаты с карты (нажмите для включения)");
+    }
+}
+
+void MainWindow::onMapCoordinatesToggled()
+{
+    m_mapCoordinatesEnabled = !m_mapCoordinatesEnabled;
+    updateMapCoordinatesButtonStyle();
+
+    if (m_mapCoordinatesEnabled) {
+        checkAndDisableConflictingSources("map");
+        updateCoordinateSource("Карта");
+    } else {
+        updateCoordinateSource("Нет");
+    }
+
+    updateFieldsEditability();
+    emit mapCoordinatesModeChanged(m_mapCoordinatesEnabled);
+
+    // Выводим сообщение о смене режима
+    QString status = m_mapCoordinatesEnabled ?
+                         "Режим координат с карты ВКЛЮЧЕН" :
+                         "Режим координат с карты ВЫКЛЮЧЕН";
+    statusBar()->showMessage(status, 3000);
+}
+
+void MainWindow::onGnssCheckboxToggled(bool checked)
+{
+    if (checked) {
+        if (m_gnssComPort.isEmpty()) {
+            qDebug() << "MainWindow: COM-порт не настроен, открываем настройки...";
+            ui->checkboxGnss->setChecked(false);
+            QMessageBox::information(this, "Ошибка GNSS",
+                                     "Пожалуйста, подключите антенну GNSS через кнопку подключения датчиков");
+            return;
+        }
+
+        connectToGnss();
+    } else {
+        disconnectFromGnss();
+    }
+}
+
+void MainWindow::connectToGnss()
+{
+    checkAndDisableConflictingSources("gnss");
+
+    if (m_gnssHandler->connectToGnss(m_gnssComPort, m_gnssBaudRate)) {
+        qDebug() << "MainWindow: GNSS подключение инициировано успешно";
+        m_gnssEnabled = true;
+        updateCoordinateSource("GNSS");
+        statusBar()->showMessage("Подключение к GNSS...", 3000);
+    } else {
+        qDebug() << "MainWindow: Ошибка подключения к GNSS";
+        m_gnssEnabled = false;
+        ui->checkboxGnss->setChecked(false);
+        QMessageBox::warning(this, "Ошибка", "Не удалось подключиться к GNSS приемнику");
+    }
+
+    updateFieldsEditability();
+    emit gnssDataSourceChanged(m_gnssEnabled);
+}
+
+void MainWindow::disconnectFromGnss()
+{
+    qDebug() << "MainWindow: Отключение от GNSS";
+    m_gnssHandler->disconnectFromGnss();
+    m_gnssEnabled = false;
+    ui->checkboxGnss->setChecked(false);
+
+    updateCoordinateSource("Нет");
+    updateFieldsEditability();
+    updateGnssMarkerOnMap(0, 0);
+
+    statusBar()->showMessage("GNSS приемник отключен", 3000);
+    emit gnssDataSourceChanged(m_gnssEnabled);
+
+}
+
+void MainWindow::onGnssDataReceived(const GNSSData &data)
+{
+    qDebug() << "=== MainWindow: Получены GNSS данные ===";
+    qDebug() << "  Широта:" << data.latitude;
+    qDebug() << "  Долгота:" << data.longitude;
+    qDebug() << "  Высота:" << data.altitude;
+    qDebug() << "  Спутники:" << data.satellites;
+    qDebug() << "  Тип фикса:" << data.fixType;
+    qDebug() << "  Качество:" << data.fixQuality;
+    qDebug() << "  HDOP:" << data.hdop;
+    qDebug() << "  Точность Г:" << data.accuracyH;
+    qDebug() << "  Точность В:" << data.accuracyV;
+
+    if (!m_gnssEnabled) {
+        return; // Игнорируем данные, если GNSS выключен
+    }
+
+    if (data.latitude == 0.0 && data.longitude == 0.0) {
+        statusBar()->showMessage("GNSS: Поиск спутников...", 2000);
+        return;
+    }
+
+    if (data.fixQuality == 0) {
+        statusBar()->showMessage("GNSS: Cпутники: " + QString::number(data.satellites) + ")", 2000);
+        return;
+    }
+
+    // Обновляем поля координат
+    setCoordField(ui->editLatitude, data.latitude);
+    setCoordField(ui->editLongitude, data.longitude);
+    ui->editAltitude->setText(QString::number(data.altitude, 'f', 2));
+
+    // Передаем сигнал другим окнам
+    emit coordinatesUpdatedFromMap(data.latitude, data.longitude);
+
+    updateGnssMarkerOnMap(data.latitude, data.longitude);
+
+    // Обновляем строку состояния
+    statusBar()->showMessage(QString("GNSS: %1 | Спутники: %2 | HDOP: %3")
+                                 .arg(data.fixType)
+                                 .arg(data.satellites)
+                                 .arg(data.hdop, 0, 'f', 1), 5000);
+}
+
+void MainWindow::onNmeaReceived(const QString &nmea)
+{
+    if (nmea.contains("GGA") || nmea.contains("RMC")) {
+        qDebug() << "GNSS NMEA: " << nmea;
+    }
+}
+
+void MainWindow::onGnssConnected()
+{
+    qDebug() << "GNSS приемник подключен";
+    ui->checkboxGnss->setStyleSheet(
+        "QCheckBox {"
+        "   background-color: #E8F5E9;"
+        "   padding: 5px 10px;"
+        "   border: 2px solid #4CAF50;"
+        "   border-radius: 5px;"
+        "}"
+        );
+    statusBar()->showMessage("GNSS приемник подключен успешно", 5000);
+    updateGnssStatusLabel(true);
+}
+
+void MainWindow::onGnssDisconnected()
+{
+    qDebug() << "GNSS приемник отключен";
+
+    m_gnssEnabled = false;
+
+    if (ui->checkboxGnss->isChecked()) {
+        ui->checkboxGnss->setChecked(false);
+    }
+
+    ui->checkboxGnss->setStyleSheet(
+        "QCheckBox {"
+        "   background-color: white;"
+        "   padding: 5px 10px;"
+        "   border: 2px solid gray;"
+        "   border-radius: 5px;"
+        "}"
+        );
+    updateFieldsEditability();
+    updateGnssStatusLabel(false);
+}
+
+void MainWindow::onGnssError(const QString &error)
+{
+    qDebug() << "Ошибка GNSS:" << error;
+
+    if (m_gnssHandler->isConnected()) {
+        statusBar()->showMessage("Ошибка GNSS: " + error, 5000);
+    }
+}
+
+void MainWindow::checkAndDisableConflictingSources(const QString &activeSource)
+{
+    if (activeSource == "map") {
+        // Отключаем GNSS и ручной ввод
+        if (m_gnssEnabled) {
+            ui->checkboxGnss->setChecked(false);
+        }
+        m_manualInputEnabled = false;
+    } else if (activeSource == "gnss") {
+        // Отключаем карту и ручной ввод
+        if (m_mapCoordinatesEnabled) {
+            ui->btnMapCoordinates->setChecked(false);
+            m_mapCoordinatesEnabled = false;
+            updateMapCoordinatesButtonStyle();
+        }
+        m_manualInputEnabled = false;
+    } else if (activeSource == "manual") {
+        // Отключаем карту и GNSS
+        if (m_mapCoordinatesEnabled) {
+            ui->btnMapCoordinates->setChecked(false);
+            m_mapCoordinatesEnabled = false;
+            updateMapCoordinatesButtonStyle();
+        }
+        if (m_gnssEnabled) {
+            ui->checkboxGnss->setChecked(false);
+        }
+    }
+}
+
+void MainWindow::setupAmsHandler()
+{
+    m_amsHandler = new AMSHandler(this);
+
+    // Существующие сигналы
+    connect(m_amsHandler, &AMSHandler::connected,
+            this, &MainWindow::onAmsConnected);
+    connect(m_amsHandler, &AMSHandler::disconnected,
+            this, &MainWindow::onAmsDisconnected);
+    connect(m_amsHandler, &AMSHandler::errorOccurred,
+            this, &MainWindow::onAmsError);
+    connect(m_amsHandler, &AMSHandler::statusMessage,
+            this, &MainWindow::onAmsStatusMessage);
+
+    // НОВЫЕ сигналы для процесса измерения
+    connect(m_amsHandler, &AMSHandler::measurementStageChanged,
+            this, &MainWindow::onAmsMeasurementStageChanged);
+    connect(m_amsHandler, &AMSHandler::measurementProgressUpdated,
+            this, &MainWindow::onAmsMeasurementProgress);
+    connect(m_amsHandler, &AMSHandler::measurementCompleted,
+            this, &MainWindow::onAmsMeasurementCompleted);
+    connect(m_amsHandler, &AMSHandler::measurementFailed,
+            this, &MainWindow::onAmsMeasurementFailed);
+    connect(m_amsHandler, &AMSHandler::needIntermediateData,
+            this, &MainWindow::onAmsNeedIntermediateData);
+
+    // Подключаем результаты
+    connect(m_amsHandler, &AMSHandler::avgWindDataReceived,
+            this, &MainWindow::onAmsAvgWindReceived);
+    connect(m_amsHandler, &AMSHandler::actualWindDataReceived,
+            this, &MainWindow::onAmsActualWindReceived);
+    connect(m_amsHandler, &AMSHandler::measuredWindDataReceived,
+            this, &MainWindow::onAmsMeasuredWindReceived);
+    connect(m_amsHandler, &AMSHandler::functionalControlDataReceived,
+            this, [this](quint32 bitMask, quint32 powerOnCount) {
+                m_functionalControlDialog->setAmsData(bitMask, powerOnCount);
+
+                FuncControlResult fc = AMSProtocol::funcControlDetails(bitMask);
+                if (!fc.allOk()) {
+                    int total = fc.faults.size() + fc.errors.size();
+                    statusBar()->showMessage(
+                        QString("Функциональный контроль АМС: обнаружено проблем - %1. "
+                                "Зайдите в 'Функциональный контроль' для просмотра.").arg(total),
+                        30000);
+                }
+            });
+
+    connect(m_functionalControlDialog, &FunctionalControlDialog::refreshRequested,
+            this, [this]() {
+                if (m_amsHandler && m_amsHandler->isConnected()
+                    && m_amsHandler->getMeasurementStatus() != STATUS_RUNNING) {
+                    m_functionalControlDialog->setWaitingState();
+                    m_amsHandler->requestFunctionalControl();
+                } else if (!m_amsHandler || !m_amsHandler->isConnected()) {
+                    m_functionalControlDialog->setDisconnectedState();
+                }
+            });
+
+    // Когда АМС записал данные в БД — делаем финальный запрос к ИВС
+    connect(m_amsHandler, &AMSHandler::dataWrittenToDatabase,
+            this, &MainWindow::onAmsDataWritten);
+}
+
+void MainWindow::configureAmsDatabase()
+{
+    // Настройка подключения к БД
+    // Загрузить параметры из конфигурационного файла или настроек
+    QString dbHost = "localhost";
+    int dbPort = 5432;
+    QString dbName = "MMK";
+    QString dbUser = "postgres";
+    QString dbPassword = "123";
+
+    qDebug() << "MainWindow: Настройка БД:" << dbName << "на" << dbHost;
+
+    DatabaseManager::instance()->configure(dbHost, dbPort, dbName, dbUser, dbPassword);
+
+    connect(DatabaseManager::instance(), &DatabaseManager::connected,
+            this, [this]() {
+                statusBar()->showMessage("База данных подключена", 5000);
+                qInfo() << "MainWindow: Сигнал connected от DatabaseManager";
+            });
+
+    if(DatabaseManager::instance()->connect()) {
+        qInfo() << "MainWindow: Успешное подключение к БД";
+    } else {
+        qCritical() << "MainWindow: Ошибка подключения к БД";
+        QMessageBox::warning(this, "Ошибка БД",
+                             "Не удалось подключиться к базе данных. \nПроверьте параметры подключения.");
+    }
+
+    if (m_amsHandler){
+        m_amsHandler->setDatabase(dbHost, dbPort, dbName, dbUser, dbPassword);
+    }
+}
+
+// ===== СЛОТЫ ДЛЯ АМС =====
+
+void MainWindow::onAmsConnectFromSettings()
+{
+    if (!sensorSettingsDialog || !m_amsHandler) return;
+
+    m_amsComPort = sensorSettingsDialog->getAmsComPort();
+    m_amsBaudRate = sensorSettingsDialog->getAmsBaudRate();
+
+    qDebug() << "MainWindow: Попытка подключения к АМС на" << m_amsComPort
+             << "со скоростью" << m_amsBaudRate;
+
+    if (m_amsHandler->connectToAMS(
+            m_amsComPort,
+            m_amsBaudRate,
+            sensorSettingsDialog->getAmsDataBits(),
+            sensorSettingsDialog->getAmsParity(),
+            sensorSettingsDialog->getAmsStopBits())) {
+
+        qDebug() << "MainWindow: АМС подключение инициировано";
+        sensorSettingsDialog->setAmsConnectionStatus("Подключение...", false);
+    } else {
+        qDebug() << "MainWindow: Ошибка подключения к АМС";
+        sensorSettingsDialog->setAmsConnectionStatus("Ошибка подключения", false);
+        QMessageBox::warning(this, "Ошибка",
+                             "Не удалось подключиться к АМС. Проверьте порт и настройки.");
+    }
+}
+
+void MainWindow::onAmsDisconnectFromSettings()
+{
+    if (!m_amsHandler) return;
+
+    qDebug() << "MainWindow: Отключение от АМС";
+    m_amsHandler->disconnectFromAMS();
+
+    if (sensorSettingsDialog) {
+        sensorSettingsDialog->setAmsConnectionStatus("Отключено", false);
+        sensorSettingsDialog->setAmsConnectionEnabled(true);
+    }
+}
+
+void MainWindow::onAmsConnected()
+{
+    qDebug() << "MainWindow: АМС подключена успешно";
+
+    if (sensorSettingsDialog) {
+        sensorSettingsDialog->setAmsConnectionStatus("Подключено", true);
+        sensorSettingsDialog->setAmsConnectionEnabled(false);
+    }
+
+    statusBar()->showMessage("АМС подключена успешно", 5000);
+    updateAmsStatusLabel(true);
+}
+
+void MainWindow::onAmsDisconnected()
+{
+    qDebug() << "MainWindow: АМС отключена";
+
+    if (sensorSettingsDialog) {
+        sensorSettingsDialog->setAmsConnectionStatus("Отключено", false);
+        sensorSettingsDialog->setAmsConnectionEnabled(true);
+    }
+
+    statusBar()->showMessage("АМС отключена", 3000);
+    updateAmsStatusLabel(false);
+
+    if (m_functionalControlDialog->isVisible()) {
+        m_functionalControlDialog->setDisconnectedState();
+    }
+}
+
+void MainWindow::onAmsError(const QString &error)
+{
+    qWarning() << "MainWindow: Ошибка АМС:" << error;
+    statusBar()->showMessage("Ошибка АМС: " + error, 10000);
+
+    // Передаём ошибку в диалог функционального контроля если он открыт
+    if (m_functionalControlDialog->isVisible()) {
+        m_functionalControlDialog->setErrorState(error);
+        // Диалог уже показывает ошибку — popup не нужен, чтобы не дублировать
+        return;
+    }
+
+    if (error.contains("Таймаут") || error.contains("контрольной суммы")) {
+        qDebug() << "MainWindow: Ошибка связи с АМС, будет повторная попытка";
+    } else {
+        QMessageBox::warning(this, "Ошибка АМС", error);
+    }
+}
+
+void MainWindow::onAmsStatusMessage(const QString &message)
+{
+    qDebug() << "MainWindow: Статус АМС:" << message;
+    statusBar()->showMessage("АМС: " + message, 3000);
+}
+
+void MainWindow::onAmsDataWritten(int recordId)
+{
+    qDebug() << "MainWindow: Данные АМС записаны в архив, record_id:" << recordId;
+    statusBar()->showMessage(
+        QString("АМС: Данные записаны в архив (ID: %1)").arg(recordId), 5000);
+
+    if (m_iwsDeviceActive) {
+        // Железный ИВС подключён — запрашиваем у него свежие данные.
+        // Ответ придёт в onIwsFinalDataReceived, который вызовет tryFinalizeMeasurement.
+        requestIwsDataForRecord(recordId);
+    } else {
+        // Железного ИВС нет. Возможно, оператор ввёл приземные данные вручную —
+        // тогда они уже в кеше GroundMeteoParams. Финализируем без запроса к ИВС.
+        qDebug() << "MainWindow: ИВС не подключён — пробуем ручные приземные данные";
+        tryFinalizeMeasurement(recordId);
+    }
+}
+
+void MainWindow::requestIwsDataForRecord(int recordId)
+{
+    qDebug() << "MainWindow: Финальный запрос к ИВС для record_id=" << recordId;
+
+    // Запоминаем record_id — ответ придёт в onSerialDataReceived → GroundMeteoParams::dataUpdated
+    m_pendingIwsRecordId = recordId;
+
+    // Инициализируем таймаут (5 секунд)
+    if (!m_iwsFinalRequestTimer) {
+        m_iwsFinalRequestTimer = new QTimer(this);
+        m_iwsFinalRequestTimer->setSingleShot(true);
+        connect(m_iwsFinalRequestTimer, &QTimer::timeout, this, [this]() {
+            if (m_pendingIwsRecordId > 0) {
+                qWarning() << "MainWindow: Таймаут ответа ИВС для record_id=" << m_pendingIwsRecordId
+                           << "— surface_meteo не заполнена";
+                statusBar()->showMessage("Предупреждение: ИВС не ответил, приземные данные не сохранены", 8000);
+                m_pendingIwsRecordId = -1;
+            }
+        });
+    }
+    m_iwsFinalRequestTimer->start(5000);
+
+    // Подключаем одноразовый обработчик — сработает на следующий dataUpdated
+    // (используем лямбду с Qt::SingleShotConnection чтобы не дублировать)
+    GroundMeteoParams* meteoParams = GroundMeteoParams::instance();
+    if (meteoParams) {
+        // Уже существует — подключаем одноразово
+        QMetaObject::Connection *conn = new QMetaObject::Connection();
+        *conn = connect(meteoParams, &GroundMeteoParams::dataUpdated,
+                        this, [this, conn](const QMap<QString, double> &values) {
+                            disconnect(*conn);
+                            delete conn;
+                            onIwsFinalDataReceived(values);
+                        });
+    } else {
+        // GroundMeteoParams ещё не создан — создаём временный только для парсинга ответа
+        // Данные придут через onSerialDataReceived который создаст instance при первом вызове
+        // Подключаемся через pollMeteoStation — он уже умеет посылать запрос без instance
+        qDebug() << "MainWindow: GroundMeteoParams не создан, используем прямой запрос";
+    }
+
+    // Формируем и отправляем запрос напрямую (не через pollMeteoStation чтобы не зависеть от таймера)
+    QList<quint16> params;
+    if (IWS_PROTOCOL == 0) { // UMB
+        params << 0x0064 << 0x00C8 << 0x012C << 0x0190 << 0x01F4;
+    } else { // Modbus RTU — средние значения
+        params << 13 << 21 << 34 << 45 << 82;
+    }
+
+    QByteArray request;
+    if (meteoParams) {
+        request = (IWS_PROTOCOL == 0)
+        ? meteoParams->createUmbReadRequest(params)
+        : meteoParams->createModbusReadRequest(params);
+    }
+
+    if (!request.isEmpty()) {
+        qint64 written = serialPort->write(request);
+        qDebug() << "MainWindow: Финальный запрос ИВС отправлен," << written << "байт:" << request.toHex(' ');
+    } else {
+        qWarning() << "MainWindow: Не удалось сформировать запрос к ИВС";
+        m_pendingIwsRecordId = -1;
+        m_iwsFinalRequestTimer->stop();
+    }
+}
+
+void MainWindow::onIwsFinalDataReceived(const QMap<QString, double> &values)
+{
+    if (m_pendingIwsRecordId <= 0) return;
+
+    m_iwsFinalRequestTimer->stop();
+    int recordId = m_pendingIwsRecordId;
+    m_pendingIwsRecordId = -1;
+
+    qDebug() << "MainWindow: Получены данные ИВС для финальной записи, record_id=" << recordId;
+
+    m_surfaceMeteoSaver->updateLastValues(values);
+    tryFinalizeMeasurement(recordId);
+}
+
+// Логика:
+//   • Определяем наземный ветер. Приоритет:
+//       1) данные железного ИВС (уже в m_surfaceMeteoSaver, если IWS отвечал);
+//       2) ручной ввод (GroundMeteoParams::hasLastData()).
+//   • Если surface_meteo есть полностью (5 параметров) — сохраняем её в БД.
+//   • Если есть хотя бы наземный ВЕТЕР — запускаем расчёт профилей.
+//   • Если наземного ветра нет вовсе — расчёт пропускаем (запись измерения
+//     при этом уже сохранена: main_archive, координаты, измеренный ветер).
+
+void MainWindow::tryFinalizeMeasurement(int recordId)
+{
+    // ── 1. Сохраняем surface_meteo, если набор данных полный ────────────────
+    // (m_surfaceMeteoSaver мог быть наполнен либо из onIwsFinalDataReceived,
+    //  либо — для ручного ввода — наполним его прямо сейчас, см. ниже).
+    GroundMeteoParams *gmp = GroundMeteoParams::instance();
+
+    // Если железного ИВС не было, но есть ручной ввод — переносим ручные
+    // значения ветра в m_surfaceMeteoSaver, чтобы они тоже могли уйти в БД.
+    if (!m_iwsDeviceActive && gmp && gmp->hasLastData()) {
+        QMap<QString, double> manualValues;
+        manualValues["Wind Speed Avg"]     = gmp->lastWindSpeed();
+        manualValues["Wind Direction Avg"] = gmp->lastWindDirection();
+        // Температуру/давление/влажность ручной ввод может не содержать —
+        // updateLastValues выставит has-флаги только для переданных полей.
+        m_surfaceMeteoSaver->updateLastValues(manualValues);
+        qDebug() << "MainWindow: применены ручные приземные данные:"
+                 << "V=" << gmp->lastWindSpeed()
+                 << "dir=" << gmp->lastWindDirection();
+    }
+
+    if (m_surfaceMeteoSaver->hasData()) {
+        // hasData() == true означает, что заполнены все 5 параметров.
+        if (m_surfaceMeteoSaver->saveToDatabase(recordId)) {
+            statusBar()->showMessage(
+                QString("Приземные данные сохранены (ID: %1)").arg(recordId), 5000);
+        }
+    } else {
+        qDebug() << "MainWindow: surface_meteo неполная — таблица surface_meteo "
+                    "пропущена (для расчёта ветров достаточно наземного ветра)";
+    }
+
+    // ── 2. Определяем наземный ВЕТЕР для расчёта ─────────────────────────────
+    double surfWindSpeed = 0.0;
+    double surfWindDir   = 0.0;
+    bool   haveSurfWind  = false;
+
+    if (m_surfaceMeteoSaver->windSpeed() > 0.0 || m_surfaceMeteoSaver->windDirection() != 0) {
+        // m_surfaceMeteoSaver уже содержит ветер (от IWS либо перенесённый
+        // ручной выше). Берём оттуда.
+        surfWindSpeed = m_surfaceMeteoSaver->windSpeed();
+        surfWindDir   = m_surfaceMeteoSaver->windDirection();
+        haveSurfWind  = true;
+    } else if (gmp && gmp->hasLastData()) {
+        // Резервный путь — напрямую из GroundMeteoParams.
+        surfWindSpeed = gmp->lastWindSpeed();
+        surfWindDir   = gmp->lastWindDirection();
+        haveSurfWind  = true;
+    }
+
+    if (!haveSurfWind) {
+        qWarning() << "MainWindow: наземный ветер недоступен (ни ИВС, ни ручной ввод)"
+                   << "— расчёт профилей ветра пропущен для record_id=" << recordId;
+        statusBar()->showMessage(
+            "Расчёт ветра пропущен: нет наземного ветра (ИВС/ручной ввод)", 8000);
+        return;
+    }
+
+    // ── 3. Запускаем расчёт ──────────────────────────────────────────────────
+    runWindProfileCalculation(recordId, surfWindSpeed, surfWindDir);
+}
+
+void MainWindow::onAmsDatabaseError(const QString &error)
+{
+    qCritical() << "MainWindow: Ошибка БД АМС:" << error;
+    statusBar()->showMessage("Ошибка БД АМС: " + error, 10000);
+    QMessageBox::critical(this, "Ошибка базы данных АМС",
+                          "Не удалось записать данные в базу данных:\n" + error);
+}
+
+void MainWindow::onFunctionalControlClicked()
+{
+    if (!m_amsHandler || !m_amsHandler->isConnected()) {
+        m_functionalControlDialog->setDisconnectedState();
+        m_functionalControlDialog->show();
+        m_functionalControlDialog->raise();
+        m_functionalControlDialog->activateWindow();
+        return;
+    }
+
+    // Просто показываем диалог — showEvent внутри него сам вызовет
+    // refreshRequested → onFunctionalControlRefresh → requestFunctionalControl
+    m_functionalControlDialog->show();
+    m_functionalControlDialog->raise();
+    m_functionalControlDialog->activateWindow();
+}
+
+void MainWindow::onAmsMeasurementStageChanged(MeasurementStage stage, const QString &description)
+{
+    Q_UNUSED(stage)
+    qDebug() << "MainWindow: Этап измерения:" << description;
+    statusBar()->showMessage(description);
+
+    // Можно добавить визуализацию этапов в UI
+    // Например, подсветить текущий этап в списке
+}
+
+void MainWindow::onAmsMeasurementProgress(int percent, float angle)
+{
+    qDebug() << "MainWindow: Прогресс измерения:" << percent << "%, угол:" << angle << "°";
+
+    // Показываем виджет прогресса (если ещё не виден)
+    if (!ui->measurementProgressWidget->isVisible()) {
+        ui->measurementProgressWidget->setVisible(true);
+    }
+
+    int displayPercent = qBound(0, percent, 100);
+    ui->progressBarMeasurement->setValue(displayPercent);
+    ui->lblProgressPercent->setText(QString("%1%").arg(displayPercent));
+    ui->lblRpvAngle->setText(QString("%1°").arg(angle, 0, 'f', 1));
+    // Обновляем индикатор положения РПВ
+    ui->rpvIndicator->setAngle(angle);
+
+    statusBar()->showMessage(
+        QString("Измерение: %1%, Угол РПВ: %2°").arg(displayPercent).arg(angle, 0, 'f', 1)
+        );
+}
+
+void MainWindow::onAmsMeasurementCompleted(int recordId)
+{
+    qInfo() << "MainWindow: Измерение завершено успешно, ID записи:" << recordId;
+
+    // Сохраняем бюллетень Метео-11 от МС (если оператор ввёл его в «Исходных данных»).
+    // Делаем это здесь, а не при нажатии «Пуск», потому что m_currentRecordId в AMSHandler
+    // гарантированно валиден в слоте сигнала measurementCompleted (сброс — после emit).
+    if (sourceDataInstance && sourceDataInstance->hasMeteo11Bulletin()) {
+        qInfo() << "MainWindow: сохраняем бюллетень Метео-11 в БД, record_id=" << recordId;
+        const bool saved = m_amsHandler->saveMeteo11Bulletin(
+            sourceDataInstance->meteo11BulletinJson(),
+            sourceDataInstance->meteo11BulletinTime(),
+            sourceDataInstance->meteo11ValidityPeriod()
+            );
+        if (saved) {
+            sourceDataInstance->resetMeteo11Applied();
+            statusBar()->showMessage("Метео-11: бюллетень от МС сохранён", 5000);
+        } else {
+            qWarning() << "MainWindow: не удалось сохранить Метео-11 в БД";
+        }
+    } else {
+        qDebug() << "MainWindow: бюллетень Метео-11 не введён — пропускаем сохранение";
+    }
+
+    QMessageBox::information(this, "Успех",
+                             QString("Измерение завершено успешно!\n\nID записи в БД: %1\n\n"
+                                     "Результаты сохранеRны и доступны в разделе 'Результаты измерений'.")
+                                 .arg(recordId));
+
+    // Обновляем UI
+    ui->lblStatus->setText("ГОТОВ");
+    ui->lblStatus->setStyleSheet("color: #2E7D32; font-weight: bold; font-size: 9pt;");
+
+    ui->btnStart->setEnabled(true);
+    ui->btnStop->setEnabled(false);
+
+    // Скрываем прогрессбар
+    ui->measurementProgressWidget->setVisible(false);
+    ui->progressBarMeasurement->setValue(0);
+
+    statusBar()->showMessage("Измерение завершено успешно", 10000);
+
+    if (m_gnssHandler && m_gnssHandler->isConnected() && m_gnssHandler->hasValidFix()) {
+        m_gnssHandler->updateCoordinatesInDb(recordId);
+    } else {
+        qDebug() << "MainWindow: GNSS недоступен - в БД записываются координаты из UI-полей";
+    }
+}
+
+void MainWindow::onAmsMeasurementFailed(const QString &reason)
+{
+    qWarning() << "MainWindow: Измерение не удалось:" << reason;
+
+    QMessageBox::critical(this, "Ошибка измерения",
+                          QString("Измерение не было завершено:\n\n%1\n\n"
+                                  "Данные о неисправностях сохранены.\n"
+                                  "Откройте 'Функциональный контроль' для просмотра")
+                              .arg(reason));
+
+    // Обновляем UI
+    ui->lblStatus->setText("ОШИБКА");
+    ui->lblStatus->setStyleSheet("color: #C62828; font-weight: bold; font-size: 9pt;");
+
+    ui->btnStart->setEnabled(true);
+    ui->btnStop->setEnabled(false);
+
+    // Перерисовываем по актуальному состоянию приземных данных.
+    // ЗАМЕЧАНИЕ: это перепишет "ОШИБКА" обратно на "ГОТОВ"/"УСТАРЕЛИ"/"НЕТ ДАННЫХ"
+    // — то есть индикация ошибки исчезнет с lblStatus. Сообщение об ошибке
+    // оператор уже видел в QMessageBox::critical (выше в этом же методе), а в
+    // statusBar остаётся "Ошибка измерения АМС: ..." на 10 секунд. Если такое
+    // поведение нежелательно — можно эту строку НЕ добавлять, тогда "ОШИБКА"
+    // на lblStatus останется до следующего события surfaceStateChanged.
+    if (GroundMeteoParams *gmp = GroundMeteoParams::instance())
+        onSurfaceStateChanged(gmp->surfaceState());
+
+    // Скрываем прогрессбар
+    ui->measurementProgressWidget->setVisible(false);
+    ui->progressBarMeasurement->setValue(0);
+
+    statusBar()->showMessage("Ошибка измерения АМС: " + reason, 10000);
+}
+
+void MainWindow::onAmsNeedIntermediateData(int progress)
+{
+    qDebug() << "MainWindow: Требуются промежуточные данные на" << progress << "%";
+
+    // --- Дата и время — берём из поля интерфейса (там актуальное значение:
+    //     GNSS, ручной ввод или системные часы — в зависимости от режима) ---
+    QDateTime currentDateTime = QDateTime::fromString(
+        ui->editDateTime->text(), "dd.MM.yyyy hh:mm:ss");
+    if (!currentDateTime.isValid()) {
+        // Резервный вариант на случай нестандартного формата в поле
+        currentDateTime = QDateTime::currentDateTime();
+        qWarning() << "MainWindow: Не удалось распарсить время из editDateTime, используем системное";
+    }
+
+    int day        = currentDateTime.date().day();
+    int hour       = currentDateTime.time().hour();
+    int tenMinutes = currentDateTime.time().minute() / 10;
+
+    // --- Высота над уровнем моря из поля положения метеокомплекса ---
+    float stationAltitude = ui->editAltitude->text().toFloat();
+
+    // --- Достигнутая высота и профили среднего ветра заполняются нулями ---
+    float reachedHeight = 0.0f;
+    QVector<float> avgWindDir(23, 0.0f);
+    QVector<float> avgWindSpeed(23, 0.0f);
+
+    // --- Приземный ветер из GroundMeteoParams ---
+    float surfaceWindDir   = 0.0f;
+    float surfaceWindSpeed = 0.0f;
+
+    GroundMeteoParams* meteoParams = GroundMeteoParams::instance();
+    if (meteoParams && meteoParams->hasLastData()) {
+        surfaceWindDir   = static_cast<float>(meteoParams->lastWindDirection());
+        surfaceWindSpeed = static_cast<float>(meteoParams->lastWindSpeed());
+        qDebug() << "MainWindow: Приземный ветер из ИВС:"
+                 << "направление" << surfaceWindDir << "°,"
+                 << "скорость" << surfaceWindSpeed << "м/с";
+    } else {
+        qWarning() << "MainWindow: Данные ИВС недоступны, приземный ветер = 0";
+    }
+
+    // --- Отправляем данные в АМС ---
+    bool success = m_amsHandler->sendSourceDataDuringMeasurement(
+        day, hour, tenMinutes,
+        stationAltitude,
+        avgWindDir, avgWindSpeed,
+        reachedHeight,
+        surfaceWindDir, surfaceWindSpeed,
+        currentDateTime
+        );
+
+    if (success) {
+        qDebug() << "MainWindow: Промежуточные данные отправлены";
+        statusBar()->showMessage(
+            QString("Промежуточные данные отправлены (прогресс %1%)").arg(progress), 3000);
+    } else {
+        qWarning() << "MainWindow: Не удалось отправить промежуточные данные";
+        QMessageBox::warning(this, "Ошибка",
+                             "Не удалось отправить промежуточные данные в АМС.");
+    }
+}
+
+void MainWindow::onAmsAvgWindReceived(const QVector<WindProfileData> &data)
+{
+    qDebug() << "MainWindow: Получен профиль среднего ветра:" << data.size() << "точек";
+
+    // Здесь можно отобразить данные в UI
+    // Например, построить график или показать в таблице
+
+    statusBar()->showMessage(
+        QString("Получен профиль среднего ветра (%1 уровней)").arg(data.size()),
+        3000
+        );
+}
+
+void MainWindow::onAmsActualWindReceived(const QVector<WindProfileData> &data)
+{
+    qDebug() << "MainWindow: Получен профиль действительного ветра:" << data.size() << "точек";
+
+    statusBar()->showMessage(
+        QString("Получен профиль действительного ветра (%1 уровней)").arg(data.size()),
+        3000
+        );
+}
+
+void MainWindow::onAmsMeasuredWindReceived(const QVector<MeasuredWindData> &data)
+{
+    qDebug() << "MainWindow: Получен профиль измеренного ветра:" << data.size() << "точек";
+
+    statusBar()->showMessage(
+        QString("Получен профиль измеренного ветра (%1 измерений)").arg(data.size()),
+        3000
+        );
+}
+
+// ========= БИНС =========
+void MainWindow::setupBinsHandler()
+{
+    if (!m_binsHandler) return;
+
+    connect(m_binsHandler, &BINSHandler::connected, this, &MainWindow::onBinsConnected);
+    connect(m_binsHandler, &BINSHandler::disconnected, this, &MainWindow::onBinsDisconnected);
+    connect(m_binsHandler, &BINSHandler::errorOccurred, this, &MainWindow::onBinsError);
+    connect(m_binsHandler, &BINSHandler::statusMessage, this, &MainWindow::onBinsStatusMessage);
+    connect(m_binsHandler, &BINSHandler::dataReceived, this, &MainWindow::onBinsDataReceived);
+
+    qDebug() << "MainWindow: БИНС обработчик настроен";
+}
+
+void MainWindow::onBinsConnectFromSettings()
+{
+    if (!sensorSettingsDialog || !m_binsHandler) return;
+
+    m_binsComPort = sensorSettingsDialog->getBinsComPort();
+    m_binsBaudRate = sensorSettingsDialog->getBinsBaudRate();
+
+    qDebug() << "MainWindow: Попытка подключения к БИНС на" << m_binsComPort << "со скоростью" << m_binsBaudRate;
+
+    if (m_binsHandler->connectToBINS(
+            m_binsComPort,
+            m_binsBaudRate,
+            sensorSettingsDialog->getBinsDataBits(),
+            sensorSettingsDialog->getBinsParity(),
+            sensorSettingsDialog->getBinsStopBits())) {
+        qDebug() << "MainWindow: БИНС подключение инициализировано";
+        sensorSettingsDialog->setBinsConnectionStatus("Ожидание данных...", false);
+    } else {
+        qDebug() << "MainWindow: Ошибка подключения к БИНС";
+        sensorSettingsDialog->setBinsConnectionStatus("Ошибка подключения", false);
+        QMessageBox::warning(this, "Ошибка", "Не удалось подключиться к БИНС. Проверьте порт или настройки.");
+    }
+}
+
+void MainWindow::onBinsDisconnectFromSettings()
+{
+    if (!m_binsHandler) return;
+
+    qDebug() << "MainWindow: Отключение от БИНС";
+    m_binsHandler->disconnectFromBINS();
+
+    if (sensorSettingsDialog) {
+        sensorSettingsDialog->setBinsConnectionStatus("Отключено", false);
+        sensorSettingsDialog->setBinsConnectionEnabled(true);
+    }
+}
+
+void MainWindow::onBinsConnected()
+{
+    qDebug() << "MainWindow: БИНС подключен успешно";
+
+    if (sensorSettingsDialog) {
+        sensorSettingsDialog->setBinsConnectionStatus("Подключено", true);
+        sensorSettingsDialog->setBinsConnectionEnabled(false);
+    }
+
+    statusBar()->showMessage("БИНС подключен успешно", 5000);
+    updateBinsStatusLabel(true);
+}
+
+void MainWindow::onBinsDisconnected()
+{
+    qDebug() << "MainWindow: БИНС отключен";
+
+    if (sensorSettingsDialog) {
+        sensorSettingsDialog->setBinsConnectionStatus("Отключено", false);
+        sensorSettingsDialog->setBinsConnectionEnabled(true);
+    }
+
+    statusBar()->showMessage("БИНС отключен", 3000);
+    updateBinsStatusLabel(false);
+}
+
+void MainWindow::onBinsError(const QString &error)
+{
+    qWarning() << "MainWindow: Ошибка БИНС:" << error;
+    statusBar()->showMessage("Ошибка БИНС: " + error, 10000);
+}
+
+void MainWindow::onBinsStatusMessage(const QString &message)
+{
+    qDebug() << "MainWindow: Статус БИНС:" << message;
+    statusBar()->showMessage("БИНС: " + message, 3000);
+}
+
+void MainWindow::onBinsDataReceived(const BINSData &data)
+{
+    if (!data.valid) return;
+
+    // Обновляем поля в интерфейсе
+    ui->editDirectionAngle->setText(QString::number(data.heading, 'f', 2));
+    ui->editRollAngle->setText(QString::number(data.roll, 'f', 2));
+    ui->editPitchAngle->setText(QString::number(data.pitch, 'f', 2));
+
+    // Обновляем строку состояния
+    statusBar()->showMessage(
+        QString("БИНС: Курс %1 град. | Крен %2 град. | Тангаж %3 град.")
+            .arg(data.heading, 0, 'f', 1)
+            .arg(data.roll, 0, 'f', 1)
+            .arg(data.pitch, 0, 'f', 1),
+        2000);
+}
+
+void MainWindow::updateCoordinateSource(const QString &source)
+{
+    QString message = "Источник координат: " + source;
+    statusBar()->showMessage(message, 3000);
+    qDebug() << message;
+}
+
+void MainWindow::updateFieldsEditability()
+{
+    // Поля редактируемы только если все источники выключены (ручной ввод)
+    bool fieldsEditable = !m_mapCoordinatesEnabled && !m_gnssEnabled;
+
+    ui->editLatitude->setReadOnly(!fieldsEditable);
+    ui->editLongitude->setReadOnly(!fieldsEditable);
+    ui->editAltitude->setReadOnly(!fieldsEditable);
+
+    // Визуальная индикация
+    QString style = fieldsEditable ? "" : "background-color: #F5F5F5;";
+    ui->editLatitude->setStyleSheet(style);
+    ui->editLongitude->setStyleSheet(style);
+    ui->editAltitude->setStyleSheet(style);
+}
+
+void MainWindow::updateCoordinatesFromMap(double latitude, double longitude)
+{
+    setCoordField(ui->editLatitude, latitude);
+    setCoordField(ui->editLongitude, longitude);
+
+    // Передаем сигнал другим окнам
+    emit coordinatesUpdatedFromMap(latitude, longitude);
+}
+
+void MainWindow::resizeEvent(QResizeEvent *event)
+{
+    QMainWindow::resizeEvent(event);
+
+    if(m_toastWidget) {
+        repositionToast();
+    }
+}
+
+bool MainWindow::eventFilter(QObject *watched, QEvent *event)
+{
+    if (watched == ui->mapCanvas && event->type() == QEvent::Resize) {
+        repositionMapFloatingControls();
+    }
+    return QMainWindow::eventFilter(watched, event);
+}
+
+void MainWindow::repositionMapFloatingControls()
+{
+    if (!ui->mapCanvas) return;
+
+    const int margin = 16;
+    const int gap = 8;
+    const int canvasWidth = ui->mapCanvas->width();
+
+    // Строка 1: маркер (выбор координат с карты) + GNSS справа от него
+    const int markerSize = ui->btnMapCoordinates->width();
+    const int gnssWidth = ui->checkboxGnss->width();
+    const int row1Height = ui->btnMapCoordinates->height();
+
+    const int gnssX = canvasWidth - gnssWidth - margin;
+    const int markerX = gnssX - gap - markerSize;
+    ui->checkboxGnss->move(gnssX, margin);
+    ui->btnMapCoordinates->move(markerX, margin);
+
+    // Строка 2: выбор типа карты — под строкой 1, прижат к правому краю
+    const int comboWidth = ui->comboBox_mapTypes->width();
+    const int y2 = margin + row1Height + gap;
+    ui->comboBox_mapTypes->move(canvasWidth - comboWidth - margin, y2);
+
+    // Поднимаем плавающие элементы над картой в порядке отрисовки
+    ui->btnMapCoordinates->raise();
+    ui->checkboxGnss->raise();
+    ui->comboBox_mapTypes->raise();
+}
+
+void MainWindow::onConnectSensorsClicked()
+{
+    bool gnssOk = m_gnssHandler->isConnected();
+    bool amsOk  = m_amsHandler && m_amsHandler->isConnected();
+    bool binsOk = m_binsHandler && m_binsHandler->isConnected();
+    bool iwsOk  = m_iwsDeviceActive;
+    if (gnssOk && amsOk && binsOk && iwsOk) {
+        QMessageBox::information(this, "Датчики", "Все датчики подключены.");
+        return;
+    }
+    if (m_autoConnector->isDetecting()) return;
+    m_autoConnector->startDetection();
+}
+
+bool MainWindow::connectIwsPort(const QString &port, int baudRate, QSerialPort::DataBits dataBits,
+                                QSerialPort::Parity parity, QSerialPort::StopBits stopBits,
+                                int protocol, quint8 address, int pollInterval)
+{
+    // Создаём serial port если ещё не создан
+    if (!serialPort) {
+        serialPort = new QSerialPort(this);
+        connect(serialPort, &QSerialPort::readyRead, this, &MainWindow::onSerialDataReceived);
+        connect(serialPort, &QSerialPort::errorOccurred, this, &MainWindow::onSerialError);
+    }
+
+    // Закрываем если уже открыт
+    if (serialPort->isOpen()) {
+        serialPort->close();
+    }
+
+    // Настраиваем порт
+    serialPort->setPortName(port);
+    serialPort->setBaudRate(baudRate);
+    serialPort->setDataBits(dataBits);
+    serialPort->setParity(parity);
+    serialPort->setStopBits(stopBits);
+    serialPort->setFlowControl(QSerialPort::NoFlowControl);
+
+    // Пытаемся открыть порт
+    if (serialPort->open(QIODevice::ReadWrite)) {
+        // Порт открыт, но устройство ещё не подтверждено —
+        // "Подключено" выставим только после первого ответа
+        m_iwsDeviceActive = false;
+        sensorSettingsDialog->setIwsConnectionStatus("Ожидание ответа...", false);
+        sensorSettingsDialog->setIwsConnectionEnabled(false);
+
+        // Запускаем таймаут: если за 3 с нет ответа — считаем, что устройства нет
+        if (!m_iwsConnectTimer) {
+            m_iwsConnectTimer = new QTimer(this);
+            m_iwsConnectTimer->setSingleShot(true);
+            connect(m_iwsConnectTimer, &QTimer::timeout, this, &MainWindow::onIwsConnectTimeout);
+        }
+        m_iwsConnectTimer->start(3000);
+
+        // Запускаем таймер прогрева ИВС (3 минуты)
+        m_iwsWarmupDone = false;
+        // Переключаемся на 6 мин., если сейчас выбрано 3 мин.
+        if (ui->comboAvgTime->currentIndex() == 0)
+            ui->comboAvgTime->setCurrentIndex(1);
+        // Серим (блокируем) пункт "3 мин" — не удаляем, чтобы не сбивать с толку
+        if (auto *m = qobject_cast<QStandardItemModel*>(ui->comboAvgTime->model()))
+            if (auto *it = m->item(0)) it->setEnabled(false);
+        ui->comboAvgTime->setToolTip("Режим 3 мин. станет доступен через 3 минуты после подключения ИВС");
+        m_iwsWarmupTimer->start(3 * 60 * 1000);
+        statusBar()->showMessage("ИВС подключён. Режим усреднения 3 мин. станет доступен через 3 минуты.", 8000);
+
+        // Настраиваем протокол в GroundMeteoParams
+        GroundMeteoParams* meteoParams = GroundMeteoParams::instance();
+        if (meteoParams) {
+            int protocolToUse = protocol;
+
+            GroundMeteoParams::RS485Protocol rs485Protocol =
+                (protocolToUse == 0) ?
+                    GroundMeteoParams::UMB_PROTOCOL :
+                    GroundMeteoParams::MODBUS_RTU;
+
+            meteoParams->setProtocol(rs485Protocol);
+            meteoParams->setDeviceAddress(address);
+
+            qDebug() << "IWS: Configured"
+                     << (protocolToUse == 0 ? "UMB" : "Modbus RTU")
+                     << "protocol, address" << QString("0x%1").arg(address, 2, 16, QChar('0'))
+                     << (protocolToUse == 1 ? "(AVERAGE values)" : "");
+        } else {
+            qDebug() << "GroundMeteoParams not created yet. Will be configured when 'Initial Data' is opened.";
+        }
+
+        // Запускаем таймер опроса
+        if (!pollTimer) {
+            pollTimer = new QTimer(this);
+            connect(pollTimer, &QTimer::timeout, this, &MainWindow::pollMeteoStation);
+        }
+        pollTimer->start(pollInterval * 1000);
+        // Немедленный зондирующий запрос для быстрой верификации устройства
+        QTimer::singleShot(200, this, &MainWindow::pollMeteoStation);
+
+        qDebug() << "RS485 port opened on" << port << "— waiting for device response";
+        return true;
+    } else {
+        sensorSettingsDialog->setIwsConnectionStatus("Ошибка подключения", false);
+        return false;
+    }
+}
+
+void MainWindow::onConnectRequested()
+{
+    if (sensorSettingsDialog->getIwsComPort().isEmpty() ||
+        sensorSettingsDialog->getIwsComPort() == "Нет доступных портов") {
+        QMessageBox::warning(this, "Ошибка", "Нет доступных COM-портов");
+        return;
+    }
+
+    if (!connectIwsPort(sensorSettingsDialog->getIwsComPort(),
+                        sensorSettingsDialog->getIwsBaudRate(),
+                        sensorSettingsDialog->getIwsDataBits(),
+                        sensorSettingsDialog->getIwsParity(),
+                        sensorSettingsDialog->getIwsStopBits(),
+                        IWS_PROTOCOL,
+                        sensorSettingsDialog->getIwsDeviceAddress(),
+                        sensorSettingsDialog->getIwsPollInterval())) {
+        QMessageBox::critical(this, "Ошибка подключения",
+                              QString("Не удалось открыть порт: %1").arg(serialPort->errorString()));
+
+    }
+}
+
+void MainWindow::onIwsWarmupFinished()
+{
+    m_iwsWarmupDone = true;
+    // Разблокируем пункт "3 мин" в combobox
+    if (auto *m = qobject_cast<QStandardItemModel*>(ui->comboAvgTime->model()))
+        if (auto *it = m->item(0)) it->setEnabled(true);
+    ui->comboAvgTime->setToolTip("");
+    statusBar()->showMessage("ИВС: режим усреднения 3 минуты теперь доступен", 5000);
+    qDebug() << "MainWindow: ИВС прогрев завершён, пункт '3 мин' разблокирован";
+}
+
+void MainWindow::onDisconnectRequested()
+{
+    m_iwsDeviceActive = false;
+    if (m_iwsConnectTimer) m_iwsConnectTimer->stop();
+
+    // Сбрасываем прогрев ИВС; ИВС отключён — восстанавливаем comboAvgTime
+    if (m_iwsWarmupTimer) {
+        m_iwsWarmupTimer->stop();
+    }
+    m_iwsWarmupDone = false;
+    // При отключении ИВС — разблокируем пункт "3 мин" обратно
+    if (auto *m = qobject_cast<QStandardItemModel*>(ui->comboAvgTime->model()))
+        if (auto *it = m->item(0)) it->setEnabled(true);
+    ui->comboAvgTime->setToolTip("");
+
+    if (pollTimer) {
+        pollTimer->stop();
+    }
+
+    if (serialPort && serialPort->isOpen()) {
+        serialPort->close();
+    }
+
+    sensorSettingsDialog->setIwsConnectionStatus("Отключено", false);
+    sensorSettingsDialog->setIwsConnectionEnabled(true);
+    updateIwsStatusLabel(false);
+
+    qDebug() << "RS485 disconnected";
+}
+
+void MainWindow::onSerialDataReceived()
+{
+    if (!serialPort) return;
+
+    QByteArray data = serialPort->readAll();
+    qDebug() << "Received data:" << data.toHex(' ');
+
+    // Первый ответ от устройства — подтверждаем подключение ИВС
+    if (!m_iwsDeviceActive) {
+        m_iwsDeviceActive = true;
+        if (m_iwsConnectTimer) m_iwsConnectTimer->stop();
+        sensorSettingsDialog->setIwsConnectionStatus("Подключено", true);
+        updateIwsStatusLabel(true);
+        qDebug() << "IWS device confirmed (first response received)";
+    }
+
+    // Передаём данные в GroundMeteoParams если он открыт
+    GroundMeteoParams* meteoParams = GroundMeteoParams::instance();
+    if (meteoParams) {
+        meteoParams->onDataReceived(data);
+    }
+}
+
+void MainWindow::onSerialError(QSerialPort::SerialPortError error)
+{
+    if (error != QSerialPort::NoError && error != QSerialPort::TimeoutError) {
+        qDebug() << "Serial port error:" << serialPort->errorString();
+        m_iwsDeviceActive = false;
+
+        if (sensorSettingsDialog) {
+            sensorSettingsDialog->setIwsConnectionStatus(
+                QString("Ошибка: %1").arg(serialPort->errorString()), false);
+        }
+
+        if (serialPort->isOpen()) {
+            onDisconnectRequested();
+        }
+    }
+}
+
+void MainWindow::onIwsConnectTimeout()
+{
+    // Таймаут истёк — устройство не отвечает, порт открыт впустую
+    if (!m_iwsDeviceActive && serialPort && serialPort->isOpen()) {
+        qDebug() << "IWS connect timeout — no response, closing port";
+        onDisconnectRequested();
+        sensorSettingsDialog->setIwsConnectionStatus("Нет ответа от устройства", false);
+
+        // Показываем предупреждение только если AutoConnector уже не работает
+        // (чтобы не дублировать сообщение из onAutoConnectorFinished)
+        if (!m_autoConnector->isDetecting()) {
+            QMessageBox::warning(this, "ИВС не отвечает",
+                "Не удалось подключить ИВС: устройство не отвечает.\n\n"
+                "Проверьте физическое подключение кабеля и нажмите\n"
+                "«Подключить датчики» для повторной попытки.");
+        }
+    }
+}
+
+void MainWindow::pollMeteoStation()
+{
+    if (!serialPort || !serialPort->isOpen()) {
+        qDebug() << "Serial port not open, skipping poll";
+        return;
+    }
+
+    GroundMeteoParams* meteoParams = GroundMeteoParams::instance();
+    if (!meteoParams) {
+        qDebug() << "GroundMeteoParams instance not found";
+        return;
+    }
+
+    // Получаем параметры для запроса
+    QList<quint16> params = getRequestParameters();
+
+    if (params.isEmpty()) {
+        qWarning() << "No parameters to request";
+        return;
+    }
+
+    // Создаём запрос через GroundMeteoParams
+    QByteArray request;
+
+    // ИСПОЛЬЗУЕМ КОНСТАНТУ IWS_PROTOCOL (определена в начале файла)
+    int protocolToUse = IWS_PROTOCOL;
+
+    // Если нужно, можно переопределить из настроек
+    // protocolToUse = sensorSettingsDialog->getIwsProtocolIndex();
+
+    // Получаем адрес устройства из настроек
+    quint8 deviceAddress = sensorSettingsDialog ?
+                               sensorSettingsDialog->getIwsDeviceAddress() :
+                               (protocolToUse == 0 ? 0x70 : 0x01);
+
+    if (protocolToUse == 0) { // UMB
+        meteoParams->setProtocol(GroundMeteoParams::UMB_PROTOCOL);
+        meteoParams->setDeviceAddress(deviceAddress);
+        request = meteoParams->createUmbReadRequest(params);
+        qDebug() << "Polling IWS with UMB protocol (current values), address"
+                 << QString("0x%1").arg(deviceAddress, 2, 16, QChar('0'));
+    } else { // MODBUS RTU
+        meteoParams->setProtocol(GroundMeteoParams::MODBUS_RTU);
+        meteoParams->setDeviceAddress(deviceAddress);
+        request = meteoParams->createModbusReadRequest(params);
+        qDebug() << "Polling IWS with Modbus RTU protocol (AVERAGE values), address"
+                 << QString("0x%1").arg(deviceAddress, 2, 16, QChar('0'));
+    }
+
+    if (request.isEmpty()) {
+        qDebug() << "Failed to create request";
+        return;
+    }
+
+    qint64 written = serialPort->write(request);
+    if (written != -1) {
+        qDebug() << "Request sent (" << written << "bytes):" << request.toHex(' ');
+    } else {
+        qDebug() << "Failed to write to serial port";
+    }
+}
+
+QList<quint16> MainWindow::getRequestParameters()
+{
+    QList<quint16> params;
+
+    // ИСПОЛЬЗУЕМ КОНСТАНТУ IWS_PROTOCOL (определена в начале файла)
+    int protocolToUse = IWS_PROTOCOL;
+
+    // Если нужно, можно переопределить из настроек
+    // if (sensorSettingsDialog) {
+    //     protocolToUse = sensorSettingsDialog->getIwsProtocolIndex();
+    // }
+
+    if (protocolToUse == 0) { // UMB - текущие значения
+        params << 0x0064  // Temperature (текущая)
+               << 0x00C8  // Humidity (текущая)
+               << 0x012C  // Pressure (текущее)
+               << 0x0190  // Wind Speed (текущая)
+               << 0x01F4; // Wind Direction (текущее)
+        qDebug() << "Request parameters: UMB current values";
+    } else { // MODBUS RTU - СРЕДНИЕ значения (функция 0x04)
+        // Оптимизированный запрос: читаем близкие регистры вместе
+        // Группируем регистры чтобы не читать 70 штук сразу
+
+        // ВАРИАНТ 1: Все 5 регистров (читает 13-82 = 70 регистров)
+        // Работает, но читает много лишнего
+        params << 13  // Humidity Avg (влажность средняя)
+               << 21  // Wind Direction Avg (направление ветра среднее)
+               << 34  // Temperature Avg (температура средняя)
+               << 45  // Wind Speed Avg (скорость ветра средняя)
+               << 82; // Pressure Avg (давление среднее)
+
+        // ВАРИАНТ 2: Если хотите читать меньше за раз, раскомментируйте это:
+        // params << 13 << 21 << 34 << 45;  // 4 параметра (13-45 = 33 регистра)
+        // В следующем цикле добавить: params << 82;  // 1 параметр
+
+        qDebug() << "Request parameters: Modbus RTU (0x04) AVERAGE values, registers:" << params;
+    }
+
+    return params;
+}
+
+void MainWindow::createMapComponent(const QString &pluginName)
+{
+    QQuickItem* main = ui->quickWidget->rootObject();
+    if (main) {
+        qcp.setMapTypes(QStringList());
+        QMetaObject::invokeMethod(main, "createMapComponent", Qt::DirectConnection,
+                                  Q_ARG(QVariant, pluginName));
+        setupMapItems(main);
+    }
+}
+
+void MainWindow::setupMapItems(QQuickItem *item)
+{
+    if (item) {
+        item->update();
+    }
+}
+
+
+void MainWindow::updateDateTime()
+{
+    if (m_isEditingDateTime) {
+        return;
+    }
+
+    if (ui->editDateTime->hasFocus()) {
+        return;
+    }
+
+    QString timeString;
+
+    if (m_manualDateTimeSet) {
+        // Используем вручную установленное время и продолжаем его инкремент
+        m_manualDateTime = m_manualDateTime.addSecs(1);
+        timeString = m_manualDateTime.toString("dd.MM.yyyy hh:mm:ss");
+    }
+    else if (m_gnssEnabled && m_gnssHandler->isConnected()) {
+        // Используем время из GNSS
+        GNSSData data = m_gnssHandler->getCurrentData();
+        if (data.timestamp.isValid()){
+            timeString = data.timestamp.toString("dd.MM.yyyy hh:mm:ss");
+        } else {
+            // Если время из GNSS не валидно, то используем системное
+            timeString = QDateTime::currentDateTime().toString("dd.MM.yyyy hh:mm:ss");
+        }
+    } else {
+        // Используем системное время
+        timeString = QDateTime::currentDateTime().toString("dd.MM.yyyy hh:mm:ss");
+    }
+
+    ui->editDateTime->setText(timeString);
+    ui->lblTopDateTime->setText(timeString);
+}
+
+void MainWindow::onSyncTimeClicked()
+{
+    // Синхронизируем с системным временем
+    m_manualDateTime = QDateTime::currentDateTime();
+    ui->editDateTime->setText(m_manualDateTime.toString("dd.MM.yyyy hh:mm:ss"));
+
+    // Помечаем, что время было установлено вручную
+    m_manualDateTimeSet = true;
+    m_useManualDateTime = true;
+
+    statusBar()->showMessage("Время синхронизировано с системным", 3000);
+
+    if (!m_manualInputEnabled) {
+        ui->editDateTime->setStyleSheet("font-weight: bold; font-size: 11pt; background-color: #E8F5E9;");
+    }
+}
+
+void MainWindow::onDateTimeEditingFinished()
+{
+    m_isEditingDateTime = false;
+
+    if (!m_useManualDateTime) {
+        return; // Валидация только в режиме ручного ввода
+    }
+
+    QString inputText = ui->editDateTime->text();
+    QDateTime newDateTime = QDateTime::fromString(inputText, "dd.MM.yyyy hh:mm:ss");
+
+    if (newDateTime.isValid()) {
+        // Время корректно введено
+        m_manualDateTime = newDateTime;
+        m_manualDateTimeSet = true;
+        ui->editDateTime->setStyleSheet("font-weight: bold; font-size: 11pt; background-color: #FFFACD;");
+    } else {
+        // Время введено некоррктно - возвращаем предыдущее значение
+        ui->editDateTime->setText(m_manualDateTime.toString("dd.MM.yyyy hh:mm:ss"));
+
+        // Кратковременная визуальная индикация ошибки
+        ui->editDateTime->setStyleSheet("font-weight: bold; font-size: 11pt; background-color: #FFB6C1;");
+        QTimer::singleShot(500, this, [this]() {
+            ui->editDateTime->setStyleSheet("font-weight: bold; font-size: 11pt; background-color: #FFFACD;");
+        });
+    }
+}
+
+void MainWindow::onDateTimeEditingStarted()
+{
+    if (m_useManualDateTime) {
+        m_isEditingDateTime = true;
+    }
+}
+
+//void MainWindow::onFunctionalControlClicked()
+//{
+//    // Здесь будет логика функционального контроля
+//}
+
+void MainWindow::onWorkRegulationClicked()
+{
+    WorkRegulationDialog dlg(m_amsHandler, this);
+    dlg.adjustSize();
+    dlg.setMinimumSize(dlg.sizeHint());
+    dlg.setSizeGripEnabled(true);
+    dlg.exec();
+}
+
+void MainWindow::onManualInputClicked()
+{
+    bool enabled = ui->editAltitude->isEnabled() &&
+                   ui->editDirectionAngle->isEnabled() &&
+                   ui->editLatitude->isEnabled() &&
+                   ui->editLongitude->isEnabled() &&
+                   ui->editPitchAngle->isEnabled() &&
+                   ui->editRollAngle->isEnabled();
+
+    ui->editAltitude->setEnabled(!enabled);
+    ui->editDirectionAngle->setEnabled(!enabled);
+    ui->editLatitude->setEnabled(!enabled);
+    ui->editLongitude->setEnabled(!enabled);
+    ui->editPitchAngle->setEnabled(!enabled);
+    ui->editRollAngle->setEnabled(!enabled);
+    ui->editDateTime->setReadOnly(enabled);
+
+    m_manualInputEnabled = !enabled;
+
+    if (m_manualInputEnabled) {
+        checkAndDisableConflictingSources("manual");
+        updateCoordinateSource("Ручной ввод");
+
+        m_useManualDateTime = true;
+        m_isEditingDateTime = false;
+
+        // Если время еще не было установлено вручную, берем текущее
+        if (!m_manualDateTimeSet) {
+            QDateTime currentDisplayed = QDateTime::fromString(ui->editDateTime->text(), "dd.MM.yyyy hh:mm:ss");
+            if (currentDisplayed.isValid()) {
+                m_manualDateTime = currentDisplayed;
+            } else {
+                m_manualDateTime = QDateTime::currentDateTime();
+            }
+        }
+        // Визуальная индикация редактируемого поля
+        ui->editDateTime->setStyleSheet("font-weight: bold; font-size: 11pt; background-color: #FFFACD;");
+    } else {
+        // При выходе из режима ручного ввода возвращаемся к автоматическому времени
+        m_manualDateTimeSet = true;
+        m_isEditingDateTime = false;
+        ui->editDateTime->setStyleSheet("font-weight: bold; font-size: 11pt;");
+
+        QDateTime currentDisplayed = QDateTime::fromString(ui->editDateTime->text(), "dd.MM.yyyy hh:mm:ss");
+        if (currentDisplayed.isValid()) {
+            m_manualDateTime = currentDisplayed;
+        }
+
+        updateDateTime();
+    }
+}
+
+void MainWindow::onInitialDataClicked()
+{
+    ui->stackedWidget->setCurrentWidget(sourceDataInstance);
+}
+
+void MainWindow::onCalculationsClicked()
+{
+    ui->stackedWidget->setCurrentWidget(ui->page_calculations);
+}
+
+void MainWindow::onMeasurementResultsClicked()
+{
+    MeasurementResults *dialog = new MeasurementResults(this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+
+    //    if (!DatabaseManager::instance()->isConnected()){
+    //        DatabaseManager::instance()->connect();
+    //    }
+
+    connect(this, &MainWindow::coordinatesUpdatedFromMap,
+            dialog, &MeasurementResults::updateCoordinatesFromMainWindow);
+
+    connect(this, &MainWindow::mapCoordinatesModeChanged,
+            dialog, &MeasurementResults::setMapCoordinatesMode,
+            Qt::DirectConnection);
+
+    dialog->setMapCoordinatesMode(m_mapCoordinatesEnabled || m_gnssEnabled);
+
+    if ((m_mapCoordinatesEnabled || m_gnssEnabled) && ui->editLatitude && ui->editLongitude) {
+        bool ok1, ok2;
+        double lat = getCoordField(ui->editLatitude, ok1);
+        double lon = getCoordField(ui->editLongitude, ok2);
+        if (ok1 && ok2) {
+            dialog->updateCoordinatesFromMainWindow(lat, lon);
+        }
+    }
+
+    dialog->adjustSize();
+    dialog->setMinimumSize(800, 600);
+    dialog->showMaximized();
+}
+
+void MainWindow::onStartClicked()
+{
+    // Проверяем подключение к АМС
+    if (!m_amsHandler || !m_amsHandler->isConnected()) {
+        QMessageBox::warning(this, "Ошибка",
+                             "АМС не подключен. Подключитесь к АМС через настройки датчиков.");
+        return;
+    }
+
+    // Проверяем, не выполняется ли уже измерение
+    if (m_amsHandler->getMeasurementStatus() == STATUS_RUNNING) {
+        QMessageBox::warning(this, "Ошибка",
+                             "Измерение уже выполняется. Остановите текущее измерение перед запуском нового.");
+        return;
+    }
+
+    // Страховочная проверка: приземные данные должны быть применены целиком
+    // (все 5 строк). По нормальной логике кнопка при NoData отключена
+    // (onSurfaceStateChanged), но мало ли — на всякий случай.
+    if (GroundMeteoParams *gmp = GroundMeteoParams::instance()) {
+        if (gmp->surfaceState() == GroundMeteoParams::NoData) {
+            QMessageBox::warning(this, "Не готово к измерению",
+                                 "Не введены приземные метеоданные.\n\n"
+                                 "Откройте «Исходные данные» и заполните все 5 строк "
+                                 "(скорость и направление ветра, давление, влажность, температура), "
+                                 "затем нажмите «Применить».");
+            return;
+        }
+    }
+
+    // Обновляем UI
+    ui->lblStatus->setText("РАБОТА");
+    ui->lblStatus->setStyleSheet("color: #1565C0; font-weight: bold; font-size: 9pt;");
+
+    // Получаем параметры для запуска измерения
+    WorkMode mode = ui->cbWorkMode->isChecked() ? MODE_WORKING : MODE_STANDBY;
+    // Литера из combobox (индекс 0→LITERA_1, 1→LITERA_2, 2→LITERA_3)
+    Litera litera = static_cast<Litera>(ui->comboLitera->currentIndex());
+
+    // Время усреднения из combobox (индекс 0→3 мин, 1→6 мин, 2→9 мин)
+    AveragingTime avgTime = AVERAGING_3_MIN;
+    switch (ui->comboAvgTime->currentIndex()) {
+    case 1: avgTime = AVERAGING_6_MIN; break;
+    case 2: avgTime = AVERAGING_9_MIN; break;
+    default: avgTime = AVERAGING_3_MIN; break;
+    }
+
+    // Собираем координаты станции
+    StationCoordinates coords;
+    bool ok;
+
+    // Широта
+    double lat = getCoordField(ui->editLatitude, ok);
+    if (!ok) lat = 0.0;
+    coords.latitude = static_cast<int>(lat * 3600.0);
+
+    // Долгота
+    double lon = getCoordField(ui->editLongitude, ok);
+    if (!ok) lon = 0.0;
+    coords.longitude = static_cast<int>(lon * 3600.0);
+
+    // Высота
+    coords.altitude = ui->editAltitude->text().toFloat();
+
+    // Углы ориентации
+    coords.azimuth = ui->editDirectionAngle->text().toFloat();
+    coords.pitch = ui->editPitchAngle->text().toFloat();
+    coords.roll = ui->editRollAngle->text().toFloat();
+
+    // Дата и время
+    QDateTime dateTime;
+    if (m_useManualDateTime && m_manualDateTimeSet) {
+        dateTime = m_manualDateTime;
+    } else {
+        dateTime = QDateTime::currentDateTime();
+    }
+
+    // Запускаем полную последовательность измерения
+    qDebug() << "MainWindow: Запуск измерения АМС";
+    qDebug() << "  Режим:" << (mode == MODE_WORKING ? "РАБОЧИЙ" : "ДЕЖУРНЫЙ");
+    qDebug() << "  Координаты:" << lat << lon << coords.altitude;
+    qDebug() << "  Углы:" << coords.azimuth << coords.pitch << coords.roll;
+
+    bool success = m_amsHandler->startMeasurementSequence(mode, avgTime, litera, coords, dateTime);
+
+    if (!success) {
+        QMessageBox::warning(this, "Ошибка",
+                             "Не удалось запустить измерение АМС. Проверьте подключение.");
+
+        // Возвращаем статус в ГОТОВ
+        ui->lblStatus->setText("ГОТОВ");
+        ui->lblStatus->setStyleSheet("color: #2E7D32; font-weight: bold; font-size: 9pt;");
+        return;
+    }
+
+    // Блокируем кнопку старта, разблокируем стоп
+    ui->btnStart->setEnabled(false);
+    ui->btnStop->setEnabled(true);
+
+    // Сбрасываем и показываем прогрессбар
+    ui->progressBarMeasurement->setValue(0);
+    ui->lblProgressPercent->setText("0%");
+    ui->lblRpvAngle->setText("0.0°");
+    ui->measurementProgressWidget->setVisible(true);
+
+    statusBar()->showMessage("Измерение АМС запущено...", 5000);
+}
+
+void MainWindow::onStopClicked()
+{
+    // Останавливаем измерение АМС если оно выполняется
+    if (m_amsHandler && m_amsHandler->getMeasurementStatus() == STATUS_RUNNING) {
+        bool stopped = m_amsHandler->stopMeasurement();
+
+        if (stopped) {
+            statusBar()->showMessage("Измерение АМС остановлено", 3000);
+        } else {
+            QMessageBox::warning(this, "Предупреждение",
+                                 "Не удалось корректно остановить измерение АМС.");
+        }
+    }
+
+    // Обновляем UI
+    ui->lblStatus->setText("ГОТОВ");
+    ui->lblStatus->setStyleSheet("color: #2E7D32; font-weight: bold; font-size: 9pt;");
+
+    // Разблокируем кнопку старта, блокируем стоп
+    ui->btnStart->setEnabled(true);
+    ui->btnStop->setEnabled(false);
+
+    // Измерение завершено — перерисовываем lblStatus и доступность btnStart
+    // в соответствии с актуальным состоянием приземных данных. Если за время
+    // измерения данные успели устареть — увидим "ДАННЫЕ УСТАРЕЛИ" (пуск
+    // следующего измерения при этом остаётся разрешённым). Если оператор
+    // тем временем нажал "Очистить" — увидим "НЕТ ПРИЗЕМНЫХ ДАННЫХ" и кнопка
+    // снова заблокируется.
+    if (GroundMeteoParams *gmp = GroundMeteoParams::instance())
+        onSurfaceStateChanged(gmp->surfaceState());
+
+    // Скрываем прогрессбар
+    ui->measurementProgressWidget->setVisible(false);
+    ui->progressBarMeasurement->setValue(0);
+}
+
+// void MainWindow::onWorkModeChanged(int state)
+// {
+//     if (state == Qt::Checked) {
+//         ui->cbStandbyMode->setChecked(false);
+//     }
+// }
+
+// void MainWindow::onStandbyModeChanged(int state)
+// {
+//     if (state == Qt::Checked) {
+//         ui->cbWorkMode->setChecked(false);
+//     }
+// }
+
+// ==================== Методы обновления статуса датчиков ====================
+
+void MainWindow::updateSensorStatusPanel()
+{
+    updateGnssStatusLabel(m_gnssHandler && m_gnssHandler->isConnected());
+    updateAmsStatusLabel(m_amsHandler && m_amsHandler->isConnected());
+    updateBinsStatusLabel(m_binsHandler && m_binsHandler->isConnected());
+    updateIwsStatusLabel(m_iwsDeviceActive);
+}
+
+void MainWindow::updateGnssStatusLabel(bool connected)
+{
+    if (connected) {
+        ui->lblGnssStatus->setText("GNSS: подключен");
+        ui->lblGnssStatus->setStyleSheet(
+            "background-color: #E8F5E9; color: #1B5E20; border: 1px solid #A5D6A7; "
+            "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
+    } else {
+        ui->lblGnssStatus->setText("GNSS: отключен");
+        ui->lblGnssStatus->setStyleSheet(
+            "background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2; "
+            "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
+    }
+}
+
+void MainWindow::updateAmsStatusLabel(bool connected)
+{
+    if (connected) {
+        ui->lblAmsStatus->setText("АМС: подключен");
+        ui->lblAmsStatus->setStyleSheet(
+            "background-color: #E8F5E9; color: #1B5E20; border: 1px solid #A5D6A7; "
+            "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
+    } else {
+        ui->lblAmsStatus->setText("АМС: отключен");
+        ui->lblAmsStatus->setStyleSheet(
+            "background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2; "
+            "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
+    }
+}
+
+void MainWindow::updateBinsStatusLabel(bool connected)
+{
+    if (connected) {
+        ui->lblBinsStatus->setText("БИНС: подключен");
+        ui->lblBinsStatus->setStyleSheet(
+            "background-color: #E8F5E9; color: #1B5E20; border: 1px solid #A5D6A7; "
+            "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
+    } else {
+        ui->lblBinsStatus->setText("БИНС: отключен");
+        ui->lblBinsStatus->setStyleSheet(
+            "background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2; "
+            "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
+    }
+}
+
+void MainWindow::updateIwsStatusLabel(bool connected)
+{
+    if (connected) {
+        ui->lblIwsStatus->setText("ИВС: подключен");
+        ui->lblIwsStatus->setStyleSheet(
+            "background-color: #E8F5E9; color: #1B5E20; border: 1px solid #A5D6A7; "
+            "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
+    } else {
+        ui->lblIwsStatus->setText("ИВС: отключен");
+        ui->lblIwsStatus->setStyleSheet(
+            "background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2; "
+            "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
+    }
+}
+
+// ==================== Авто-подключение датчиков ====================
+
+void MainWindow::connectSensorsFromConfig()
+{
+    // Try each sensor from sensorSettingsDialog (already loaded from QSettings)
+    // Track which ones need AutoConnector
+    QStringList needAutoSearch;
+
+    // GNSS
+    QString gnssPort = sensorSettingsDialog->getGnssComPort();
+    if (!gnssPort.isEmpty() && gnssPort != "Нет доступных портов") {
+        if (m_gnssHandler->connectToGnss(gnssPort, sensorSettingsDialog->getGnssBaudRate())) {
+            m_gnssEnabled = true;
+            ui->checkboxGnss->setChecked(true);
+        } else { needAutoSearch << "gnss"; }
+    } else { needAutoSearch << "gnss"; }
+
+    // АМС
+    QString amsPort = sensorSettingsDialog->getAmsComPort();
+    if (!amsPort.isEmpty() && amsPort != "Нет доступных портов" && m_amsHandler) {
+        if (!m_amsHandler->connectToAMS(amsPort, sensorSettingsDialog->getAmsBaudRate(),
+                sensorSettingsDialog->getAmsDataBits(), sensorSettingsDialog->getAmsParity(),
+                sensorSettingsDialog->getAmsStopBits()))
+            needAutoSearch << "ams";
+    } else { needAutoSearch << "ams"; }
+
+    // БИНС (no auto-search for BINS)
+    QString binsPort = sensorSettingsDialog->getBinsComPort();
+    if (!binsPort.isEmpty() && binsPort != "Нет доступных портов" && m_binsHandler) {
+        m_binsHandler->connectToBINS(binsPort, sensorSettingsDialog->getBinsBaudRate(),
+            sensorSettingsDialog->getBinsDataBits(), sensorSettingsDialog->getBinsParity(),
+            sensorSettingsDialog->getBinsStopBits());
+        // BINS is async, don't track failure here
+    }
+
+    // ИВС
+    QString iwsPort = sensorSettingsDialog->getIwsComPort();
+    if (!iwsPort.isEmpty() && iwsPort != "Нет доступных портов") {
+        if (!connectIwsPort(iwsPort, sensorSettingsDialog->getIwsBaudRate(),
+                sensorSettingsDialog->getIwsDataBits(), sensorSettingsDialog->getIwsParity(),
+                sensorSettingsDialog->getIwsStopBits(), IWS_PROTOCOL,
+                sensorSettingsDialog->getIwsDeviceAddress(), sensorSettingsDialog->getIwsPollInterval()))
+            needAutoSearch << "iws";
+    } else { needAutoSearch << "iws"; }
+
+    bool anyNeedSearch = needAutoSearch.contains("gnss") || needAutoSearch.contains("ams") || needAutoSearch.contains("iws");
+    if (anyNeedSearch) {
+        m_autoConnector->startDetection();
+    }
+    // Note: if no auto-search needed, we're done (BINS failure shown after AutoConnector)
+}
+
+void MainWindow::onAutoConnectorDeviceDetected(AutoConnector::DeviceType type, const QString &port, int baudRate)
+{
+    switch (type) {
+    case AutoConnector::DEVICE_GNSS:
+        if (!m_gnssHandler->isConnected()) {
+            if (m_gnssHandler->connectToGnss(port, baudRate)) {
+                m_gnssEnabled = true;
+                ui->checkboxGnss->setChecked(true);
+            }
+        }
+        break;
+    case AutoConnector::DEVICE_AMS:
+        if (m_amsHandler && !m_amsHandler->isConnected()) {
+            m_amsHandler->connectToAMS(port, baudRate, QSerialPort::Data8, QSerialPort::NoParity, QSerialPort::OneStop);
+        }
+        break;
+    case AutoConnector::DEVICE_IWS:
+        if (!m_iwsDeviceActive && !(serialPort && serialPort->isOpen())) {
+            connectIwsPort(port, baudRate, QSerialPort::Data8, QSerialPort::NoParity, QSerialPort::OneStop,
+                           IWS_PROTOCOL, 0, 5); // default address=0, pollInterval=5s
+        }
+        break;
+    default: break;
+    }
+}
+
+void MainWindow::onAutoConnectorFinished()
+{
+    ui->btnConnectSensors->setEnabled(true);
+    statusBar()->clearMessage();
+
+    m_toastProgress->setValue(100);
+    m_toastPercent->setText("100%");
+
+    QStringList failed;
+    if (!m_gnssHandler->isConnected())                    failed << "GNSS";
+    if (m_amsHandler && !m_amsHandler->isConnected())     failed << "АМС";
+    if (m_binsHandler && !m_binsHandler->isConnected())   failed << "БИНС";
+    if (!m_iwsDeviceActive)                               failed << "ИВС";
+
+    if (!failed.isEmpty()) {
+        m_toastTitle->setText("Поиск завершнен с ошибками");
+        m_toastTitle->setStyleSheet("font-weight: bold; font-size: 10pt; color: #B71C1C; border: none; background: transparent;");
+        m_toastPercent->setStyleSheet("font-size: 10pt; font-weight: bold; color: #B71C1C; border: none; background: transparent;");
+        m_toastProgress->setStyleSheet(
+            "QProgressBar { background-color: #FFEBEE; border: none; border-radius: 3px; }"
+            "QProgressBar::chunk { background-color: #C62828; border-radius: 3px }"
+        );
+        m_toastText->setText("Не подключены: " + failed.join(", "));
+
+        QMessageBox::warning(this, "Не удалось подключить датчики",
+            "Не удалось подключить: " + failed.join(", ") + ".\n\n"
+            "Проверьте физическое подключение кабелей и нажмите\n"
+            "«Подключить датчики» для повторной попытки.");
+    } else {
+        m_toastTitle->setText("Поиск успешно завершен");
+        m_toastText->setText("Все датчики обнаружены и подключены!");
+    }
+
+    m_toastHideTimer->start(4000);
+}
+
+// ── MBTiles / LocalTileServer методы ─────────────────────────────────────────
+
+void MainWindow::writeProvidersJson(const QString &providersDir, const QString &urlTemplate)
+{
+    // Строим JSON через replace, чтобы %z/%x/%y в urlTemplate не мешал QString::arg()
+    QString tmpl =
+        "{\n"
+        "    \"UrlTemplate\":      \"TILE_URL\",\n"
+        "    \"ImageFormat\":      \"png\",\n"
+        "    \"MapCopyRight\":     \"<a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a>\",\n"
+        "    \"DataCopyRight\":    \"<a href='https://www.openstreetmap.org/copyright'>OpenStreetMap contributors</a>\",\n"
+        "    \"MinimumZoomLevel\": 0,\n"
+        "    \"MaximumZoomLevel\": 19\n"
+        "}";
+    QByteArray json = tmpl.replace("TILE_URL", urlTemplate).toUtf8();
+
+    static const QStringList types = {
+        "street", "terrain", "street-hires", "terrain-hires",
+        "satellite", "satellite-hires", "cycle", "cycle-hires",
+        "transit", "transit-hires", "night-transit", "night-transit-hires",
+        "hiking", "hiking-hires"
+    };
+    for (const QString &type : types) {
+        QFile f(providersDir + "/" + type);
+        if (f.open(QIODevice::WriteOnly | QIODevice::Text))
+            f.write(json);
+    }
+}
+
+void MainWindow::refreshMapCombo()
+{
+    QComboBox *combo = ui->comboBox_mapTypes;
+    QSignalBlocker blocker(combo);
+
+    // Запоминаем текущий выбор, чтобы восстановить его после перестройки
+    QString savedMbtiles = m_currentMbtilesPath;
+    int     savedOsmIdx  = m_osmCurrentIndex;
+
+    combo->clear();
+
+    // 1. OSM-типы
+    for (const QString &name : m_osmMapTypeNames)
+        combo->addItem(name);
+
+    // 2. .mbtiles-файлы из MapCache
+    QDir dir(m_mapCacheDir);
+    QStringList files = dir.entryList({"*.mbtiles"}, QDir::Files, QDir::Name);
+    if (!files.isEmpty()) {
+        combo->insertSeparator(combo->count());
+        for (const QString &file : files) {
+            QString label = "[офлайн] " + QFileInfo(file).completeBaseName();
+            combo->addItem(label, dir.absoluteFilePath(file));
+        }
+    }
+
+    // 3. Восстанавливаем выбор
+    if (!savedMbtiles.isEmpty()) {
+        for (int i = 0; i < combo->count(); ++i) {
+            if (combo->itemData(i).toString() == savedMbtiles) {
+                combo->setCurrentIndex(i);
+                return;
+            }
+        }
+    }
+    if (savedOsmIdx >= 0 && savedOsmIdx < m_osmMapTypeNames.size())
+        combo->setCurrentIndex(savedOsmIdx);
+}
+
+void MainWindow::onMapComboChanged(int index)
+{
+    if (index < 0) return;
+
+    QString mbtilesPath = ui->comboBox_mapTypes->itemData(index).toString();
+
+    if (!mbtilesPath.isEmpty()) {
+        // Офлайн-режим: тайлы только из MBTiles-файла
+        m_currentMbtilesPath = mbtilesPath;
+        applyMbtilesFile(mbtilesPath);
+    } else if (index < m_osmMapTypeNames.size()) {
+        // Онлайн-режим: OSM с кэшированием в MBTiles
+        m_currentMbtilesPath.clear();
+        m_osmCurrentIndex = index;
+        applyOnlineMapType(index);
+    }
+}
+
+void MainWindow::applyOnlineMapType(int osmIndex)
+{
+    // Только переключаем БД в сервере — карту не пересоздаём (порт не меняется)
+    QString mapName     = m_osmMapTypeNames.value(osmIndex, "Street Map");
+    QString mbtilesPath = m_mapCacheDir + "/" + mapName + ".mbtiles";
+
+    if (m_tileServer)
+        m_tileServer->switchTo(mbtilesPath,
+                               "https://a.tile.openstreetmap.org/%1/%2/%3.png");
+
+    // Переключаем активный тип карты в QML (сетка тайлов та же, данные из нашего сервера)
+    qcp.setCurrentMapType(osmIndex);
+}
+
+void MainWindow::applyMbtilesFile(const QString &mbtilesPath)
+{
+    // Только переключаем БД в сервере — карту не пересоздаём (порт не меняется)
+    if (m_tileServer)
+        m_tileServer->switchTo(mbtilesPath, QString()); // офлайн: нет upstream
+}
+
+void MainWindow::runWindProfileCalculation(int recordId,
+                                           double surfaceWindSpeed,
+                                           double surfaceWindDirection)
+{
+    qInfo() << "MainWindow: Запуск расчёта профилей ветра для record_id=" << recordId
+            << "| наземный ветер: V=" << surfaceWindSpeed
+            << "dir=" << surfaceWindDirection;
+
+    if (!m_windProfileCalculator) {
+        qCritical() << "MainWindow: m_windProfileCalculator == nullptr";
+        return;
+    }
+    if (!m_amsHandler) {
+        qCritical() << "MainWindow: m_amsHandler == nullptr";
+        return;
+    }
+    if (!DatabaseManager::instance()->connect()) {
+        qCritical() << "MainWindow: нет подключения к БД для расчёта профиля";
+        return;
+    }
+
+    QSqlDatabase db = DatabaseManager::instance()->database();
+
+    // ── 1. Измеренный ветер из БД (сохранён обработчиком 0xAC) ───────────────
+    QVector<MeasuredWindData> measuredWind;
+    {
+        QSqlQuery refQuery(db);
+        refQuery.prepare(
+            "SELECT measured_wind_profile_id FROM wind_profiles_references "
+            "WHERE record_id = :rid"
+            );
+        refQuery.bindValue(":rid", recordId);
+
+        if (!refQuery.exec() || !refQuery.next() || refQuery.value(0).isNull()) {
+            qWarning() << "MainWindow: нет measured_wind_profile_id для record_id="
+                       << recordId << "— расчёт невозможен";
+            statusBar()->showMessage(
+                "Расчёт ветра пропущен: нет данных измеренного ветра", 8000);
+            return;
+        }
+
+        int measuredProfileId = refQuery.value(0).toInt();
+
+        QSqlQuery q(db);
+        q.prepare(
+            "SELECT height, wind_speed, wind_direction, reliability "
+            "FROM measured_wind_profile WHERE profile_id = :pid ORDER BY profile_id"
+            );
+        q.bindValue(":pid", measuredProfileId);
+        if (!q.exec()) {
+            qWarning() << "MainWindow: ошибка чтения measured_wind_profile:"
+                       << q.lastError().text();
+            return;
+        }
+        while (q.next()) {
+            MeasuredWindData pt;
+            pt.height        = q.value(0).toFloat();
+            pt.windSpeed     = q.value(1).toFloat();
+            pt.windDirection = q.value(2).toFloat();
+            // Достоверность от АМС (1 - достоверная, 0 - недостоверная).
+            // Калькулятор сам отфильтрует недостоверные точки.
+            pt.reliability   = q.value(3).toInt();
+            measuredWind.append(pt);
+        }
+    }
+
+    if (measuredWind.isEmpty()) {
+        qWarning() << "MainWindow: measured_wind_profile пуст для record_id=" << recordId;
+        statusBar()->showMessage("Расчёт ветра пропущен: измеренный ветер пуст", 8000);
+        return;
+    }
+
+    qDebug() << "MainWindow: для расчёта прочитано" << measuredWind.size()
+             << "точек измеренного ветра";
+
+    // ── 2. Координаты и высота станции ───────────────────────────────────────
+    double latitudeDeg  = 0.0;
+    double longitudeDeg = 0.0;
+    float  altitudeM    = 0.0f;
+    {
+        QSqlQuery q(db);
+        q.prepare(
+            "SELECT latitude, longitude, altitude FROM station_coordinates "
+            "WHERE record_id = :rid"
+            );
+        q.bindValue(":rid", recordId);
+        if (q.exec() && q.next()) {
+            latitudeDeg  = q.value(0).toDouble();
+            longitudeDeg = q.value(1).toDouble();
+            altitudeM    = q.value(2).toFloat();
+        } else {
+            qWarning() << "MainWindow: нет station_coordinates для record_id="
+                       << recordId << "— берём текущие из UI";
+            bool ok1, ok2;
+            latitudeDeg  = getCoordField(ui->editLatitude,  ok1);
+            longitudeDeg = getCoordField(ui->editLongitude, ok2);
+            altitudeM    = ui->editAltitude->text().toFloat();
+        }
+    }
+
+    // ── 3. Время зондирования ────────────────────────────────────────────────
+    QDateTime sondingTime = QDateTime::fromString(
+        ui->editDateTime->text(), QStringLiteral("dd.MM.yyyy hh:mm:ss"));
+    if (!sondingTime.isValid())
+        sondingTime = QDateTime::currentDateTime();
+
+    // ── 4. Заполняем Input и запускаем расчёт ────────────────────────────────
+    WindProfileCalculator::Input in;
+    in.measuredWind       = measuredWind;
+    in.latitudeDeg        = latitudeDeg;
+    in.longitudeDeg       = longitudeDeg;
+    in.stationAltitudeM   = altitudeM;
+    in.surfaceWindSpeedMs = static_cast<float>(surfaceWindSpeed);
+    in.surfaceWindDirDeg  = static_cast<float>(surfaceWindDirection);
+    in.groundWindHeightM  = 8.0f;
+    in.z0                 = 0.0f;
+    in.sondingTime        = sondingTime;
+
+    qDebug() << "MainWindow: Параметры расчёта: lat=" << latitudeDeg
+             << "lon=" << longitudeDeg << "alt=" << altitudeM
+             << "surfaceWind=" << surfaceWindSpeed << "м/с" << surfaceWindDirection << "°";
+
+    WindProfileCalculator::Output out;
+    auto t0 = QDateTime::currentDateTime();
+    WindProfileCalculator::Result res = m_windProfileCalculator->calculate(in, out);
+    qDebug() << "MainWindow: Расчёт занял"
+             << t0.msecsTo(QDateTime::currentDateTime()) << "мс";
+
+    if (res != WindProfileCalculator::OK) {
+        qWarning() << "MainWindow: Расчёт профилей не выполнен —"
+                   << WindProfileCalculator::resultString(res);
+        statusBar()->showMessage(
+            QString("Расчёт профилей не выполнен: %1")
+                .arg(WindProfileCalculator::resultString(res)), 10000);
+        return;
+    }
+
+    // ── 5. Убираем старые рассчитанные профили (на случай повторного расчёта) ─
+    m_amsHandler->deleteCalculatedWindProfiles(recordId);
+
+    // ── 6. Сохраняем рассчитанные профили в БД ───────────────────────────────
+    const bool okAvg    = m_amsHandler->saveAvgWindProfile(recordId, out.avgWind);
+    const bool okActual = m_amsHandler->saveActualWindProfile(recordId, out.actualWind);
+
+    if (okAvg && okActual) {
+        qInfo() << "MainWindow: Рассчитанные профили сохранены в БД для record_id="
+                << recordId;
+        statusBar()->showMessage(
+            QString("Расчёт профилей ветра завершён (ID: %1)").arg(recordId), 5000);
+    } else {
+        qWarning() << "MainWindow: Ошибка сохранения профилей: avg=" << okAvg
+                   << "actual=" << okActual;
+        statusBar()->showMessage("Ошибка сохранения рассчитанных профилей", 8000);
+    }
+}
+
+void MainWindow::onSurfaceStateChanged(GroundMeteoParams::SurfaceState newState)
+{
+    const bool measurementRunning =
+        (m_amsHandler && m_amsHandler->getMeasurementStatus() == STATUS_RUNNING);
+
+    // Кнопка пуска: блокируется ТОЛЬКО при NoData. Stale разрешает пуск
+    // (по требованию: устаревание не блокирует, только уведомляет).
+    // Во время идущего измерения кнопку всё равно держим заблокированной
+    // (как и было — onStartClicked сам делает btnStart->setEnabled(false)).
+    if (!measurementRunning) {
+        ui->btnStart->setEnabled(newState != GroundMeteoParams::NoData);
+    }
+
+    // Текст и стиль состояния — для использования и сейчас, и в statusBar.
+    QString text;
+    QString style;
+    QString statusBarMsg;
+    switch (newState) {
+    case GroundMeteoParams::NoData:
+        text = "НЕТ ПРИЗЕМНЫХ ДАННЫХ";
+        style = "color: #C62828; font-weight: bold; font-size: 9pt;";
+        statusBarMsg = "Приземные данные не введены — пуск измерения заблокирован";
+        break;
+    case GroundMeteoParams::Fresh:
+        text = "ГОТОВ";
+        style = "color: #2E7D32; font-weight: bold; font-size: 9pt;";
+        statusBarMsg = "Приземные данные получены — система готова";
+        break;
+    case GroundMeteoParams::Stale:
+        text = "ДАННЫЕ УСТАРЕЛИ";
+        style = "color: #e65100; font-weight: bold; font-size: 9pt;";
+        statusBarMsg = "Приземные данные старше 30 минут — рекомендуется обновить";
+        break;
+    }
+
+    if (measurementRunning) {
+        // Во время измерения lblStatus занят надписью "РАБОТА" — туда не пишем.
+        // Только уведомление через статус-бар.
+        statusBar()->showMessage(statusBarMsg, 8000);
+        qDebug() << "MainWindow: surfaceState изменилось во время измерения —"
+                 << text << "(показано в statusBar, lblStatus не трогаем)";
+    } else {
+        // Измерение не идёт — обновляем lblStatus в полном объёме.
+        ui->lblStatus->setText(text);
+        ui->lblStatus->setStyleSheet(style);
+        qDebug() << "MainWindow: lblStatus →" << text;
+    }
+}
+
+void MainWindow::runPlowSelfTest()
+{
+//     qInfo() << "════════════════════════════════════════════════════════════";
+//     qInfo() << "  САМОТЕСТ РАСЧЁТА ВЕТРА (ФЕЙКОВЫЙ измеренный профиль, 320 точек)";
+//     qInfo() << "════════════════════════════════════════════════════════════";
+
+//     if (!m_windProfileCalculator) {
+//         qWarning() << "[SelfTest] m_windProfileCalculator == nullptr — пропуск";
+//         return;
+//     }
+
+//     // ── Координаты станции (можно заменить на реальные) ──────────────────────
+//     const double kLat = 55.75;     // широта, град
+//     const double kLon = 37.62;     // долгота, град
+//     const float  kAlt = 150.0f;    // высота над уровнем моря, м
+
+//     // ── Приземный ветер — ЖЁСТКО ─────────────────────────────────────────────
+//     const float surfaceWindSpeed = 13.0f;
+//     const float surfaceWindDir   = 351.0f;
+
+//     // ── Генерация фейкового измеренного профиля (320 точек) ──────────────────
+//     // Физичная модель:
+//     //   • высота h: 25, 50, 75, ... 8000 (шаг 25 м, 320 уровней);
+//     //   • скорость: логарифмический рост у земли + линейный выше
+//     //     V(h) = 5 + 0.003*h  (на 8000 м ≈ 29 м/с) — типичный сдвиг;
+//     //   • направление: старт 351°, плавный правый поворот с высотой
+//     //     dir(h) = 351 + 0.004*h градусов (через 360 заворачиваем).
+//     QVector<MeasuredWindData> measured;
+//     const int N = 320;
+//     measured.reserve(N);
+//     for (int i = 0; i < N; ++i) {
+//         const float h = 25.0f * (i + 1);            // 25 … 8000 м
+
+//         MeasuredWindData m;
+//         m.height        = h;
+//         m.windSpeed     = 5.0f + 0.003f * h;        // 5 … ~29 м/с
+//         float dir       = 351.0f + 0.004f * h;      // плавный поворот
+//         while (dir >= 360.0f) dir -= 360.0f;
+//         m.windDirection = dir;
+//         m.reliability   = 1;                         // достоверная (под фильтр ==1)
+//         measured.append(m);
+//     }
+
+//     qInfo() << "[SelfTest] сгенерировано фейковых точек:" << measured.size()
+//             << "| диапазон высот: 25 .. " << (25 * N) << "м";
+//     qInfo() << "[SelfTest] пример точек:";
+//     for (int i : {0, 39, 79, 159, 319}) {
+//         if (i < measured.size())
+//             qInfo("    h=%7.1f  V=%6.2f  dir=%6.2f  rel=%d",
+//                   measured[i].height, measured[i].windSpeed,
+//                   measured[i].windDirection, measured[i].reliability);
+//     }
+
+//     // ── Собираем Input ───────────────────────────────────────────────────────
+//     WindProfileCalculator::Input in;
+//     in.measuredWind       = measured;
+//     in.latitudeDeg        = kLat;
+//     in.longitudeDeg       = kLon;
+//     in.stationAltitudeM   = kAlt;
+//     in.surfaceWindSpeedMs = surfaceWindSpeed;
+//     in.surfaceWindDirDeg  = surfaceWindDir;
+//     in.groundWindHeightM  = 8.0f;
+//     in.z0                 = 0.01f;
+//     in.sondingTime        = QDateTime::currentDateTime();
+
+//     qInfo() << "[SelfTest] координаты: lat=" << kLat << "lon=" << kLon << "alt=" << kAlt;
+//     qInfo() << "[SelfTest] приземный ветер: V=" << surfaceWindSpeed << "dir=" << surfaceWindDir;
+//     qInfo() << "[SelfTest] ─── запуск calculate() ─── (ниже лог библиотеки plow)";
+
+//     WindProfileCalculator::Output out;
+//     WindProfileCalculator::Result r = m_windProfileCalculator->calculate(in, out);
+
+//     qInfo() << "[SelfTest] результат:" << WindProfileCalculator::resultString(r);
+//     if (r != WindProfileCalculator::OK) {
+//         qWarning() << "[SelfTest] расчёт не выполнен";
+//         return;
+//     }
+
+//     // ── Печать результата с полной дробной частью ────────────────────────────
+//     qInfo() << "[SelfTest] ─── ДЕЙСТВИТЕЛЬНЫЙ ветер ───";
+//     for (int i = 0; i < out.actualWind.size(); ++i) {
+//         const WindProfileData &p = out.actualWind[i];
+//         qInfo("  #%2d  h=%8.2f  V=%15.6f  dir=%15.6f  valid=%d",
+//               i, p.height, p.windSpeed, p.windDirection, int(p.isValid));
+//     }
+
+//     qInfo() << "[SelfTest] ─── СРЕДНИЙ ветер ───";
+//     for (int i = 0; i < out.avgWind.size(); ++i) {
+//         const WindProfileData &p = out.avgWind[i];
+//         qInfo("  #%2d  h=%8.2f  V=%15.6f  dir=%15.6f  valid=%d",
+//               i, p.height, p.windSpeed, p.windDirection, int(p.isValid));
+//     }
+
+//     qInfo() << "════════════════════════════════════════════════════════════";
+//     qInfo() << "  САМОТЕСТ ЗАВЕРШЁН (фейковые данные)";
+//     qInfo() << "════════════════════════════════════════════════════════════";
+}
+
+// =====================================================
+// Методы работы с уведомлением о подключении датчиков
+// =====================================================
+
+void MainWindow::setupToastUI()
+{
+    m_toastWidget = new QWidget(this);
+    m_toastWidget->setFixedSize(340, 105);
+    m_toastWidget->setStyleSheet(
+        "QWidget#toastWidget {"
+        "   background-color: #FFFFFF;"
+        "   border: 1px solid #DDE1E3;"
+        "   border-radius: 12px;"
+        "}"
+        );
+    m_toastWidget->setObjectName("toastWidget");
+
+    // Тень для окна
+    QGraphicsDropShadowEffect *shadow = new QGraphicsDropShadowEffect(this);
+    shadow->setBlurRadius(15);
+    shadow->setColor(QColor(0, 0, 0, 40));
+    shadow->setOffset(0, 4);
+    m_toastWidget->setGraphicsEffect(shadow);
+
+    QVBoxLayout *layout = new QVBoxLayout(m_toastWidget);
+    layout->setContentsMargins(16, 16, 16, 16);
+    layout->setSpacing(8);
+
+    QHBoxLayout *headerLayout = new QHBoxLayout();
+    m_toastTitle = new QLabel("Автопоиск датчиков", m_toastWidget);
+    m_toastTitle->setStyleSheet("font-weight: bold; font-size: 10pt; color: #1C1F22; border: none; background: transparent;");
+
+    m_toastPercent = new QLabel("0%", m_toastWidget);
+    m_toastPercent->setStyleSheet("font-size: 10pt; font-weight: bold; color: #0F6B4F; border: none; background: transparent;");
+    m_toastPercent->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+
+    headerLayout->addWidget(m_toastTitle);
+    headerLayout->addStretch();
+    headerLayout->addWidget(m_toastPercent);
+
+    m_toastText = new QLabel("Инициализация...", m_toastWidget);
+    m_toastText->setStyleSheet("font-size: 9pt; color: #666; font-family: monospace; border: none; background: transparent;");
+    m_toastText->setWordWrap(true);
+    m_toastText->setFixedHeight(32);
+
+    m_toastProgress = new QProgressBar(m_toastWidget);
+    m_toastProgress->setFixedHeight(6);
+    m_toastProgress->setTextVisible(false);
+    m_toastProgress->setStyleSheet(
+        "QProgressBar {"
+        "   background-color: #EFF1F1;"
+        "   border: none;"
+        "   border-radius: 3px;"
+        "}"
+        "QProgressBar::chunk {"
+        "   background-color: #0F6B4F;"
+        "   border-radius: 3px;"
+        "}"
+        );
+
+    layout->addLayout(headerLayout);
+    layout->addWidget(m_toastText);
+    layout->addWidget(m_toastProgress);
+
+    m_toastAnimation = new QPropertyAnimation(m_toastWidget, "pos", this);
+    m_toastAnimation->setDuration(400);
+    m_toastAnimation->setEasingCurve(QEasingCurve::OutBack);
+
+    m_toastHideTimer = new QTimer(this);
+    m_toastHideTimer->setSingleShot(true);
+    connect(m_toastHideTimer, &QTimer::timeout, this, &MainWindow::hideToast);
+
+    // Прячем окно за пределы экрана при создании
+    m_toastWidget->move(width() - m_toastWidget->width() - 20, height() + 10);
+    m_toastWidget->show();
+}
+
+void MainWindow::showToast()
+{
+    m_toastWidget->raise();
+
+    int targetX = width() - m_toastWidget->width() - 20;
+    int startY = height() + 10;
+    int endY = height() - m_toastWidget->height() - 20;
+
+    m_toastAnimation->stop();
+    m_toastWidget->move(targetX, startY);
+    m_toastAnimation->setStartValue(QPoint(targetX, startY));
+    m_toastAnimation->setEndValue(QPoint(targetX, endY));
+    m_toastAnimation->start();
+}
+
+void MainWindow::hideToast()
+{
+    int targetX = width() - m_toastWidget->width() - 20;
+    int startY = m_toastWidget->y();
+    int endY = height() + 10;
+
+    m_toastAnimation->stop();
+    m_toastAnimation->setStartValue(QPoint(targetX, startY));
+    m_toastAnimation->setEndValue(QPoint(targetX, endY));
+    m_toastAnimation->start();
+}
+
+void MainWindow::repositionToast()
+{
+    if (m_toastAnimation->state() == QAbstractAnimation::Running) {
+        return;
+    }
+
+    int targetX = width() - m_toastWidget->width() - 20;
+    int targetYVisible = height() - m_toastWidget->height() - 20;
+    int targetYHidden = height() + 10;
+
+    // Если Toast сейчас на экране, корректируем его видимую позицию
+    if (m_toastWidget->y() < height()) {
+        m_toastWidget->move(targetX, targetYVisible);
+    } else {
+        m_toastWidget->move(targetX, targetYHidden);
+    }
+}
+
+void MainWindow::onAutoConnectorStarted()
+{
+    ui->btnConnectSensors->setEnabled(false);
+    statusBar()->showMessage("Автопоиск датчиков...", 0);
+
+    // Сбрасываем стили к дефолтным (зеленым) на случай, если прошлая попытка завершилась ошибкой
+    m_toastTitle->setText("Автопоиск датчиков");
+    m_toastTitle->setStyleSheet("font-weight: bold; font-size: 10pt; color: #1C1F22; border: none; background: transparent;");
+    m_toastPercent->setStyleSheet("font-size: 10pt; font-weight: bold; color: #0F6B4F; border: none; background: transparent;");
+    m_toastProgress->setStyleSheet(
+        "QProgressBar { background-color: #EFF1F1; border: none; border-radius: 3px; }"
+        "QProgressBar::chunk { background-color: #0F6B4F; border-radius: 3px; }"
+        );
+
+    m_toastPercent->setText("0%");
+    m_toastProgress->setValue(0);
+    m_toastText->setText("Инициализация портов...");
+
+    showToast();
+}
+
+void MainWindow::onAutoConnectorProgress(int current, int total)
+{
+    if (total > 0) {
+        int percent = (current * 100) / total;
+        m_toastProgress->setValue(percent);
+        m_toastPercent->setText(QString("%1%").arg(percent));
+    }
+}
+
+void MainWindow::onAutoConnectorLog(const QString &msg)
+{
+    QString cleanMsg = msg.trimmed();
+
+    // Игнорируем пустые строки и чисто декоративные разделители от AutoConnector
+    if (cleanMsg.isEmpty() || cleanMsg.startsWith("===") || cleanMsg == "---") {
+        return;
+    }
+
+    // Очищаем дефисы из строк типа "--- Проверка порта COM1 (1/5) ---"
+    if (cleanMsg.startsWith("---")) {
+        cleanMsg.replace("-", "");
+        cleanMsg = cleanMsg.trimmed();
+    }
+
+    m_toastText->setText(cleanMsg);
+}

@@ -1,102 +1,289 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>SourceData</class>
- <widget class="QDialog" name="SourceData">
-  <property name="windowModality">
-   <enum>Qt::NonModal</enum>
+ <widget class="QWidget" name="SourceData">
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
   </property>
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>213</height>
+    <width>1024</width>
+    <height>640</height>
    </rect>
   </property>
-  <property name="sizePolicy">
-   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-    <horstretch>0</horstretch>
-    <verstretch>0</verstretch>
-   </sizepolicy>
-  </property>
-  <property name="minimumSize">
-   <size>
-    <width>400</width>
-    <height>213</height>
-   </size>
-  </property>
-  <property name="maximumSize">
-   <size>
-    <width>400</width>
-    <height>213</height>
-   </size>
-  </property>
-  <property name="contextMenuPolicy">
-   <enum>Qt::NoContextMenu</enum>
-  </property>
   <property name="windowTitle">
-   <string/>
+   <string>Исходные данные</string>
   </property>
-  <property name="modal">
-   <bool>false</bool>
+  <property name="styleSheet">
+   <string notr="true">background-color: #EFF1F1;</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
    <item>
-    <widget class="QLabel" name="labelSourceData">
-     <property name="text">
-      <string>Ввод исходных данных</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignHCenter|Qt::AlignTop</set>
-     </property>
-    </widget>
+    <layout class="QHBoxLayout" name="sdHeaderLayout">
+     <item>
+      <widget class="QPushButton" name="btnSourceDataBack">
+       <property name="minimumSize">
+        <size>
+         <width>96</width>
+         <height>48</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton { font-size: 16pt; font-weight: bold; border: none; background: transparent; color: #0F6B4F; }
+QPushButton:pressed { color: #0B5A42; }</string>
+       </property>
+       <property name="text">
+        <string>‹ Назад</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="lblSourceData">
+       <property name="styleSheet">
+        <string notr="true">font-size: 15pt; font-weight: bold; padding-left: 8px; background: transparent;</string>
+       </property>
+       <property name="text">
+        <string>Исходные данные</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="sdHeaderSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
    </item>
    <item>
-    <spacer name="verticalSpacer_2">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
+    <layout class="QVBoxLayout" name="sdListLayout">
+     <property name="spacing">
+      <number>18</number>
      </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>40</height>
-      </size>
+     <property name="leftMargin">
+      <number>40</number>
      </property>
-    </spacer>
-   </item>
-   <item alignment="Qt::AlignHCenter">
-    <widget class="QPushButton" name="btnMeteo11">
-     <property name="text">
-      <string>Бюллетень &quot;Метео-11&quot;</string>
+     <property name="topMargin">
+      <number>28</number>
      </property>
-    </widget>
-   </item>
-   <item alignment="Qt::AlignHCenter">
-    <widget class="QPushButton" name="btnGroundLayerParam">
-     <property name="text">
-      <string>Параметры приземного слоя</string>
+     <property name="rightMargin">
+      <number>40</number>
      </property>
-    </widget>
-   </item>
-   <item>
-    <spacer name="verticalSpacer_3">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>40</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item alignment="Qt::AlignHCenter">
-    <widget class="QPushButton" name="btnCloseSourceData">
-     <property name="text">
-      <string>Закрыть</string>
-     </property>
-    </widget>
+     <item>
+      <widget class="QWidget" name="rowMeteo11" native="true">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>72</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QWidget#rowMeteo11 {
+    background-color: #FFFFFF;
+    border: 1px solid #DDE1E3;
+    border-radius: 18px;
+}
+QWidget#rowMeteo11[pressed="true"] {
+    background-color: #F0F1F2;
+}</string>
+       </property>
+       <layout class="QHBoxLayout" name="rowMeteo11Layout" stretch="1,0,0">
+        <property name="leftMargin">
+         <number>26</number>
+        </property>
+        <property name="topMargin">
+         <number>10</number>
+        </property>
+        <property name="rightMargin">
+         <number>22</number>
+        </property>
+        <property name="bottomMargin">
+         <number>10</number>
+        </property>
+        <property name="spacing">
+         <number>14</number>
+        </property>
+        <item>
+         <layout class="QVBoxLayout" name="rowMeteo11TextLayout">
+          <property name="spacing">
+           <number>2</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="lblMeteo11Title">
+            <property name="styleSheet">
+             <string notr="true">background: transparent; font-size: 13pt; font-weight: 700; color: #1C1F22;</string>
+            </property>
+            <property name="text">
+             <string>Бюллетень «Метео-11»</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="lblMeteo11Desc">
+            <property name="styleSheet">
+             <string notr="true">background: transparent; font-size: 9pt; color: #6B7278;</string>
+            </property>
+            <property name="text">
+             <string>Ввод/просмотр закодированного бюллетеня</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QLabel" name="badgeMeteo11">
+          <property name="styleSheet">
+           <string notr="true">font-size: 8pt; font-weight: 700; padding: 4px 10px; border-radius: 10px; color: #C62828; background-color: #FFEBEE;</string>
+          </property>
+          <property name="text">
+           <string>Не загружен</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="chevronMeteo11">
+          <property name="styleSheet">
+           <string notr="true">background: transparent; color: #6B7278; font-size: 16px;</string>
+          </property>
+          <property name="text">
+           <string>›</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QWidget" name="rowGroundParams" native="true">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>72</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QWidget#rowGroundParams {
+    background-color: #FFFFFF;
+    border: 1px solid #DDE1E3;
+    border-radius: 18px;
+}
+QWidget#rowGroundParams[pressed="true"] {
+    background-color: #F0F1F2;
+}</string>
+       </property>
+       <layout class="QHBoxLayout" name="rowGroundParamsLayout" stretch="1,0,0">
+        <property name="leftMargin">
+         <number>26</number>
+        </property>
+        <property name="topMargin">
+         <number>10</number>
+        </property>
+        <property name="rightMargin">
+         <number>22</number>
+        </property>
+        <property name="bottomMargin">
+         <number>10</number>
+        </property>
+        <property name="spacing">
+         <number>14</number>
+        </property>
+        <item>
+         <layout class="QVBoxLayout" name="rowGroundParamsTextLayout">
+          <property name="spacing">
+           <number>2</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="lblGroundParamsTitle">
+            <property name="styleSheet">
+             <string notr="true">background: transparent; font-size: 13pt; font-weight: 700; color: #1C1F22;</string>
+            </property>
+            <property name="text">
+             <string>Параметры приземного слоя</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="lblGroundParamsDesc">
+            <property name="styleSheet">
+             <string notr="true">background: transparent; font-size: 9pt; color: #6B7278;</string>
+            </property>
+            <property name="text">
+             <string>Ветер, давление, влажность, температура у земли</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QLabel" name="badgeGroundParams">
+          <property name="styleSheet">
+           <string notr="true">font-size: 8pt; font-weight: 700; padding: 4px 10px; border-radius: 10px; color: #C62828; background-color: #FFEBEE;</string>
+          </property>
+          <property name="text">
+           <string>Нет данных</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="chevronGroundParams">
+          <property name="styleSheet">
+           <string notr="true">background: transparent; color: #6B7278; font-size: 16px;</string>
+          </property>
+          <property name="text">
+           <string>›</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <spacer name="sdListSpacer">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>20</width>
+         <height>40</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
    </item>
   </layout>
  </widget>

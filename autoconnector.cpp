@@ -3,7 +3,7 @@
 #include <QDebug>
 #include <QtEndian>
 #include <QDir>
-#include "amsprotocol.h"
+#include "sensors/amsprotocol.h"
 
 
 AutoConnector::AutoConnector(QObject *parent)
@@ -123,7 +123,7 @@ int AutoConnector::baudRateForPhase(TestPhase phase)
 {
     switch (phase) {
         case PHASE_AMS_TEST:    return 115200; // АМС: 115200
-        case PHASE_GNSS_LISTEN: return 9600;  // GNSS: 19200
+        case PHASE_GNSS_LISTEN: return 9600;  // GNSS: 9600
         case PHASE_IWS_TEST:    return 19200;  // ИВС: 19200
         default:                return 9600;
     }
@@ -384,6 +384,16 @@ void AutoConnector::deviceFound(DeviceType type, const QString &description)
 
     m_detectedDevices[type] = info;
     m_deviceFoundOnCurrentPort = true;
+
+    // ВАЖНО: закрываем тестовый порт ДО эмита сигнала. Раньше порт закрывался
+    // только через 100 мс (в processNextPort), а deviceDetected — это прямое
+    // соединение в одном потоке, поэтому слот в MainWindow (который пытается
+    // открыть этот же порт в "боевом" хендлере, например AMSHandler::connectToAMS)
+    // выполнялся СИНХРОННО, пока порт ещё был занят автоконнектором.
+    // Результат: QSerialPort::open() у боевого хендлера всегда падал с
+    // "порт занят", тест линии даже не отправлялся, и устройство считалось
+    // отключённым несмотря на то, что автоконнектор его только что нашёл.
+    closeCurrentPort();
 
     emit deviceDetected(type, m_currentPortName, m_currentBaudRate);
 

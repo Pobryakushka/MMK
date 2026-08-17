@@ -1,0 +1,42 @@
+#ifndef NUMERIC_CONVERSIONS_H
+#define NUMERIC_CONVERSIONS_H
+
+#include_next <string>
+
+#if __cplusplus < 201103L
+#   include <sstream>
+
+#   define NUM_CONVERSION(TYPE, FUNC_NAME) \
+        inline TYPE FUNC_NAME(const string &str) { \
+            return from_string<TYPE>(str); \
+        }
+
+    namespace std {
+        template <typename T>
+        string to_string(T value) {
+            ostringstream oss;
+            oss << value;
+            return oss.str();
+        }
+
+        template <typename T>
+        T from_string(const string &str) {
+            istringstream iss(str);
+            T res;
+            iss >> res;
+            return res;
+        }
+
+        NUM_CONVERSION(int, stoi)
+        NUM_CONVERSION(long, stol)
+        NUM_CONVERSION(long long, stoll)
+
+        NUM_CONVERSION(unsigned long, stoul)
+        NUM_CONVERSION(unsigned long long, stoull)
+
+        NUM_CONVERSION(float, stof)
+        NUM_CONVERSION(double, stod)
+        NUM_CONVERSION(long double, stold)
+    }
+#   endif
+#endif // NUMERIC_CONVERSIONS_H

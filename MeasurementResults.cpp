@@ -2,9 +2,9 @@
 #include "CoordHelper.h"
 #include "ui_MeasurementResults.h"
 #include "databasemanager.h"
-#include "amsprotocol.h"
-#include "MeasurementExporter.h"
-#include "ExportDialog.h"
+#include "sensors/amsprotocol.h"
+#include "ui/MeasurementExporter.h"
+#include "ui/ExportDialog.h"
 #include <qwt_plot_renderer.h>
 #include <QFileDialog>
 #include <QCheckBox>
@@ -44,6 +44,10 @@ MeasurementResults::MeasurementResults(QWidget *parent)
     , m_currentWindSpeedSurface(0.0)
     , m_currentLatitude(0.0)
     , m_currentLongitude(0.0)
+    , m_currentAvgWind()
+    , m_currentActualWind()
+    , m_currentMeasuredWind()
+    , m_gribPipeline(new GribMeteo11Pipeline(this))
 //    , m_dbPort(5432)
 //    , m_dbConfigured(false)
 {
@@ -65,6 +69,15 @@ MeasurementResults::MeasurementResults(QWidget *parent)
     connect(ui->pushButton_updated, &QPushButton::clicked, this, &MeasurementResults::onUpdatedButtonClicked);
     connect(ui->pushButton_approximate, &QPushButton::clicked, this, &MeasurementResults::onApproximateButtonClicked);
     connect(ui->pushButton_fromMeteoStat, &QPushButton::clicked, this, &MeasurementResults::onFromMeteoStatButtonClicked);
+    connect(ui->pushButton_fromGrib, &QPushButton::clicked, this, &MeasurementResults::onFromGribButtonClicked);
+
+    // TODO: заменить на реальные пути после интеграции (сборочный каталог
+    // Mushroom, место скрипта на этой машине) — сейчас относительные
+    // значения по умолчанию из GribConfig.
+    connect(m_gribPipeline, &GribMeteo11Pipeline::logLine, this,
+            [](const QString &line) { qDebug() << "[GRIB]" << line; });
+    connect(m_gribPipeline, &GribMeteo11Pipeline::finished,
+            this, &MeasurementResults::onGribPipelineFinished);
 
     connect(ui->pushButton_string, &QPushButton::clicked, this, &MeasurementResults::onStringFormatClicked);
     connect(ui->pushButton_table, &QPushButton::clicked, this, &MeasurementResults::onTableFormatClicked);
@@ -146,17 +159,27 @@ void MeasurementResults::loadMeasurementsFromDatabase()
     QSqlDatabase db = DatabaseManager::instance()->database();
     QSqlQuery query(db);
 
-    // Загружаем ВСЕ записи из main_archive за последние 30 дней
+    // Загружаем ВСЕ записи архива (без ограничения по дате — требование
+    // хранения не менее года). Наличие профилей ветра определяется тем же
+    // запросом через LEFT JOIN на wind_profiles_references — это убирает
+    // N отдельных запросов в цикле и делает открытие архива быстрым даже
+    // на больших объёмах.
+    //
+    // CASE WHEN ... IS NOT NULL — флаг наличия соответствующего профиля.
     QString sql =
         "SELECT "
         "   ma.record_id, "
         "   ma.completion_time, "
-        "   ma.notes "
+        "   ma.notes, "
+        "   (wpr.avg_wind_profile_id      IS NOT NULL) AS has_avg, "
+        "   (wpr.actual_wind_profile_id   IS NOT NULL) AS has_actual, "
+        "   (wpr.measured_wind_profile_id IS NOT NULL) AS has_measured "
         "FROM main_archive ma "
-        "WHERE ma.completion_time >= CURRENT_DATE - INTERVAL '30 days' "
+        "LEFT JOIN wind_profiles_references wpr "
+        "       ON wpr.record_id = ma.record_id "
         "ORDER BY ma.completion_time DESC";
 
-    qDebug() << "MeasurementResults: Выполняем запрос к main_archive...";
+    qDebug() << "MeasurementResults: Выполняем запрос к main_archive (весь архив)...";
 
     if (!query.exec(sql)) {
         qCritical() << "MeasurementResults: Ошибка SQL:" << query.lastError().text();
@@ -165,63 +188,27 @@ void MeasurementResults::loadMeasurementsFromDatabase()
     }
 
     int totalRecords = 0;
-    QMap<QDateTime, MeasurementRecord> recordsByDateTime;
 
     while (query.next()) {
         MeasurementRecord record;
-        record.recordId = query.value(0).toInt();
+        record.recordId        = query.value(0).toInt();
         record.measurementTime = query.value(1).toDateTime();
-        record.notes = query.value(2).toString();
+        record.notes           = query.value(2).toString();
 
-        // Флаги наличия данных заполним позже
-        record.hasAvgWind = false;
-        record.hasActualWind = false;
-        record.hasMeasuredWind = false;
+        // Флаги наличия профилей пришли тем же запросом — без доп. обращений к БД
+        record.hasAvgWind      = query.value(3).toBool();
+        record.hasActualWind   = query.value(4).toBool();
+        record.hasMeasuredWind = query.value(5).toBool();
 
-        recordsByDateTime[record.measurementTime] = record;
-        totalRecords++;
-
-        //        QDate date = record.measurementTime.date();
-        //        int hour = record.measurementTime.time().hour();
-        //        QString key = QString("%1_%2").arg(date.toString("yyyy-MM-dd")).arg(hour);
-
-        //        recordsByDateTime[key] = record;
-        //        totalRecords++;
-
-        qDebug() << "  Запись" << record.recordId
-                 << "от" << record.measurementTime.toString("yyyy-MM-dd hh:mm:ss");
-    }
-
-    qInfo() << "MeasurementResults: Загружено" << totalRecords << "записей из main_archive";
-
-    // Теперь проверяем наличие профилей ветра для каждой записи через wind_profiles_references
-    for (auto it = recordsByDateTime.begin(); it != recordsByDateTime.end(); ++it) {
-        int rid = it.value().recordId;
-
-        QSqlQuery refQuery(db);
-        refQuery.prepare(
-            "SELECT avg_wind_profile_id, actual_wind_profile_id, measured_wind_profile_id "
-            "FROM wind_profiles_references WHERE record_id = :rid"
-            );
-        refQuery.bindValue(":rid", rid);
-
-        if (refQuery.exec() && refQuery.next()) {
-            it.value().hasAvgWind      = !refQuery.value(0).isNull();
-            it.value().hasActualWind   = !refQuery.value(1).isNull();
-            it.value().hasMeasuredWind = !refQuery.value(2).isNull();
-        }
-        // Если строки нет в wind_profiles_references — все флаги остаются false
-    }
-
-    // Переносим в основную структуру availableMeasurements
-    for (auto it = recordsByDateTime.begin(); it != recordsByDateTime.end(); ++it) {
-        MeasurementRecord record = it.value();
-        QDate date = record.measurementTime.date();
-        int hour = record.measurementTime.time().hour();
-
+        const QDate date = record.measurementTime.date();
         availableMeasurements[date].append(record);
+        totalRecords++;
     }
 
+    qInfo() << "MeasurementResults: Загружено" << totalRecords
+            << "записей из main_archive (весь архив)";
+
+    // Сортируем записи внутри каждой даты по времени (новые сверху)
     for (auto it = availableMeasurements.begin(); it != availableMeasurements.end(); ++it) {
         std::sort(it.value().begin(), it.value().end(),
                   [](const MeasurementRecord &a, const MeasurementRecord &b) {
@@ -229,9 +216,10 @@ void MeasurementResults::loadMeasurementsFromDatabase()
                   });
     }
 
-    qInfo() << "MeasurementResults: Данные распределены по" << availableMeasurements.size() << "датам";
+    qInfo() << "MeasurementResults: Данные распределены по"
+            << availableMeasurements.size() << "датам";
 
-    // Выводим список дат для отладки
+    // Список дат для отладки
     QList<QDate> dates = availableMeasurements.keys();
     std::sort(dates.begin(), dates.end());
     qDebug() << "Доступные даты в архиве:" << dates;
@@ -375,7 +363,7 @@ QVector<MeasuredWindData> MeasurementResults::loadMeasuredWindProfile(int record
 
     QSqlQuery query(db);
     query.prepare(
-        "SELECT height, wind_speed, wind_direction "
+        "SELECT height, wind_speed, wind_direction, reliability "
         "FROM measured_wind_profile "
         "WHERE profile_id = :pid "
         "ORDER BY height ASC"
@@ -392,10 +380,10 @@ QVector<MeasuredWindData> MeasurementResults::loadMeasuredWindProfile(int record
         point.height        = query.value(0).toFloat();
         point.windSpeed     = query.value(1).toFloat();
         point.windDirection = query.value(2).toInt();
-        point.reliability   = 2; // Из БД только достоверные данные
+        // Достоверность от АМС (1 - достоверная, 0 - недостоверная)
+        point.reliability   = query.value(3).toInt();
         profile.append(point);
     }
-
     qDebug() << "MeasurementResults: Загружен профиль измеренного ветра," << profile.size()
              << "точек (record_id=" << recordId << ", profile_id=" << profileId << ")";
     return profile;
@@ -907,6 +895,48 @@ void MeasurementResults::onFromMeteoStatButtonClicked()
     updateWindShearDisplay();
 }
 
+void MeasurementResults::onFromGribButtonClicked()
+{
+    currentButtelinType = FromGrib;
+    m_meteo11FromGrib = Meteo11Data(); // сбрасываем, чтобы не показать устаревший результат, пока считается новый
+    switchMeteo11Display();
+    updateWindShearDisplay();
+
+    // Координаты и время берём из уже загруженной записи (m_currentLatitude/
+    // m_currentLongitude/m_currentSondingTime — те же, что использует
+    // остальная часть вкладки). Приземный ветер — с реального датчика
+    // (m_currentWindDirSurface/m_currentWindSpeedSurface), без ручного ввода.
+    if (!m_currentSondingTime.isValid()) {
+        m_meteo11FromGrib = Meteo11Data();
+        updateMeteo11Display();
+        return;
+    }
+
+    m_gribPipeline->run(m_currentLatitude, m_currentLongitude, m_currentSondingTime,
+                        m_currentWindSpeedSurface, m_currentWindDirSurface);
+}
+
+void MeasurementResults::onGribPipelineFinished(bool success, const QVector<WindProfileData> &profile,
+                                                const QString &error)
+{
+    if (!success) {
+        qWarning() << "GRIB Метео-11: ошибка —" << error;
+        m_meteo11FromGrib = Meteo11Data();
+        if (currentButtelinType == FromGrib)
+            updateMeteo11Display();
+        return;
+    }
+
+    const Meteo11Data *oldBulletin = m_meteo11FromStation.isValid ? &m_meteo11FromStation : nullptr;
+
+    m_meteo11FromGrib = buildMeteo11(profile, m_currentStationAltitude, m_currentPressureMmHg,
+                                     m_currentTempC, m_currentSondingTime,
+                                     /*useActual=*/true, oldBulletin);
+
+    if (currentButtelinType == FromGrib)
+        updateMeteo11Display();
+}
+
 void MeasurementResults::onStringFormatClicked()
 {
     currentOutputFormat = String;
@@ -1027,6 +1057,10 @@ void MeasurementResults::loadMeasurementData(const QDateTime &dateTime)
     QDate date = dateTime.date();
     int hour = dateTime.time().hour();
 
+    m_currentAvgWind.clear();
+    m_currentActualWind.clear();
+    m_currentMeasuredWind.clear();
+
     // Сначала ищем точное совпадение по времени
     MeasurementRecord record;
     if (availableMeasurements.contains(date)) {
@@ -1052,6 +1086,10 @@ void MeasurementResults::loadMeasurementData(const QDateTime &dateTime)
         QVector<WindProfileData>  avgWind      = loadAvgWindProfile(record.recordId);
         QVector<WindProfileData>  actualWind   = loadActualWindProfile(record.recordId);
         QVector<MeasuredWindData> measuredWind = loadMeasuredWindProfile(record.recordId);
+
+        m_currentAvgWind = avgWind;
+        m_currentActualWind = actualWind;
+        m_currentMeasuredWind = measuredWind;
 
         loadSurfaceMeteoData(record.recordId);
         loadStationCoordinates(record.recordId);
@@ -1343,42 +1381,38 @@ void MeasurementResults::plotWindSpeed(QwtPlot *plot, const QVector<WindProfileD
                                        const QString &title, const QColor &color)
 {
     if (!plot || data.isEmpty()) return;
-
-    // Очищаем старые кривые
     plot->detachItems(QwtPlotItem::Rtti_PlotCurve);
 
-    // Подготавливаем данные
-    QVector<double> heights;
-    QVector<double> speeds;
+    QVector<double> heights, speeds;
+    double maxSpeed = 0, maxHeight = 0;
 
     for (const WindProfileData &point : data) {
-        if (point.isValid) {
+        if (point.isValid && point.windSpeed < 900.f) { // 999 = нет данных (sentinel)
             heights.append(point.height);
             speeds.append(point.windSpeed);
+            maxSpeed  = qMax(maxSpeed,  (double)point.windSpeed);
+            maxHeight = qMax(maxHeight, (double)point.height);
         }
     }
 
-    if (heights.isEmpty()) {
-        plot->replot();
-        return;
-    }
+    if (heights.isEmpty()) { plot->replot(); return; }
 
-    // Создаем кривую
     QwtPlotCurve *curve = new QwtPlotCurve(title);
-    // X-ось: скорость, Y-ось: высота
     curve->setSamples(speeds, heights);
     curve->setPen(QPen(color, 2));
-
-    // Добавляем символы на точках
     QwtSymbol *symbol = new QwtSymbol(QwtSymbol::Ellipse,
-                                      QBrush(color),
-                                      QPen(color, 1),
-                                      QSize(5, 5));
+                                      QBrush(color), QPen(color, 1), QSize(5, 5));
     curve->setSymbol(symbol);
     curve->setStyle(QwtPlotCurve::Lines);
-
     curve->attach(plot);
+
+    // Динамические оси по данным
+    double xMax = (maxSpeed < 1.0) ? 10.0 : maxSpeed * 1.15;
+    double yMax = (maxHeight < 100.0) ? 1000.0 : maxHeight * 1.05;
+    plot->setAxisScale(QwtPlot::xBottom, 0.0, xMax);
+    plot->setAxisScale(QwtPlot::yLeft,   0.0, yMax);
     plot->replot();
+
 }
 
 void MeasurementResults::plotWindDirection(QwtPlot *plot, const QVector<WindProfileData> &data,
@@ -1388,8 +1422,7 @@ void MeasurementResults::plotWindDirection(QwtPlot *plot, const QVector<WindProf
 
     plot->detachItems(QwtPlotItem::Rtti_PlotCurve);
 
-    QVector<double> heights;
-    QVector<double> directions;
+    QVector<double> heights, directions;
 
     for (const WindProfileData &point : data) {
         if (point.isValid) {
@@ -1414,8 +1447,8 @@ void MeasurementResults::plotWindDirection(QwtPlot *plot, const QVector<WindProf
                                       QSize(5, 5));
     curve->setSymbol(symbol);
     curve->setStyle(QwtPlotCurve::Lines);
-
     curve->attach(plot);
+
     plot->replot();
 }
 
@@ -1423,32 +1456,35 @@ void MeasurementResults::plotMeasuredWindSpeed(QwtPlot *plot, const QVector<Meas
                                                const QString &title, const QColor &color)
 {
     if (!plot || data.isEmpty()) return;
-
     plot->detachItems(QwtPlotItem::Rtti_PlotCurve);
 
-    QVector<double> heights;
-    QVector<double> speeds;
+    QVector<double> heights, speeds;
+    double maxSpeed = 0, maxHeight = 0;
 
     for (const MeasuredWindData &point : data) {
         heights.append(point.height);
         speeds.append(point.windSpeed);
+        maxSpeed  = qMax(maxSpeed,  (double)point.windSpeed);
+        maxHeight = qMax(maxHeight, (double)point.height);
     }
 
     QwtPlotCurve *curve = new QwtPlotCurve(title);
-    // X-ось: скорость, Y-ось: высота
     curve->setSamples(speeds, heights);
     curve->setPen(QPen(color, 2));
-
     QwtSymbol *symbol = new QwtSymbol(QwtSymbol::Ellipse,
-                                      QBrush(color),
-                                      QPen(color, 1),
-                                      QSize(5, 5));
+                                      QBrush(color), QPen(color, 1), QSize(5, 5));
     curve->setSymbol(symbol);
     curve->setStyle(QwtPlotCurve::Lines);
-
     curve->attach(plot);
+
+    double xMax = (maxSpeed < 0.01) ? 1.0 : maxSpeed * 1.15;
+    double yMax = (maxHeight < 100.0) ? 1000.0 : maxHeight * 1.05;
+    plot->setAxisScale(QwtPlot::xBottom, 0.0, xMax);
+    plot->setAxisScale(QwtPlot::yLeft,   0.0, yMax);
     plot->replot();
+
 }
+
 
 void MeasurementResults::plotMeasuredWindDirection(QwtPlot *plot, const QVector<MeasuredWindData> &data,
                                                    const QString &title, const QColor &color)
@@ -1998,6 +2034,7 @@ void MeasurementResults::updateMeteo11Display()
     case Updated:      d = &m_meteo11Updated;     break;
     case Approximate:  d = &m_meteo11Approximate; break;
     case FromMeteoStat:d = &m_meteo11FromStation;  break;
+    case FromGrib:     d = &m_meteo11FromGrib;     break;
     }
 
     if (!d) return;
@@ -2082,6 +2119,7 @@ void MeasurementResults::updateMeteo11Display()
     setPressed(ui->pushButton_updated,       currentButtelinType == Updated);
     setPressed(ui->pushButton_approximate,   currentButtelinType == Approximate);
     setPressed(ui->pushButton_fromMeteoStat, currentButtelinType == FromMeteoStat);
+    setPressed(ui->pushButton_fromGrib,      currentButtelinType == FromGrib);
 
     auto setFmtPressed = [](QPushButton *btn, bool pressed) {
         if (!btn) return;
@@ -2643,7 +2681,7 @@ MeasurementSnapshot MeasurementResults::buildSnapshot() const
             auto cell = [&](int row) -> double {
                 return t->item(row, 0) ? t->item(row, 0)->text().toDouble() : 0.0;
             };
-            snap.pressureMmHg      = cell(0);
+            snap.pressureHpa      = cell(0);
             snap.temperatureC     = cell(1);
             snap.humidityPct      = cell(2);
             snap.surfaceWindDir   = cell(3);
@@ -2653,9 +2691,9 @@ MeasurementSnapshot MeasurementResults::buildSnapshot() const
 
     // ── Профили ветра ────────────────────────────────────────────────────────
     // Загружаем из БД (лёгкий повторный запрос — данные кешируются на уровне БД)
-    snap.avgWind      = const_cast<MeasurementResults*>(this)->loadAvgWindProfile(snap.recordId);
-    snap.actualWind   = const_cast<MeasurementResults*>(this)->loadActualWindProfile(snap.recordId);
-    snap.measuredWind = const_cast<MeasurementResults*>(this)->loadMeasuredWindProfile(snap.recordId);
+    snap.avgWind      = m_currentAvgWind;
+    snap.actualWind   = m_currentActualWind;
+    snap.measuredWind = m_currentMeasuredWind;
 
     // ── Сдвиг ветра ──────────────────────────────────────────────────────────
     snap.windShear = m_currentShearData;
@@ -2673,7 +2711,7 @@ MeasurementSnapshot MeasurementResults::buildSnapshot() const
         return img;
     };
 
-    const int CW = 560, CH = 250;
+    const int CW = 400, CH = 280;
     snap.charts["avgSpeed"]    = renderPlot(ui->plot_midWindSpeed,       CW, CH);
     snap.charts["avgDir"]      = renderPlot(ui->plot_midWindAzimut,      CW, CH);
     snap.charts["actualSpeed"] = renderPlot(ui->plot_realWindSpeed,      CW, CH);
