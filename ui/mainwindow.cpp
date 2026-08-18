@@ -676,8 +676,6 @@ void MainWindow::onGnssCheckboxToggled(bool checked)
         if (m_gnssComPort.isEmpty()) {
             qDebug() << "MainWindow: COM-порт не настроен, открываем настройки...";
             ui->checkboxGnss->setChecked(false);
-            QMessageBox::information(this, "Ошибка GNSS",
-                                     "Пожалуйста, подключите антенну GNSS через кнопку подключения датчиков");
             return;
         }
 
@@ -700,7 +698,6 @@ void MainWindow::connectToGnss()
         qDebug() << "MainWindow: Ошибка подключения к GNSS";
         m_gnssEnabled = false;
         ui->checkboxGnss->setChecked(false);
-        QMessageBox::warning(this, "Ошибка", "Не удалось подключиться к GNSS приемнику");
     }
 
     updateFieldsEditability();
@@ -2542,10 +2539,6 @@ void MainWindow::onAutoConnectorFinished()
         );
         m_toastText->setText("Не подключены: " + failed.join(", "));
 
-        QMessageBox::warning(this, "Не удалось подключить датчики",
-            "Не удалось подключить: " + failed.join(", ") + ".\n\n"
-            "Проверьте физическое подключение кабелей и нажмите\n"
-            "«Подключить датчики» для повторной попытки.");
     } else {
         m_toastTitle->setText("Поиск успешно завершен");
         m_toastText->setText("Все датчики обнаружены и подключены!");
