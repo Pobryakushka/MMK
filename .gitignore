@@ -5956,3 +5956,9 @@ build/Desktop-u041eu0442u043bu0430u0434u043au0430/moc_VirtualKeyboard.o
 build/Desktop-u041eu0442u043bu0430u0434u043au0430/VirtualKeyboard.o
 
 .qmake.stash
+
+build/Desktop-u041eu0442u043bu0430u0434u043au0430/ClickableLabel.o
+
+build/Desktop-u041eu0442u043bu0430u0434u043au0430/moc_ClickableLabel.cpp
+
+build/Desktop-u041eu0442u043bu0430u0434u043au0430/moc_ClickableLabel.o
