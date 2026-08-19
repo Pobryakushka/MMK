@@ -970,7 +970,7 @@ void MainWindow::configureAmsDatabase()
     int dbPort = 5432;
     QString dbName = "MMK";
     QString dbUser = "postgres";
-    QString dbPassword = "123";
+    QString dbPassword = "otdel412";
 
     qDebug() << "MainWindow: Настройка БД:" << dbName << "на" << dbHost;
 
