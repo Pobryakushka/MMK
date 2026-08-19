@@ -43,7 +43,7 @@ struct StationCoordinates {
     float roll;             // Угол крена, градусы
 
     StationCoordinates() : latitude(0), longitude(0), altitude(0),
-                          azimuth(0), pitch(0), roll(0) {}
+        azimuth(0), pitch(0), roll(0) {}
 };
 
 // Причина отказа разбора пакета
@@ -164,12 +164,12 @@ public:
     QByteArray createStartMeasurementPacket();
     QByteArray createDataExchangePacket(bool continueProcess);
     QByteArray createSourceDataPacket(int day, int hour, int tenMinutes,
-                                     float stationAltitude,
-                                     const QVector<float> &avgWindDir,
-                                     const QVector<float> &avgWindSpeed,
-                                     float reachedHeight,
-                                     float surfaceWindDir, float surfaceWindSpeed,
-                                     const QDateTime &currentDateTime);
+                                      float stationAltitude,
+                                      const QVector<float> &avgWindDir,
+                                      const QVector<float> &avgWindSpeed,
+                                      float reachedHeight,
+                                      float surfaceWindDir, float surfaceWindSpeed,
+                                      const QDateTime &currentDateTime);
     QByteArray createFuncControlPacket();
     QByteArray createAvgWindRequestPacket();
     QByteArray createActualWindRequestPacket();
@@ -200,6 +200,14 @@ public:
     // Детальная диагностика ошибок
     ParseError checkPacket(const QByteArray &data, AMSCommand expectedCmd, int minSize);
     static QString parseErrorString(ParseError err);
+
+    // Ожидаемая длина ОТВЕТА АМС для данной команды (в байтах, включая
+    // команду, данные, чек-сумму и стоп-байт). Используется для корректного
+    // кадрирования потока в AMSHandler::onDataReceived — без этого нарезка
+    // "по первому встреченному 0xFF" ошибочно принимает за конец пакета
+    // байт 0xFF, встретившийся внутри данных (например, в float-значении).
+    // Возвращает -1 для неизвестной/неподдерживаемой команды.
+    static int expectedResponseSize(AMSCommand cmd);
     static QString antennaStatusString(quint8 status);
     static QString rotateStatusString(quint8 status);
     static FuncControlResult funcControlDetails(quint32 bitMask);
