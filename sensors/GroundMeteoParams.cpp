@@ -3,7 +3,7 @@
 #include "VirtualKeyboard.h"
 #include <QDebug>
 #include <QtMath>
-#include <algorithm>  // Для std::min_element, std::max_element
+#include <algorithm>
 #include <QMessageBox>
 #include <QLineEdit>
 
@@ -42,6 +42,9 @@ QWidget* GroundParamValueDelegate::createEditor(QWidget *parent, const QStyleOpt
     editor->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     editor->setFont(option.font);
 
+    editor->setAutoFillBackground(true);
+    editor->setStyleSheet("background-color: #FFFFFF; border: none; padding: 0 4px;");
+
     const int row = index.row();
     if (row >= 0 && row < 5) {
         const RowFormat &fmt = kRowFormat[row];
@@ -56,6 +59,14 @@ QWidget* GroundParamValueDelegate::createEditor(QWidget *parent, const QStyleOpt
     }
 
     return editor;
+}
+
+void GroundParamValueDelegate::setEditorData(QWidget *editor, const QModelIndex &index) const
+{
+    QStyledItemDelegate::setEditorData(editor, index);
+
+    if (auto *le = qobject_cast<QLineEdit*>(editor))
+        le->selectAll();
 }
 
 void GroundParamValueDelegate::destroyEditor(QWidget *editor, const QModelIndex &index) const
@@ -116,11 +127,7 @@ GroundMeteoParams::GroundMeteoParams(QWidget *parent)
     connect(m_staleTimer, &QTimer::timeout,
             this, &GroundMeteoParams::onStaleTimerTimeout);
 
-    connect(this, &GroundMeteoParams::surfaceStateChanged,
-            this, &GroundMeteoParams::updateStatusPill);
-
     applyVisualStyle();
-    updateStatusPill(m_surfaceState); // начальное состояние пилюли ("Нет данных")
 }
 
 GroundMeteoParams::~GroundMeteoParams()
@@ -175,14 +182,6 @@ void GroundMeteoParams::closeEvent(QCloseEvent *event)
 
     VirtualKeyboard::hideKeyboard();
     QWidget::closeEvent(event);
-}
-
-// TEMP DEBUG — убрать после диагностики зависания
-void GroundMeteoParams::showEvent(QShowEvent *event)
-{
-    qDebug() << "[TEMP DEBUG] GroundMeteoParams::showEvent — before QWidget::showEvent";
-    QWidget::showEvent(event);
-    qDebug() << "[TEMP DEBUG] GroundMeteoParams::showEvent — after QWidget::showEvent";
 }
 
 GroundMeteoParams* GroundMeteoParams::instance()
@@ -1214,31 +1213,4 @@ void GroundMeteoParams::applyVisualStyle()
         "}"
         "QLabel#lblStatusPill { border-radius:14px; padding:6px 18px; font-weight:700; font-size:9.5pt; }"
     );
-
-    ui->lblStatusPill->setAttribute(Qt::WA_StyledBackground, true);
-}
-
-void GroundMeteoParams::updateStatusPill(GroundMeteoParams::SurfaceState state)
-{
-    QString text;
-    QString style;
-    switch (state) {
-    case NoData:
-        text = QString::fromUtf8("● НЕТ ПРИЗЕМНЫХ ДАННЫХ");
-        style = "QLabel#lblStatusPill { background:#FFEBEE; color:#C62828; border:1px solid #FFCDD2; }";
-        break;
-    case Stale:
-        text = QString::fromUtf8("● ДАННЫЕ УСТАРЕЛИ (>30 МИН)");
-        style = "QLabel#lblStatusPill { background:#FFF3E0; color:#E65100; border:1px solid #FFE0B2; }";
-        break;
-    case Fresh:
-        text = QString::fromUtf8("● ПРИЗЕМНЫЕ ДАННЫЕ АКТУАЛЬНЫ");
-        style = "QLabel#lblStatusPill { background:#E8F5E9; color:#0F6B4F; border:1px solid #C8E6C9; }";
-        break;
-    }
-    ui->lblStatusPill->setText(text);
-    // Локальный стиль пилюли добавляется поверх общего QSS диалога (тот уже
-    // задаёт radius/padding/шрифт — здесь только цвет состояния).
-    ui->lblStatusPill->setStyleSheet(style +
-        " QLabel#lblStatusPill { border-radius:14px; padding:6px 18px; font-weight:700; font-size:9.5pt; }");
 }

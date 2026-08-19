@@ -12,6 +12,10 @@
 #include <QProgressBar>
 #include <QTimer>
 #include <QLabel>
+#include <QPushButton>
+#include <QGraphicsOpacityEffect>
+#include <QFrame>
+#include <functional>
 #include "qmlcoordinateproxy.h"
 #include "sensors/gnsshandler.h"
 #include "sensors/amshandler.h"
@@ -36,6 +40,31 @@ class LandingCalculation;
 namespace Ui {
 class MainWindow;
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// ClickableFrame — обычный QFrame с сигналом clicked(). Реализовано через
+// прямое переопределение mousePressEvent/mouseReleaseEvent (НЕ через
+// installEventFilter — на этой платформе перехват мышиных событий через
+// eventFilter уже приводил к зависанию приложения в другом месте интерфейса,
+// поэтому для кликабельных элементов используем только штатный, надёжный
+// путь — тот же, что использует сам Qt внутри QAbstractButton).
+// ─────────────────────────────────────────────────────────────────────────
+class ClickableFrame : public QFrame
+{
+    Q_OBJECT
+public:
+    explicit ClickableFrame(QWidget *parent = nullptr);
+
+signals:
+    void clicked();
+
+protected:
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
+
+private:
+    bool m_pressed = false;
+};
 
 class MainWindow : public QMainWindow
 {
@@ -155,6 +184,18 @@ private slots:
     void onAutoConnectorProgress(int current, int total);
     void onAutoConnectorLog(const QString &msg);
 
+    // Остановка поиска датчиков (крестик на toast) и отключение датчика из
+    // шторки — оба идут через ОДНО обобщённое окно подтверждения.
+    void onToastCloseClicked();
+    void onConfirmOverlayAccepted();
+    void onConfirmOverlayCancelled();
+
+    // Шторка состояния/управления датчиком (клик по плашке статуса)
+    void onSensorPopupActionClicked();
+
+    // Всплывающая карточка при клике на индикатор состояния приземных данных
+    void onReadinessIndicatorClicked();
+
 private:
     Ui::MainWindow *ui;
     AutoConnector *m_autoConnector = nullptr;
@@ -232,6 +273,110 @@ private:
     QProgressBar *m_toastProgress = nullptr;
     QPropertyAnimation *m_toastAnimation = nullptr;
     QTimer *m_toastHideTimer = nullptr;
+    QPushButton *m_toastCloseBtn = nullptr; // маленькая красная кнопка остановки поиска
+
+    // Окно подтверждения (оверлей поверх всего окна) — ОБЩЕЕ для остановки
+    // поиска датчиков и для отключения датчика из шторки. Что именно
+    // подтверждается — определяется текстом и колбэком, передаваемыми в
+    // showConfirmOverlay(), сама карточка переиспользуется.
+    QWidget *m_stopConfirmOverlay = nullptr;
+    QWidget *m_stopConfirmCard = nullptr;
+    QLabel *m_confirmTitleLabel = nullptr;
+    QLabel *m_confirmSubtitleLabel = nullptr;
+    QPushButton *m_confirmYesBtn = nullptr;
+    QPushButton *m_confirmNoBtn = nullptr;
+    QGraphicsOpacityEffect *m_stopConfirmOpacity = nullptr;
+    QPropertyAnimation *m_stopConfirmAnimation = nullptr;
+    std::function<void()> m_confirmCallback; // выполняется по "Да", затем очищается
+
+    void setupConfirmOverlay();
+    void showConfirmOverlay(const QString &title, const QString &subtitle,
+                            std::function<void()> onConfirm,
+                            const QString &yesLabel = "Да",
+                            const QString &noLabel = "Нет");
+    void hideConfirmOverlay();
+
+    // ── Шторка состояния/управления датчиком ────────────────────────────────
+    // Открывается кликом по одной из 4 плашек статуса (GNSS/АМС/БИНС/ИВС).
+    // Показывает состояние, доп. информацию (если доступна по протоколу),
+    // причину проблемы при отсутствии связи и кнопку "Подключить" (только
+    // когда датчик не подключён — отключать вручную не нужно по задаче:
+    // отключение отслеживается автоматически через health-check).
+    QWidget *m_sensorPopup = nullptr;
+    QLabel *m_sensorPopupTitle = nullptr;
+    QLabel *m_sensorPopupStatus = nullptr;
+    QLabel *m_sensorPopupInfo = nullptr;
+    QLabel *m_sensorPopupReason = nullptr;
+    QPushButton *m_sensorPopupActionBtn = nullptr;
+    QPropertyAnimation *m_sensorPopupAnimation = nullptr;
+    AutoConnector::DeviceType m_currentPopupSensor = AutoConnector::DEVICE_UNKNOWN;
+
+    void setupSensorPopup();
+    void showSensorPopup(AutoConnector::DeviceType type);
+    void hideSensorPopup();
+    void populateSensorPopupContent();
+    void startSingleSensorSearch(AutoConnector::DeviceType type);
+    // Вызывается ТОЛЬКО изнутри health-check при реальной потере связи
+    // (не из UI — кнопки отключения в шторке больше нет).
+    void disconnectSensor(AutoConnector::DeviceType type);
+    QString sensorDisplayName(AutoConnector::DeviceType type) const;
+    QString sensorExtraInfo(AutoConnector::DeviceType type) const;
+    // Текст причины проблемы: последняя реальная ошибка от хендлера, если
+    // она есть, иначе общий чек-лист "проверьте кабель/порт/скорость".
+    QString sensorProblemReason(AutoConnector::DeviceType type) const;
+    // "Последние данные: N сек назад" — для GNSS/БИНС/ИВС (вещательные протоколы)
+    QString sensorLastSeenText(AutoConnector::DeviceType type) const;
+    bool isSensorConnected(AutoConnector::DeviceType type) const;
+    QWidget* sensorIndicatorWidget(AutoConnector::DeviceType type) const;
+
+    // ── Health-check: опрос "жив ли датчик" для уже подключённых ───────────
+    // АМС — активный (LINE_TEST раз в 5с, только когда не идёт измерение).
+    // GNSS/БИНС/ИВС — пассивный "сторож": если дольше kSilenceTimeoutMs не
+    // пришло ни байта — считаем отключённым.
+    static constexpr int kHealthCheckIntervalMs = 5000;
+    static constexpr int kSilenceTimeoutMs = 12000;
+
+    QTimer *m_amsHealthTimer = nullptr;
+    QTimer *m_silenceWatchdogTimer = nullptr;
+
+    QDateTime m_gnssLastDataAt;
+    QDateTime m_binsLastDataAt;
+    QDateTime m_iwsLastDataAt;
+
+    // Последняя реальная ошибка от каждого хендлера — используется как
+    // причина в шторке. Очищается при успешном подключении.
+    QString m_gnssLastError;
+    QString m_amsLastError;
+    QString m_binsLastError;
+    QString m_iwsLastError;
+
+    void setupHealthChecks();
+    void onAmsHealthCheckTimer();
+    void onSilenceWatchdogTimer();
+
+    // Toast по итогам поиска — вынесено в отдельный метод, т.к. вызывается
+    // и сразу из onAutoConnectorFinished(), и с отсрочкой (см. там же —
+    // обходит гонку подтверждения АМС).
+    void finalizeAutoConnectorFinished();
+
+    // ── Всплывающая карточка у индикатора состояния приземных данных ───────
+    // "Выезжает" из readinessIndicatorFrame (левый верхний угол), по тому же
+    // принципу, что и m_toastWidget, но со своей геометрией/анимацией.
+    QWidget      *m_readinessPopup = nullptr;
+    QLabel       *m_readinessPopupTitle = nullptr;
+    QLabel       *m_readinessPopupSubtitle = nullptr;
+    QPushButton  *m_readinessPopupYes = nullptr;
+    QPushButton  *m_readinessPopupNo = nullptr;
+    QPropertyAnimation *m_readinessPopupAnimation = nullptr;
+    // Последнее известное состояние приземных данных — хранится отдельно от
+    // текста lblStatus, т.к. во время измерения АМС в lblStatus временно
+    // показывается "РАБОТА"/"ОШИБКА" поверх этого состояния.
+    GroundMeteoParams::SurfaceState m_lastKnownSurfaceState = GroundMeteoParams::NoData;
+
+    void setupReadinessPopup();
+    void showReadinessPopup();
+    void hideReadinessPopup();
+    void populateReadinessPopupContent();
 
     void connectSensorsFromConfig();
     bool connectIwsPort(const QString &port, int baudRate, QSerialPort::DataBits dataBits,
@@ -302,6 +447,9 @@ private:
     void updateGnssStatusLabel(bool connected);
     void updateAmsStatusLabel(bool connected);
     void updateBinsStatusLabel(bool connected);
+    // Плитка "Готов к запуску" на экране "Пуск измерения" (не влияет на
+    // btnStart->setEnabled(...) — только поясняющая надпись для оператора).
+    void updateMeasureReadinessLabel();
     void updateIwsStatusLabel(bool connected);
 
     void runPlowSelfTest();

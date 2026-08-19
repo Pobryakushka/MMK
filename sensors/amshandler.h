@@ -49,6 +49,16 @@ public:
     void disconnectFromAMS();
     bool isConnected() const;
 
+    // Лёгкая проверка "жив ли АМС" — переотправляет LINE_TEST по уже
+    // открытому порту. НЕ вызывать во время измерения (мешает основному
+    // обмену) — вызывающая сторона должна сама проверить getMeasurementStatus().
+    // Если ответа не будет в течение обычного таймаута — соединение
+    // считается потерянным: вызывается тот же путь, что и при обычном
+    // отключении (disconnectFromAMS(), сигнал disconnected()).
+    // Возвращает false, если пинг не был отправлен (не подключены, или уже
+    // ждём ответ на другую команду — в этом случае просто пропускаем такт).
+    bool pingConnection();
+
     // Настройка БД
     void setDatabase(const QString &host, int port, const QString &dbName,
                      const QString &user, const QString &password);
@@ -159,6 +169,11 @@ private:
     bool m_confirmed = false;  // true только после успешного LINE_TEST
     AMSCommand m_lastCommand;
     int m_currentRecordId;
+
+    // true, пока ждём ответ именно на health-check пинг (pingConnection()) —
+    // отличаем от обычного ожидания ответа, чтобы таймаут без ответа
+    // трактовался как "соединение потеряно", а не просто как ошибка команды.
+    bool m_healthCheckPing = false;
 
     // Новые переменные состояния для процесса измерения
     MeasurementStatus m_measurementStatus;

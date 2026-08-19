@@ -15,19 +15,6 @@
 QHash<QLineEdit*, VirtualKeyboard::AttachInfo> VirtualKeyboard::s_registry;
 VirtualKeyboard* VirtualKeyboard::s_instance = nullptr;
 
-// ─────────────────────────────────────────────────────────────────────────
-// Конструктор / синглтон
-// ─────────────────────────────────────────────────────────────────────────
-//
-// ВАЖНО: клавиатура — это ОБЫЧНЫЙ дочерний QWidget, а НЕ отдельное
-// top-level окно (раньше был Qt::Tool — из-за этого на планшете при показе
-// нового окна поле мгновенно теряло фокус, клавиатура открывалась и тут же
-// пряталась обратно). Вместо этого при каждом показе она перепривязывается
-// (setParent) к тому же top-level окну, где находится поле ввода, и
-// рисуется поверх остального содержимого этого окна как оверлей —
-// никакого отдельного окна и, соответственно, никакой борьбы за фокус
-// с оконным менеджером/композитором.
-
 VirtualKeyboard::VirtualKeyboard(QWidget *parent)
     : QWidget(parent)
 {
@@ -155,6 +142,26 @@ QString VirtualKeyboard::numericPattern(const Constraints &c)
 
 bool VirtualKeyboard::eventFilter(QObject *watched, QEvent *event)
 {
+    if (isVisible() && watched == m_watchedWindow && event->type() == QEvent::MouseButtonPress){
+        auto *me = static_cast<QMouseEvent*>(event);
+        const QPoint pos =
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+            me->position().toPoint();
+#else
+            me->pos();
+#endif
+        const bool onKeyboard = geometry().contains(pos);
+        bool onTarget = false;
+        if(m_target){
+            const QPoint targetTopLeft = m_target->mapTo(m_watchedWindow, QPoint(0, 0));
+            onTarget = QRect(targetTopLeft, m_target->size()).contains(pos);
+        }
+        if (!onKeyboard && !onTarget) {
+            commitAndClose();
+        }
+        return QWidget::eventFilter(watched, event);
+    }
+
     auto *target = qobject_cast<QLineEdit*>(watched);
     if (!target)
         return QWidget::eventFilter(watched, event);
@@ -216,6 +223,14 @@ void VirtualKeyboard::showFor(QLineEdit *target)
         setParent(topLevel); // setParent() скрывает виджет — show() ниже вернёт его
     }
 
+    if (m_watchedWindow != topLevel) {
+        if (m_watchedWindow)
+            m_watchedWindow->removeEventFilter(this);
+        m_watchedWindow = topLevel;
+        if (m_watchedWindow)
+            m_watchedWindow->installEventFilter(this);
+    }
+
     rebuildLayout();
     updateHint();
     repositionFor(target);
@@ -229,20 +244,21 @@ void VirtualKeyboard::repositionFor(QWidget *target)
     if (!topLevel)
         return;
 
-    // Границы считаем от РАБОЧЕЙ ОБЛАСТИ ОКНА, в котором находится поле
-    // (а не от физического экрана) — так клавиатура всегда умещается в
-    // пределах своего диалога/главного окна и автоматически подстраивается
-    // под текущий размер этого окна (в т.ч. при будущей поддержке поворота
-    // экрана — сейчас ориентация преимущественно альбомная).
     const QRect avail = topLevel->rect();
 
-    // Оптимальный размер: не более 92% ширины окна и не более 38% его высоты —
-    // клавиатура остаётся крупной и удобной для пальца на планшете, но
-    // гарантированно не перекрывает поле ввода и не занимает всё окно.
-    int kbWidth  = (m_shownMode == Mode::Text)
-                       ? qMin(avail.width() * 92 / 100, 980)
-                       : qMin(avail.width() * 55 / 100, 520);
-    int kbHeight = qMin(avail.height() * 38 / 100, m_shownMode == Mode::Text ? 340 : 300);
+    if (QLayout *l = layout())
+        l->activate();
+    const QSize hint = sizeHint();
+    const QSize minHint = minimumSizeHint();
+
+    int maxWidth = (m_shownMode == Mode::Text)
+        ? qMin(avail.width() * 92 / 100, 980)
+        : qMin(avail.width() * 70 / 100, 560);
+
+    int maxHeight = qMin(avail.height() * 55 / 100, m_shownMode == Mode::Text ? 380 : 340);
+
+    int kbWidth  = qMax(minHint.width(), qMin(hint.width(), maxWidth));
+    int kbHeight = qMax(minHint.height(), qMin(hint.height(), maxHeight));
 
     resize(kbWidth, kbHeight);
 
@@ -273,7 +289,7 @@ void VirtualKeyboard::repositionFor(QWidget *target)
         y = qBound(avail.top(), y, avail.bottom() - kbHeight);
     }
 
-    int x = targetRect.left();
+    int x = targetRect.center().x() - kbWidth / 2;
     if (x + kbWidth > avail.right())
         x = avail.right() - kbWidth;
     if (x < avail.left())
@@ -335,7 +351,7 @@ void VirtualKeyboard::buildNumericLayout()
         {"7", "8", "9"},
         {"4", "5", "6"},
         {"1", "2", "3"},
-        {c.allowNegative ? "-" : "", "0", c.allowDecimal ? "," : ""}
+        {c.allowNegative ? "-" : "", "0", c.allowDecimal ? "." : ""}
     };
 
     for (int r = 0; r < 4; ++r) {
@@ -532,7 +548,9 @@ void VirtualKeyboard::commitAndClose()
         const auto &c = m_current.constraints;
         QString text = target->text();
         text.replace(',', '.');
-        if (!text.isEmpty() && text != "-" && text != ".") {
+        text = normalizeNumericText(text);
+
+        if (!text.isEmpty()) {
             bool ok = false;
             double value = text.toDouble(&ok);
             if (ok) {
@@ -540,17 +558,55 @@ void VirtualKeyboard::commitAndClose()
                     if (c.clampOnDone) {
                         value = qBound(c.minValue, value, c.maxValue);
                         int decimals = c.maxDecimals >= 0 ? c.maxDecimals : 1;
-                        target->setText(QString::number(value, 'f', decimals));
+                        text = QString::number(value, 'f', decimals);
                     } else {
-                        target->clear();
+                        text.clear();
                     }
                 }
             } else {
-                target->clear(); // осталась незавершённая запись вроде "-" — считаем полем пустым
+                text.clear(); // осталась незавершённая запись вроде "-" — считаем полем пустым
             }
         }
+
+        target->setText(text);
     }
 
     hide();
     emit doneEditing(target);
+}
+
+QString VirtualKeyboard::normalizeNumericText(const QString &input)
+{
+    if (input.isEmpty())
+        return input;
+
+    QString text = input;
+    if (text.endsWith('.'))
+        text.chop(1);
+
+    const bool negative = text.startsWith('-');
+    QString body = negative ? text.mid(1) : text;
+
+    if (body.isEmpty() || body == ".")
+        return QString();
+
+    const int dotPos = body.indexOf('.');
+    QString intPart = (dotPos >= 0) ? body.left(dotPos) : body;
+    QString fracPart = (dotPos >= 0) ? body.mid(dotPos) : QString();
+
+    if (intPart.isEmpty())
+        intPart = "0";
+
+    int firstNonZero = 0;
+    while (firstNonZero < intPart.length() - 1 && intPart.at(firstNonZero) == '0')
+        ++firstNonZero;
+    intPart = intPart.mid(firstNonZero);
+
+    text = intPart + fracPart;
+
+    bool ok = false;
+    const double value = text.toDouble(&ok);
+    const bool keepSign = negative && (!ok || value != 0.0);
+
+    return keepSign ? ('-' + text) : text;
 }

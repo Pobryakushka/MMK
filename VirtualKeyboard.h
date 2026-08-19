@@ -3,28 +3,6 @@
 
 // ─────────────────────────────────────────────────────────────────────────
 // VirtualKeyboard — переиспользуемая экранная клавиатура для планшета.
-//
-// Идея: НЕ вызывать клавиатуру вручную в каждом месте. Один раз "привязать"
-// (attach) её к полю ввода (QLineEdit, либо QLineEdit-редактор ячейки
-// таблицы), а дальше клавиатура сама показывается по фокусу, сама
-// позиционируется так, чтобы не перекрывать поле ввода и не вылезать за
-// границы экрана, и сама валидирует ввод по заданным ограничениям.
-//
-// Пример использования (обычное поле):
-//     VirtualKeyboard::Constraints c;
-//     c.allowNegative = false;
-//     c.maxDecimals    = 1;
-//     c.minValue = 0.0; c.maxValue = 60.0;
-//     VirtualKeyboard::attach(ui->editWindSpeed, VirtualKeyboard::Mode::Numeric, c);
-//
-// Пример использования (текстовое поле, без ограничений):
-//     VirtualKeyboard::attach(ui->editOperatorName); // Mode::Auto → Text
-//
-// Отвязка (например, при удалении виджета вручную раньше времени):
-//     VirtualKeyboard::detach(ui->editWindSpeed);
-//
-// Клавиатура — синглтон (одна на приложение), т.к. в любой момент времени
-// в фокусе может быть только одно поле.
 // ─────────────────────────────────────────────────────────────────────────
 
 #include <QWidget>
@@ -41,16 +19,7 @@ class QVBoxLayout;
 
 // Ограничения ввода для конкретного поля. Проверяются на каждое нажатие
 // клавиши (что можно набрать) и при "Готово" (диапазон значения).
-//
-// ВАЖНО: этот struct объявлен ВНЕ класса VirtualKeyboard (а не как
-// VirtualKeyboard::Constraints), т.к. используется значением по умолчанию
-// в объявлении VirtualKeyboard::attach() — компилятору нужен полностью
-// определённый тип ДО конца класса VirtualKeyboard, а вложенный класс
-// внутри ещё не завершённого внешнего класса для этого не годится
-// (ошибка GCC "default member initializer ... required before the end
-// of its enclosing class"). Внутри VirtualKeyboard есть алиас
-// `using Constraints = VirtualKeyboardConstraints;`, так что снаружи
-// (VirtualKeyboard::Constraints) всё выглядит и используется как раньше.
+
 struct VirtualKeyboardConstraints {
     bool   allowNegative   = true;   // разрешён ли знак "-"
     bool   allowDecimal    = true;   // разрешена ли дробная часть
@@ -123,6 +92,7 @@ private:
     void backspace();
     void clearField();
     void commitAndClose();
+    static QString normalizeNumericText(const QString &input);
     void toggleShift();
     void toggleMode();
     bool candidateAllowed(const QString &candidateText) const;
@@ -130,6 +100,7 @@ private:
     void updateHint();
 
     QPointer<QLineEdit> m_target;
+    QPointer<QWidget> m_watchedWindow;
     AttachInfo   m_current;
     Mode         m_shownMode = Mode::Numeric;
     bool         m_shift = false;

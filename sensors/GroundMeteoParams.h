@@ -5,7 +5,6 @@
 #include <QMap>
 #include <QSerialPort>
 #include <QCloseEvent>
-#include <QShowEvent>
 #include <QTimer>
 #include <QTableWidget>
 #include <QStyledItemDelegate>
@@ -25,6 +24,7 @@ public:
     explicit GroundParamValueDelegate(QObject *parent = nullptr);
     QWidget* createEditor(QWidget *parent, const QStyleOptionViewItem &option,
                           const QModelIndex &index) const override;
+    void setEditorData(QWidget *editor, const QModelIndex &index) const override;
     void destroyEditor(QWidget *editor, const QModelIndex &index) const override;
 };
 
@@ -90,7 +90,6 @@ private slots:
     void applyManualInput();
     void onTableItemChanged(QTableWidgetItem *item);   // отслеживание m_dirty
     void onStaleTimerTimeout();                         // 30 мин истекли
-    void updateStatusPill(GroundMeteoParams::SurfaceState state); // обновление пилюли статуса
 
 private:
     Ui::GroundMeteoParams *ui;
@@ -173,7 +172,6 @@ private:
 
 protected:
     void closeEvent(QCloseEvent *event) override;
-    void showEvent(QShowEvent *event) override; // TEMP DEBUG — убрать после диагностики
 
 signals:
     void errorOccurred(const QString& error);

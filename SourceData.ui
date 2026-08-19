@@ -97,177 +97,23 @@ QPushButton:pressed { color: #0B5A42; }</string>
       <number>40</number>
      </property>
      <item>
-      <widget class="QWidget" name="rowMeteo11" native="true">
+      <widget class="SourceDataTile" name="rowMeteo11">
        <property name="minimumSize">
         <size>
          <width>0</width>
          <height>72</height>
         </size>
        </property>
-       <property name="styleSheet">
-        <string notr="true">QWidget#rowMeteo11 {
-    background-color: #FFFFFF;
-    border: 1px solid #DDE1E3;
-    border-radius: 18px;
-}
-QWidget#rowMeteo11[pressed="true"] {
-    background-color: #F0F1F2;
-}</string>
-       </property>
-       <layout class="QHBoxLayout" name="rowMeteo11Layout" stretch="1,0,0">
-        <property name="leftMargin">
-         <number>26</number>
-        </property>
-        <property name="topMargin">
-         <number>10</number>
-        </property>
-        <property name="rightMargin">
-         <number>22</number>
-        </property>
-        <property name="bottomMargin">
-         <number>10</number>
-        </property>
-        <property name="spacing">
-         <number>14</number>
-        </property>
-        <item>
-         <layout class="QVBoxLayout" name="rowMeteo11TextLayout">
-          <property name="spacing">
-           <number>2</number>
-          </property>
-          <item>
-           <widget class="QLabel" name="lblMeteo11Title">
-            <property name="styleSheet">
-             <string notr="true">background: transparent; font-size: 13pt; font-weight: 700; color: #1C1F22;</string>
-            </property>
-            <property name="text">
-             <string>Бюллетень «Метео-11»</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLabel" name="lblMeteo11Desc">
-            <property name="styleSheet">
-             <string notr="true">background: transparent; font-size: 9pt; color: #6B7278;</string>
-            </property>
-            <property name="text">
-             <string>Ввод/просмотр закодированного бюллетеня</string>
-            </property>
-            <property name="wordWrap">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <widget class="QLabel" name="badgeMeteo11">
-          <property name="styleSheet">
-           <string notr="true">font-size: 8pt; font-weight: 700; padding: 4px 10px; border-radius: 10px; color: #C62828; background-color: #FFEBEE;</string>
-          </property>
-          <property name="text">
-           <string>Не загружен</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="chevronMeteo11">
-          <property name="styleSheet">
-           <string notr="true">background: transparent; color: #6B7278; font-size: 16px;</string>
-          </property>
-          <property name="text">
-           <string>›</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
       </widget>
      </item>
      <item>
-      <widget class="QWidget" name="rowGroundParams" native="true">
+      <widget class="SourceDataTile" name="rowGroundParams">
        <property name="minimumSize">
         <size>
          <width>0</width>
          <height>72</height>
         </size>
        </property>
-       <property name="styleSheet">
-        <string notr="true">QWidget#rowGroundParams {
-    background-color: #FFFFFF;
-    border: 1px solid #DDE1E3;
-    border-radius: 18px;
-}
-QWidget#rowGroundParams[pressed="true"] {
-    background-color: #F0F1F2;
-}</string>
-       </property>
-       <layout class="QHBoxLayout" name="rowGroundParamsLayout" stretch="1,0,0">
-        <property name="leftMargin">
-         <number>26</number>
-        </property>
-        <property name="topMargin">
-         <number>10</number>
-        </property>
-        <property name="rightMargin">
-         <number>22</number>
-        </property>
-        <property name="bottomMargin">
-         <number>10</number>
-        </property>
-        <property name="spacing">
-         <number>14</number>
-        </property>
-        <item>
-         <layout class="QVBoxLayout" name="rowGroundParamsTextLayout">
-          <property name="spacing">
-           <number>2</number>
-          </property>
-          <item>
-           <widget class="QLabel" name="lblGroundParamsTitle">
-            <property name="styleSheet">
-             <string notr="true">background: transparent; font-size: 13pt; font-weight: 700; color: #1C1F22;</string>
-            </property>
-            <property name="text">
-             <string>Параметры приземного слоя</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLabel" name="lblGroundParamsDesc">
-            <property name="styleSheet">
-             <string notr="true">background: transparent; font-size: 9pt; color: #6B7278;</string>
-            </property>
-            <property name="text">
-             <string>Ветер, давление, влажность, температура у земли</string>
-            </property>
-            <property name="wordWrap">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <widget class="QLabel" name="badgeGroundParams">
-          <property name="styleSheet">
-           <string notr="true">font-size: 8pt; font-weight: 700; padding: 4px 10px; border-radius: 10px; color: #C62828; background-color: #FFEBEE;</string>
-          </property>
-          <property name="text">
-           <string>Нет данных</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="chevronGroundParams">
-          <property name="styleSheet">
-           <string notr="true">background: transparent; color: #6B7278; font-size: 16px;</string>
-          </property>
-          <property name="text">
-           <string>›</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
       </widget>
      </item>
      <item>
@@ -287,6 +133,13 @@ QWidget#rowGroundParams[pressed="true"] {
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>SourceDataTile</class>
+   <extends>QPushButton</extends>
+   <header>SourceData.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

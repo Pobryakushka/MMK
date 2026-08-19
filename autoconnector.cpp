@@ -60,14 +60,27 @@ static QStringList collectAllSerialLikePorts()
     return result;
 }
 
-void AutoConnector::startDetection()
+void AutoConnector::startDetection(DeviceType onlyType)
 {
     if (m_isDetecting) {
         emit logMessage("Автоопределение уже запущено");
         return;
     }
 
-    emit logMessage("=== НАЧАЛО АВТООПРЕДЕЛЕНИЯ УСТРОЙСТВ ===");
+    m_singleSearchTarget = onlyType;
+    m_skipTypes.clear();
+    if (onlyType != DEVICE_UNKNOWN) {
+        // Ищем только один тип — остальные три помечаем "пропустить",
+        // существующая логика выбора фазы сама отфильтрует их.
+        static const DeviceType allTypes[] = { DEVICE_AMS, DEVICE_GNSS, DEVICE_IWS, DEVICE_BINS };
+        for (DeviceType t : allTypes) {
+            if (t != onlyType)
+                m_skipTypes.insert(t);
+        }
+        emit logMessage(QString("=== НАЧАЛО ПОИСКА: ТОЛЬКО %1 ===").arg(onlyType));
+    } else {
+        emit logMessage("=== НАЧАЛО АВТООПРЕДЕЛЕНИЯ УСТРОЙСТВ ===");
+    }
 
     // Очищаем предыдущие результаты
     m_detectedDevices.clear();
@@ -125,8 +138,14 @@ int AutoConnector::baudRateForPhase(TestPhase phase)
         case PHASE_AMS_TEST:    return 115200; // АМС: 115200
         case PHASE_GNSS_LISTEN: return 9600;  // GNSS: 9600
         case PHASE_IWS_TEST:    return 19200;  // ИВС: 19200
+        case PHASE_BINS_LISTEN: return 115200; // БИНС: 115200
         default:                return 9600;
     }
+}
+
+bool AutoConnector::isTypeSkipped(DeviceType type) const
+{
+    return m_detectedDevices.contains(type) || m_skipTypes.contains(type);
 }
 
 void AutoConnector::processNextPort()
@@ -148,14 +167,17 @@ void AutoConnector::processNextPort()
     m_deviceFoundOnCurrentPort = false;
 
     // Определяем с какой фазы начинать — пропускаем уже найденные типы
+    // (и типы, не входящие в искомый при поиске одного датчика)
     m_currentPhase = PHASE_DONE; // будет перезаписано ниже
 
-    if (!m_detectedDevices.contains(DEVICE_AMS))
+    if (!isTypeSkipped(DEVICE_AMS))
         m_currentPhase = PHASE_AMS_TEST;
-    else if (!m_detectedDevices.contains(DEVICE_GNSS))
+    else if (!isTypeSkipped(DEVICE_GNSS))
         m_currentPhase = PHASE_GNSS_LISTEN;
-    else if (!m_detectedDevices.contains(DEVICE_IWS))
+    else if (!isTypeSkipped(DEVICE_IWS))
         m_currentPhase = PHASE_IWS_TEST;
+    else if (!isTypeSkipped(DEVICE_BINS))
+        m_currentPhase = PHASE_BINS_LISTEN;
 
     // Все устройства уже найдены — останавливаемся
     if (m_currentPhase == PHASE_DONE) {
@@ -213,6 +235,7 @@ void AutoConnector::openPortAndTest(const QString &portName, int baudRate)
         case PHASE_AMS_TEST:    testAMS();  break;
         case PHASE_GNSS_LISTEN: testGNSS(); break;
         case PHASE_IWS_TEST:    testIWS();  break;
+        case PHASE_BINS_LISTEN: testBINS(); break;
         default: moveToNextPhase(); break;
     }
 }
@@ -272,6 +295,17 @@ void AutoConnector::testIWS()
     }
 }
 
+void AutoConnector::testBINS()
+{
+    emit logMessage("  Тест БИНС: слушаем поток пакетов 0xAA/0x02...");
+
+    // БИНС ничего не запрашивает командой — устройство само непрерывно
+    // транслирует пакеты, порт нужен только на чтение. Поэтому просто
+    // слушаем 3 секунды и проверяем буфер на валидный пакет (см.
+    // isBinsResponse) — тот же принцип, что и для GNSS/NMEA.
+    m_timeoutTimer->start(3000);
+}
+
 void AutoConnector::onReadyRead()
 {
     if (!m_testPort) return;
@@ -309,6 +343,14 @@ void AutoConnector::onReadyRead()
             }
             break;
 
+        case PHASE_BINS_LISTEN:
+            if (isBinsResponse(m_receiveBuffer)) {
+                m_timeoutTimer->stop();
+                deviceFound(DEVICE_BINS, "БИНС");
+                return;
+            }
+            break;
+
         case PHASE_DONE:
             break;
     }
@@ -334,15 +376,22 @@ void AutoConnector::moveToNextPhase()
 
     if (m_currentPhase == PHASE_AMS_TEST) {
         // Ищем следующую фазу после AMS
-        if (!m_detectedDevices.contains(DEVICE_GNSS))
+        if (!isTypeSkipped(DEVICE_GNSS))
             nextPhase = PHASE_GNSS_LISTEN;
-        else if (!m_detectedDevices.contains(DEVICE_IWS))
+        else if (!isTypeSkipped(DEVICE_IWS))
             nextPhase = PHASE_IWS_TEST;
+        else if (!isTypeSkipped(DEVICE_BINS))
+            nextPhase = PHASE_BINS_LISTEN;
     } else if (m_currentPhase == PHASE_GNSS_LISTEN) {
-        if (!m_detectedDevices.contains(DEVICE_IWS))
+        if (!isTypeSkipped(DEVICE_IWS))
             nextPhase = PHASE_IWS_TEST;
+        else if (!isTypeSkipped(DEVICE_BINS))
+            nextPhase = PHASE_BINS_LISTEN;
+    } else if (m_currentPhase == PHASE_IWS_TEST) {
+        if (!isTypeSkipped(DEVICE_BINS))
+            nextPhase = PHASE_BINS_LISTEN;
     }
-    // PHASE_IWS_TEST и PHASE_DONE → всегда переходим к следующему порту
+    // PHASE_BINS_LISTEN и PHASE_DONE → всегда переходим к следующему порту
 
     if (nextPhase == PHASE_DONE) {
         // Все нужные фазы на этом порту пройдены — следующий порт
@@ -362,6 +411,7 @@ void AutoConnector::moveToNextPhase()
         switch (nextPhase) {
             case PHASE_GNSS_LISTEN: testGNSS(); break;
             case PHASE_IWS_TEST:    testIWS();  break;
+            case PHASE_BINS_LISTEN: testBINS(); break;
             default: break;
         }
     } else {
@@ -455,6 +505,40 @@ bool AutoConnector::isUmbResponse(const QByteArray &data)
     if (hasEtx) {
         emit logMessage("  → Обнаружен ответ UMB (SOH, ETX, EOT)");
         return true;
+    }
+
+    return false;
+}
+
+bool AutoConnector::isBinsResponse(const QByteArray &data)
+{
+    // Пакет БИНС: [0xAA][0x02][... 16 байт данных ...][CRC16 LE] = 18 байт.
+    // Ищем заголовок 0xAA с типом 0x02 сразу после него и проверяем CRC16
+    // над первыми 16 байтами данных — та же структура, что разбирает
+    // BINSHandler::parseOrientationPacket / calculateCRC16.
+    static const int MIN_PACKET_SIZE = 18;
+    static const int DATA_SIZE = 16;
+
+    if (data.size() < MIN_PACKET_SIZE)
+        return false;
+
+    for (int i = 0; i + MIN_PACKET_SIZE <= data.size(); ++i) {
+        if (static_cast<quint8>(data[i]) != 0xAA)
+            continue;
+        if (static_cast<quint8>(data[i + 1]) != 0x02)
+            continue;
+
+        QByteArray packet = data.mid(i, MIN_PACKET_SIZE);
+        QByteArray dataForCrc = packet.left(DATA_SIZE);
+
+        quint16 receivedCrc = static_cast<quint8>(packet[DATA_SIZE]) |
+                              (static_cast<quint8>(packet[DATA_SIZE + 1]) << 8);
+        quint16 calculatedCrc = calculateBinsCrc16(dataForCrc);
+
+        if (receivedCrc == calculatedCrc) {
+            emit logMessage("  → Обнаружен пакет БИНС (0xAA/0x02, CRC совпадает)");
+            return true;
+        }
     }
 
     return false;
@@ -557,6 +641,26 @@ quint16 AutoConnector::calculateUmbCrc(const QByteArray &data)
             crc = crc >> 1;
             crc ^= x16;
             byte = byte >> 1;
+        }
+    }
+
+    return crc;
+}
+
+quint16 AutoConnector::calculateBinsCrc16(const QByteArray &data)
+{
+    // Идентично BINSHandler::calculateCRC16 — полином 0x1021, init 0xFFFF.
+    quint16 crc = 0xFFFF;
+
+    for (int i = 0; i < data.size(); i++) {
+        crc ^= (static_cast<quint16>(static_cast<quint8>(data[i])) << 8);
+
+        for (int j = 0; j < 8; j++) {
+            if (crc & 0x8000) {
+                crc = (crc << 1) ^ 0x1021;
+            } else {
+                crc <<= 1;
+            }
         }
     }
 

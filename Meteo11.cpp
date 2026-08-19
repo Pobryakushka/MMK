@@ -13,15 +13,11 @@ const QStringList Meteo11::kHeightCodes = {
 };
 
 Meteo11::Meteo11(QWidget *parent)
-    : QDialog(parent, Qt::CustomizeWindowHint | Qt::WindowCloseButtonHint)
+    : QWidget(parent)
     , ui(new Ui::Meteo11)
     , m_applied(false)
 {
     ui->setupUi(this);
-    setWindowTitle("Метео-11 — ввод бюллетеня от метеостанции");
-    adjustSize();
-    setMinimumSize(sizeHint());
-    setSizeGripEnabled(true);
 
     // Настраиваем таблицу: 3 колонки — ПП, НН, СС
     ui->tableWidget_meteo11->setColumnCount(3);
@@ -42,12 +38,32 @@ Meteo11::Meteo11(QWidget *parent)
     connect(ui->btnMet11Apply,  &QPushButton::clicked, this, &Meteo11::onApplyClicked);
     connect(ui->btnMet11Parse,  &QPushButton::clicked, this, &Meteo11::onParseClicked);
     connect(ui->btnMet11Clear,  &QPushButton::clicked, this, &Meteo11::onClearClicked);
-    connect(ui->btnMet11Close,  &QPushButton::clicked, this, [this]{ close(); });
+    connect(ui->btnMet11Back,   &QPushButton::clicked, this, [this]{ emit backRequested(); });
+
+    updateStatusPill();
 }
 
 Meteo11::~Meteo11()
 {
     delete ui;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Бейдж-пилюля состояния бюллетеня (аналог lblStatusPill в GroundMeteoParams)
+// ─────────────────────────────────────────────────────────────────────────────
+void Meteo11::updateStatusPill()
+{
+    if (m_applied) {
+        ui->lblMet11StatusPill->setText(QString::fromUtf8("● БЮЛЛЕТЕНЬ ЗАГРУЖЕН"));
+        ui->lblMet11StatusPill->setStyleSheet(
+            "padding: 6px 18px; border-radius: 17px; font-weight: bold; "
+            "background-color: #E8F5E9; color: #0F6B4F;");
+    } else {
+        ui->lblMet11StatusPill->setText(QString::fromUtf8("● БЮЛЛЕТЕНЬ НЕ ЗАГРУЖЕН"));
+        ui->lblMet11StatusPill->setStyleSheet(
+            "padding: 6px 18px; border-radius: 17px; font-weight: bold; "
+            "background-color: #FFEBEE; color: #C62828;");
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -141,17 +157,19 @@ void Meteo11::onApplyClicked()
     m_validityPeriod = "12h";
     m_applied        = true;
 
-    // Показываем статус в метке
+    // Показываем статус в метке и обновляем пилюлю в шапке
     ui->lblStatus->setText(QString("✓ Применён: %1, слоёв: %2")
                                .arg(dt.toString("dd.MM.yyyy HH:mm"))
                                .arg(layers.size()));
+    ui->lblStatus->setStyleSheet("color: #0F6B4F; font-weight: bold;");
+    updateStatusPill();
 
     qDebug() << "Meteo11: бюллетень применён, время:" << dt
              << "слоёв:" << layers.size();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Кнопка «Разобрать строку»
+// Кнопка «Заполнить поля из строки»
 // ─────────────────────────────────────────────────────────────────────────────
 void Meteo11::onParseClicked()
 {
@@ -265,7 +283,6 @@ void Meteo11::onClearClicked()
     ui->lineEdit_Met11GroundVertTempDev->clear();
     ui->lineEdit_Met11AchievedSensHeight->clear();
     ui->lblStatus->clear();
-    ui->lblStatus->setStyleSheet("color: #2E7D32; font-weight: bold;");
 
     // Сбрасываем все три колонки: ПП → "//" (default), НН и СС → ""
     for (int r = 0; r < ui->tableWidget_meteo11->rowCount(); ++r) {
@@ -279,4 +296,5 @@ void Meteo11::onClearClicked()
     m_applied      = false;
     m_bulletinJson = QJsonObject();
     m_bulletinTime = QDateTime();
+    updateStatusPill();
 }
