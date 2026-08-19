@@ -164,10 +164,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->btnMeasurementResults, &QPushButton::clicked, this, &MainWindow::onMeasurementResultsClicked);
     connect(ui->btnStart, &QPushButton::clicked, this, &MainWindow::onStartClicked);
     connect(ui->btnStop, &QPushButton::clicked, this, &MainWindow::onStopClicked);
-    // connect(ui->cbWorkMode, &QCheckBox::stateChanged, this, &MainWindow::onWorkModeChanged);
-    // connect(ui->cbStandbyMode, &QCheckBox::stateChanged, this, &MainWindow::onStandbyModeChanged);
-    // connect(ui->cbWorkMode, &QRadioButton::toggled, this, &MainWindow::onWorkModeChanged);
-    // connect(ui->cbStandbyMode, &QRadioButton::toggled, this, &MainWindow::onStandbyModeChanged);
+    // connect(ui->btnModeWorking, &QPushButton::toggled, this, &MainWindow::onWorkModeChanged);
+    // connect(ui->btnModeStandby, &QPushButton::toggled, this, &MainWindow::onStandbyModeChanged);
     // NoFocus: кнопка часто переключается setEnabled(false/true) во время
     // поиска датчиков — если она в этот момент в фокусе, Qt перекидывает
     // фокус на следующий по табуляции виджет ("Функциональный контроль"),
@@ -404,12 +402,15 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_iwsWarmupTimer, &QTimer::timeout, this, &MainWindow::onIwsWarmupFinished);
 
     // 3 мин доступны по умолчанию; блокируется только после подключения ИВС
-    // на 3 минуты прогрева (см. onConnectRequested / onDisconnectRequested)
-    ui->comboAvgTime->setEnabled(true);
-    ui->comboAvgTime->setToolTip("");
+    // на 3 минуты прогрева (см. onConnectRequested / onDisconnectRequested).
+    // comboAvgTime/comboLitera заменены сегментированными кнопками
+    // (btnAvg3/6/9, btnLitera1/2/3) — логика выбора не изменилась, изменился
+    // только визуальный виджет.
+    ui->btnAvg3->setEnabled(true);
+    ui->btnAvg3->setToolTip("");
 
-    // Литера 2 по умолчанию (индекс 1)
-    ui->comboLitera->setCurrentIndex(1);
+    // Литера 2 по умолчанию (совпадает с исходным setCurrentIndex(1))
+    ui->btnLitera2->setChecked(true);
 
     // Инициализация панели статуса датчиков
     updateSensorStatusPanel();
@@ -954,6 +955,11 @@ void MainWindow::setupAmsHandler()
     // Когда АМС записал данные в БД — делаем финальный запрос к ИВС
     connect(m_amsHandler, &AMSHandler::dataWrittenToDatabase,
             this, &MainWindow::onAmsDataWritten);
+
+    // m_amsHandler теперь существует — освежаем плитку готовности на экране
+    // "Пуск измерения" (до этого момента она могла быть выставлена с
+    // m_amsHandler == nullptr).
+    updateMeasureReadinessLabel();
 }
 
 void MainWindow::configureAmsDatabase()
@@ -1043,6 +1049,7 @@ void MainWindow::onAmsConnected()
 
     statusBar()->showMessage("АМС подключена успешно", 5000);
     updateAmsStatusLabel(true);
+    updateMeasureReadinessLabel();
 }
 
 void MainWindow::onAmsDisconnected()
@@ -1056,6 +1063,7 @@ void MainWindow::onAmsDisconnected()
 
     statusBar()->showMessage("АМС отключена", 3000);
     updateAmsStatusLabel(false);
+    updateMeasureReadinessLabel();
 
     if (m_functionalControlDialog->isVisible()) {
         m_functionalControlDialog->setDisconnectedState();
@@ -1354,6 +1362,9 @@ void MainWindow::onAmsMeasurementCompleted(int recordId)
     ui->progressBarMeasurement->setValue(0);
 
     statusBar()->showMessage("Измерение завершено успешно", 10000);
+
+    // Обновляем плитку готовности к запуску на экране "Пуск измерения"
+    updateMeasureReadinessLabel();
 
     if (m_gnssHandler && m_gnssHandler->isConnected() && m_gnssHandler->hasValidFix()) {
         m_gnssHandler->updateCoordinatesInDb(recordId);
@@ -1798,12 +1809,11 @@ bool MainWindow::connectIwsPort(const QString &port, int baudRate, QSerialPort::
         // Запускаем таймер прогрева ИВС (3 минуты)
         m_iwsWarmupDone = false;
         // Переключаемся на 6 мин., если сейчас выбрано 3 мин.
-        if (ui->comboAvgTime->currentIndex() == 0)
-            ui->comboAvgTime->setCurrentIndex(1);
-        // Серим (блокируем) пункт "3 мин" — не удаляем, чтобы не сбивать с толку
-        if (auto *m = qobject_cast<QStandardItemModel*>(ui->comboAvgTime->model()))
-            if (auto *it = m->item(0)) it->setEnabled(false);
-        ui->comboAvgTime->setToolTip("Режим 3 мин. станет доступен через 3 минуты после подключения ИВС");
+        if (ui->btnAvg3->isChecked())
+            ui->btnAvg6->setChecked(true);
+        // Серим (блокируем) кнопку "3 мин" — не скрываем, чтобы не сбивать с толку
+        ui->btnAvg3->setEnabled(false);
+        ui->btnAvg3->setToolTip("Режим 3 мин. станет доступен через 3 минуты после подключения ИВС");
         m_iwsWarmupTimer->start(3 * 60 * 1000);
         statusBar()->showMessage("ИВС подключён. Режим усреднения 3 мин. станет доступен через 3 минуты.", 8000);
 
@@ -1870,10 +1880,9 @@ void MainWindow::onConnectRequested()
 void MainWindow::onIwsWarmupFinished()
 {
     m_iwsWarmupDone = true;
-    // Разблокируем пункт "3 мин" в combobox
-    if (auto *m = qobject_cast<QStandardItemModel*>(ui->comboAvgTime->model()))
-        if (auto *it = m->item(0)) it->setEnabled(true);
-    ui->comboAvgTime->setToolTip("");
+    // Разблокируем кнопку "3 мин"
+    ui->btnAvg3->setEnabled(true);
+    ui->btnAvg3->setToolTip("");
     statusBar()->showMessage("ИВС: режим усреднения 3 минуты теперь доступен", 5000);
     qDebug() << "MainWindow: ИВС прогрев завершён, пункт '3 мин' разблокирован";
 }
@@ -1883,15 +1892,14 @@ void MainWindow::onDisconnectRequested()
     m_iwsDeviceActive = false;
     if (m_iwsConnectTimer) m_iwsConnectTimer->stop();
 
-    // Сбрасываем прогрев ИВС; ИВС отключён — восстанавливаем comboAvgTime
+    // Сбрасываем прогрев ИВС; ИВС отключён — восстанавливаем кнопку "3 мин"
     if (m_iwsWarmupTimer) {
         m_iwsWarmupTimer->stop();
     }
     m_iwsWarmupDone = false;
-    // При отключении ИВС — разблокируем пункт "3 мин" обратно
-    if (auto *m = qobject_cast<QStandardItemModel*>(ui->comboAvgTime->model()))
-        if (auto *it = m->item(0)) it->setEnabled(true);
-    ui->comboAvgTime->setToolTip("");
+    // При отключении ИВС — разблокируем кнопку "3 мин" обратно
+    ui->btnAvg3->setEnabled(true);
+    ui->btnAvg3->setToolTip("");
 
     if (pollTimer) {
         pollTimer->stop();
@@ -2322,18 +2330,22 @@ void MainWindow::onStartClicked()
     ui->lblStatus->setText("РАБОТА");
     ui->lblStatus->setStyleSheet("color: #1565C0; font-weight: bold; font-size: 9pt;");
 
-    // Получаем параметры для запуска измерения
-    WorkMode mode = ui->cbWorkMode->isChecked() ? MODE_WORKING : MODE_STANDBY;
-    // Литера из combobox (индекс 0→LITERA_1, 1→LITERA_2, 2→LITERA_3)
-    Litera litera = static_cast<Litera>(ui->comboLitera->currentIndex());
+    // Получаем параметры для запуска измерения.
+    // comboAvgTime/comboLitera/cbWorkMode заменены сегментированными кнопками,
+    // но сама логика выбора (индекс/режим) не изменилась — только источник чтения.
+    WorkMode mode = ui->btnModeWorking->isChecked() ? MODE_WORKING : MODE_STANDBY;
 
-    // Время усреднения из combobox (индекс 0→3 мин, 1→6 мин, 2→9 мин)
+    // Литера (индекс 0→LITERA_1, 1→LITERA_2, 2→LITERA_3)
+    int literaIndex = 0;
+    if (ui->btnLitera2->isChecked())      literaIndex = 1;
+    else if (ui->btnLitera3->isChecked()) literaIndex = 2;
+    Litera litera = static_cast<Litera>(literaIndex);
+
+    // Время усреднения (0→3 мин, 1→6 мин, 2→9 мин)
     AveragingTime avgTime = AVERAGING_3_MIN;
-    switch (ui->comboAvgTime->currentIndex()) {
-    case 1: avgTime = AVERAGING_6_MIN; break;
-    case 2: avgTime = AVERAGING_9_MIN; break;
-    default: avgTime = AVERAGING_3_MIN; break;
-    }
+    if (ui->btnAvg6->isChecked())      avgTime = AVERAGING_6_MIN;
+    else if (ui->btnAvg9->isChecked()) avgTime = AVERAGING_9_MIN;
+    else                                avgTime = AVERAGING_3_MIN;
 
     // Собираем координаты станции
     StationCoordinates coords;
@@ -2380,6 +2392,7 @@ void MainWindow::onStartClicked()
         // Возвращаем статус в ГОТОВ
         ui->lblStatus->setText("ГОТОВ");
         ui->lblStatus->setStyleSheet("color: #2E7D32; font-weight: bold; font-size: 9pt;");
+        updateMeasureReadinessLabel();
         return;
     }
 
@@ -2394,57 +2407,68 @@ void MainWindow::onStartClicked()
     ui->measurementProgressWidget->setVisible(true);
 
     statusBar()->showMessage("Измерение АМС запущено...", 5000);
+
+    // Плитка готовности теперь должна отражать, что измерение выполняется
+    updateMeasureReadinessLabel();
 }
 
 void MainWindow::onStopClicked()
 {
-    // Останавливаем измерение АМС если оно выполняется
-    if (m_amsHandler && m_amsHandler->getMeasurementStatus() == STATUS_RUNNING) {
-        bool stopped = m_amsHandler->stopMeasurement();
+    // Если измерение фактически не идёт — кнопка и так должна быть
+    // заблокирована (см. onStartClicked/onSurfaceStateChanged), но на всякий
+    // случай подтверждение не показываем и ничего не делаем.
+    if (!m_amsHandler || m_amsHandler->getMeasurementStatus() != STATUS_RUNNING)
+        return;
 
-        if (stopped) {
-            statusBar()->showMessage("Измерение АМС остановлено", 3000);
-        } else {
-            QMessageBox::warning(this, "Предупреждение",
-                                 "Не удалось корректно остановить измерение АМС.");
-        }
-    }
+    // Подтверждение остановки — та же карточка и тот же паттерн, что и при
+    // остановке поиска датчиков (onToastCloseClicked), чтобы не было ложных
+    // срабатываний от случайного нажатия.
+    showConfirmOverlay(
+        "Остановить измерение?",
+        "Текущие данные измерения будут потеряны,\nизмерение придётся запускать заново.",
+        [this]() {
+            // Останавливаем измерение АМС
+            bool stopped = m_amsHandler->stopMeasurement();
 
-    // Обновляем UI
-    ui->lblStatus->setText("ГОТОВ");
-    ui->lblStatus->setStyleSheet("color: #2E7D32; font-weight: bold; font-size: 9pt;");
+            if (stopped) {
+                statusBar()->showMessage("Измерение АМС остановлено", 3000);
+            } else {
+                QMessageBox::warning(this, "Предупреждение",
+                                     "Не удалось корректно остановить измерение АМС.");
+            }
 
-    // Разблокируем кнопку старта, блокируем стоп
-    ui->btnStart->setEnabled(true);
-    ui->btnStop->setEnabled(false);
+            // Обновляем UI
+            ui->lblStatus->setText("ГОТОВ");
+            ui->lblStatus->setStyleSheet("color: #2E7D32; font-weight: bold; font-size: 9pt;");
 
-    // Измерение завершено — перерисовываем lblStatus и доступность btnStart
-    // в соответствии с актуальным состоянием приземных данных. Если за время
-    // измерения данные успели устареть — увидим "ДАННЫЕ УСТАРЕЛИ" (пуск
-    // следующего измерения при этом остаётся разрешённым). Если оператор
-    // тем временем нажал "Очистить" — увидим "НЕТ ПРИЗЕМНЫХ ДАННЫХ" и кнопка
-    // снова заблокируется.
-    if (GroundMeteoParams *gmp = GroundMeteoParams::instance())
-        onSurfaceStateChanged(gmp->surfaceState());
+            // Разблокируем кнопку старта, блокируем стоп
+            ui->btnStart->setEnabled(true);
+            ui->btnStop->setEnabled(false);
 
-    // Скрываем прогрессбар
-    ui->measurementProgressWidget->setVisible(false);
-    ui->progressBarMeasurement->setValue(0);
+            // Измерение завершено — перерисовываем lblStatus и доступность btnStart
+            // в соответствии с актуальным состоянием приземных данных. Если за время
+            // измерения данные успели устареть — увидим "ДАННЫЕ УСТАРЕЛИ" (пуск
+            // следующего измерения при этом остаётся разрешённым). Если оператор
+            // тем временем нажал "Очистить" — увидим "НЕТ ПРИЗЕМНЫХ ДАННЫХ" и кнопка
+            // снова заблокируется.
+            if (GroundMeteoParams *gmp = GroundMeteoParams::instance())
+                onSurfaceStateChanged(gmp->surfaceState());
+
+            // Скрываем прогрессбар
+            ui->measurementProgressWidget->setVisible(false);
+            ui->progressBarMeasurement->setValue(0);
+
+            // Обновляем плитку готовности к запуску на экране "Пуск измерения"
+            updateMeasureReadinessLabel();
+        },
+        "Да, остановить", "Нет, продолжить");
 }
 
-// void MainWindow::onWorkModeChanged(int state)
-// {
-//     if (state == Qt::Checked) {
-//         ui->cbStandbyMode->setChecked(false);
-//     }
-// }
-
-// void MainWindow::onStandbyModeChanged(int state)
-// {
-//     if (state == Qt::Checked) {
-//         ui->cbWorkMode->setChecked(false);
-//     }
-// }
+// Больше не нужны: btnModeWorking/btnModeStandby взаимоисключаются сами
+// (checkable + autoExclusive="true" в mainwindow.ui), как раньше исключались
+// QRadioButton cbWorkMode/cbStandbyMode.
+// void MainWindow::onWorkModeChanged(bool checked) {}
+// void MainWindow::onStandbyModeChanged(bool checked) {}
 
 // ==================== Методы обновления статуса датчиков ====================
 
@@ -3032,6 +3056,52 @@ void MainWindow::onSurfaceStateChanged(GroundMeteoParams::SurfaceState newState)
     // во время просмотра уведомления).
     if (m_readinessPopup && m_readinessPopup->isVisible())
         populateReadinessPopupContent();
+
+    // Плитка "Готов к запуску" на экране "Пуск измерения" — отражает то же
+    // состояние приземных данных плюс подключение АМС (см. updateMeasureReadinessLabel).
+    updateMeasureReadinessLabel();
+}
+
+// Текстовая плитка "Готов к запуску" над кнопкой "Пуск" на экране
+// "Пуск измерения". В отличие от btnStart->setEnabled(...) (который
+// по-прежнему блокируется ТОЛЬКО при NoData — поведение не менялось),
+// эта подпись даёт оператору понятную причину, почему запуск может быть
+// недоступен или почему стоит быть внимательнее (устаревшие данные).
+// Порядок проверок совпадает с реальными условиями блокировки в
+// onStartClicked()/onSurfaceStateChanged() — источник истины не дублируется,
+// только поясняется словами.
+void MainWindow::updateMeasureReadinessLabel()
+{
+    if (!ui->lblStartReadiness)
+        return;
+
+    const bool measurementRunning =
+        (m_amsHandler && m_amsHandler->getMeasurementStatus() == STATUS_RUNNING);
+
+    QString text;
+    QString color;
+
+    if (measurementRunning) {
+        text  = "Идёт измерение";
+        color = "#1565C0";
+    } else if (!m_amsHandler || !m_amsHandler->isConnected()) {
+        text  = "Не готов к запуску: нет подключения к АМС.\nПроверьте статус АМС вверху экрана.";
+        color = "#C62828";
+    } else if (m_lastKnownSurfaceState == GroundMeteoParams::NoData) {
+        text  = "Не готов к запуску: нет приземных данных.\nЗаполните «Исходные данные».";
+        color = "#C62828";
+    } else if (m_lastKnownSurfaceState == GroundMeteoParams::Stale) {
+        text  = "Готов к запуску\n(приземные данные устарели)";
+        color = "#E65100";
+    } else {
+        text  = "Готов к запуску";
+        color = "#2E7D32";
+    }
+
+    ui->lblStartReadiness->setText(text);
+    ui->lblStartReadiness->setStyleSheet(
+        QString("font-size: 8pt; font-weight: bold; color: %1; border: none; background: transparent;")
+            .arg(color));
 }
 
 void MainWindow::runPlowSelfTest()

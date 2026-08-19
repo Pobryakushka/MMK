@@ -447,6 +447,9 @@ private:
     void updateGnssStatusLabel(bool connected);
     void updateAmsStatusLabel(bool connected);
     void updateBinsStatusLabel(bool connected);
+    // Плитка "Готов к запуску" на экране "Пуск измерения" (не влияет на
+    // btnStart->setEnabled(...) — только поясняющая надпись для оператора).
+    void updateMeasureReadinessLabel();
     void updateIwsStatusLabel(bool connected);
 
     void runPlowSelfTest();
