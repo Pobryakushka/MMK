@@ -5,6 +5,7 @@
 #include <QSerialPort>
 #include <QTimer>
 #include <QMap>
+#include <QSet>
 
 /**
  * @brief Класс для автоматического определения и подключения датчиков
@@ -13,6 +14,9 @@
  * - АМС: отправляет команду LINE_TEST (0xA0), ждет ответ
  * - GNSS: слушает порт, ищет NMEA строки ($GNGGA, $GNRMC и т.д.)
  * - ИВС (UMB): отправляет UMB запрос, проверяет ответ
+ * - БИНС: слушает порт, ищет пакеты 0xAA/0x02 с валидным CRC16 (устройство
+ *   само непрерывно транслирует данные, порт открывается только на чтение —
+ *   отправлять команду не нужно)
  */
 class AutoConnector : public QObject
 {
@@ -23,7 +27,8 @@ public:
         DEVICE_UNKNOWN = 0,
         DEVICE_AMS,
         DEVICE_GNSS,
-        DEVICE_IWS
+        DEVICE_IWS,
+        DEVICE_BINS
     };
 
     struct DeviceInfo {
@@ -36,8 +41,11 @@ public:
     explicit AutoConnector(QObject *parent = nullptr);
     ~AutoConnector();
 
-    // Запуск автоопределения
-    void startDetection();
+    // Запуск автоопределения.
+    // onlyType == DEVICE_UNKNOWN (по умолчанию) — искать все типы, как раньше.
+    // onlyType == конкретный тип — искать ТОЛЬКО его (перебор всех портов,
+    // но проверяется только один тип устройства на каждом порту).
+    void startDetection(DeviceType onlyType = DEVICE_UNKNOWN);
 
     // Остановка процесса
     void stopDetection();
@@ -47,6 +55,10 @@ public:
 
     // Проверка идет ли сейчас определение
     bool isDetecting() const { return m_isDetecting; }
+
+    // Какой тип искали, если поиск был ограничен одним типом
+    // (DEVICE_UNKNOWN, если шёл полный поиск по всем типам).
+    DeviceType singleSearchTarget() const { return m_singleSearchTarget; }
 
 signals:
     // Начало процесса определения
@@ -87,6 +99,7 @@ private:
         PHASE_AMS_TEST,
         PHASE_GNSS_LISTEN,
         PHASE_IWS_TEST,
+        PHASE_BINS_LISTEN,
         PHASE_DONE
     };
     TestPhase m_currentPhase;
@@ -94,6 +107,16 @@ private:
     // Результаты
     QMap<DeviceType, DeviceInfo> m_detectedDevices;
     bool m_isDetecting;
+
+    // Типы, которые нужно ПРОПУСКАТЬ при переборе фаз — используется для
+    // поиска только одного конкретного типа устройства: перед стартом сюда
+    // предзаполняются все типы КРОМЕ искомого, и вся существующая логика
+    // "пропускаем уже найденные типы" начинает работать как "пропускаем
+    // все типы кроме искомого", без отдельного дублирования кода.
+    // НЕ путать с m_detectedDevices — сюда никогда не попадают реальные
+    // результаты поиска.
+    QSet<DeviceType> m_skipTypes;
+    DeviceType m_singleSearchTarget = DEVICE_UNKNOWN;
 
     // Временные данные для текущего порта
     QString m_currentPortName;
@@ -106,13 +129,19 @@ private:
     void testAMS();
     void testGNSS();
     void testIWS();
+    void testBINS();
     void moveToNextPhase();
     void deviceFound(DeviceType type, const QString &description);
+
+    // true, если тип уже найден ИЛИ он не входит в число искомых при
+    // ограниченном поиске одного типа.
+    bool isTypeSkipped(DeviceType type) const;
 
     // Вспомогательные методы
     bool isAmsResponse(const QByteArray &data);
     bool isNmeaData(const QByteArray &data);
     bool isUmbResponse(const QByteArray &data);
+    bool isBinsResponse(const QByteArray &data);
 
     QByteArray createAmsLineTestCommand();
     QByteArray createIwsTestCommand();
@@ -124,6 +153,10 @@ private:
     QByteArray finalizePacketAuto(const QByteArray &data);
 
     quint16 calculateUmbCrc(const QByteArray &data);
+
+    // CRC16 (полином 0x1021, init 0xFFFF) — тот же алгоритм, что и в
+    // BINSHandler::calculateCRC16, для проверки пакетов БИНС при автопоиске.
+    quint16 calculateBinsCrc16(const QByteArray &data);
 
     int baudRateForPhase(TestPhase phase); // Скорость порта для каждой фазы
 };

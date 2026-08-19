@@ -29,7 +29,8 @@ QMAKE_LFLAGS += -Wl,-rpath,$$PLOW_DIR
 # Оставляем только заголовочные файлы для корректного отображения структуры в дереве Qt Creator.
 PLOW_HEADERS = $$files($$PLOW_DIR/*.h,   true)
 HEADERS *= $$PLOW_HEADERS \
-    VirtualKeyboard.h
+    VirtualKeyboard.h \
+    ui/ClickableLabel.h
 
 # ─── ClimatData — климатические данные по широте/долготе/месяцу ───
 CLIMAT_DIR = $$THIRDPARTY/climatData
@@ -38,7 +39,8 @@ INCLUDEPATH += $$CLIMAT_DIR
 SOURCES *= \
     $$CLIMAT_DIR/climatdata.cpp \
     $$CLIMAT_DIR/climatdataprivate.cpp \
-    VirtualKeyboard.cpp
+    VirtualKeyboard.cpp \
+    ui/ClickableLabel.cpp
 
 HEADERS *= \
     $$CLIMAT_DIR/climatdata.h \

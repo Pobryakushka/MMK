@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "ClickableLabel.h"
 #include <QApplication>
 #include "RpvIndicator.h"
 #include "SourceData.h"
@@ -357,6 +358,25 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->readinessIndicatorFrame, &ClickableFrame::clicked,
             this, &MainWindow::onReadinessIndicatorClicked);
 
+    // Шторка состояния/управления датчиком — клик по любой из 4 плашек
+    // статуса (GNSS/АМС/БИНС/ИВС). lblGnssStatus/lblAmsStatus/lblBinsStatus/
+    // lblIwsStatus должны быть промоутнуты в Designer до класса
+    // ClickableLabel (Правой кнопкой → Promote to... → ClickableLabel,
+    // header ClickableLabel.h), иначе clicked() у них не будет.
+    setupSensorPopup();
+    connect(ui->lblGnssStatus, &ClickableLabel::clicked, this, [this]() {
+        showSensorPopup(AutoConnector::DEVICE_GNSS);
+    });
+    connect(ui->lblAmsStatus, &ClickableLabel::clicked, this, [this]() {
+        showSensorPopup(AutoConnector::DEVICE_AMS);
+    });
+    connect(ui->lblBinsStatus, &ClickableLabel::clicked, this, [this]() {
+        showSensorPopup(AutoConnector::DEVICE_BINS);
+    });
+    connect(ui->lblIwsStatus, &ClickableLabel::clicked, this, [this]() {
+        showSensorPopup(AutoConnector::DEVICE_IWS);
+    });
+
     setupAmsHandler();
     //    configureAmsDatabase();
 
@@ -393,6 +413,22 @@ MainWindow::MainWindow(QWidget *parent)
 
     // Инициализация панели статуса датчиков
     updateSensorStatusPanel();
+
+    // Health-check: опрос "жив ли датчик" для уже подключённых (см.
+    // setupHealthChecks()) — в самом конце конструктора, когда
+    // m_gnssHandler/m_amsHandler/m_binsHandler уже точно созданы.
+    setupHealthChecks();
+
+    // Автоматический запуск поиска датчиков при старте программы.
+    // Небольшая отсрочка (не сразу в конструкторе) — чтобы главное окно
+    // успело полностью показаться и разложиться до того, как появится
+    // toast с прогрессом поиска: его анимация/позиционирование считается
+    // от текущей геометрии окна, а в момент конструктора окно ещё не
+    // показано (show() вызывается позже, в main()).
+    QTimer::singleShot(500, this, [this]() {
+        if (!m_autoConnector->isDetecting())
+            m_autoConnector->startDetection();
+    });
 
     runPlowSelfTest();
 }
@@ -676,6 +712,8 @@ void MainWindow::onGnssCheckboxToggled(bool checked)
         if (m_gnssComPort.isEmpty()) {
             qDebug() << "MainWindow: COM-порт не настроен, открываем настройки...";
             ui->checkboxGnss->setChecked(false);
+            QMessageBox::information(this, "Ошибка GNSS",
+                                     "Пожалуйста, подключите антенну GNSS через кнопку подключения датчиков");
             return;
         }
 
@@ -698,6 +736,7 @@ void MainWindow::connectToGnss()
         qDebug() << "MainWindow: Ошибка подключения к GNSS";
         m_gnssEnabled = false;
         ui->checkboxGnss->setChecked(false);
+        QMessageBox::warning(this, "Ошибка", "Не удалось подключиться к GNSS приемнику");
     }
 
     updateFieldsEditability();
@@ -722,6 +761,11 @@ void MainWindow::disconnectFromGnss()
 
 void MainWindow::onGnssDataReceived(const GNSSData &data)
 {
+    // Метка "последние данные получены" — для health-check сторожа,
+    // обновляем ДО проверки m_gnssEnabled, чтобы отражать реальную
+    // активность железа независимо от UI-переключателя.
+    m_gnssLastDataAt = QDateTime::currentDateTime();
+
     qDebug() << "=== MainWindow: Получены GNSS данные ===";
     qDebug() << "  Широта:" << data.latitude;
     qDebug() << "  Долгота:" << data.longitude;
@@ -774,6 +818,8 @@ void MainWindow::onNmeaReceived(const QString &nmea)
 void MainWindow::onGnssConnected()
 {
     qDebug() << "GNSS приемник подключен";
+    m_gnssLastError.clear();
+    m_gnssLastDataAt = QDateTime::currentDateTime();
     ui->checkboxGnss->setStyleSheet(
         "QCheckBox {"
         "   background-color: #E8F5E9;"
@@ -811,6 +857,7 @@ void MainWindow::onGnssDisconnected()
 void MainWindow::onGnssError(const QString &error)
 {
     qDebug() << "Ошибка GNSS:" << error;
+    m_gnssLastError = error;
 
     if (m_gnssHandler->isConnected()) {
         statusBar()->showMessage("Ошибка GNSS: " + error, 5000);
@@ -987,6 +1034,7 @@ void MainWindow::onAmsDisconnectFromSettings()
 void MainWindow::onAmsConnected()
 {
     qDebug() << "MainWindow: АМС подключена успешно";
+    m_amsLastError.clear();
 
     if (sensorSettingsDialog) {
         sensorSettingsDialog->setAmsConnectionStatus("Подключено", true);
@@ -1017,6 +1065,7 @@ void MainWindow::onAmsDisconnected()
 void MainWindow::onAmsError(const QString &error)
 {
     qWarning() << "MainWindow: Ошибка АМС:" << error;
+    m_amsLastError = error;
     statusBar()->showMessage("Ошибка АМС: " + error, 10000);
 
     // Передаём ошибку в диалог функционального контроля если он открыт
@@ -1496,6 +1545,8 @@ void MainWindow::onBinsDisconnectFromSettings()
 void MainWindow::onBinsConnected()
 {
     qDebug() << "MainWindow: БИНС подключен успешно";
+    m_binsLastError.clear();
+    m_binsLastDataAt = QDateTime::currentDateTime();
 
     if (sensorSettingsDialog) {
         sensorSettingsDialog->setBinsConnectionStatus("Подключено", true);
@@ -1522,6 +1573,7 @@ void MainWindow::onBinsDisconnected()
 void MainWindow::onBinsError(const QString &error)
 {
     qWarning() << "MainWindow: Ошибка БИНС:" << error;
+    m_binsLastError = error;
     statusBar()->showMessage("Ошибка БИНС: " + error, 10000);
 }
 
@@ -1534,6 +1586,9 @@ void MainWindow::onBinsStatusMessage(const QString &message)
 void MainWindow::onBinsDataReceived(const BINSData &data)
 {
     if (!data.valid) return;
+
+    // Метка "последние данные получены" — для health-check сторожа.
+    m_binsLastDataAt = QDateTime::currentDateTime();
 
     // Обновляем поля в интерфейсе
     ui->editDirectionAngle->setText(QString::number(data.heading, 'f', 2));
@@ -1604,6 +1659,14 @@ void MainWindow::resizeEvent(QResizeEvent *event)
             this, QPoint(0, ui->readinessIndicatorFrame->height()));
         m_readinessPopup->move(frameBottomLeft.x(), frameBottomLeft.y() + 8);
     }
+
+    if (m_sensorPopup && m_sensorPopup->isVisible()) {
+        QWidget *indicator = sensorIndicatorWidget(m_currentPopupSensor);
+        if (indicator) {
+            const QPoint bottomLeft = indicator->mapTo(this, QPoint(0, indicator->height()));
+            m_sensorPopup->move(bottomLeft.x(), bottomLeft.y() + 8);
+        }
+    }
 }
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event)
@@ -1630,6 +1693,20 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
             ui->readinessIndicatorFrame->mapFromGlobal(globalPos));
         if (!insidePopup && !insideIndicator)
             hideReadinessPopup();
+    }
+
+    // То же самое для шторки датчика.
+    if (event->type() == QEvent::MouseButtonPress &&
+        m_sensorPopup && m_sensorPopup->isVisible()) {
+        auto *me = static_cast<QMouseEvent*>(event);
+        const QPoint globalPos = me->globalPos();
+        QWidget *indicator = sensorIndicatorWidget(m_currentPopupSensor);
+        const bool insidePopup = m_sensorPopup->rect().contains(
+            m_sensorPopup->mapFromGlobal(globalPos));
+        const bool insideIndicator = indicator && indicator->rect().contains(
+            indicator->mapFromGlobal(globalPos));
+        if (!insidePopup && !insideIndicator)
+            hideSensorPopup();
     }
 
     return QMainWindow::eventFilter(watched, event);
@@ -1841,11 +1918,13 @@ void MainWindow::onSerialDataReceived()
     // Первый ответ от устройства — подтверждаем подключение ИВС
     if (!m_iwsDeviceActive) {
         m_iwsDeviceActive = true;
+        m_iwsLastError.clear();
         if (m_iwsConnectTimer) m_iwsConnectTimer->stop();
         sensorSettingsDialog->setIwsConnectionStatus("Подключено", true);
         updateIwsStatusLabel(true);
         qDebug() << "IWS device confirmed (first response received)";
     }
+    m_iwsLastDataAt = QDateTime::currentDateTime();
 
     // Передаём данные в GroundMeteoParams если он открыт
     GroundMeteoParams* meteoParams = GroundMeteoParams::instance();
@@ -1859,6 +1938,7 @@ void MainWindow::onSerialError(QSerialPort::SerialPortError error)
     if (error != QSerialPort::NoError && error != QSerialPort::TimeoutError) {
         qDebug() << "Serial port error:" << serialPort->errorString();
         m_iwsDeviceActive = false;
+        m_iwsLastError = QString("Ошибка порта: %1").arg(serialPort->errorString());
 
         if (sensorSettingsDialog) {
             sensorSettingsDialog->setIwsConnectionStatus(
@@ -1876,6 +1956,7 @@ void MainWindow::onIwsConnectTimeout()
     // Таймаут истёк — устройство не отвечает, порт открыт впустую
     if (!m_iwsDeviceActive && serialPort && serialPort->isOpen()) {
         qDebug() << "IWS connect timeout — no response, closing port";
+        m_iwsLastError = "Устройство не отвечает (таймаут при подключении)";
         onDisconnectRequested();
         sensorSettingsDialog->setIwsConnectionStatus("Нет ответа от устройства", false);
 
@@ -2509,6 +2590,11 @@ void MainWindow::onAutoConnectorDeviceDetected(AutoConnector::DeviceType type, c
                            IWS_PROTOCOL, 0, 5); // default address=0, pollInterval=5s
         }
         break;
+    case AutoConnector::DEVICE_BINS:
+        if (m_binsHandler && !m_binsHandler->isConnected()) {
+            m_binsHandler->connectToBINS(port, baudRate);
+        }
+        break;
     default: break;
     }
 }
@@ -2522,6 +2608,66 @@ void MainWindow::onAutoConnectorFinished()
 
     m_toastProgress->setValue(100);
     m_toastPercent->setText("100%");
+
+    // АМС может быть УЖЕ найден AutoConnector'ом (свой отдельный временный
+    // порт AutoConnector'а успешно прошёл LINE_TEST), но m_amsHandler ещё
+    // не успел подтвердить связь своим ОТДЕЛЬНЫМ подключением — внутри
+    // AMSHandler::connectToAMS() есть встроенная пауза перед отправкой
+    // LINE_TEST плюс время на сам обмен, итого может занять больше времени,
+    // чем разница между "нашли устройство" и "поиск полностью завершён".
+    // Без этой отсрочки toast мог написать "не найден" за мгновение до
+    // того, как соединение реально подтвердится — короткая пауза убирает
+    // эту гонку.
+    const auto detected = m_autoConnector->getDetectedDevices();
+    const bool amsPendingConfirm = detected.contains(AutoConnector::DEVICE_AMS) &&
+                                   m_amsHandler && !m_amsHandler->isConnected();
+
+    if (amsPendingConfirm) {
+        QTimer::singleShot(1500, this, &MainWindow::finalizeAutoConnectorFinished);
+        return;
+    }
+
+    finalizeAutoConnectorFinished();
+}
+
+void MainWindow::finalizeAutoConnectorFinished()
+{
+    const AutoConnector::DeviceType singleTarget = m_autoConnector->singleSearchTarget();
+
+    if (singleTarget != AutoConnector::DEVICE_UNKNOWN) {
+        // Поиск ОДНОГО датчика, запущенный из шторки — короткое тайловое
+        // сообщение вместо общего диалога/списка "не найдено".
+        const QString name = sensorDisplayName(singleTarget);
+        const bool found = isSensorConnected(singleTarget);
+
+        if (found) {
+            m_toastTitle->setText("Датчик найден");
+            m_toastTitle->setStyleSheet("font-weight: bold; font-size: 10pt; color: #1C1F22; border: none; background: transparent;");
+            m_toastPercent->setStyleSheet("font-size: 10pt; font-weight: bold; color: #0F6B4F; border: none; background: transparent;");
+            m_toastProgress->setStyleSheet(
+                "QProgressBar { background-color: #EFF1F1; border: none; border-radius: 3px; }"
+                "QProgressBar::chunk { background-color: #0F6B4F; border-radius: 3px; }"
+                );
+            m_toastText->setText(name + " обнаружен и подключён!");
+        } else {
+            m_toastTitle->setText("Датчик не найден");
+            m_toastTitle->setStyleSheet("font-weight: bold; font-size: 10pt; color: #B71C1C; border: none; background: transparent;");
+            m_toastPercent->setStyleSheet("font-size: 10pt; font-weight: bold; color: #B71C1C; border: none; background: transparent;");
+            m_toastProgress->setStyleSheet(
+                "QProgressBar { background-color: #FFEBEE; border: none; border-radius: 3px; }"
+                "QProgressBar::chunk { background-color: #C62828; border-radius: 3px; }"
+                );
+            m_toastText->setText(name + " не найден. Проверьте подключение кабеля.");
+        }
+
+        // Если шторка этого же датчика ещё открыта — освежаем её (кнопка
+        // "Идёт поиск..." должна смениться на актуальное состояние).
+        if (m_sensorPopup && m_sensorPopup->isVisible() && m_currentPopupSensor == singleTarget)
+            populateSensorPopupContent();
+
+        m_toastHideTimer->start(4000);
+        return;
+    }
 
     QStringList failed;
     if (!m_gnssHandler->isConnected())                    failed << "GNSS";
@@ -2539,6 +2685,10 @@ void MainWindow::onAutoConnectorFinished()
         );
         m_toastText->setText("Не подключены: " + failed.join(", "));
 
+        QMessageBox::warning(this, "Не удалось подключить датчики",
+            "Не удалось подключить: " + failed.join(", ") + ".\n\n"
+            "Проверьте физическое подключение кабелей и нажмите\n"
+            "«Подключить датчики» для повторной попытки.");
     } else {
         m_toastTitle->setText("Поиск успешно завершен");
         m_toastText->setText("Все датчики обнаружены и подключены!");
@@ -3071,7 +3221,7 @@ void MainWindow::setupToastUI()
     m_toastCloseBtn->hide(); // видна только пока идёт активный поиск
     connect(m_toastCloseBtn, &QPushButton::clicked, this, &MainWindow::onToastCloseClicked);
 
-    setupStopConfirmOverlay();
+    setupConfirmOverlay();
 
     m_toastAnimation = new QPropertyAnimation(m_toastWidget, "pos", this);
     m_toastAnimation->setDuration(400);
@@ -3089,7 +3239,7 @@ void MainWindow::setupToastUI()
 void MainWindow::showToast()
 {
     // Если toast прятался по таймеру после предыдущей отмены/завершения
-    // поиска (см. onStopSearchConfirmed/onAutoConnectorFinished), а поиск
+    // поиска (см. onToastCloseClicked/onAutoConnectorFinished), а поиск
     // запустили заново раньше, чем этот таймер сработал — он всё равно
     // "выстрелит" через оставшееся время и спрячет уже НОВЫЙ toast. Поэтому
     // при каждом показе гарантированно останавливаем отложенное скрытие.
@@ -3142,7 +3292,7 @@ void MainWindow::repositionToast()
 // Окно подтверждения остановки поиска датчиков
 // =====================================================
 
-void MainWindow::setupStopConfirmOverlay()
+void MainWindow::setupConfirmOverlay()
 {
     // Полупрозрачный оверлей на всё окно — затемняет фон, перехватывает клики "мимо"
     m_stopConfirmOverlay = new QWidget(this);
@@ -3170,10 +3320,11 @@ void MainWindow::setupStopConfirmOverlay()
             m_stopConfirmOverlay->hide();
     });
 
-    // Карточка подтверждения — в стиле остальных всплывающих окон приложения.
+    // Карточка подтверждения — ОБЩАЯ для "остановить поиск" и "отключить
+    // датчик": текст/кнопки/колбэк выставляются в showConfirmOverlay().
     // Дочерний виджет MainWindow (НЕ m_stopConfirmOverlay!) — намеренно, по
     // причине, описанной выше. Позиционируется/поднимается поверх оверлея
-    // вручную в showStopConfirmOverlay()/resizeEvent().
+    // вручную в showConfirmOverlay()/resizeEvent().
     m_stopConfirmCard = new QWidget(this);
     m_stopConfirmCard->setObjectName("stopConfirmCard");
     m_stopConfirmCard->setFixedSize(360, 210);
@@ -3206,30 +3357,28 @@ void MainWindow::setupStopConfirmOverlay()
     iconRow->addWidget(icon);
     iconRow->addStretch();
 
-    QLabel *title = new QLabel("Остановить поиск датчиков?", m_stopConfirmCard);
-    title->setAlignment(Qt::AlignCenter);
-    title->setWordWrap(true);
-    title->setStyleSheet(
+    m_confirmTitleLabel = new QLabel(m_stopConfirmCard);
+    m_confirmTitleLabel->setAlignment(Qt::AlignCenter);
+    m_confirmTitleLabel->setWordWrap(true);
+    m_confirmTitleLabel->setStyleSheet(
         "font-weight: bold; font-size: 12pt; color: #1C1F22; border: none; background: transparent;"
         );
 
-    QLabel *subtitle = new QLabel(
-        "Уже найденные датчики останутся подключены,\nостальные придётся искать заново.",
-        m_stopConfirmCard);
-    subtitle->setAlignment(Qt::AlignCenter);
-    subtitle->setWordWrap(true);
-    subtitle->setStyleSheet(
+    m_confirmSubtitleLabel = new QLabel(m_stopConfirmCard);
+    m_confirmSubtitleLabel->setAlignment(Qt::AlignCenter);
+    m_confirmSubtitleLabel->setWordWrap(true);
+    m_confirmSubtitleLabel->setStyleSheet(
         "font-size: 9pt; color: #666666; border: none; background: transparent;"
         );
 
     QHBoxLayout *btnRow = new QHBoxLayout();
     btnRow->setSpacing(12);
 
-    QPushButton *btnYes = new QPushButton("Да, остановить", m_stopConfirmCard);
-    btnYes->setFocusPolicy(Qt::NoFocus);
-    btnYes->setCursor(Qt::PointingHandCursor);
-    btnYes->setFixedHeight(44);
-    btnYes->setStyleSheet(
+    m_confirmYesBtn = new QPushButton(m_stopConfirmCard);
+    m_confirmYesBtn->setFocusPolicy(Qt::NoFocus);
+    m_confirmYesBtn->setCursor(Qt::PointingHandCursor);
+    m_confirmYesBtn->setFixedHeight(44);
+    m_confirmYesBtn->setStyleSheet(
         "QPushButton {"
         "   background-color: #FFFFFF;"
         "   color: #B71C1C;"
@@ -3242,11 +3391,11 @@ void MainWindow::setupStopConfirmOverlay()
         "QPushButton:pressed { background-color: #FFCDD2; }"
         );
 
-    QPushButton *btnNo = new QPushButton("Нет, продолжить", m_stopConfirmCard);
-    btnNo->setFocusPolicy(Qt::NoFocus);
-    btnNo->setCursor(Qt::PointingHandCursor);
-    btnNo->setFixedHeight(44);
-    btnNo->setStyleSheet(
+    m_confirmNoBtn = new QPushButton(m_stopConfirmCard);
+    m_confirmNoBtn->setFocusPolicy(Qt::NoFocus);
+    m_confirmNoBtn->setCursor(Qt::PointingHandCursor);
+    m_confirmNoBtn->setFixedHeight(44);
+    m_confirmNoBtn->setStyleSheet(
         "QPushButton {"
         "   background-color: #0F6B4F;"
         "   color: #FFFFFF;"
@@ -3259,22 +3408,31 @@ void MainWindow::setupStopConfirmOverlay()
         "QPushButton:pressed { background-color: #094B37; }"
         );
 
-    btnRow->addWidget(btnYes);
-    btnRow->addWidget(btnNo);
+    btnRow->addWidget(m_confirmYesBtn);
+    btnRow->addWidget(m_confirmNoBtn);
 
     cardLayout->addLayout(iconRow);
-    cardLayout->addWidget(title);
-    cardLayout->addWidget(subtitle);
+    cardLayout->addWidget(m_confirmTitleLabel);
+    cardLayout->addWidget(m_confirmSubtitleLabel);
     cardLayout->addStretch();
     cardLayout->addLayout(btnRow);
 
-    connect(btnYes, &QPushButton::clicked, this, &MainWindow::onStopSearchConfirmed);
-    connect(btnNo, &QPushButton::clicked, this, &MainWindow::onStopSearchCancelled);
+    connect(m_confirmYesBtn, &QPushButton::clicked, this, &MainWindow::onConfirmOverlayAccepted);
+    connect(m_confirmNoBtn, &QPushButton::clicked, this, &MainWindow::onConfirmOverlayCancelled);
 }
 
-void MainWindow::showStopConfirmOverlay()
+void MainWindow::showConfirmOverlay(const QString &title, const QString &subtitle,
+                                    std::function<void()> onConfirm,
+                                    const QString &yesLabel, const QString &noLabel)
 {
     if (!m_stopConfirmOverlay || !m_stopConfirmCard) return;
+
+    m_confirmTitleLabel->setText(title);
+    m_confirmSubtitleLabel->setText(subtitle);
+    m_confirmSubtitleLabel->setVisible(!subtitle.isEmpty());
+    m_confirmYesBtn->setText(yesLabel);
+    m_confirmNoBtn->setText(noLabel);
+    m_confirmCallback = std::move(onConfirm);
 
     m_stopConfirmOverlay->setGeometry(rect());
     m_stopConfirmOverlay->show();
@@ -3293,7 +3451,7 @@ void MainWindow::showStopConfirmOverlay()
     m_stopConfirmAnimation->start();
 }
 
-void MainWindow::hideStopConfirmOverlay()
+void MainWindow::hideConfirmOverlay()
 {
     if (!m_stopConfirmOverlay) return;
 
@@ -3306,38 +3464,49 @@ void MainWindow::hideStopConfirmOverlay()
     m_stopConfirmAnimation->start();
 }
 
+void MainWindow::onConfirmOverlayAccepted()
+{
+    hideConfirmOverlay();
+    if (m_confirmCallback) {
+        auto callback = std::move(m_confirmCallback);
+        m_confirmCallback = nullptr;
+        callback();
+    }
+}
+
+void MainWindow::onConfirmOverlayCancelled()
+{
+    hideConfirmOverlay();
+    m_confirmCallback = nullptr;
+}
+
 void MainWindow::onToastCloseClicked()
 {
     // Крестик активен только пока идёт реальный поиск
     if (!m_autoConnector->isDetecting()) return;
-    showStopConfirmOverlay();
-}
 
-void MainWindow::onStopSearchConfirmed()
-{
-    hideStopConfirmOverlay();
+    showConfirmOverlay(
+        "Остановить поиск датчиков?",
+        "Уже найденные датчики останутся подключены,\nостальные придётся искать заново.",
+        [this]() {
+            m_autoConnector->stopDetection();
 
-    m_autoConnector->stopDetection();
+            ui->btnConnectSensors->setEnabled(true);
+            statusBar()->clearMessage();
+            m_toastCloseBtn->hide();
 
-    ui->btnConnectSensors->setEnabled(true);
-    statusBar()->clearMessage();
-    m_toastCloseBtn->hide();
+            m_toastTitle->setText("Поиск остановлен");
+            m_toastTitle->setStyleSheet("font-weight: bold; font-size: 10pt; color: #B71C1C; border: none; background: transparent;");
+            m_toastPercent->setStyleSheet("font-size: 10pt; font-weight: bold; color: #B71C1C; border: none; background: transparent;");
+            m_toastProgress->setStyleSheet(
+                "QProgressBar { background-color: #FFEBEE; border: none; border-radius: 3px; }"
+                "QProgressBar::chunk { background-color: #C62828; border-radius: 3px; }"
+                );
+            m_toastText->setText("Поиск остановлен пользователем");
 
-    m_toastTitle->setText("Поиск остановлен");
-    m_toastTitle->setStyleSheet("font-weight: bold; font-size: 10pt; color: #B71C1C; border: none; background: transparent;");
-    m_toastPercent->setStyleSheet("font-size: 10pt; font-weight: bold; color: #B71C1C; border: none; background: transparent;");
-    m_toastProgress->setStyleSheet(
-        "QProgressBar { background-color: #FFEBEE; border: none; border-radius: 3px; }"
-        "QProgressBar::chunk { background-color: #C62828; border-radius: 3px; }"
-        );
-    m_toastText->setText("Поиск остановлен пользователем");
-
-    m_toastHideTimer->start(2000);
-}
-
-void MainWindow::onStopSearchCancelled()
-{
-    hideStopConfirmOverlay();
+            m_toastHideTimer->start(2000);
+        },
+        "Да, остановить", "Нет, продолжить");
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -3491,13 +3660,405 @@ void MainWindow::hideReadinessPopup()
     m_readinessPopup->hide();
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Шторка состояния/управления датчиком
+// ─────────────────────────────────────────────────────────────────────────
+
+QString MainWindow::sensorDisplayName(AutoConnector::DeviceType type) const
+{
+    switch (type) {
+    case AutoConnector::DEVICE_GNSS: return "GNSS";
+    case AutoConnector::DEVICE_AMS:  return "АМС";
+    case AutoConnector::DEVICE_BINS: return "БИНС";
+    case AutoConnector::DEVICE_IWS:  return "ИВС";
+    default: return QString();
+    }
+}
+
+bool MainWindow::isSensorConnected(AutoConnector::DeviceType type) const
+{
+    switch (type) {
+    case AutoConnector::DEVICE_GNSS: return m_gnssHandler && m_gnssHandler->isConnected();
+    case AutoConnector::DEVICE_AMS:  return m_amsHandler && m_amsHandler->isConnected();
+    case AutoConnector::DEVICE_BINS: return m_binsHandler && m_binsHandler->isConnected();
+    case AutoConnector::DEVICE_IWS:  return m_iwsDeviceActive;
+    default: return false;
+    }
+}
+
+QWidget* MainWindow::sensorIndicatorWidget(AutoConnector::DeviceType type) const
+{
+    switch (type) {
+    case AutoConnector::DEVICE_GNSS: return ui->lblGnssStatus;
+    case AutoConnector::DEVICE_AMS:  return ui->lblAmsStatus;
+    case AutoConnector::DEVICE_BINS: return ui->lblBinsStatus;
+    case AutoConnector::DEVICE_IWS:  return ui->lblIwsStatus;
+    default: return nullptr;
+    }
+}
+
+// Дополнительная информация о датчике, если протокол это позволяет.
+// Это "снимок" на момент открытия шторки (или на момент завершения
+// поиска, если она открыта в это время) — не обновляется в реальном
+// времени, пока шторка просто открыта.
+// Форматирует "сколько времени прошло" для отметок последних полученных
+// данных в шторке (GNSS/БИНС/ИВС — "вещательные" протоколы).
+static QString formatElapsedSince(const QDateTime &at)
+{
+    if (!at.isValid())
+        return QString();
+    const qint64 secs = at.secsTo(QDateTime::currentDateTime());
+    if (secs < 2)  return "только что";
+    if (secs < 60) return QString("%1 сек назад").arg(secs);
+    return QString("%1 мин назад").arg(secs / 60);
+}
+
+QString MainWindow::sensorExtraInfo(AutoConnector::DeviceType type) const
+{
+    switch (type) {
+    case AutoConnector::DEVICE_GNSS: {
+        if (!m_gnssHandler || !m_gnssHandler->hasValidFix())
+            return "Фикс ещё не получен";
+        GNSSData d = m_gnssHandler->getCurrentData();
+        return QString("Тип фикса: %1\nСпутников: %2\nHDOP: %3")
+            .arg(d.fixType.isEmpty() ? QString("—") : d.fixType)
+            .arg(d.satellites)
+            .arg(d.hdop, 0, 'f', 1);
+    }
+    case AutoConnector::DEVICE_AMS: {
+        if (!m_amsHandler) return QString();
+        switch (m_amsHandler->getMeasurementStatus()) {
+        case STATUS_IDLE:    return "Состояние: ожидание (проверка связи каждые 5 сек)";
+        case STATUS_RUNNING: return "Состояние: идёт измерение";
+        case STATUS_READY:   return "Состояние: измерение завершено";
+        case STATUS_FAILURE: return "Состояние: ошибка измерения";
+        }
+        return QString();
+    }
+    case AutoConnector::DEVICE_BINS: {
+        if (!m_binsHandler) return QString();
+        BINSData d = m_binsHandler->getCurrentData();
+        if (!d.valid) return "Данные ещё не получены";
+        return QString("Курс: %1°\nКрен: %2°\nТангаж: %3°")
+            .arg(d.heading, 0, 'f', 1).arg(d.roll, 0, 'f', 1).arg(d.pitch, 0, 'f', 1);
+    }
+    case AutoConnector::DEVICE_IWS: {
+        GroundMeteoParams *gmp = GroundMeteoParams::instance();
+        if (!gmp || !gmp->hasLastData()) return "Данные ещё не получены";
+        return QString("Ветер: %1 м/с, %2°")
+            .arg(gmp->lastWindSpeed(), 0, 'f', 1)
+            .arg(gmp->lastWindDirection(), 0, 'f', 0);
+    }
+    default: return QString();
+    }
+}
+
+// "Последние данные: N сек назад" — только для "вещательных" протоколов
+// (GNSS/БИНС/ИВС), где это и есть механизм health-check. У АМС health-check
+// активный (LINE_TEST), отдельная метка времени ему не так показательна —
+// см. sensorExtraInfo для АМС.
+QString MainWindow::sensorLastSeenText(AutoConnector::DeviceType type) const
+{
+    QDateTime at;
+    switch (type) {
+    case AutoConnector::DEVICE_GNSS: at = m_gnssLastDataAt; break;
+    case AutoConnector::DEVICE_BINS: at = m_binsLastDataAt; break;
+    case AutoConnector::DEVICE_IWS:  at = m_iwsLastDataAt;  break;
+    default: return QString();
+    }
+    if (!at.isValid()) return QString();
+    return "Последние данные: " + formatElapsedSince(at);
+}
+
+// Причина проблемы с подключением: реальная последняя ошибка от хендлера,
+// если она есть, иначе общий чек-лист.
+QString MainWindow::sensorProblemReason(AutoConnector::DeviceType type) const
+{
+    QString lastError;
+    switch (type) {
+    case AutoConnector::DEVICE_GNSS: lastError = m_gnssLastError; break;
+    case AutoConnector::DEVICE_AMS:  lastError = m_amsLastError;  break;
+    case AutoConnector::DEVICE_BINS: lastError = m_binsLastError; break;
+    case AutoConnector::DEVICE_IWS:  lastError = m_iwsLastError;  break;
+    default: break;
+    }
+
+    if (!lastError.isEmpty())
+        return "Причина: " + lastError;
+
+    return "Проверьте: кабель подключён, порт и скорость (бод) верны в настройках датчиков.";
+}
+
+void MainWindow::setupSensorPopup()
+{
+    m_sensorPopup = new QWidget(this);
+    m_sensorPopup->setObjectName("sensorPopup");
+    m_sensorPopup->setFixedWidth(280);
+    m_sensorPopup->setStyleSheet(
+        "QWidget#sensorPopup {"
+        "   background-color: #FFFFFF;"
+        "   border: 1px solid #DDE1E3;"
+        "   border-radius: 14px;"
+        "}"
+        );
+
+    QGraphicsDropShadowEffect *shadow = new QGraphicsDropShadowEffect(this);
+    shadow->setBlurRadius(18);
+    shadow->setColor(QColor(0, 0, 0, 50));
+    shadow->setOffset(0, 6);
+    m_sensorPopup->setGraphicsEffect(shadow);
+
+    QVBoxLayout *layout = new QVBoxLayout(m_sensorPopup);
+    layout->setContentsMargins(16, 14, 16, 14);
+    layout->setSpacing(6);
+
+    m_sensorPopupTitle = new QLabel(m_sensorPopup);
+    m_sensorPopupTitle->setStyleSheet(
+        "font-weight: bold; font-size: 11pt; color: #1C1F22; background: transparent; border: none;");
+
+    m_sensorPopupStatus = new QLabel(m_sensorPopup);
+    m_sensorPopupStatus->setStyleSheet(
+        "font-size: 9pt; font-weight: 600; background: transparent; border: none;");
+
+    m_sensorPopupInfo = new QLabel(m_sensorPopup);
+    m_sensorPopupInfo->setWordWrap(true);
+    m_sensorPopupInfo->setStyleSheet(
+        "font-size: 8.5pt; color: #6B7278; background: transparent; border: none;");
+
+    m_sensorPopupReason = new QLabel(m_sensorPopup);
+    m_sensorPopupReason->setWordWrap(true);
+    m_sensorPopupReason->setStyleSheet(
+        "font-size: 8.5pt; color: #B71C1C; background: transparent; border: none;");
+
+    m_sensorPopupActionBtn = new QPushButton(m_sensorPopup);
+    m_sensorPopupActionBtn->setFocusPolicy(Qt::NoFocus);
+    m_sensorPopupActionBtn->setCursor(Qt::PointingHandCursor);
+    m_sensorPopupActionBtn->setFixedHeight(36);
+
+    layout->addWidget(m_sensorPopupTitle);
+    layout->addWidget(m_sensorPopupStatus);
+    layout->addWidget(m_sensorPopupInfo);
+    layout->addWidget(m_sensorPopupReason);
+    layout->addSpacing(4);
+    layout->addWidget(m_sensorPopupActionBtn);
+
+    m_sensorPopup->hide();
+
+    m_sensorPopupAnimation = new QPropertyAnimation(m_sensorPopup, "pos", this);
+    m_sensorPopupAnimation->setDuration(300);
+    m_sensorPopupAnimation->setEasingCurve(QEasingCurve::OutBack);
+
+    connect(m_sensorPopupActionBtn, &QPushButton::clicked, this, &MainWindow::onSensorPopupActionClicked);
+}
+
+void MainWindow::populateSensorPopupContent()
+{
+    const AutoConnector::DeviceType type = m_currentPopupSensor;
+    m_sensorPopupTitle->setText(sensorDisplayName(type));
+
+    const bool connected = isSensorConnected(type);
+    const bool searchRunning = m_autoConnector->isDetecting();
+    const bool searchingThis = searchRunning && m_autoConnector->singleSearchTarget() == type;
+
+    if (connected) {
+        m_sensorPopupStatus->setText("Подключено");
+        m_sensorPopupStatus->setStyleSheet(
+            "font-size: 9pt; font-weight: 600; color: #0F6B4F; background: transparent; border: none;");
+
+        QString info = sensorExtraInfo(type);
+        const QString lastSeen = sensorLastSeenText(type);
+        if (!lastSeen.isEmpty())
+            info = info.isEmpty() ? lastSeen : (info + "\n" + lastSeen);
+        m_sensorPopupInfo->setText(info);
+        m_sensorPopupInfo->setVisible(!info.isEmpty());
+
+        // Отключать вручную из шторки не нужно (см. задачу) — отключение
+        // отслеживается автоматически через health-check.
+        m_sensorPopupReason->setVisible(false);
+        m_sensorPopupActionBtn->setVisible(false);
+    } else {
+        m_sensorPopupStatus->setText("Не подключено");
+        m_sensorPopupStatus->setStyleSheet(
+            "font-size: 9pt; font-weight: 600; color: #C62828; background: transparent; border: none;");
+        m_sensorPopupInfo->setVisible(false);
+
+        m_sensorPopupReason->setText(sensorProblemReason(type));
+        m_sensorPopupReason->setVisible(true);
+
+        m_sensorPopupActionBtn->setVisible(true);
+        if (searchingThis) {
+            m_sensorPopupActionBtn->setText("Идёт поиск...");
+            m_sensorPopupActionBtn->setEnabled(false);
+        } else if (searchRunning) {
+            m_sensorPopupActionBtn->setText("Дождитесь окончания поиска");
+            m_sensorPopupActionBtn->setEnabled(false);
+        } else {
+            m_sensorPopupActionBtn->setText("Подключить");
+            m_sensorPopupActionBtn->setEnabled(true);
+        }
+        m_sensorPopupActionBtn->setStyleSheet(
+            "QPushButton { background:#0F6B4F; color:#FFFFFF; border:none;"
+            " border-radius:8px; font-weight:700; }"
+            "QPushButton:pressed { background:#0B5A41; }"
+            "QPushButton:disabled { background:#B9BFC2; color:#FFFFFF; }");
+    }
+
+    m_sensorPopup->adjustSize();
+    m_sensorPopup->setFixedWidth(280);
+}
+
+void MainWindow::showSensorPopup(AutoConnector::DeviceType type)
+{
+    // Повторный клик по той же плашке — закрыть (как readiness popup)
+    if (m_sensorPopup->isVisible() && m_currentPopupSensor == type) {
+        hideSensorPopup();
+        return;
+    }
+
+    QWidget *indicator = sensorIndicatorWidget(type);
+    if (!indicator) return;
+
+    m_currentPopupSensor = type;
+    populateSensorPopupContent();
+
+    const QPoint bottomLeft = indicator->mapTo(this, QPoint(0, indicator->height()));
+    const int targetX = bottomLeft.x();
+    const int targetY = bottomLeft.y() + 8;
+    const int startY  = bottomLeft.y() - 20;
+
+    m_sensorPopup->raise();
+    m_sensorPopupAnimation->stop();
+    m_sensorPopup->move(targetX, startY);
+    m_sensorPopup->show();
+    m_sensorPopupAnimation->setStartValue(QPoint(targetX, startY));
+    m_sensorPopupAnimation->setEndValue(QPoint(targetX, targetY));
+    m_sensorPopupAnimation->start();
+}
+
+void MainWindow::hideSensorPopup()
+{
+    if (!m_sensorPopup || !m_sensorPopup->isVisible())
+        return;
+    m_sensorPopupAnimation->stop();
+    m_sensorPopup->hide();
+}
+
+void MainWindow::onSensorPopupActionClicked()
+{
+    startSingleSensorSearch(m_currentPopupSensor);
+}
+
+void MainWindow::startSingleSensorSearch(AutoConnector::DeviceType type)
+{
+    if (m_autoConnector->isDetecting()) {
+        QMessageBox::information(this, "Поиск датчиков",
+            "Поиск уже выполняется, дождитесь его завершения.");
+        return;
+    }
+    hideSensorPopup();
+    m_autoConnector->startDetection(type);
+}
+
+// Вызывается ТОЛЬКО из health-check (onSilenceWatchdogTimer) при реальной
+// потере связи — кнопки отключения в шторке больше нет, отключение
+// отслеживается автоматически.
+void MainWindow::disconnectSensor(AutoConnector::DeviceType type)
+{
+    switch (type) {
+    case AutoConnector::DEVICE_GNSS: onGnssDisconnectFromSettings(); break;
+    case AutoConnector::DEVICE_AMS:  onAmsDisconnectFromSettings();  break;
+    case AutoConnector::DEVICE_BINS: onBinsDisconnectFromSettings(); break;
+    case AutoConnector::DEVICE_IWS:  onDisconnectRequested();        break;
+    default: break;
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Health-check: опрос "жив ли датчик" для уже подключённых
+// ─────────────────────────────────────────────────────────────────────────
+
+void MainWindow::setupHealthChecks()
+{
+    m_amsHealthTimer = new QTimer(this);
+    m_amsHealthTimer->setInterval(kHealthCheckIntervalMs);
+    connect(m_amsHealthTimer, &QTimer::timeout, this, &MainWindow::onAmsHealthCheckTimer);
+    m_amsHealthTimer->start();
+
+    m_silenceWatchdogTimer = new QTimer(this);
+    m_silenceWatchdogTimer->setInterval(kHealthCheckIntervalMs);
+    connect(m_silenceWatchdogTimer, &QTimer::timeout, this, &MainWindow::onSilenceWatchdogTimer);
+    m_silenceWatchdogTimer->start();
+}
+
+void MainWindow::onAmsHealthCheckTimer()
+{
+    if (!m_amsHandler || !m_amsHandler->isConnected())
+        return; // не подключён — нечего проверять
+
+    if (m_amsHandler->getMeasurementStatus() == STATUS_RUNNING)
+        return; // идёт измерение — живость и так подтверждается обменом данных
+
+    // pingConnection() сама разберётся: если ответа не будет — AMSHandler
+    // сам вызовет disconnectFromAMS() и эмитит disconnected() (см.
+    // AMSHandler::onResponseTimeout) — обычный путь onAmsDisconnected()
+    // обновит UI, никакой дополнительной обработки здесь не требуется.
+    m_amsHandler->pingConnection();
+}
+
+void MainWindow::onSilenceWatchdogTimer()
+{
+    const QDateTime now = QDateTime::currentDateTime();
+    bool anyChanged = false;
+
+    if (m_gnssHandler && m_gnssHandler->isConnected() && m_gnssLastDataAt.isValid() &&
+        m_gnssLastDataAt.msecsTo(now) > kSilenceTimeoutMs) {
+        qWarning() << "MainWindow: GNSS молчит дольше" << kSilenceTimeoutMs
+                   << "мс — считаем отключённым";
+        m_gnssLastError = QString("Нет данных более %1 сек — проверьте кабель/антенну")
+                              .arg(kSilenceTimeoutMs / 1000);
+        disconnectSensor(AutoConnector::DEVICE_GNSS);
+        anyChanged = true;
+    }
+
+    if (m_binsHandler && m_binsHandler->isConnected() && m_binsLastDataAt.isValid() &&
+        m_binsLastDataAt.msecsTo(now) > kSilenceTimeoutMs) {
+        qWarning() << "MainWindow: БИНС молчит дольше" << kSilenceTimeoutMs
+                   << "мс — считаем отключённым";
+        m_binsLastError = QString("Нет данных более %1 сек — проверьте кабель")
+                              .arg(kSilenceTimeoutMs / 1000);
+        disconnectSensor(AutoConnector::DEVICE_BINS);
+        anyChanged = true;
+    }
+
+    if (m_iwsDeviceActive && m_iwsLastDataAt.isValid() &&
+        m_iwsLastDataAt.msecsTo(now) > kSilenceTimeoutMs) {
+        qWarning() << "MainWindow: ИВС молчит дольше" << kSilenceTimeoutMs
+                   << "мс — считаем отключённым";
+        m_iwsLastError = QString("Нет ответа более %1 сек — проверьте кабель/устройство")
+                              .arg(kSilenceTimeoutMs / 1000);
+        disconnectSensor(AutoConnector::DEVICE_IWS);
+        anyChanged = true;
+    }
+
+    // Если шторка сейчас открыта на одном из этих датчиков — освежаем её,
+    // чтобы причина/статус не оставались устаревшими.
+    if (anyChanged && m_sensorPopup && m_sensorPopup->isVisible())
+        populateSensorPopupContent();
+}
+
 void MainWindow::onAutoConnectorStarted()
 {
     ui->btnConnectSensors->setEnabled(false);
-    statusBar()->showMessage("Автопоиск датчиков...", 0);
+
+    const AutoConnector::DeviceType singleTarget = m_autoConnector->singleSearchTarget();
+    const QString title = (singleTarget == AutoConnector::DEVICE_UNKNOWN)
+        ? "Автопоиск датчиков"
+        : QString("Поиск: %1").arg(sensorDisplayName(singleTarget));
+
+    statusBar()->showMessage(title + "...", 0);
 
     // Сбрасываем стили к дефолтным (зеленым) на случай, если прошлая попытка завершилась ошибкой
-    m_toastTitle->setText("Автопоиск датчиков");
+    m_toastTitle->setText(title);
     m_toastTitle->setStyleSheet("font-weight: bold; font-size: 10pt; color: #1C1F22; border: none; background: transparent;");
     m_toastPercent->setStyleSheet("font-size: 10pt; font-weight: bold; color: #0F6B4F; border: none; background: transparent;");
     m_toastProgress->setStyleSheet(

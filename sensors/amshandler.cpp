@@ -109,6 +109,7 @@ void AMSHandler::disconnectFromAMS()
 
     m_waitingForResponse = false;
     m_isConnecting = false;
+    m_healthCheckPing = false;
     m_responseTimer->stop();
     m_exchangeDataTimer->stop();
     m_antennaPollTimer->stop();
@@ -123,6 +124,29 @@ void AMSHandler::disconnectFromAMS()
 bool AMSHandler::isConnected() const
 {
     return m_serialPort->isOpen() && m_confirmed;
+}
+
+bool AMSHandler::pingConnection()
+{
+    if (!m_serialPort->isOpen() || !m_confirmed) {
+        return false; // не подключены — нечего проверять
+    }
+    if (m_waitingForResponse) {
+        // Уже ждём ответ на что-то другое (например, идёт обмен во время
+        // измерения) — не мешаем, просто пропускаем этот такт health-check.
+        return false;
+    }
+
+    QByteArray testPacket = m_protocol->createLineTestPacket();
+    m_healthCheckPing = true;
+
+    if (!sendPacket(testPacket, CMD_LINE_TEST)) {
+        m_healthCheckPing = false;
+        return false;
+    }
+
+    qDebug() << "AMSHandler: health-check пинг (LINE_TEST) отправлен";
+    return true;
 }
 
 // ===== НАСТРОЙКА БД =====
@@ -645,6 +669,17 @@ void AMSHandler::processReceivedPacket(const QByteArray &packet)
     switch (command) {
     case CMD_LINE_TEST: {
         bool ok = m_protocol->parseLineTestResponse(packet);
+        const bool wasHealthCheckPing = m_healthCheckPing;
+        m_healthCheckPing = false; // ответ пришёл вовремя — health-check пройден
+
+        if (wasHealthCheckPing) {
+            // Обычный health-check пинг на уже подключённом АМС — соединение
+            // подтверждено, обновлять состояние подключения не нужно (уже
+            // подключены), просто логируем.
+            qDebug() << "AMSHandler: health-check пинг — ответ получен, связь жива";
+            break;
+        }
+
         if (ok) {
             qInfo() << "AMSHandler: Тест линии пройден успешно";
             m_isConnecting = false;
@@ -904,6 +939,17 @@ void AMSHandler::onResponseTimeout()
     // Таймаут LINE_TEST при подключении — устройство не отвечает, закрываем порт
     if (m_isConnecting) {
         qWarning() << "AMSHandler: LINE_TEST не прошёл (таймаут), отключаемся";
+        disconnectFromAMS();
+        return;
+    }
+
+    // Таймаут health-check пинга на уже подключённом АМС — устройство
+    // перестало отвечать, соединение считаем потерянным по-настоящему
+    // (как обычное отключение), а не просто разовой ошибкой команды.
+    if (m_healthCheckPing) {
+        m_healthCheckPing = false;
+        qWarning() << "AMSHandler: health-check пинг без ответа — связь потеряна";
+        emit errorOccurred("АМС не отвечает (проверка связи)");
         disconnectFromAMS();
         return;
     }
