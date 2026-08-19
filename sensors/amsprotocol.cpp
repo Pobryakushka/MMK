@@ -68,7 +68,7 @@ bool AMSProtocol::isPacketValid(const QByteArray &data)
     quint8 calculatedChecksum = calculateChecksum(dataWithoutChecksumAndStop);
 
     qDebug() << "Полученная КС" << receivedChecksum;
-        qDebug() << "Вычисленная КС" << calculatedChecksum;
+    qDebug() << "Вычисленная КС" << calculatedChecksum;
 
     return receivedChecksum == calculatedChecksum;
 }
@@ -86,6 +86,29 @@ ParseError AMSProtocol::checkPacket(const QByteArray &data, AMSCommand expectedC
     if (data.size() < minSize) return PARSE_ERR_TOO_SHORT;
 
     return PARSE_OK;
+}
+
+int AMSProtocol::expectedResponseSize(AMSCommand cmd)
+{
+    // Длины ОТВЕТОВ АМС (не наших исходящих команд!), сверены с таблицей
+    // CommandStorage и с фактической длиной пакетов, формируемых createXxxPacket().
+    switch (cmd) {
+    case CMD_LINE_TEST:             return 19;
+    case CMD_MODE_TRANSFER:         return 3;
+    case CMD_COORDS_TRANSFER:       return 3;
+    case CMD_START_MEASUREMENT:     return 4;
+    case CMD_DATA_EXCHANGE:         return 12;
+    case CMD_SOURCE_DATA:           return 3;
+    case CMD_FUNC_CONTROL:          return 15;
+    case CMD_AVG_WIND_REQUEST:      return 399;
+    case CMD_ACTUAL_WIND_REQUEST:   return 399;
+    case CMD_TO2_MODE:              return 7;
+    case CMD_MEASURED_WIND_REQUEST: return 5123;
+    case CMD_ANTENNA_CONTROL:       return 4;
+    case CMD_SET_DATETIME:          return 3;
+    case CMD_ROTATE_ANTENNA:        return 8;
+    }
+    return -1;
 }
 
 QString AMSProtocol::parseErrorString(ParseError err)
@@ -124,55 +147,55 @@ QString AMSProtocol::rotateStatusString(quint8 status)
 FuncControlResult AMSProtocol::funcControlDetails(quint32 bitMask)
 {
     // Таблица: {бит, описание, isFault}
-        // isFault=true  → "Неисправности"
-        // isFault=false → "Ошибки"
-        static const struct {
-            quint32    bit;
-            const char *desc;
-            bool       isFault;
-        } kTable[] = {
-            { FAILURE_EXCHANGE_TRANSMITTER,   "Ошибка обмена с УМ", false },
-            { FAILURE_EXCHANGE_SCH        ,   "Ошибка обмена с СЧ", true  },
-            { FAILURE_EXCHANGE_BEKU       ,   "Ошибка обмена с БЭКУ", false },
-            { FAILURE_TRANSMITTER         ,   "Не готов УМ", false },
-            { FAILURE_SCH                 ,   "Не готов СЧ", false },
-            { FAILURE_BEKU                ,   "Не готов БЭКУ", true  },
-            { FAILURE_BEKU_POWER          ,   "Неисправность модуля питания БЭКУ", true  },
-            { FAILURE_BEKU_POWER_MHN      ,   "Отказ по питанию блока ЗМЛ", false },
-            { FAILURE_BEKU_POWER_UM       ,   "Отказ по питанию УМ", false },
-            { FAILURE_BEKU_POWER_SCH      ,   "Отказ по питанию СЧ", false },
-            { FAILURE_BEKU_POWER_PM       ,   "Отказ по питанию ПМ", false },
-            { FAILURE_BEKU_POWER_MSHU     ,   "Отказ по питанию МШУ", false },
-            { ROTATION_TIMEOUT            ,   "Превышено время ожидания завершения вращения", true  },
-            { ROTATION_FAILURE_ANGLE      ,   "Текущий угол не совпадает с заданным", true  },
-            { ROTATION_EMERGENCY_STOP     ,   "Аварийная остановка привода вращения", true  },
-            { ANGLE_SENSOR_FAILURE        ,   "Отказ датчика угла привода вращения", true  },
-            { FAILURE_LITERA              ,   "Ошибка задания литеры", true  },
-            { ANTENNA_EMERGENCY_STOP      ,   "Аварийная остановка открытия/закрытия антенны", true  },
-            { ANTENNA_OPEN_TIMEOUT        ,   "Превышено время ожидания открытия антенны", true  },
-            { ANTENNA_CLOSE_TIMEOUT       ,   "Превышено время ожидания закрытия антенны", true  },
-            { NO_SOUNDING                 ,   "Нет сбора данных", true  },
-            { FAILURE_STOPPER_LOCK        ,   "Ошибка блокировки стопора", false },
-            { FAILURE_STOPPER_UNLOCK      ,   "Ошибка разблокировки стопора",  true  },
-            { FAILURE_SOFTWARE_EXCHANGE   ,   "Ошибка обмена с БОУ", true  },
-            { FAILURE_KV_OPEN_STATE       ,   "Ошибка состояния концевиков антенны РП", false },
-            { FAILURE_KV_CLOSE_STATE      ,   "Ошибка состояния концевиков антенны ПП", false },
-            { FAILURE_PILOT               ,   "Отказ при проверке пилот-сигнала", false },
-            { FAILURE_TRANSMITTER_POWER   ,   "Отcутствует выходная импульсная мощность", false },
-            { SCH_MODE_SETTER_ERROR       ,   "Ошибка установки режимов в СЧ", false },
-            { UM_MODE_SETTER_ERROR        ,   "Ошибка установки режимов в УМ", true  },
-        };
+    // isFault=true  → "Неисправности"
+    // isFault=false → "Ошибки"
+    static const struct {
+        quint32    bit;
+        const char *desc;
+        bool       isFault;
+    } kTable[] = {
+                  { FAILURE_EXCHANGE_TRANSMITTER,   "Ошибка обмена с УМ", false },
+                  { FAILURE_EXCHANGE_SCH        ,   "Ошибка обмена с СЧ", true  },
+                  { FAILURE_EXCHANGE_BEKU       ,   "Ошибка обмена с БЭКУ", false },
+                  { FAILURE_TRANSMITTER         ,   "Не готов УМ", false },
+                  { FAILURE_SCH                 ,   "Не готов СЧ", false },
+                  { FAILURE_BEKU                ,   "Не готов БЭКУ", true  },
+                  { FAILURE_BEKU_POWER          ,   "Неисправность модуля питания БЭКУ", true  },
+                  { FAILURE_BEKU_POWER_MHN      ,   "Отказ по питанию блока ЗМЛ", false },
+                  { FAILURE_BEKU_POWER_UM       ,   "Отказ по питанию УМ", false },
+                  { FAILURE_BEKU_POWER_SCH      ,   "Отказ по питанию СЧ", false },
+                  { FAILURE_BEKU_POWER_PM       ,   "Отказ по питанию ПМ", false },
+                  { FAILURE_BEKU_POWER_MSHU     ,   "Отказ по питанию МШУ", false },
+                  { ROTATION_TIMEOUT            ,   "Превышено время ожидания завершения вращения", true  },
+                  { ROTATION_FAILURE_ANGLE      ,   "Текущий угол не совпадает с заданным", true  },
+                  { ROTATION_EMERGENCY_STOP     ,   "Аварийная остановка привода вращения", true  },
+                  { ANGLE_SENSOR_FAILURE        ,   "Отказ датчика угла привода вращения", true  },
+                  { FAILURE_LITERA              ,   "Ошибка задания литеры", true  },
+                  { ANTENNA_EMERGENCY_STOP      ,   "Аварийная остановка открытия/закрытия антенны", true  },
+                  { ANTENNA_OPEN_TIMEOUT        ,   "Превышено время ожидания открытия антенны", true  },
+                  { ANTENNA_CLOSE_TIMEOUT       ,   "Превышено время ожидания закрытия антенны", true  },
+                  { NO_SOUNDING                 ,   "Нет сбора данных", true  },
+                  { FAILURE_STOPPER_LOCK        ,   "Ошибка блокировки стопора", false },
+                  { FAILURE_STOPPER_UNLOCK      ,   "Ошибка разблокировки стопора",  true  },
+                  { FAILURE_SOFTWARE_EXCHANGE   ,   "Ошибка обмена с БОУ", true  },
+                  { FAILURE_KV_OPEN_STATE       ,   "Ошибка состояния концевиков антенны РП", false },
+                  { FAILURE_KV_CLOSE_STATE      ,   "Ошибка состояния концевиков антенны ПП", false },
+                  { FAILURE_PILOT               ,   "Отказ при проверке пилот-сигнала", false },
+                  { FAILURE_TRANSMITTER_POWER   ,   "Отcутствует выходная импульсная мощность", false },
+                  { SCH_MODE_SETTER_ERROR       ,   "Ошибка установки режимов в СЧ", false },
+                  { UM_MODE_SETTER_ERROR        ,   "Ошибка установки режимов в УМ", true  },
+                  };
 
-        FuncControlResult result;
-        for (const auto &e : kTable) {
-            if (bitMask & e.bit) {
-                if (e.isFault)
-                    result.faults << QString::fromUtf8(e.desc);
-                else
-                    result.errors << QString::fromUtf8(e.desc);
-            }
+    FuncControlResult result;
+    for (const auto &e : kTable) {
+        if (bitMask & e.bit) {
+            if (e.isFault)
+                result.faults << QString::fromUtf8(e.desc);
+            else
+                result.errors << QString::fromUtf8(e.desc);
         }
-        return result;
+    }
+    return result;
 }
 
 AMSCommand AMSProtocol::getPacketCommand(const QByteArray &data)
@@ -327,7 +350,7 @@ QByteArray AMSProtocol::createSourceDataPacket(int day, int hour, int tenMinutes
     packet.append(floatToBytes(surfaceWindSpeed));
 
     // Дата/время в формате ММДДччммГГГГ
-//    QString dateTimeStr = currentDateTime.toString("MMddhhmmyyyy");
+    //    QString dateTimeStr = currentDateTime.toString("MMddhhmmyyyy");
     QString dateTimeStr = currentDateTime.toString("MMddhhmmyyyy");
     packet.append(dateTimeStr.toLatin1());
 
@@ -497,7 +520,7 @@ QVector<WindProfileData> AMSProtocol::parseAvgWindResponse(const QByteArray &dat
         point.height = bytesToFloat(data, 1 + 33 * 2 * 4 + i * 4);  // Устанавливаем стандартную высоту
         point.windDirection = bytesToFloat(data, 1 + i * 4);
         point.windSpeed = bytesToFloat(data, 1 + 33 * 4 + i * 4);
-//        point.windHeight = bytesToFloat(data, 1 + 33 * 2 * 4 + i * 4);
+        //        point.windHeight = bytesToFloat(data, 1 + 33 * 2 * 4 + i * 4);
         point.isValid = true;
         profile.append(point);
     }

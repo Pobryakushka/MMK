@@ -612,43 +612,65 @@ void AMSHandler::onDataReceived()
 
     qDebug() << "AMSHandler: Получено" << data.size() << "байт, буфер:" << m_receiveBuffer.size();
 
-    // Обрабатываем все пакеты в буфере
-    while (true) {
-        // Ищем начало пакета
-        int startIndex = -1;
-        for (int i = 0; i < m_receiveBuffer.size(); i++) {
-            quint8 byte = static_cast<quint8>(m_receiveBuffer[i]);
-            if (byte >= 0xA0 && byte <= 0xAF) { // Расширенный диапазон команд
-                startIndex = i;
-                break;
-            }
-        }
-
-        if (startIndex == -1) {
+    // Протокол полудуплексный: команда -> один ответ. Поэтому в любой момент
+    // мы либо ждём ровно один конкретный ответ (m_lastCommand), либо не ждём
+    // ничего. Раньше конец пакета искался как первый попавшийся байт 0xFF в
+    // буфере — но 0xFF легитимно встречается и внутри данных (например, в
+    // float-значениях координат/углов), из-за чего пакет иногда обрезался
+    // раньше времени и чек-сумма считалась по неполным данным. Теперь длина
+    // ответа берётся из протокольной таблицы AMSProtocol::expectedResponseSize
+    // для той команды, ответ на которую мы ждём.
+    while (m_waitingForResponse) {
+        int expectedSize = AMSProtocol::expectedResponseSize(m_lastCommand);
+        if (expectedSize <= 0) {
+            qWarning() << "AMSHandler: неизвестна длина ответа для команды"
+                       << Qt::hex << static_cast<int>(m_lastCommand)
+                       << "— кадрирование невозможно, буфер сброшен";
             m_receiveBuffer.clear();
             break;
         }
 
+        // Ищем в буфере байт нашей ожидаемой команды - это кандидат на начало пакета
+        int startIndex = m_receiveBuffer.indexOf(static_cast<char>(m_lastCommand));
+        if (startIndex == -1) {
+            // Ответа (или его начала) в буфере ещё нет вовсе
+            if (m_receiveBuffer.size() > 8192) {
+                qWarning() << "AMSHandler: буфер приёма аномально разросся без совпадения "
+                              "команды, сброс";
+                m_receiveBuffer.clear();
+            }
+            break;
+        }
+
         if (startIndex > 0) {
+            qWarning() << "AMSHandler: отброшено" << startIndex
+                       << "байт мусора перед началом пакета";
             m_receiveBuffer.remove(0, startIndex);
         }
 
-        if (m_receiveBuffer.size() < 3) {
+        if (m_receiveBuffer.size() < expectedSize) {
+            // Пакет ещё не пришёл целиком - ждём остальные байты
             break;
         }
 
-        quint8 lastByte = static_cast<quint8>(m_receiveBuffer.back());
-        if (lastByte != 0xFF) {
-            break;
+        QByteArray packet = m_receiveBuffer.left(expectedSize);
+
+        // Проверяем, что байт ровно на ожидаемой позиции конца пакета - это
+        // действительно стоп-байт. Если нет - совпадение по команде было
+        // случайным (такой байт встретился в данных предыдущего мусора), и
+        // нужно поискать следующее вхождение команды дальше в буфере, а не
+        // просто отбрасывать expectedSize байт вслепую.
+        if (static_cast<quint8>(packet.back()) != 0xFF) {
+            qWarning() << "AMSHandler: по ожидаемой длине стоп-байт не сошёлся "
+                          "(ложное совпадение байта команды), пробуем сдвинуться";
+            m_receiveBuffer.remove(0, 1);
+            continue;
         }
 
-        int stopIndex = m_receiveBuffer.size() - 1;
-        QByteArray packet = m_receiveBuffer.left(stopIndex + 1);
-        m_receiveBuffer.remove(0, stopIndex + 1);
-
-        if (packet.size() >= 3) {
-            processReceivedPacket(packet);
-        }
+        m_receiveBuffer.remove(0, expectedSize);
+        processReceivedPacket(packet);
+        // processReceivedPacket выставляет m_waitingForResponse = false,
+        // поэтому цикл корректно завершится сам по условию while.
     }
 }
 

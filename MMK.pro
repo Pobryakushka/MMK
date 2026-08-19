@@ -1,4 +1,4 @@
-PATH_TO_REFERENCES = $$absolute_path($$PWD/../../references)
+PATH_TO_REFERENCES = ../../references
 
 QT       += core gui quick quickwidgets qml positioning location network serialport sql printsupport core-private
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
@@ -28,9 +28,7 @@ QMAKE_LFLAGS += -Wl,-rpath,$$PLOW_DIR
 # Исходники (.cpp) отсюда убраны, так как они уже скомпилированы в .so.
 # Оставляем только заголовочные файлы для корректного отображения структуры в дереве Qt Creator.
 PLOW_HEADERS = $$files($$PLOW_DIR/*.h,   true)
-HEADERS *= $$PLOW_HEADERS \
-    VirtualKeyboard.h \
-    ui/ClickableLabel.h
+HEADERS *= $$PLOW_HEADERS
 
 # ─── ClimatData — климатические данные по широте/долготе/месяцу ───
 CLIMAT_DIR = $$THIRDPARTY/climatData
@@ -38,9 +36,7 @@ INCLUDEPATH += $$CLIMAT_DIR
 
 SOURCES *= \
     $$CLIMAT_DIR/climatdata.cpp \
-    $$CLIMAT_DIR/climatdataprivate.cpp \
-    VirtualKeyboard.cpp \
-    ui/ClickableLabel.cpp
+    $$CLIMAT_DIR/climatdataprivate.cpp
 
 HEADERS *= \
     $$CLIMAT_DIR/climatdata.h \
@@ -81,7 +77,17 @@ SOURCES += \
     surfacemeteosaver.cpp \
     ui/workregulationdialog.cpp \
     ui/RpvIndicator.cpp \
-    calculationAlgorithms/windprofilecalculator.cpp
+    calculationAlgorithms/windprofilecalculator.cpp \
+    VirtualKeyboard.cpp \
+    Meteo11Grib/ProcessRunner.cpp \
+    Meteo11Grib/GfsDownloadRunner.cpp \
+    Meteo11Grib/MushroomRunner.cpp \
+    Meteo11Grib/MushroomResultParser.cpp \
+    Meteo11Grib/Meteo11Calculator.cpp \
+    Meteo11Grib/Meteo11ProfileBuilder.cpp \
+    Meteo11Grib/GribWindProfileAdapter.cpp \
+    Meteo11Grib/GribMeteo11Pipeline.cpp \
+    ui/ClickableLabel.cpp \
 
 HEADERS += \
     LocalTileServer.h \
@@ -117,7 +123,20 @@ HEADERS += \
     surfacemeteosaver.h \
     ui/workregulationdialog.h \
     ui/RpvIndicator.h \
-    calculationAlgorithms/windprofilecalculator.h
+    calculationAlgorithms/windprofilecalculator.h \
+    VirtualKeyboard.h \
+    Meteo11Grib/ProcessRunner.h \
+    Meteo11Grib/GfsDownloadRunner.h \
+    Meteo11Grib/MushroomRunner.h \
+    Meteo11Grib/MushroomMessage.h \
+    Meteo11Grib/MushroomResultParser.h \
+    Meteo11Grib/Meteo11Types.h \
+    Meteo11Grib/Meteo11Calculator.h \
+    Meteo11Grib/Meteo11ProfileBuilder.h \
+    Meteo11Grib/GribWindProfileAdapter.h \
+    Meteo11Grib/GribMeteo11Pipeline.h \
+    Meteo11Grib/GribConfig.h \
+    ui/ClickableLabel.h
 
 
 # Default rules for deployment.
