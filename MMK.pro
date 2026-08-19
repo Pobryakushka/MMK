@@ -86,7 +86,8 @@ SOURCES += \
     Meteo11Grib/Meteo11Calculator.cpp \
     Meteo11Grib/Meteo11ProfileBuilder.cpp \
     Meteo11Grib/GribWindProfileAdapter.cpp \
-    Meteo11Grib/GribMeteo11Pipeline.cpp
+    Meteo11Grib/GribMeteo11Pipeline.cpp \
+    ui/ClickableLabel.cpp \
 
 HEADERS += \
     LocalTileServer.h \
@@ -134,7 +135,8 @@ HEADERS += \
     Meteo11Grib/Meteo11ProfileBuilder.h \
     Meteo11Grib/GribWindProfileAdapter.h \
     Meteo11Grib/GribMeteo11Pipeline.h \
-    Meteo11Grib/GribConfig.h
+    Meteo11Grib/GribConfig.h \
+    ui/ClickableLabel.h
 
 
 # Default rules for deployment.
