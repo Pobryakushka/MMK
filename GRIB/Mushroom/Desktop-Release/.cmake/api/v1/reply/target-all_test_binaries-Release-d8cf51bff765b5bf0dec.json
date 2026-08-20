@@ -1,0 +1,129 @@
+{
+	"backtrace" : 1,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_custom_target",
+			"add_dependencies"
+		],
+		"files" : 
+		[
+			"libKriging/tests/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 26,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 30,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 35,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 40,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 45,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 50,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 55,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 62,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 67,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 72,
+				"parent" : 0
+			}
+		]
+	},
+	"dependencies" : 
+	[
+		{
+			"backtrace" : 2,
+			"id" : "class_unit_test::@1212c1b258519eda1d22"
+		},
+		{
+			"backtrace" : 3,
+			"id" : "function_unit_test::@1212c1b258519eda1d22"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "armadillo_example::@1212c1b258519eda1d22"
+		},
+		{
+			"backtrace" : 5,
+			"id" : "catch2_unit_test::@1212c1b258519eda1d22"
+		},
+		{
+			"backtrace" : 6,
+			"id" : "regression_unit_test::@1212c1b258519eda1d22"
+		},
+		{
+			"backtrace" : 7,
+			"id" : "KrigingTest::@1212c1b258519eda1d22"
+		},
+		{
+			"backtrace" : 8,
+			"id" : "CacheTest::@1212c1b258519eda1d22"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "GetVersion::@1212c1b258519eda1d22"
+		},
+		{
+			"backtrace" : 10,
+			"id" : "JsonTest::@1212c1b258519eda1d22"
+		}
+	],
+	"id" : "all_test_binaries::@1212c1b258519eda1d22",
+	"name" : "all_test_binaries",
+	"paths" : 
+	{
+		"build" : "libKriging/tests",
+		"source" : "libKriging/tests"
+	},
+	"sources" : [],
+	"type" : "UTILITY"
+}

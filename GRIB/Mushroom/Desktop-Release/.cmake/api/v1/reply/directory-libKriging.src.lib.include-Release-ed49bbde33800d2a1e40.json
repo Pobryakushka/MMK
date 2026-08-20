@@ -1,0 +1,523 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install"
+		],
+		"files" : 
+		[
+			"libKriging/src/lib/include/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/Bench.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 2,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/CacheFunction.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 3,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/Covariance.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 4,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/Kriging.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 5,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/KrigingException.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 6,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/KrigingLoader.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 7,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/LinearAlgebra.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 8,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/LinearRegression.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 9,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/LinearRegressionOptim.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 10,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/NoiseKriging.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 11,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/NuggetKriging.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 12,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/Optim.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 13,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/Random.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 14,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/Trend.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 15,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging/demo",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/demo/DemoArmadilloClass.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 16,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging/demo",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/demo/DemoClass.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 17,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging/demo",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/demo/DemoFunction.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 18,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging/demo",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/demo/demo.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 19,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/libKriging.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 20,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging/utils",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/utils/ExplicitCopySpecifier.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 21,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging/utils",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/utils/LinearHashStorage.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 22,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging/utils",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/utils/cache_details.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 23,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging/utils",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/utils/custom_hash_function.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 24,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging/utils",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/utils/data_from_arma_vec.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 25,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging/utils",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/utils/jsonutils.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 26,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging/utils",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/utils/lk_armadillo.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 27,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging/utils",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/utils/lkalloc.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 28,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging/utils/nlohmann",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/utils/nlohmann/json.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 29,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging/utils/nlohmann",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/utils/nlohmann/json_fwd.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 30,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging/utils",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/utils/utils.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 31,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging",
+			"paths" : 
+			[
+				"libKriging/src/lib/include/libKriging/version.hpp"
+			],
+			"type" : "file"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "libKriging/src/lib/include",
+		"source" : "libKriging/src/lib/include"
+	}
+}

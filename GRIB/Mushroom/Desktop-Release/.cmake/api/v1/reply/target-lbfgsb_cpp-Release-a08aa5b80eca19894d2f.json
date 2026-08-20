@@ -1,0 +1,295 @@
+{
+	"artifacts" : 
+	[
+		{
+			"path" : "libKriging/dependencies/lbfgsb_cpp/liblbfgsb_cpp.so"
+		}
+	],
+	"backtrace" : 1,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_library",
+			"install",
+			"add_definitions",
+			"target_compile_definitions",
+			"include_directories"
+		],
+		"files" : 
+		[
+			"libKriging/dependencies/lbfgsb_cpp/CMakeLists.txt",
+			"CMakeLists.txt",
+			"libKriging/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 10,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 58,
+				"parent" : 0
+			},
+			{
+				"file" : 1
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 45,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 46,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 47,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 48,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 10,
+				"parent" : 3
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 31,
+				"parent" : 0
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 29,
+				"parent" : 0
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 33,
+				"parent" : 0
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 32,
+				"parent" : 0
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 30,
+				"parent" : 0
+			},
+			{
+				"file" : 2
+			},
+			{
+				"command" : 4,
+				"file" : 2,
+				"line" : 173,
+				"parent" : 14
+			}
+		]
+	},
+	"compileGroups" : 
+	[
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "-O3 -DNDEBUG -fPIC -fdiagnostics-color=always"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 4,
+					"define" : "ARMA_32BIT_WORD"
+				},
+				{
+					"backtrace" : 5,
+					"define" : "ARMA_ALIEN_MEM_ALLOC_FUNCTION=lkalloc::malloc"
+				},
+				{
+					"backtrace" : 6,
+					"define" : "ARMA_ALIEN_MEM_FREE_FUNCTION=lkalloc::free"
+				},
+				{
+					"backtrace" : 7,
+					"define" : "CARMA_DO_NOT_EXPORT_ALIEN_MEM_FUNCTIONS"
+				},
+				{
+					"backtrace" : 8,
+					"define" : "PROJECT_DATA_PATH=\"/home/otdel412/Desktop/AMS/Mushroom/mushroom/data\""
+				},
+				{
+					"backtrace" : 9,
+					"define" : "daxpy_=Waxpy_"
+				},
+				{
+					"backtrace" : 10,
+					"define" : "dcopy_=Wcopy_"
+				},
+				{
+					"backtrace" : 11,
+					"define" : "ddot_=Wdot_"
+				},
+				{
+					"backtrace" : 12,
+					"define" : "dnrm2_=Wnrm2_"
+				},
+				{
+					"backtrace" : 13,
+					"define" : "dscal_=Wscal_"
+				},
+				{
+					"define" : "lbfgsb_cpp_EXPORTS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"backtrace" : 15,
+					"isSystem" : true,
+					"path" : "/home/otdel412/Desktop/AMS/Mushroom/mushroom/libKriging/dependencies/armadillo-code/include"
+				}
+			],
+			"language" : "C",
+			"sourceIndexes" : 
+			[
+				1,
+				2,
+				3,
+				4,
+				5,
+				6
+			]
+		}
+	],
+	"id" : "lbfgsb_cpp::@5bbe7c8cf1924e8ded4d",
+	"install" : 
+	{
+		"destinations" : 
+		[
+			{
+				"backtrace" : 2,
+				"path" : "lib"
+			},
+			{
+				"backtrace" : 2,
+				"path" : "lib"
+			}
+		],
+		"prefix" : 
+		{
+			"path" : "/home/otdel412/Desktop/AMS/Mushroom/mushroom/build/Desktop-Release/installed"
+		}
+	},
+	"link" : 
+	{
+		"commandFragments" : 
+		[
+			{
+				"fragment" : "",
+				"role" : "flags"
+			}
+		],
+		"language" : "C"
+	},
+	"name" : "lbfgsb_cpp",
+	"nameOnDisk" : "liblbfgsb_cpp.so",
+	"paths" : 
+	{
+		"build" : "libKriging/dependencies/lbfgsb_cpp",
+		"source" : "libKriging/dependencies/lbfgsb_cpp"
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "Header Files",
+			"sourceIndexes" : 
+			[
+				0
+			]
+		},
+		{
+			"name" : "Source Files",
+			"sourceIndexes" : 
+			[
+				1,
+				2,
+				3,
+				4,
+				5,
+				6
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 1,
+			"path" : "libKriging/dependencies/lbfgsb_cpp/Lbfgsb.3.0/include/lbfgsb/lbfgsb.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "libKriging/dependencies/lbfgsb_cpp/Lbfgsb.3.0/blas.c",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "libKriging/dependencies/lbfgsb_cpp/Lbfgsb.3.0/lbfgsb.c",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "libKriging/dependencies/lbfgsb_cpp/Lbfgsb.3.0/linpack.c",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "libKriging/dependencies/lbfgsb_cpp/Lbfgsb.3.0/s_cmp.c",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "libKriging/dependencies/lbfgsb_cpp/Lbfgsb.3.0/s_copy.c",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "libKriging/dependencies/lbfgsb_cpp/Lbfgsb.3.0/timer.c",
+			"sourceGroupIndex" : 1
+		}
+	],
+	"type" : "SHARED_LIBRARY"
+}

@@ -1,0 +1,3 @@
+add_test( [==[Scenario: a linear regression reveals randomly generated seed parameters]==] /home/otdel412/Desktop/AMS/Mushroom/mushroom/build/Desktop-Release/libKriging/tests/regression_unit_test [==[Scenario: a linear regression reveals randomly generated seed parameters]==]  )
+set_tests_properties( [==[Scenario: a linear regression reveals randomly generated seed parameters]==] PROPERTIES WORKING_DIRECTORY /home/otdel412/Desktop/AMS/Mushroom/mushroom/build/Desktop-Release/libKriging/tests)
+set( regression_unit_test_TESTS [==[Scenario: a linear regression reveals randomly generated seed parameters]==])

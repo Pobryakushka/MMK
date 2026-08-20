@@ -1,0 +1,612 @@
+{
+	"artifacts" : 
+	[
+		{
+			"path" : "libKriging/src/lib/libKriging.so"
+		}
+	],
+	"backtrace" : 1,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_library",
+			"install",
+			"target_link_libraries",
+			"add_definitions",
+			"target_include_directories",
+			"include_directories"
+		],
+		"files" : 
+		[
+			"libKriging/src/lib/CMakeLists.txt",
+			"libKriging/dependencies/armadillo-code/CMakeLists.txt",
+			"CMakeLists.txt",
+			"libKriging/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 86,
+				"parent" : 0
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 37,
+				"parent" : 0
+			},
+			{
+				"file" : 1
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 629,
+				"parent" : 4
+			},
+			{
+				"file" : 2
+			},
+			{
+				"command" : 3,
+				"file" : 2,
+				"line" : 45,
+				"parent" : 6
+			},
+			{
+				"command" : 3,
+				"file" : 2,
+				"line" : 46,
+				"parent" : 6
+			},
+			{
+				"command" : 3,
+				"file" : 2,
+				"line" : 47,
+				"parent" : 6
+			},
+			{
+				"command" : 3,
+				"file" : 2,
+				"line" : 48,
+				"parent" : 6
+			},
+			{
+				"command" : 3,
+				"file" : 2,
+				"line" : 10,
+				"parent" : 6
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 68,
+				"parent" : 0
+			},
+			{
+				"file" : 3
+			},
+			{
+				"command" : 5,
+				"file" : 3,
+				"line" : 173,
+				"parent" : 13
+			}
+		]
+	},
+	"compileGroups" : 
+	[
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "  -Wall -Wextra -O3 -DNDEBUG -fPIC -fvisibility=hidden -fdiagnostics-color=always"
+				},
+				{
+					"fragment" : "-std=c++17"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 7,
+					"define" : "ARMA_32BIT_WORD"
+				},
+				{
+					"backtrace" : 8,
+					"define" : "ARMA_ALIEN_MEM_ALLOC_FUNCTION=lkalloc::malloc"
+				},
+				{
+					"backtrace" : 9,
+					"define" : "ARMA_ALIEN_MEM_FREE_FUNCTION=lkalloc::free"
+				},
+				{
+					"backtrace" : 10,
+					"define" : "CARMA_DO_NOT_EXPORT_ALIEN_MEM_FUNCTIONS"
+				},
+				{
+					"define" : "Kriging_EXPORTS"
+				},
+				{
+					"backtrace" : 11,
+					"define" : "PROJECT_DATA_PATH=\"/home/otdel412/Desktop/AMS/Mushroom/mushroom/data\""
+				}
+			],
+			"includes" : 
+			[
+				{
+					"backtrace" : 12,
+					"path" : "/home/otdel412/Desktop/AMS/Mushroom/mushroom/libKriging/src/lib/include"
+				},
+				{
+					"backtrace" : 12,
+					"path" : "/home/otdel412/Desktop/AMS/Mushroom/mushroom/build/Desktop-Release/libKriging/src/lib"
+				},
+				{
+					"backtrace" : 12,
+					"path" : "/home/otdel412/Desktop/AMS/Mushroom/mushroom/libKriging/src/lib"
+				},
+				{
+					"backtrace" : 3,
+					"path" : "/home/otdel412/Desktop/AMS/Mushroom/mushroom/build/Desktop-Release/libKriging/dependencies/armadillo-code/tmp/include"
+				},
+				{
+					"backtrace" : 3,
+					"path" : "/home/otdel412/Desktop/AMS/Mushroom/mushroom/libKriging/dependencies/lbfgsb_cpp/include"
+				},
+				{
+					"backtrace" : 14,
+					"isSystem" : true,
+					"path" : "/home/otdel412/Desktop/AMS/Mushroom/mushroom/libKriging/dependencies/armadillo-code/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					3
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				0,
+				2,
+				4,
+				6,
+				8,
+				10,
+				12,
+				14,
+				16,
+				18,
+				20,
+				22,
+				24,
+				26,
+				29,
+				31,
+				33,
+				41,
+				43,
+				46
+			]
+		}
+	],
+	"dependencies" : 
+	[
+		{
+			"backtrace" : 3,
+			"id" : "armadillo::@25245a8b3da35cee7082"
+		},
+		{
+			"backtrace" : 3,
+			"id" : "lbfgsb_cpp::@5bbe7c8cf1924e8ded4d"
+		}
+	],
+	"id" : "Kriging::@24ff03e36bdcedbd2b52",
+	"install" : 
+	{
+		"destinations" : 
+		[
+			{
+				"backtrace" : 2,
+				"path" : "lib"
+			},
+			{
+				"backtrace" : 2,
+				"path" : "lib"
+			}
+		],
+		"prefix" : 
+		{
+			"path" : "/home/otdel412/Desktop/AMS/Mushroom/mushroom/build/Desktop-Release/installed"
+		}
+	},
+	"link" : 
+	{
+		"commandFragments" : 
+		[
+			{
+				"fragment" : "",
+				"role" : "flags"
+			},
+			{
+				"fragment" : "-Wl,-rpath,/home/otdel412/Desktop/AMS/Mushroom/mushroom/build/Desktop-Release/libKriging/dependencies/armadillo-code:/home/otdel412/Desktop/AMS/Mushroom/mushroom/build/Desktop-Release/libKriging/dependencies/lbfgsb_cpp:",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 3,
+				"fragment" : "../../dependencies/armadillo-code/libarmadillo.so.11.4.2",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 3,
+				"fragment" : "../../dependencies/lbfgsb_cpp/liblbfgsb_cpp.so",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 5,
+				"fragment" : "/usr/lib/x86_64-linux-gnu/libopenblas.so",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 5,
+				"fragment" : "/usr/lib/x86_64-linux-gnu/liblapack.so",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 5,
+				"fragment" : "/usr/lib/x86_64-linux-gnu/libarpack.so",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 5,
+				"fragment" : "/usr/lib/x86_64-linux-gnu/libsuperlu.so",
+				"role" : "libraries"
+			}
+		],
+		"language" : "CXX"
+	},
+	"name" : "Kriging",
+	"nameOnDisk" : "libKriging.so",
+	"paths" : 
+	{
+		"build" : "libKriging/src/lib",
+		"source" : "libKriging/src/lib"
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "Source Files",
+			"sourceIndexes" : 
+			[
+				0,
+				2,
+				4,
+				6,
+				8,
+				10,
+				12,
+				14,
+				16,
+				18,
+				20,
+				22,
+				24,
+				26,
+				29,
+				31,
+				33,
+				41,
+				43,
+				46
+			]
+		},
+		{
+			"name" : "Header Files",
+			"sourceIndexes" : 
+			[
+				1,
+				3,
+				5,
+				7,
+				9,
+				11,
+				13,
+				15,
+				17,
+				19,
+				21,
+				23,
+				25,
+				27,
+				28,
+				30,
+				32,
+				34,
+				35,
+				36,
+				37,
+				38,
+				39,
+				40,
+				42,
+				44,
+				45
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "libKriging/src/lib/demo/DemoClass.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "libKriging/src/lib/include/libKriging/demo/DemoClass.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "libKriging/src/lib/demo/DemoFunction.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "libKriging/src/lib/include/libKriging/demo/DemoFunction.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "libKriging/src/lib/demo/DemoArmadilloClass.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "libKriging/src/lib/include/libKriging/demo/DemoArmadilloClass.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "libKriging/src/lib/LinearRegression.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "libKriging/src/lib/include/libKriging/LinearRegression.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "libKriging/src/lib/LinearRegressionOptim.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "libKriging/src/lib/include/libKriging/LinearRegressionOptim.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "libKriging/src/lib/Trend.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "libKriging/src/lib/include/libKriging/Trend.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "libKriging/src/lib/Optim.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "libKriging/src/lib/include/libKriging/Optim.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "libKriging/src/lib/Random.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "libKriging/src/lib/include/libKriging/Random.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "libKriging/src/lib/LinearAlgebra.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "libKriging/src/lib/include/libKriging/LinearAlgebra.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "libKriging/src/lib/Covariance.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "libKriging/src/lib/include/libKriging/Covariance.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "libKriging/src/lib/Kriging.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "libKriging/src/lib/include/libKriging/Kriging.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "libKriging/src/lib/NuggetKriging.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "libKriging/src/lib/include/libKriging/NuggetKriging.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "libKriging/src/lib/NoiseKriging.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "libKriging/src/lib/include/libKriging/NoiseKriging.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "libKriging/src/lib/KrigingLoader.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "libKriging/src/lib/include/libKriging/KrigingLoader.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"path" : "libKriging/src/lib/include/libKriging/KrigingException.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "libKriging/src/lib/lkalloc.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "libKriging/src/lib/include/libKriging/utils/lkalloc.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "libKriging/src/lib/Bench.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "libKriging/src/lib/include/libKriging/Bench.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "libKriging/src/lib/CacheFunction.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "libKriging/src/lib/include/libKriging/CacheFunction.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"path" : "libKriging/src/lib/include/libKriging/utils/custom_hash_function.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"path" : "libKriging/src/lib/include/libKriging/utils/cache_details.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"path" : "libKriging/src/lib/include/libKriging/utils/LinearHashStorage.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"path" : "libKriging/src/lib/include/libKriging/utils/data_from_arma_vec.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"path" : "libKriging/src/lib/include/libKriging/utils/ExplicitCopySpecifier.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"path" : "libKriging/src/lib/include/libKriging/utils/utils.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "libKriging/src/lib/utils/base64.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "libKriging/src/lib/utils/base64.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "libKriging/src/lib/utils/jsonutils.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "libKriging/src/lib/include/libKriging/utils/jsonutils.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"path" : "libKriging/src/lib/include/libKriging/version.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "build/Desktop-Release/libKriging/version.cpp",
+			"sourceGroupIndex" : 0
+		}
+	],
+	"type" : "SHARED_LIBRARY"
+}

@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "libKriging/dependencies/Catch2",
+		"source" : "libKriging/dependencies/Catch2"
+	}
+}

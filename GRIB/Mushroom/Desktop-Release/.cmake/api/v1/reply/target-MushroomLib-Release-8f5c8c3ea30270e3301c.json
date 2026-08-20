@@ -1,0 +1,206 @@
+{
+	"archive" : {},
+	"artifacts" : 
+	[
+		{
+			"path" : "libMushroomLib.a"
+		}
+	],
+	"backtrace" : 1,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_library",
+			"target_link_libraries",
+			"add_definitions",
+			"target_include_directories"
+		],
+		"files" : 
+		[
+			"CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 54,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 60,
+				"parent" : 0
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 45,
+				"parent" : 0
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 46,
+				"parent" : 0
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 47,
+				"parent" : 0
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 48,
+				"parent" : 0
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 10,
+				"parent" : 0
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 57,
+				"parent" : 0
+			}
+		]
+	},
+	"compileGroups" : 
+	[
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "-O3 -DNDEBUG -fdiagnostics-color=always"
+				},
+				{
+					"fragment" : "-std=c++20"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 3,
+					"define" : "ARMA_32BIT_WORD"
+				},
+				{
+					"backtrace" : 4,
+					"define" : "ARMA_ALIEN_MEM_ALLOC_FUNCTION=lkalloc::malloc"
+				},
+				{
+					"backtrace" : 5,
+					"define" : "ARMA_ALIEN_MEM_FREE_FUNCTION=lkalloc::free"
+				},
+				{
+					"backtrace" : 6,
+					"define" : "CARMA_DO_NOT_EXPORT_ALIEN_MEM_FUNCTIONS"
+				},
+				{
+					"backtrace" : 7,
+					"define" : "PROJECT_DATA_PATH=\"/home/otdel412/Desktop/AMS/Mushroom/mushroom/data\""
+				}
+			],
+			"includes" : 
+			[
+				{
+					"backtrace" : 8,
+					"path" : "/home/otdel412/Desktop/AMS/Mushroom/mushroom/install/include"
+				},
+				{
+					"backtrace" : 2,
+					"path" : "/home/otdel412/Desktop/AMS/Mushroom/mushroom/libKriging/src/lib/include"
+				},
+				{
+					"backtrace" : 2,
+					"path" : "/home/otdel412/Desktop/AMS/Mushroom/mushroom/build/Desktop-Release/libKriging/src/lib"
+				},
+				{
+					"backtrace" : 2,
+					"path" : "/home/otdel412/Desktop/AMS/Mushroom/mushroom/build/Desktop-Release/libKriging/dependencies/armadillo-code/tmp/include"
+				},
+				{
+					"backtrace" : 2,
+					"path" : "/home/otdel412/Desktop/AMS/Mushroom/mushroom/libKriging/dependencies/lbfgsb_cpp/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					2
+				],
+				"standard" : "20"
+			},
+			"sourceIndexes" : 
+			[
+				0
+			]
+		}
+	],
+	"dependencies" : 
+	[
+		{
+			"backtrace" : 2,
+			"id" : "armadillo::@25245a8b3da35cee7082"
+		},
+		{
+			"backtrace" : 2,
+			"id" : "lbfgsb_cpp::@5bbe7c8cf1924e8ded4d"
+		},
+		{
+			"backtrace" : 2,
+			"id" : "Kriging::@24ff03e36bdcedbd2b52"
+		}
+	],
+	"id" : "MushroomLib::@6890427a1f51a3e7e1df",
+	"name" : "MushroomLib",
+	"nameOnDisk" : "libMushroomLib.a",
+	"paths" : 
+	{
+		"build" : ".",
+		"source" : "."
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "Source Files",
+			"sourceIndexes" : 
+			[
+				0
+			]
+		},
+		{
+			"name" : "Header Files",
+			"sourceIndexes" : 
+			[
+				1
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "Mushroom.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "Mushroom.hpp",
+			"sourceGroupIndex" : 1
+		}
+	],
+	"type" : "STATIC_LIBRARY"
+}
