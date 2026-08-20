@@ -1630,12 +1630,15 @@ QPushButton:pressed { color: #0B5A42; }</string>
             <number>0</number>
            </property>
            <item>
-            <widget class="QQuickWidget" name="quickWidget" native="true">
+            <widget class="QQuickWidget" name="quickWidget">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                <horstretch>1</horstretch>
                <verstretch>1</verstretch>
               </sizepolicy>
+             </property>
+             <property name="resizeMode">
+              <enum>QQuickWidget::SizeRootObjectToView</enum>
              </property>
             </widget>
            </item>
@@ -1819,7 +1822,7 @@ QPushButton:pressed { color: #0B5A42; }</string>
           <enum>QFrame::NoFrame</enum>
          </property>
          <property name="verticalScrollBarPolicy">
-          <enum>Qt::ScrollBarAsNeeded</enum>
+          <enum>Qt::ScrollBarAlwaysOff</enum>
          </property>
          <property name="horizontalScrollBarPolicy">
           <enum>Qt::ScrollBarAlwaysOff</enum>
@@ -1847,7 +1850,7 @@ QPushButton:pressed { color: #0B5A42; }</string>
             <number>0</number>
            </property>
            <property name="bottomMargin">
-            <number>12</number>
+            <number>6</number>
            </property>
            <item>
             <spacer name="measureLeftSpacer">
@@ -1856,7 +1859,7 @@ QPushButton:pressed { color: #0B5A42; }</string>
              </property>
              <property name="sizeHint" stdset="0">
               <size>
-               <width>20</width>
+               <width>16</width>
                <height>20</height>
               </size>
              </property>
@@ -1866,16 +1869,16 @@ QPushButton:pressed { color: #0B5A42; }</string>
             <widget class="QWidget" name="measureGridContainer" native="true">
              <property name="maximumSize">
               <size>
-               <width>960</width>
+               <width>1400</width>
                <height>16777215</height>
               </size>
              </property>
              <layout class="QGridLayout" name="measureGrid">
               <property name="horizontalSpacing">
-               <number>14</number>
+               <number>12</number>
               </property>
               <property name="verticalSpacing">
-               <number>14</number>
+               <number>10</number>
               </property>
 
               <!-- ── Тайл: Время усреднения ─────────────────────────────── -->
@@ -1885,10 +1888,10 @@ QPushButton:pressed { color: #0B5A42; }</string>
                  <string notr="true">QFrame#tileAvgTime { background-color: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 16px; }</string>
                 </property>
                 <layout class="QVBoxLayout" name="tileAvgTimeLayout">
-                 <property name="leftMargin"><number>14</number></property>
-                 <property name="topMargin"><number>13</number></property>
-                 <property name="rightMargin"><number>14</number></property>
-                 <property name="bottomMargin"><number>13</number></property>
+                 <property name="leftMargin"><number>12</number></property>
+                 <property name="topMargin"><number>10</number></property>
+                 <property name="rightMargin"><number>12</number></property>
+                 <property name="bottomMargin"><number>10</number></property>
                  <item>
                   <widget class="QLabel" name="lblAveragingTime">
                    <property name="styleSheet">
@@ -1964,10 +1967,10 @@ QPushButton:disabled { color: #BFBFBF; }</string>
                  <string notr="true">QFrame#tileLitera { background-color: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 16px; }</string>
                 </property>
                 <layout class="QVBoxLayout" name="tileLiteraLayout">
-                 <property name="leftMargin"><number>14</number></property>
-                 <property name="topMargin"><number>13</number></property>
-                 <property name="rightMargin"><number>14</number></property>
-                 <property name="bottomMargin"><number>13</number></property>
+                 <property name="leftMargin"><number>12</number></property>
+                 <property name="topMargin"><number>10</number></property>
+                 <property name="rightMargin"><number>12</number></property>
+                 <property name="bottomMargin"><number>10</number></property>
                  <item>
                   <widget class="QLabel" name="lblLitera">
                    <property name="styleSheet">
@@ -2040,10 +2043,10 @@ QPushButton:checked { background-color: #FFFFFF; color: #0F6B4F; font-weight: 70
                  <string notr="true">QFrame#tileMode { background-color: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 16px; }</string>
                 </property>
                 <layout class="QVBoxLayout" name="tileModeLayout">
-                 <property name="leftMargin"><number>14</number></property>
-                 <property name="topMargin"><number>13</number></property>
-                 <property name="rightMargin"><number>14</number></property>
-                 <property name="bottomMargin"><number>13</number></property>
+                 <property name="leftMargin"><number>12</number></property>
+                 <property name="topMargin"><number>10</number></property>
+                 <property name="rightMargin"><number>12</number></property>
+                 <property name="bottomMargin"><number>10</number></property>
                  <item>
                   <widget class="QLabel" name="lblWorkMode">
                    <property name="styleSheet">
@@ -2055,34 +2058,43 @@ QPushButton:checked { background-color: #FFFFFF; color: #0F6B4F; font-weight: 70
                   </widget>
                  </item>
                  <item>
-                  <layout class="QHBoxLayout" name="modeButtonsLayout">
-                   <property name="spacing"><number>8</number></property>
-                   <item>
-                    <widget class="QPushButton" name="btnModeWorking">
-                     <property name="minimumSize"><size><width>0</width><height>44</height></size></property>
-                     <property name="styleSheet">
-                      <string notr="true">QPushButton { background-color: #FFFFFF; border: 1.5px solid #DDE1E3; border-radius: 12px; padding: 8px 6px; font-size: 9pt; font-weight: 600; color: #1C1F22; }
-QPushButton:checked { background-color: #E8F5E9; border: 1.5px solid #0F6B4F; color: #0B5A42; font-weight: 700; }</string>
-                     </property>
-                     <property name="text"><string>Рабочий</string></property>
-                     <property name="checkable"><bool>true</bool></property>
-                     <property name="autoExclusive"><bool>true</bool></property>
-                     <property name="checked"><bool>true</bool></property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QPushButton" name="btnModeStandby">
-                     <property name="minimumSize"><size><width>0</width><height>44</height></size></property>
-                     <property name="styleSheet">
-                      <string notr="true">QPushButton { background-color: #FFFFFF; border: 1.5px solid #DDE1E3; border-radius: 12px; padding: 8px 6px; font-size: 9pt; font-weight: 600; color: #1C1F22; }
-QPushButton:checked { background-color: #E8F5E9; border: 1.5px solid #0F6B4F; color: #0B5A42; font-weight: 700; }</string>
-                     </property>
-                     <property name="text"><string>Дежурный</string></property>
-                     <property name="checkable"><bool>true</bool></property>
-                     <property name="autoExclusive"><bool>true</bool></property>
-                    </widget>
-                   </item>
-                  </layout>
+                  <widget class="QWidget" name="modeSegment" native="true">
+                   <property name="styleSheet">
+                    <string notr="true">QWidget#modeSegment { background-color: #F0F1F2; border-radius: 12px; }</string>
+                   </property>
+                   <layout class="QHBoxLayout" name="modeButtonsLayout">
+                    <property name="spacing"><number>4</number></property>
+                    <property name="leftMargin"><number>4</number></property>
+                    <property name="topMargin"><number>4</number></property>
+                    <property name="rightMargin"><number>4</number></property>
+                    <property name="bottomMargin"><number>4</number></property>
+                    <item>
+                     <widget class="QPushButton" name="btnModeWorking">
+                      <property name="minimumSize"><size><width>0</width><height>36</height></size></property>
+                      <property name="styleSheet">
+                       <string notr="true">QPushButton { background: transparent; border: none; border-radius: 9px; padding: 8px 2px; font-size: 9pt; font-weight: 600; color: #555555; }
+QPushButton:checked { background-color: #FFFFFF; color: #0F6B4F; font-weight: 700; }</string>
+                      </property>
+                      <property name="text"><string>Рабочий</string></property>
+                      <property name="checkable"><bool>true</bool></property>
+                      <property name="autoExclusive"><bool>true</bool></property>
+                      <property name="checked"><bool>true</bool></property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QPushButton" name="btnModeStandby">
+                      <property name="minimumSize"><size><width>0</width><height>36</height></size></property>
+                      <property name="styleSheet">
+                       <string notr="true">QPushButton { background: transparent; border: none; border-radius: 9px; padding: 8px 2px; font-size: 9pt; font-weight: 600; color: #555555; }
+QPushButton:checked { background-color: #FFFFFF; color: #0F6B4F; font-weight: 700; }</string>
+                      </property>
+                      <property name="text"><string>Дежурный</string></property>
+                      <property name="checkable"><bool>true</bool></property>
+                      <property name="autoExclusive"><bool>true</bool></property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </widget>
                  </item>
                 </layout>
                </widget>
@@ -2095,10 +2107,10 @@ QPushButton:checked { background-color: #E8F5E9; border: 1.5px solid #0F6B4F; co
                  <string notr="true">QFrame#tileGauge { background-color: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 16px; }</string>
                 </property>
                 <layout class="QVBoxLayout" name="tileGaugeLayout">
-                 <property name="leftMargin"><number>14</number></property>
-                 <property name="topMargin"><number>13</number></property>
-                 <property name="rightMargin"><number>14</number></property>
-                 <property name="bottomMargin"><number>13</number></property>
+                 <property name="leftMargin"><number>12</number></property>
+                 <property name="topMargin"><number>10</number></property>
+                 <property name="rightMargin"><number>12</number></property>
+                 <property name="bottomMargin"><number>10</number></property>
                  <item>
                   <widget class="QLabel" name="lblRpvGaugeTitle">
                    <property name="styleSheet">
@@ -2113,14 +2125,14 @@ QPushButton:checked { background-color: #E8F5E9; border: 1.5px solid #0F6B4F; co
                   <widget class="RpvIndicator" name="rpvIndicator" native="true">
                    <property name="minimumSize">
                     <size>
-                     <width>220</width>
-                     <height>220</height>
+                     <width>170</width>
+                     <height>170</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>320</width>
-                     <height>320</height>
+                     <width>240</width>
+                     <height>240</height>
                     </size>
                    </property>
                   </widget>
@@ -2136,10 +2148,10 @@ QPushButton:checked { background-color: #E8F5E9; border: 1.5px solid #0F6B4F; co
                  <string notr="true">QFrame#tileStart { background-color: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 16px; }</string>
                 </property>
                 <layout class="QVBoxLayout" name="tileStartLayout">
-                 <property name="leftMargin"><number>14</number></property>
-                 <property name="topMargin"><number>13</number></property>
-                 <property name="rightMargin"><number>14</number></property>
-                 <property name="bottomMargin"><number>13</number></property>
+                 <property name="leftMargin"><number>12</number></property>
+                 <property name="topMargin"><number>10</number></property>
+                 <property name="rightMargin"><number>12</number></property>
+                 <property name="bottomMargin"><number>10</number></property>
                  <item>
                   <widget class="QLabel" name="lblStartReadiness">
                    <property name="styleSheet">
@@ -2186,10 +2198,10 @@ QPushButton:disabled { background-color: #BDBDBD; color: #757575; }</string>
                 </property>
                 <layout class="QVBoxLayout" name="tileProgressLayout">
                  <property name="spacing"><number>8</number></property>
-                 <property name="leftMargin"><number>14</number></property>
-                 <property name="topMargin"><number>13</number></property>
-                 <property name="rightMargin"><number>14</number></property>
-                 <property name="bottomMargin"><number>13</number></property>
+                 <property name="leftMargin"><number>12</number></property>
+                 <property name="topMargin"><number>10</number></property>
+                 <property name="rightMargin"><number>12</number></property>
+                 <property name="bottomMargin"><number>10</number></property>
                  <item>
                   <widget class="QWidget" name="measurementProgressWidget" native="true">
                    <property name="visible">
@@ -2259,20 +2271,20 @@ QPushButton:disabled { background-color: #BDBDBD; color: #757575; }</string>
                       <property name="minimumSize">
                        <size>
                         <width>0</width>
-                        <height>18</height>
+                        <height>14</height>
                        </size>
                       </property>
                       <property name="styleSheet">
                        <string notr="true">QProgressBar {
-        border: 1px solid #BDBDBD;
-        border-radius: 4px;
-        background-color: #F5F5F5;
+        border: none;
+        border-radius: 7px;
+        background-color: #EFF1F2;
         text-align: center;
         font-size: 8pt;
     }
     QProgressBar::chunk {
-        background-color: #1976D2;
-        border-radius: 3px;
+        background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #1976D2, stop:1 #42A5F5);
+        border-radius: 7px;
     }</string>
                       </property>
                       <property name="maximum">
@@ -2370,7 +2382,7 @@ QPushButton:disabled { background-color: #F5F5F5; color: #BDBDBD; border: 1px so
              </property>
              <property name="sizeHint" stdset="0">
               <size>
-               <width>20</width>
+               <width>16</width>
                <height>20</height>
               </size>
              </property>
