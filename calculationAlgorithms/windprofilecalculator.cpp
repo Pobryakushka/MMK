@@ -9,6 +9,7 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QFileInfo>
+#include <InData/indata.h>
 
 // Внешние библиотеки расчёта профиля (plow + ClimatData).
 // Путь к Profile/profile.h — относительно корня plow. INCLUDEPATH в MMK.pro
@@ -159,6 +160,9 @@ WindProfileCalculator::calculate(const Input &in, Output &out)
 
     // ── 3. Конфигурируем ProfileReal ────────────────────────────────────────
     ProfileReal profileReal;
+    qDebug() << "[DIAG] Перед setProfRpv: InData::prevZond="
+             << InData::prevZond << " InData::kprev=" << InData::kprev;
+    profileReal.setMeteoMid(nullptr, 0, false);
     profileReal.setProfRpv(profRPV.data(), h);
     profileReal.setClimatData(&cd);
 

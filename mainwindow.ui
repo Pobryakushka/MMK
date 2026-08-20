@@ -1630,12 +1630,15 @@ QPushButton:pressed { color: #0B5A42; }</string>
             <number>0</number>
            </property>
            <item>
-            <widget class="QQuickWidget" name="quickWidget" native="true">
+            <widget class="QQuickWidget" name="quickWidget">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                <horstretch>1</horstretch>
                <verstretch>1</verstretch>
               </sizepolicy>
+             </property>
+             <property name="resizeMode">
+              <enum>QQuickWidget::SizeRootObjectToView</enum>
              </property>
             </widget>
            </item>
