@@ -373,6 +373,15 @@ private:
     // показывается "РАБОТА"/"ОШИБКА" поверх этого состояния.
     GroundMeteoParams::SurfaceState m_lastKnownSurfaceState = GroundMeteoParams::NoData;
 
+    // Плавная анимация прогресс-бара измерения и стрелки компаса РПВ —
+    // вместо мгновенного "прыжка" значения при каждом
+    // measurementProgressUpdated(). См. animateProgressBarTo()/animateRpvAngleTo().
+    QPropertyAnimation *m_progressBarAnimation = nullptr;
+    QPropertyAnimation *m_rpvAngleAnimation    = nullptr;
+    double m_rpvDisplayedAngle = 0.0; // текущее (анимируемое) значение угла — для расчёта кратчайшего пути на следующем шаге
+    void animateProgressBarTo(int value);
+    void animateRpvAngleTo(double targetAngleDeg);
+
     void setupReadinessPopup();
     void showReadinessPopup();
     void hideReadinessPopup();
