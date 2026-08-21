@@ -161,6 +161,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->btnManualInput, &QPushButton::clicked, this, &MainWindow::onManualInputClicked);
     connect(ui->btnInitialData, &QPushButton::clicked, this, &MainWindow::onInitialDataClicked);
     connect(ui->btnCalculations, &QPushButton::clicked, this, &MainWindow::onCalculationsClicked);
+    // Раздел "Расчёты" пока не нужен — прячем кнопку из главного меню, не
+    // удаляя саму реализацию (может понадобиться в будущем).
+    ui->btnCalculations->setVisible(false);
     connect(ui->btnMeasurementResults, &QPushButton::clicked, this, &MainWindow::onMeasurementResultsClicked);
     connect(ui->btnStart, &QPushButton::clicked, this, &MainWindow::onStartClicked);
     connect(ui->btnStop, &QPushButton::clicked, this, &MainWindow::onStopClicked);
@@ -173,6 +176,13 @@ MainWindow::MainWindow(QWidget *parent)
     // кнопки попапов ниже — та же причина.
     ui->btnConnectSensors->setFocusPolicy(Qt::NoFocus);
     connect(ui->btnConnectSensors, &QPushButton::clicked, this, &MainWindow::onConnectSensorsClicked);
+    // Кнопка "Подключить датчики" убрана из главного меню — её роль теперь
+    // играет btnConnectAll в статус-панели (см. onConnectAllClicked()).
+    // Реализация и сигнал выше оставлены нетронутыми на будущее.
+    ui->btnConnectSensors->setVisible(false);
+
+    ui->btnConnectAll->setFocusPolicy(Qt::NoFocus);
+    connect(ui->btnConnectAll, &QPushButton::clicked, this, &MainWindow::onConnectAllClicked);
     connect(ui->btnSyncTime, &QPushButton::clicked, this, &MainWindow::onSyncTimeClicked);
     connect(ui->editDateTime, &QLineEdit::editingFinished, this, &MainWindow::onDateTimeEditingFinished);
     connect(ui->editDateTime, &QLineEdit::textEdited, this, &MainWindow::onDateTimeEditingStarted);
@@ -1755,6 +1765,17 @@ void MainWindow::onConnectSensorsClicked()
     m_autoConnector->startDetection();
 }
 
+void MainWindow::onConnectAllClicked()
+{
+    // Та же логика, что и у прежней кнопки главного меню — просто вызывается
+    // из статус-панели. Отдельная проверка "все уже подключены" не нужна:
+    // кнопка и так видна только когда ни один датчик не подключён (см.
+    // updateConnectAllButtonVisibility()).
+    if (m_autoConnector->isDetecting()) return;
+    m_autoConnector->startDetection();
+    updateConnectAllButtonVisibility();
+}
+
 bool MainWindow::connectIwsPort(const QString &port, int baudRate, QSerialPort::DataBits dataBits,
                                 QSerialPort::Parity parity, QSerialPort::StopBits stopBits,
                                 int protocol, quint8 address, int pollInterval)
@@ -2489,6 +2510,7 @@ void MainWindow::updateGnssStatusLabel(bool connected)
             "background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2; "
             "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
     }
+    updateConnectAllButtonVisibility();
 }
 
 void MainWindow::updateAmsStatusLabel(bool connected)
@@ -2504,6 +2526,7 @@ void MainWindow::updateAmsStatusLabel(bool connected)
             "background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2; "
             "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
     }
+    updateConnectAllButtonVisibility();
 }
 
 void MainWindow::updateBinsStatusLabel(bool connected)
@@ -2519,6 +2542,7 @@ void MainWindow::updateBinsStatusLabel(bool connected)
             "background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2; "
             "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
     }
+    updateConnectAllButtonVisibility();
 }
 
 void MainWindow::updateIwsStatusLabel(bool connected)
@@ -2534,12 +2558,38 @@ void MainWindow::updateIwsStatusLabel(bool connected)
             "background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2; "
             "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
     }
+    updateConnectAllButtonVisibility();
+}
+
+void MainWindow::updateConnectAllButtonVisibility()
+{
+    // Пока идёт поиск (полный или одиночный из шторки) — кнопку не
+    // показываем, за происходящим уже следит toast.
+    if (m_autoConnector && m_autoConnector->isDetecting()) {
+        ui->btnConnectAll->setVisible(false);
+        return;
+    }
+
+    const bool anyConnected =
+        (m_gnssHandler && m_gnssHandler->isConnected()) ||
+        (m_amsHandler  && m_amsHandler->isConnected())  ||
+        (m_binsHandler && m_binsHandler->isConnected())  ||
+        m_iwsDeviceActive;
+
+    // Показываем только когда НИ ОДИН датчик не подключён — это же правило
+    // само по себе покрывает и отмену поиска: если к моменту отмены хоть
+    // один датчик успел найтись, кнопка остаётся скрытой.
+    ui->btnConnectAll->setVisible(!anyConnected);
 }
 
 // ==================== Авто-подключение датчиков ====================
 
 void MainWindow::connectSensorsFromConfig()
 {
+    // Стартовый опрос при запуске программы ещё не завершён — пока не знаем
+    // итог, кнопка "Подключить всё" должна молчать (не мигать видимой).
+    ui->btnConnectAll->setVisible(false);
+
     // Try each sensor from sensorSettingsDialog (already loaded from QSettings)
     // Track which ones need AutoConnector
     QStringList needAutoSearch;
@@ -2652,6 +2702,10 @@ void MainWindow::onAutoConnectorFinished()
 
 void MainWindow::finalizeAutoConnectorFinished()
 {
+    // Поиск (полный или одиночный) завершён — пересчитываем видимость
+    // "Подключить всё" по актуальному состоянию подключений.
+    updateConnectAllButtonVisibility();
+
     const AutoConnector::DeviceType singleTarget = m_autoConnector->singleSearchTarget();
 
     if (singleTarget != AutoConnector::DEVICE_UNKNOWN) {
@@ -3625,6 +3679,11 @@ void MainWindow::onToastCloseClicked()
             statusBar()->clearMessage();
             m_toastCloseBtn->hide();
 
+            // Поиск прерван пользователем — пересчитываем видимость
+            // "Подключить всё": появится, только если к этому моменту не
+            // подключился ни один датчик.
+            updateConnectAllButtonVisibility();
+
             m_toastTitle->setText("Поиск остановлен");
             m_toastTitle->setStyleSheet("font-weight: bold; font-size: 10pt; color: #B71C1C; border: none; background: transparent;");
             m_toastPercent->setStyleSheet("font-size: 10pt; font-weight: bold; color: #B71C1C; border: none; background: transparent;");
@@ -4087,6 +4146,9 @@ void MainWindow::startSingleSensorSearch(AutoConnector::DeviceType type)
     }
     hideSensorPopup();
     m_autoConnector->startDetection(type);
+    // Поиск одного датчика тоже "поиск" — прячем "Подключить всё" на время,
+    // даже если до этого было 0 из 4 подключено.
+    updateConnectAllButtonVisibility();
 }
 
 // Вызывается ТОЛЬКО из health-check (onSilenceWatchdogTimer) при реальной
