@@ -1,0 +1,100 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install"
+		],
+		"files" : 
+		[
+			"libKriging/src/lib/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 86,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 93,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 98,
+				"parent" : 0
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "lib",
+			"paths" : 
+			[
+				"libKriging/src/lib/libKriging.so.0.8.3",
+				"libKriging/src/lib/libKriging.so.0"
+			],
+			"targetId" : "Kriging::@24ff03e36bdcedbd2b52",
+			"targetIndex" : 21,
+			"targetInstallNamelink" : "skip",
+			"type" : "target"
+		},
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "lib",
+			"paths" : 
+			[
+				"libKriging/src/lib/libKriging.so"
+			],
+			"targetId" : "Kriging::@24ff03e36bdcedbd2b52",
+			"targetIndex" : 21,
+			"targetInstallNamelink" : "only",
+			"type" : "target"
+		},
+		{
+			"backtrace" : 2,
+			"component" : "Unspecified",
+			"destination" : "lib/cmake",
+			"exportName" : "libKriging-export",
+			"exportTargets" : 
+			[
+				{
+					"id" : "Kriging::@24ff03e36bdcedbd2b52",
+					"index" : 21
+				}
+			],
+			"paths" : 
+			[
+				"libKriging/src/lib/CMakeFiles/Export/c220ae0af1591e9e9e916bba91f25986/libKriging.cmake"
+			],
+			"type" : "export"
+		},
+		{
+			"backtrace" : 3,
+			"component" : "Unspecified",
+			"destination" : "include/libKriging",
+			"paths" : 
+			[
+				"build/Desktop-Release/libKriging/src/lib/libKriging/libKriging_exports.h"
+			],
+			"type" : "file"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "libKriging/src/lib",
+		"source" : "libKriging/src/lib"
+	}
+}

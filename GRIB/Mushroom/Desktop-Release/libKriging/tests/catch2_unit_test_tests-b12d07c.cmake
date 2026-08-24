@@ -1,0 +1,5 @@
+add_test( [==[Trival test]==] /home/otdel412/Desktop/AMS/Mushroom/mushroom/build/Desktop-Release/libKriging/tests/catch2_unit_test [==[Trival test]==]  )
+set_tests_properties( [==[Trival test]==] PROPERTIES WORKING_DIRECTORY /home/otdel412/Desktop/AMS/Mushroom/mushroom/build/Desktop-Release/libKriging/tests)
+add_test( [==[Scenario: vectors can be sized and resized]==] /home/otdel412/Desktop/AMS/Mushroom/mushroom/build/Desktop-Release/libKriging/tests/catch2_unit_test [==[Scenario: vectors can be sized and resized]==]  )
+set_tests_properties( [==[Scenario: vectors can be sized and resized]==] PROPERTIES WORKING_DIRECTORY /home/otdel412/Desktop/AMS/Mushroom/mushroom/build/Desktop-Release/libKriging/tests)
+set( catch2_unit_test_TESTS [==[Trival test]==] [==[Scenario: vectors can be sized and resized]==])

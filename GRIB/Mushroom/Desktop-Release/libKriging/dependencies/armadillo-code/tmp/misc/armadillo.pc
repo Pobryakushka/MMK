@@ -1,0 +1,9 @@
+libdir=/home/otdel412/Desktop/AMS/Mushroom/mushroom/build/Desktop-Release/installed/lib
+includedir=/home/otdel412/Desktop/AMS/Mushroom/mushroom/build/Desktop-Release/installed/include
+
+Name: armadillo
+Description: Fast C++ matrix library with syntax similar to MATLAB and Octave
+URL: http://arma.sourceforge.net
+Version: 11.4.2
+Cflags: -I${includedir}
+Libs: -L${libdir} -larmadillo

@@ -1,0 +1,5 @@
+if(EXISTS "/home/otdel412/Desktop/AMS/Mushroom/mushroom/build/Desktop-Release/libKriging/tests/KrigingTest_tests-b12d07c.cmake")
+  include("/home/otdel412/Desktop/AMS/Mushroom/mushroom/build/Desktop-Release/libKriging/tests/KrigingTest_tests-b12d07c.cmake")
+else()
+  add_test(KrigingTest_NOT_BUILT-b12d07c KrigingTest_NOT_BUILT-b12d07c)
+endif()

@@ -1,0 +1,85 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install"
+		],
+		"files" : 
+		[
+			"libKriging/dependencies/lbfgsb_cpp/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 58,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 66,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 68,
+				"parent" : 0
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "lib",
+			"paths" : 
+			[
+				"libKriging/dependencies/lbfgsb_cpp/liblbfgsb_cpp.so"
+			],
+			"targetId" : "lbfgsb_cpp::@5bbe7c8cf1924e8ded4d",
+			"targetIndex" : 45,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 2,
+			"component" : "Unspecified",
+			"destination" : "include/lbfgsb_cpp",
+			"paths" : 
+			[
+				"libKriging/dependencies/lbfgsb_cpp/include/lbfgsb_cpp/lbfgsb.hpp"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 3,
+			"component" : "Unspecified",
+			"destination" : "lib/cmake/lbfgsb_cpp",
+			"exportName" : "lbfgsb_cpp_targets",
+			"exportTargets" : 
+			[
+				{
+					"id" : "lbfgsb_cpp::@5bbe7c8cf1924e8ded4d",
+					"index" : 45
+				}
+			],
+			"paths" : 
+			[
+				"libKriging/dependencies/lbfgsb_cpp/CMakeFiles/Export/e53632b7780161fe15ac508dec3c24ed/lbfgsb_cppConfig.cmake"
+			],
+			"type" : "export"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "libKriging/dependencies/lbfgsb_cpp",
+		"source" : "libKriging/dependencies/lbfgsb_cpp"
+	}
+}

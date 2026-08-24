@@ -1,0 +1,136 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install"
+		],
+		"files" : 
+		[
+			"libKriging/dependencies/armadillo-code/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 649,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 656,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 682,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 705,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 719,
+				"parent" : 0
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "include",
+			"paths" : 
+			[
+				{
+					"from" : "build/Desktop-Release/libKriging/dependencies/armadillo-code/tmp/include",
+					"to" : "."
+				}
+			],
+			"type" : "directory"
+		},
+		{
+			"backtrace" : 2,
+			"component" : "Unspecified",
+			"destination" : "lib",
+			"paths" : 
+			[
+				"libKriging/dependencies/armadillo-code/libarmadillo.so.11.4.2",
+				"libKriging/dependencies/armadillo-code/libarmadillo.so.11"
+			],
+			"targetId" : "armadillo::@25245a8b3da35cee7082",
+			"targetIndex" : 36,
+			"targetInstallNamelink" : "skip",
+			"type" : "target"
+		},
+		{
+			"backtrace" : 2,
+			"component" : "Unspecified",
+			"destination" : "lib",
+			"paths" : 
+			[
+				"libKriging/dependencies/armadillo-code/libarmadillo.so"
+			],
+			"targetId" : "armadillo::@25245a8b3da35cee7082",
+			"targetIndex" : 36,
+			"targetInstallNamelink" : "only",
+			"type" : "target"
+		},
+		{
+			"backtrace" : 3,
+			"component" : "dev",
+			"destination" : "share/Armadillo/CMake",
+			"exportName" : "ArmadilloLibraryDepends",
+			"exportTargets" : 
+			[
+				{
+					"id" : "armadillo::@25245a8b3da35cee7082",
+					"index" : 36
+				}
+			],
+			"paths" : 
+			[
+				"libKriging/dependencies/armadillo-code/CMakeFiles/Export/d5f1c8e7a348faccefbb4ca918240c99/ArmadilloLibraryDepends.cmake"
+			],
+			"type" : "export"
+		},
+		{
+			"backtrace" : 4,
+			"component" : "dev",
+			"destination" : "/home/otdel412/Desktop/AMS/Mushroom/mushroom/build/Desktop-Release/installed/share/Armadillo/CMake",
+			"paths" : 
+			[
+				"build/Desktop-Release/libKriging/dependencies/armadillo-code/InstallFiles/ArmadilloConfig.cmake",
+				"build/Desktop-Release/libKriging/dependencies/armadillo-code/InstallFiles/ArmadilloConfigVersion.cmake"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 5,
+			"component" : "Unspecified",
+			"destination" : "lib/pkgconfig",
+			"paths" : 
+			[
+				"build/Desktop-Release/libKriging/dependencies/armadillo-code/tmp/misc/armadillo.pc"
+			],
+			"type" : "file"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "libKriging/dependencies/armadillo-code",
+		"source" : "libKriging/dependencies/armadillo-code"
+	}
+}

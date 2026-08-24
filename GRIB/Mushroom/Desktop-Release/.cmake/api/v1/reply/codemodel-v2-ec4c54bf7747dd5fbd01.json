@@ -1,0 +1,668 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1
+					],
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-Release-f5ebdc15457944623624.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.12"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						23,
+						24
+					]
+				},
+				{
+					"build" : "libKriging",
+					"childIndexes" : 
+					[
+						2,
+						3,
+						4,
+						7,
+						8
+					],
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-libKriging-Release-c8cd78103d059826f7de.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.12"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 1,
+					"source" : "libKriging",
+					"targetIndexes" : 
+					[
+						1,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7,
+						8,
+						9,
+						10,
+						11,
+						12,
+						13,
+						14,
+						15,
+						16,
+						17,
+						18,
+						25,
+						26,
+						27,
+						28,
+						29,
+						30,
+						31,
+						32,
+						33,
+						34,
+						40,
+						41,
+						42,
+						44,
+						47
+					]
+				},
+				{
+					"build" : "libKriging/dependencies/armadillo-code",
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-libKriging.dependencies.armadillo-code-Release-60d1ba47b70e0a395575.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 2,
+					"source" : "libKriging/dependencies/armadillo-code",
+					"targetIndexes" : 
+					[
+						36
+					]
+				},
+				{
+					"build" : "libKriging/dependencies/lbfgsb_cpp",
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-libKriging.dependencies.lbfgsb_cpp-Release-6127cfbe9cc71050c953.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.10"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 3,
+					"source" : "libKriging/dependencies/lbfgsb_cpp",
+					"targetIndexes" : 
+					[
+						45
+					]
+				},
+				{
+					"build" : "libKriging/src",
+					"childIndexes" : 
+					[
+						5
+					],
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-libKriging.src-Release-c852d7c9776ef93ac7fa.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 1,
+					"source" : "libKriging/src"
+				},
+				{
+					"build" : "libKriging/src/lib",
+					"childIndexes" : 
+					[
+						6
+					],
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-libKriging.src.lib-Release-7ee6684e8dbf09e08afd.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.12"
+					},
+					"parentIndex" : 4,
+					"projectIndex" : 1,
+					"source" : "libKriging/src/lib",
+					"targetIndexes" : 
+					[
+						21
+					]
+				},
+				{
+					"build" : "libKriging/src/lib/include",
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-libKriging.src.lib.include-Release-ed49bbde33800d2a1e40.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.12"
+					},
+					"parentIndex" : 5,
+					"projectIndex" : 1,
+					"source" : "libKriging/src/lib/include"
+				},
+				{
+					"build" : "libKriging/dependencies/Catch2",
+					"jsonFile" : "directory-libKriging.dependencies.Catch2-Release-a43b9628aeb3e208984a.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.5"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 4,
+					"source" : "libKriging/dependencies/Catch2"
+				},
+				{
+					"build" : "libKriging/tests",
+					"jsonFile" : "directory-libKriging.tests-Release-2e0b75502823c4320d2d.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 1,
+					"source" : "libKriging/tests",
+					"targetIndexes" : 
+					[
+						0,
+						19,
+						20,
+						22,
+						35,
+						37,
+						38,
+						39,
+						43,
+						46
+					]
+				}
+			],
+			"name" : "Release",
+			"projects" : 
+			[
+				{
+					"childIndexes" : 
+					[
+						1
+					],
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "mushroom",
+					"targetIndexes" : 
+					[
+						23,
+						24
+					]
+				},
+				{
+					"childIndexes" : 
+					[
+						2,
+						3,
+						4
+					],
+					"directoryIndexes" : 
+					[
+						1,
+						4,
+						5,
+						6,
+						8
+					],
+					"name" : "libKriging",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7,
+						8,
+						9,
+						10,
+						11,
+						12,
+						13,
+						14,
+						15,
+						16,
+						17,
+						18,
+						19,
+						20,
+						21,
+						22,
+						25,
+						26,
+						27,
+						28,
+						29,
+						30,
+						31,
+						32,
+						33,
+						34,
+						35,
+						37,
+						38,
+						39,
+						40,
+						41,
+						42,
+						43,
+						44,
+						46,
+						47
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						2
+					],
+					"name" : "armadillo",
+					"parentIndex" : 1,
+					"targetIndexes" : 
+					[
+						36
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						3
+					],
+					"name" : "lbfgsb_cpp",
+					"parentIndex" : 1,
+					"targetIndexes" : 
+					[
+						45
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						7
+					],
+					"name" : "Catch2",
+					"parentIndex" : 1
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 8,
+					"id" : "CacheTest::@1212c1b258519eda1d22",
+					"jsonFile" : "target-CacheTest-Release-b6f6be243119996fb3c5.json",
+					"name" : "CacheTest",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "Continuous::@0d7a627d7336209015b5",
+					"jsonFile" : "target-Continuous-Release-7332ce53c7a3d9a37da7.json",
+					"name" : "Continuous",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ContinuousBuild::@0d7a627d7336209015b5",
+					"jsonFile" : "target-ContinuousBuild-Release-e3c834336eaeedb56c01.json",
+					"name" : "ContinuousBuild",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ContinuousConfigure::@0d7a627d7336209015b5",
+					"jsonFile" : "target-ContinuousConfigure-Release-3757c36809d1607b3453.json",
+					"name" : "ContinuousConfigure",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ContinuousCoverage::@0d7a627d7336209015b5",
+					"jsonFile" : "target-ContinuousCoverage-Release-c801f924418b6188749d.json",
+					"name" : "ContinuousCoverage",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ContinuousMemCheck::@0d7a627d7336209015b5",
+					"jsonFile" : "target-ContinuousMemCheck-Release-35657c927ee0b5b963dc.json",
+					"name" : "ContinuousMemCheck",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ContinuousStart::@0d7a627d7336209015b5",
+					"jsonFile" : "target-ContinuousStart-Release-54011fe6a422a73f22d4.json",
+					"name" : "ContinuousStart",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ContinuousSubmit::@0d7a627d7336209015b5",
+					"jsonFile" : "target-ContinuousSubmit-Release-081bab6903b43d88e35d.json",
+					"name" : "ContinuousSubmit",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ContinuousTest::@0d7a627d7336209015b5",
+					"jsonFile" : "target-ContinuousTest-Release-d80cdf857e9a064c25e4.json",
+					"name" : "ContinuousTest",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ContinuousUpdate::@0d7a627d7336209015b5",
+					"jsonFile" : "target-ContinuousUpdate-Release-f35cc60d93cc9e28d6e6.json",
+					"name" : "ContinuousUpdate",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "Experimental::@0d7a627d7336209015b5",
+					"jsonFile" : "target-Experimental-Release-11cef71cb416e724252d.json",
+					"name" : "Experimental",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ExperimentalBuild::@0d7a627d7336209015b5",
+					"jsonFile" : "target-ExperimentalBuild-Release-7001e0447dbc6ae4bf98.json",
+					"name" : "ExperimentalBuild",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ExperimentalConfigure::@0d7a627d7336209015b5",
+					"jsonFile" : "target-ExperimentalConfigure-Release-8e404236656a444a5a9b.json",
+					"name" : "ExperimentalConfigure",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ExperimentalCoverage::@0d7a627d7336209015b5",
+					"jsonFile" : "target-ExperimentalCoverage-Release-1bf7aa757e3e5eb1133d.json",
+					"name" : "ExperimentalCoverage",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ExperimentalMemCheck::@0d7a627d7336209015b5",
+					"jsonFile" : "target-ExperimentalMemCheck-Release-de41958e9dc559461fe6.json",
+					"name" : "ExperimentalMemCheck",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ExperimentalStart::@0d7a627d7336209015b5",
+					"jsonFile" : "target-ExperimentalStart-Release-5f67acdad0f4a0c6bc4c.json",
+					"name" : "ExperimentalStart",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ExperimentalSubmit::@0d7a627d7336209015b5",
+					"jsonFile" : "target-ExperimentalSubmit-Release-6911f86e8f408a0c8b92.json",
+					"name" : "ExperimentalSubmit",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ExperimentalTest::@0d7a627d7336209015b5",
+					"jsonFile" : "target-ExperimentalTest-Release-53227e6196a43fa9644d.json",
+					"name" : "ExperimentalTest",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ExperimentalUpdate::@0d7a627d7336209015b5",
+					"jsonFile" : "target-ExperimentalUpdate-Release-ea51d1136984059d8806.json",
+					"name" : "ExperimentalUpdate",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 8,
+					"id" : "GetVersion::@1212c1b258519eda1d22",
+					"jsonFile" : "target-GetVersion-Release-baa3b3668328bf4df807.json",
+					"name" : "GetVersion",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 8,
+					"id" : "JsonTest::@1212c1b258519eda1d22",
+					"jsonFile" : "target-JsonTest-Release-ab9562217ac4f8389718.json",
+					"name" : "JsonTest",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 5,
+					"id" : "Kriging::@24ff03e36bdcedbd2b52",
+					"jsonFile" : "target-Kriging-Release-24d0d2056f46893e7353.json",
+					"name" : "Kriging",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 8,
+					"id" : "KrigingTest::@1212c1b258519eda1d22",
+					"jsonFile" : "target-KrigingTest-Release-c05169e1d2b493916b04.json",
+					"name" : "KrigingTest",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "Main::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Main-Release-d9235fc6010cac15c610.json",
+					"name" : "Main",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "MushroomLib::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-MushroomLib-Release-8f5c8c3ea30270e3301c.json",
+					"name" : "MushroomLib",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "Nightly::@0d7a627d7336209015b5",
+					"jsonFile" : "target-Nightly-Release-de1347e69a6d0aac7761.json",
+					"name" : "Nightly",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "NightlyBuild::@0d7a627d7336209015b5",
+					"jsonFile" : "target-NightlyBuild-Release-8ac0e076ec71551bd40c.json",
+					"name" : "NightlyBuild",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "NightlyConfigure::@0d7a627d7336209015b5",
+					"jsonFile" : "target-NightlyConfigure-Release-9ffb3f35891b71302146.json",
+					"name" : "NightlyConfigure",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "NightlyCoverage::@0d7a627d7336209015b5",
+					"jsonFile" : "target-NightlyCoverage-Release-214f19ee3f2767e8d700.json",
+					"name" : "NightlyCoverage",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "NightlyMemCheck::@0d7a627d7336209015b5",
+					"jsonFile" : "target-NightlyMemCheck-Release-6250aec29a3acc7b2d5e.json",
+					"name" : "NightlyMemCheck",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "NightlyMemoryCheck::@0d7a627d7336209015b5",
+					"jsonFile" : "target-NightlyMemoryCheck-Release-f778ae5d156e938561d5.json",
+					"name" : "NightlyMemoryCheck",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "NightlyStart::@0d7a627d7336209015b5",
+					"jsonFile" : "target-NightlyStart-Release-fe9af5d96628f8f17504.json",
+					"name" : "NightlyStart",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "NightlySubmit::@0d7a627d7336209015b5",
+					"jsonFile" : "target-NightlySubmit-Release-30289889ff218aaea233.json",
+					"name" : "NightlySubmit",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "NightlyTest::@0d7a627d7336209015b5",
+					"jsonFile" : "target-NightlyTest-Release-84387d1a8772140fc19b.json",
+					"name" : "NightlyTest",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "NightlyUpdate::@0d7a627d7336209015b5",
+					"jsonFile" : "target-NightlyUpdate-Release-d1b12f691d33c7e8189a.json",
+					"name" : "NightlyUpdate",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 8,
+					"id" : "all_test_binaries::@1212c1b258519eda1d22",
+					"jsonFile" : "target-all_test_binaries-Release-d8cf51bff765b5bf0dec.json",
+					"name" : "all_test_binaries",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "armadillo::@25245a8b3da35cee7082",
+					"jsonFile" : "target-armadillo-Release-6913a779b0c3945029c3.json",
+					"name" : "armadillo",
+					"projectIndex" : 2
+				},
+				{
+					"directoryIndex" : 8,
+					"id" : "armadillo_example::@1212c1b258519eda1d22",
+					"jsonFile" : "target-armadillo_example-Release-e52e64862daf574d14e3.json",
+					"name" : "armadillo_example",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 8,
+					"id" : "catch2_unit_test::@1212c1b258519eda1d22",
+					"jsonFile" : "target-catch2_unit_test-Release-62752133f5013421cdad.json",
+					"name" : "catch2_unit_test",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 8,
+					"id" : "class_unit_test::@1212c1b258519eda1d22",
+					"jsonFile" : "target-class_unit_test-Release-ba0e617334b157a10187.json",
+					"name" : "class_unit_test",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "coverage::@0d7a627d7336209015b5",
+					"jsonFile" : "target-coverage-Release-6d93b88205b23d9135a7.json",
+					"name" : "coverage",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "coverage-report::@0d7a627d7336209015b5",
+					"jsonFile" : "target-coverage-report-Release-a02877e4d024b043d903.json",
+					"name" : "coverage-report",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "doc::@0d7a627d7336209015b5",
+					"jsonFile" : "target-doc-Release-cb225d0c15476fb049fd.json",
+					"name" : "doc",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 8,
+					"id" : "function_unit_test::@1212c1b258519eda1d22",
+					"jsonFile" : "target-function_unit_test-Release-edc158111b2087efa515.json",
+					"name" : "function_unit_test",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "install.lib::@0d7a627d7336209015b5",
+					"jsonFile" : "target-install.lib-Release-735108e3b0c64e337c3b.json",
+					"name" : "install.lib",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 3,
+					"id" : "lbfgsb_cpp::@5bbe7c8cf1924e8ded4d",
+					"jsonFile" : "target-lbfgsb_cpp-Release-a08aa5b80eca19894d2f.json",
+					"name" : "lbfgsb_cpp",
+					"projectIndex" : 3
+				},
+				{
+					"directoryIndex" : 8,
+					"id" : "regression_unit_test::@1212c1b258519eda1d22",
+					"jsonFile" : "target-regression_unit_test-Release-8047cea86dc2e23a7dd9.json",
+					"name" : "regression_unit_test",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "run_unit_tests::@0d7a627d7336209015b5",
+					"jsonFile" : "target-run_unit_tests-Release-c413a4273481b295bc2e.json",
+					"name" : "run_unit_tests",
+					"projectIndex" : 1
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/otdel412/Desktop/AMS/Mushroom/mushroom/build/Desktop-Release",
+		"source" : "/home/otdel412/Desktop/AMS/Mushroom/mushroom"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 4
+	}
+}

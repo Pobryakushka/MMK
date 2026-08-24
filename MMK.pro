@@ -1,4 +1,4 @@
-PATH_TO_REFERENCES = $$absolute_path($$PWD/../../references)
+PATH_TO_REFERENCES = ../../references
 
 QT       += core gui quick quickwidgets qml positioning location network serialport sql printsupport core-private
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets

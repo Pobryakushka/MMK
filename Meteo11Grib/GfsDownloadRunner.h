@@ -15,6 +15,14 @@ public:
     void start(const QString &scriptPath, const QString &date,
                const QString &run, double lat, double lon);
 
+    // Единый формат координаты (4 знака после запятой) для точки —
+    // используется и здесь при формировании аргумента --point, и в
+    // GribMeteo11Pipeline::pointDataDir() при вычислении пути каталога,
+    // куда grib.sh реально положит скачанный файл. Важно, чтобы оба
+    // места форматировали координату одинаково, иначе Mushroom будет
+    // запущен не на том каталоге, куда скрипт что-то скачал.
+    static QString formatCoord(double value);
+
 signals:
     void logLine(const QString &line);
     void finished(bool success, int exitCode);

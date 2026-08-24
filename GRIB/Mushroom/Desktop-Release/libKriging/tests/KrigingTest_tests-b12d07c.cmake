@@ -1,0 +1,5 @@
+add_test( workflow /home/otdel412/Desktop/AMS/Mushroom/mushroom/build/Desktop-Release/libKriging/tests/KrigingTest workflow  )
+set_tests_properties( workflow PROPERTIES WORKING_DIRECTORY /home/otdel412/Desktop/AMS/Mushroom/mushroom/build/Desktop-Release/libKriging/tests)
+add_test( [==[save & reload]==] /home/otdel412/Desktop/AMS/Mushroom/mushroom/build/Desktop-Release/libKriging/tests/KrigingTest [==[save & reload]==]  )
+set_tests_properties( [==[save & reload]==] PROPERTIES WORKING_DIRECTORY /home/otdel412/Desktop/AMS/Mushroom/mushroom/build/Desktop-Release/libKriging/tests)
+set( KrigingTest_TESTS workflow [==[save & reload]==])

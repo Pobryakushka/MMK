@@ -58,8 +58,14 @@ private:
     double m_lat = 0.0;
     double m_lon = 0.0;
     QString m_date;
+    QString m_runCycle;
     SurfaceWind m_surfaceWind;
 
     void onDownloadFinished(bool success, int exitCode);
     void onMushroomFinished(bool success, const QVector<MushroomMessage> &messages);
+
+    // Каталог, куда grib.sh реально кладёт скачанный файл для текущего
+    // запроса (m_date/m_runCycle/m_lat/m_lon) — см. FILES_DIR в
+    // grib.sh (--point ветка). Должен совпадать с ним посимвольно.
+    QString pointDataDir() const;
 };
