@@ -346,6 +346,7 @@ void GroundMeteoParams::deleteDataFromTable()
 
     // Сбрасываем dirty (после очистки правок "нет")
     m_dirty = false;
+    m_lastUpdateWasManual = false;
 
     // Снимаем подсветку "поле не заполнено" со всех строк
     for (int row = 0; row < rowCount; ++row)
@@ -432,6 +433,11 @@ void GroundMeteoParams::applyManualInput()
 
     // Кнопка "Применить" нажата → правки считаются применёнными
     m_dirty = false;
+
+    // Это был РУЧНОЙ ввод (кнопка "Применить"), а не приём от ИВС — see
+    // lastUpdateWasManual(). MainWindow использует это для жёлтой подсветки
+    // плашки "ИВС".
+    m_lastUpdateWasManual = true;
 
     // Перезапускаем таймер 30 мин — данные свежие
     restartStaleTimer();
@@ -612,6 +618,10 @@ void GroundMeteoParams::onDataReceived(const QByteArray& data)
 void GroundMeteoParams::updateTableWithData(const QMap<QString, double>& values)
 {
     qDebug() << "updateTableWithData called with" << values.size() << "values";
+
+    // Данные пришли от ИВС, а не введены вручную — снимаем возможную
+    // жёлтую подсветку "ручной ввод" на плашке ИВС.
+    m_lastUpdateWasManual = false;
 
     // Программная запись — не помечаем как ручную правку
     m_suppressDirty = true;

@@ -20,9 +20,8 @@
    <string>Метео-11 — ввод бюллетеня от метеостанции</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">background-color: #EFF1F1;
-QLineEdit[invalid="true"] { border: 1.5px solid #C62828; background-color: #FFF5F5; }
-QPlainTextEdit[invalid="true"] { border: 1.5px solid #C62828; background-color: #FFF5F5; }</string>
+   <string notr="true">background-color: #FFFFFF;
+QLineEdit[invalid="true"] { border: 1.5px solid #C62828; background-color: #FFF5F5; }</string>
   </property>
   <layout class="QVBoxLayout" name="met11MainVLayout">
    <property name="spacing">
@@ -42,6 +41,18 @@ QPlainTextEdit[invalid="true"] { border: 1.5px solid #C62828; background-color: 
    </property>
    <item>
     <layout class="QHBoxLayout" name="met11HeaderLayout">
+     <property name="leftMargin">
+      <number>24</number>
+     </property>
+     <property name="topMargin">
+      <number>14</number>
+     </property>
+     <property name="rightMargin">
+      <number>24</number>
+     </property>
+     <property name="bottomMargin">
+      <number>8</number>
+     </property>
      <item>
       <widget class="QPushButton" name="btnMet11Back">
        <property name="minimumSize">
@@ -82,35 +93,16 @@ QPushButton:pressed { color: #0B5A42; }</string>
        </property>
       </spacer>
      </item>
-    </layout>
-   </item>
-   <item>
-    <layout class="QVBoxLayout" name="met11ContentLayout">
-     <property name="spacing">
-      <number>12</number>
-     </property>
-     <property name="leftMargin">
-      <number>40</number>
-     </property>
-     <property name="topMargin">
-      <number>12</number>
-     </property>
-     <property name="rightMargin">
-      <number>40</number>
-     </property>
-     <property name="bottomMargin">
-      <number>20</number>
-     </property>
      <item>
       <widget class="QLabel" name="lblMet11StatusPill">
        <property name="minimumSize">
         <size>
          <width>0</width>
-         <height>34</height>
+         <height>28</height>
         </size>
        </property>
        <property name="styleSheet">
-        <string notr="true">padding: 6px 18px; border-radius: 17px; font-weight: bold; background-color: #FFEBEE; color: #C62828;</string>
+        <string notr="true">padding: 4px 14px; border-radius: 13px; font-weight: bold; font-size: 9pt; background-color: #FFEBEE; color: #C62828;</string>
        </property>
        <property name="text">
         <string>● БЮЛЛЕТЕНЬ НЕ ЗАГРУЖЕН</string>
@@ -120,6 +112,25 @@ QPushButton:pressed { color: #0B5A42; }</string>
        </property>
       </widget>
      </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QVBoxLayout" name="met11ContentLayout">
+     <property name="spacing">
+      <number>8</number>
+     </property>
+     <property name="leftMargin">
+      <number>32</number>
+     </property>
+     <property name="topMargin">
+      <number>8</number>
+     </property>
+     <property name="rightMargin">
+      <number>32</number>
+     </property>
+     <property name="bottomMargin">
+      <number>12</number>
+     </property>
      <item>
       <widget class="QGroupBox" name="grpRawString">
        <property name="styleSheet">
@@ -130,33 +141,14 @@ QPushButton:pressed { color: #0B5A42; }</string>
        </property>
        <layout class="QVBoxLayout" name="rawVLayout">
         <property name="spacing">
-         <number>6</number>
+         <number>4</number>
         </property>
         <item>
-         <widget class="QLabel" name="lblRawBulletinError">
-          <property name="visible">
-           <bool>false</bool>
-          </property>
-          <property name="styleSheet">
-           <string notr="true">color: #C62828; font-weight: bold; font-size: 9pt; padding: 2px 2px 0 2px;</string>
-          </property>
-          <property name="text">
-           <string>Строка не заполнена — вставьте бюллетень перед разбором</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPlainTextEdit" name="plainEdit_rawBulletin">
+         <widget class="QLineEdit" name="lineEdit_rawBulletin">
           <property name="minimumSize">
            <size>
             <width>0</width>
-            <height>60</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>16777215</width>
-            <height>80</height>
+            <height>36</height>
            </size>
           </property>
           <property name="placeholderText">
@@ -165,11 +157,33 @@ QPushButton:pressed { color: #0B5A42; }</string>
          </widget>
         </item>
         <item>
+         <widget class="QLabel" name="lblRawBulletinHint">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>14</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>14</height>
+           </size>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">color: #C62828; font-weight: bold; font-size: 8pt;</string>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QPushButton" name="btnMet11Parse">
           <property name="minimumSize">
            <size>
             <width>0</width>
-            <height>40</height>
+            <height>38</height>
            </size>
           </property>
           <property name="styleSheet">
@@ -195,13 +209,13 @@ QPushButton:pressed { color: #0B5A42; }</string>
         <widget class="QGroupBox" name="grpHeader">
          <property name="minimumSize">
           <size>
-           <width>320</width>
+           <width>420</width>
            <height>0</height>
           </size>
          </property>
          <property name="maximumSize">
           <size>
-           <width>360</width>
+           <width>480</width>
            <height>16777215</height>
           </size>
          </property>
@@ -213,7 +227,7 @@ QPushButton:pressed { color: #0B5A42; }</string>
          </property>
          <layout class="QFormLayout" name="formHeader">
           <property name="verticalSpacing">
-           <number>10</number>
+           <number>6</number>
           </property>
           <property name="leftMargin">
            <number>10</number>
@@ -244,7 +258,7 @@ QPushButton:pressed { color: #0B5A42; }</string>
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>32</height>
+                <height>28</height>
                </size>
               </property>
               <property name="maxLength">
@@ -260,6 +274,18 @@ QPushButton:pressed { color: #0B5A42; }</string>
             </item>
             <item>
              <widget class="QLabel" name="lblStationNumHint">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>14</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>14</height>
+               </size>
+              </property>
               <property name="styleSheet">
                <string notr="true">color: #C62828; font-weight: bold; font-size: 8pt;</string>
               </property>
@@ -287,7 +313,7 @@ QPushButton:pressed { color: #0B5A42; }</string>
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>32</height>
+                <height>28</height>
                </size>
               </property>
               <property name="maxLength">
@@ -300,6 +326,18 @@ QPushButton:pressed { color: #0B5A42; }</string>
             </item>
             <item>
              <widget class="QLabel" name="lblDateTimeHint">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>14</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>14</height>
+               </size>
+              </property>
               <property name="styleSheet">
                <string notr="true">color: #C62828; font-weight: bold; font-size: 8pt;</string>
               </property>
@@ -327,7 +365,7 @@ QPushButton:pressed { color: #0B5A42; }</string>
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>32</height>
+                <height>28</height>
                </size>
               </property>
               <property name="placeholderText">
@@ -337,6 +375,18 @@ QPushButton:pressed { color: #0B5A42; }</string>
             </item>
             <item>
              <widget class="QLabel" name="lblStationHeightHint">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>14</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>14</height>
+               </size>
+              </property>
               <property name="styleSheet">
                <string notr="true">color: #C62828; font-weight: bold; font-size: 8pt;</string>
               </property>
@@ -367,7 +417,7 @@ QPushButton:pressed { color: #0B5A42; }</string>
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>32</height>
+                <height>28</height>
                </size>
               </property>
               <property name="placeholderText">
@@ -377,6 +427,18 @@ QPushButton:pressed { color: #0B5A42; }</string>
             </item>
             <item>
              <widget class="QLabel" name="lblPresDevHint">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>14</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>14</height>
+               </size>
+              </property>
               <property name="styleSheet">
                <string notr="true">color: #C62828; font-weight: bold; font-size: 8pt;</string>
               </property>
@@ -407,7 +469,7 @@ QPushButton:pressed { color: #0B5A42; }</string>
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>32</height>
+                <height>28</height>
                </size>
               </property>
               <property name="placeholderText">
@@ -417,6 +479,18 @@ QPushButton:pressed { color: #0B5A42; }</string>
             </item>
             <item>
              <widget class="QLabel" name="lblTempDevHint">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>14</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>14</height>
+               </size>
+              </property>
               <property name="styleSheet">
                <string notr="true">color: #C62828; font-weight: bold; font-size: 8pt;</string>
               </property>
@@ -479,6 +553,21 @@ QPushButton:pressed { color: #0B5A42; }</string>
           </property>
           <item>
            <widget class="QTableWidget" name="tableWidget_meteo11">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>200</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>320</height>
+             </size>
+            </property>
+            <property name="verticalScrollBarPolicy">
+             <enum>Qt::ScrollBarAsNeeded</enum>
+            </property>
             <property name="styleSheet">
              <string notr="true">QTableWidget { border: 1px solid #DDE1E3; border-radius: 6px; }</string>
             </property>
@@ -588,7 +677,7 @@ QPushButton:pressed { color: #0B5A42; }</string>
             </row>
             <column>
              <property name="text">
-              <string/>
+              <string>ПП</string>
              </property>
              <property name="toolTip">
               <string>ПП — поправка за плотность воздуха</string>
@@ -601,10 +690,7 @@ QPushButton:pressed { color: #0B5A42; }</string>
             </column>
             <column>
              <property name="text">
-              <string/>
-             </property>
-             <property name="toolTip">
-              <string>СС — скорость, м/с</string>
+              <string>СС (м/с)</string>
              </property>
             </column>
            </widget>

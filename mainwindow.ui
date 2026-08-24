@@ -1220,23 +1220,109 @@ QPushButton:pressed {
       </widget>
       <widget class="QWidget" name="page_position">
        <property name="styleSheet">
-        <string notr="true">background-color: #F5F5F5;</string>
+        <string notr="true">QWidget#page_position { background-color: #EFF1F1; }
+QFrame#gnssPositionCard, QFrame#binsOrientationCard {
+    background-color: #FFFFFF;
+    border: 1px solid #DDE1E3;
+    border-radius: 14px;
+}
+QLabel#lblGnssCardTitle, QLabel#lblBinsCardTitle {
+    font-size: 11pt;
+    font-weight: bold;
+    color: #1C1F22;
+    background: transparent;
+    border: none;
+}
+QLabel.fieldLabel {
+    color: #6B7278;
+    font-size: 9pt;
+    background: transparent;
+    border: none;
+}
+QLineEdit#editLatitude, QLineEdit#editLongitude, QLineEdit#editAltitude,
+QLineEdit#editDirectionAngle, QLineEdit#editRollAngle, QLineEdit#editPitchAngle {
+    background-color: #F5F6F6;
+    border: 1px solid #DDE1E3;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 11pt;
+    font-weight: 600;
+    color: #1C1F22;
+}
+QLineEdit#editLatitude:disabled, QLineEdit#editLongitude:disabled, QLineEdit#editAltitude:disabled,
+QLineEdit#editDirectionAngle:disabled, QLineEdit#editRollAngle:disabled, QLineEdit#editPitchAngle:disabled {
+    color: #9AA0A3;
+}
+QLabel#lblLatitudeType, QLabel#lblLongitudeType {
+    color: #6B7278;
+    font-size: 9pt;
+    background: transparent;
+    border: none;
+}
+QPushButton#btnMapCoordinates {
+    background-color: #FFFFFF;
+    color: #1C1F22;
+    border: 1px solid #DDE1E3;
+    border-radius: 8px;
+    font-size: 9pt;
+    font-weight: 700;
+    padding: 6px 12px;
+}
+QPushButton#btnMapCoordinates:checked {
+    background-color: #0F6B4F;
+    color: #FFFFFF;
+    border: 1px solid #0F6B4F;
+}
+QCheckBox#checkboxGnss {
+    background-color: #FFFFFF;
+    color: #1C1F22;
+    border: 1px solid #DDE1E3;
+    border-radius: 8px;
+    font-size: 9pt;
+    font-weight: 700;
+    padding: 6px 12px;
+}
+QCheckBox#checkboxGnss::indicator { width: 0px; height: 0px; }
+QCheckBox#checkboxGnss:checked {
+    background-color: #0F6B4F;
+    color: #FFFFFF;
+    border: 1px solid #0F6B4F;
+}
+QPushButton#btnManualInput {
+    background-color: #0F6B4F;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 10px;
+    font-size: 10pt;
+    font-weight: 700;
+    padding: 10px 22px;
+}
+QPushButton#btnManualInput:pressed { background-color: #0B5A41; }
+QLineEdit#editDateTime {
+    background-color: #F5F6F6;
+    border: 1px solid #DDE1E3;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 10pt;
+    font-weight: 700;
+    color: #1C1F22;
+}</string>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout">
         <property name="spacing">
-         <number>6</number>
+         <number>12</number>
         </property>
         <property name="leftMargin">
-         <number>8</number>
+         <number>16</number>
         </property>
         <property name="topMargin">
-         <number>8</number>
+         <number>10</number>
         </property>
         <property name="rightMargin">
-         <number>8</number>
+         <number>16</number>
         </property>
         <property name="bottomMargin">
-         <number>8</number>
+         <number>14</number>
         </property>
         <item>
          <layout class="QHBoxLayout" name="positionHeaderLayout">
@@ -1260,7 +1346,7 @@ QPushButton:pressed { color: #0B5A42; }</string>
           <item>
            <widget class="QLabel" name="lblPositionPageTitle">
             <property name="styleSheet">
-             <string notr="true">font-size: 15pt; font-weight: bold; padding-left: 8px;</string>
+             <string notr="true">font-size: 15pt; font-weight: bold; padding-left: 8px; background: transparent; border: none;</string>
             </property>
             <property name="text">
              <string>Положение метеокомплекса</string>
@@ -1280,77 +1366,242 @@ QPushButton:pressed { color: #0B5A42; }</string>
             </property>
            </spacer>
           </item>
+          <item>
+           <widget class="QLineEdit" name="editDateTime">
+            <property name="minimumSize">
+             <size>
+              <width>190</width>
+              <height>34</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>190</width>
+              <height>34</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>01.01.2024 00:00:00</string>
+            </property>
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btnSyncTime">
+            <property name="minimumSize">
+             <size>
+              <width>34</width>
+              <height>34</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>34</width>
+              <height>34</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>Синхронизировать с системным временем</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">QPushButton {
+    background-color: white;
+    border: 1px solid #DDE1E3;
+    border-radius: 8px;
+    font-size: 10pt;
+}
+QPushButton:hover {
+    background-color: #F0F0F0;
+}</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="Resources.qrc">
+              <normaloff>:/icons/clock_manual_time.svg</normaloff>:/icons/clock_manual_time.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>18</width>
+              <height>18</height>
+             </size>
+            </property>
+           </widget>
+          </item>
          </layout>
         </item>
         <item>
-         <widget class="QScrollArea" name="leftScrollArea">
-          <property name="frameShape">
-           <enum>QFrame::NoFrame</enum>
+         <layout class="QHBoxLayout" name="positionCardsRow">
+          <property name="spacing">
+           <number>16</number>
           </property>
-          <property name="verticalScrollBarPolicy">
-           <enum>Qt::ScrollBarAsNeeded</enum>
-          </property>
-          <property name="horizontalScrollBarPolicy">
-           <enum>Qt::ScrollBarAlwaysOff</enum>
-          </property>
-          <property name="widgetResizable">
-           <bool>true</bool>
-          </property>
-          <widget class="QWidget" name="leftScrollContents">
-           <property name="geometry">
-            <rect>
-             <x>0</x>
-             <y>0</y>
-             <width>154</width>
-             <height>264</height>
-            </rect>
-           </property>
-           <layout class="QVBoxLayout" name="verticalLayout_scroll">
-            <property name="spacing">
-             <number>6</number>
+          <item>
+           <widget class="QFrame" name="gnssPositionCard">
+            <property name="frameShape">
+             <enum>QFrame::NoFrame</enum>
             </property>
-            <property name="leftMargin">
-             <number>0</number>
-            </property>
-            <property name="topMargin">
-             <number>0</number>
-            </property>
-            <property name="rightMargin">
-             <number>0</number>
-            </property>
-            <property name="bottomMargin">
-             <number>0</number>
-            </property>
-            <item>
-             <widget class="QGroupBox" name="meteoGroup">
-              <property name="autoFillBackground">
-               <bool>false</bool>
-              </property>
-              <property name="title">
-               <string>Положение метеокомплекса</string>
-              </property>
-              <layout class="QGridLayout" name="gridLayout">
-               <property name="spacing">
-                <number>5</number>
+            <layout class="QVBoxLayout" name="gnssCardLayout">
+             <property name="spacing">
+              <number>10</number>
+             </property>
+             <property name="leftMargin">
+              <number>16</number>
+             </property>
+             <property name="topMargin">
+              <number>14</number>
+             </property>
+             <property name="rightMargin">
+              <number>16</number>
+             </property>
+             <property name="bottomMargin">
+              <number>14</number>
+             </property>
+             <item>
+              <widget class="QLabel" name="lblGnssCardTitle">
+               <property name="text">
+                <string>Положение (ГНСС)</string>
                </property>
-               <item row="4" column="1">
-                <widget class="QLineEdit" name="editDirectionAngle">
+              </widget>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="gnssSourceChipsRow">
+               <property name="spacing">
+                <number>6</number>
+               </property>
+               <item>
+                <widget class="QPushButton" name="btnMapCoordinates">
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>34</height>
+                  </size>
+                 </property>
+                 <property name="toolTip">
+                  <string>Использовать координаты с карты</string>
+                 </property>
                  <property name="text">
-                  <string>0.0</string>
+                  <string>Карта</string>
+                 </property>
+                 <property name="checkable">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="checkboxGnss">
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>34</height>
+                  </size>
+                 </property>
+                 <property name="text">
+                  <string>ГНСС-датчик</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="gnssChipsSpacer">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="latRow">
+               <item>
+                <widget class="QLabel" name="lblLatitudeLabel">
+                 <property name="minimumSize">
+                  <size>
+                   <width>110</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                 <property name="text">
+                  <string>Широта, град</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLineEdit" name="editLatitude">
+                 <property name="text">
+                  <string>55.7558</string>
                  </property>
                  <property name="placeholderText">
-                  <string>градусы</string>
+                  <string>Введите широту</string>
                  </property>
                 </widget>
                </item>
-               <item row="2" column="0">
-                <widget class="QLabel" name="lblLongitudeLabel">
+               <item>
+                <widget class="QLabel" name="lblLatitudeType">
                  <property name="text">
-                  <string>Долгота:</string>
+                  <string>СШ</string>
                  </property>
                 </widget>
                </item>
-               <item row="3" column="1">
+              </layout>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="lonRow">
+               <item>
+                <widget class="QLabel" name="lblLongitudeLabel">
+                 <property name="minimumSize">
+                  <size>
+                   <width>110</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                 <property name="text">
+                  <string>Долгота, град</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLineEdit" name="editLongitude">
+                 <property name="text">
+                  <string>37.6173</string>
+                 </property>
+                 <property name="placeholderText">
+                  <string>Введите долготу</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLabel" name="lblLongitudeType">
+                 <property name="text">
+                  <string>ВД</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="altRow">
+               <item>
+                <widget class="QLabel" name="lblAltitudeLabel">
+                 <property name="minimumSize">
+                  <size>
+                   <width>110</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                 <property name="text">
+                  <string>Высота над УМ, м</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QLineEdit" name="editAltitude">
                  <property name="text">
                   <string>156</string>
@@ -1360,138 +1611,95 @@ QPushButton:pressed { color: #0B5A42; }</string>
                  </property>
                 </widget>
                </item>
-               <item row="2" column="1">
-                <layout class="QHBoxLayout" name="longitudeLayout">
-                 <property name="spacing">
-                  <number>4</number>
-                 </property>
-                 <item>
-                  <widget class="QLineEdit" name="editLongitude">
-                   <property name="text">
-                    <string>37.6173</string>
-                   </property>
-                   <property name="placeholderText">
-                    <string>Введите долготу</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QLabel" name="lblLongitudeType">
-                   <property name="styleSheet">
-                    <string notr="true">color: #666; font-size: 9pt;</string>
-                   </property>
-                   <property name="text">
-                    <string>ВД</string>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </item>
-               <item row="1" column="0">
-                <widget class="QLabel" name="lblLatitudeLabel">
-                 <property name="text">
-                  <string>Широта:</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="4" column="0">
+              </layout>
+             </item>
+             <item>
+              <spacer name="gnssCardBottomSpacer">
+               <property name="orientation">
+                <enum>Qt::Vertical</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>20</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QFrame" name="binsOrientationCard">
+            <property name="frameShape">
+             <enum>QFrame::NoFrame</enum>
+            </property>
+            <layout class="QVBoxLayout" name="binsCardLayout">
+             <property name="spacing">
+              <number>10</number>
+             </property>
+             <property name="leftMargin">
+              <number>16</number>
+             </property>
+             <property name="topMargin">
+              <number>14</number>
+             </property>
+             <property name="rightMargin">
+              <number>16</number>
+             </property>
+             <property name="bottomMargin">
+              <number>14</number>
+             </property>
+             <item>
+              <widget class="QLabel" name="lblBinsCardTitle">
+               <property name="text">
+                <string>Ориентация (БИНС)</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="dirRow">
+               <item>
                 <widget class="QLabel" name="lblDirectionAngleLabel">
-                 <property name="text">
-                  <string>Дирекц. угол:</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="6" column="0">
-                <widget class="QLabel" name="lblPitchAngleLabel">
-                 <property name="text">
-                  <string>Угол тангажа:</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="5" column="0">
-                <widget class="QLabel" name="lblRollAngleLabel">
-                 <property name="text">
-                  <string>Угол крена:</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="7" column="0" colspan="2">
-                <widget class="QPushButton" name="btnManualInput">
                  <property name="minimumSize">
                   <size>
-                   <width>0</width>
-                   <height>26</height>
+                   <width>150</width>
+                   <height>0</height>
                   </size>
                  </property>
                  <property name="text">
-                  <string>Ввести вручную</string>
+                  <string>Дирекционный угол, град</string>
                  </property>
                 </widget>
                </item>
-               <item row="0" column="0" colspan="2">
-                <layout class="QHBoxLayout" name="dateTimeLayout">
-                 <property name="spacing">
-                  <number>5</number>
+               <item>
+                <widget class="QLineEdit" name="editDirectionAngle">
+                 <property name="text">
+                  <string>0.0</string>
                  </property>
-                 <item>
-                  <widget class="QLineEdit" name="editDateTime">
-                   <property name="styleSheet">
-                    <string notr="true">font-weight: bold; font-size: 11pt;</string>
-                   </property>
-                   <property name="text">
-                    <string>01.01.2024 00:00:00</string>
-                   </property>
-                   <property name="readOnly">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="btnSyncTime">
-                   <property name="minimumSize">
-                    <size>
-                     <width>30</width>
-                     <height>25</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>30</width>
-                     <height>25</height>
-                    </size>
-                   </property>
-                   <property name="toolTip">
-                    <string>Синхронизировать с системным временем</string>
-                   </property>
-                   <property name="styleSheet">
-                    <string notr="true">QPushButton {
-                  background-color: white;
-                  border: 1px solid gray;
-                  border-radius: 3px;
-                  font-size: 10pt;
-              }
-              QPushButton:hover {
-                  background-color: #e0e0e0;
-              }</string>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="icon">
-                    <iconset resource="Resources.qrc">
-                     <normaloff>:/icons/clock_manual_time.svg</normaloff>:/icons/clock_manual_time.svg</iconset>
-                   </property>
-                   <property name="iconSize">
-                    <size>
-                     <width>18</width>
-                     <height>18</height>
-                    </size>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
+                 <property name="placeholderText">
+                  <string>градусы</string>
+                 </property>
+                </widget>
                </item>
-               <item row="5" column="1">
+              </layout>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="rollRow">
+               <item>
+                <widget class="QLabel" name="lblRollAngleLabel">
+                 <property name="minimumSize">
+                  <size>
+                   <width>150</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                 <property name="text">
+                  <string>Крен, град</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QLineEdit" name="editRollAngle">
                  <property name="text">
                   <string>0.0</string>
@@ -1501,14 +1709,24 @@ QPushButton:pressed { color: #0B5A42; }</string>
                  </property>
                 </widget>
                </item>
-               <item row="3" column="0">
-                <widget class="QLabel" name="lblAltitudeLabel">
+              </layout>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="pitchRow">
+               <item>
+                <widget class="QLabel" name="lblPitchAngleLabel">
+                 <property name="minimumSize">
+                  <size>
+                   <width>150</width>
+                   <height>0</height>
+                  </size>
+                 </property>
                  <property name="text">
-                  <string>Высота над УМ:</string>
+                  <string>Тангаж, град</string>
                  </property>
                 </widget>
                </item>
-               <item row="6" column="1">
+               <item>
                 <widget class="QLineEdit" name="editPitchAngle">
                  <property name="text">
                   <string>0.0</string>
@@ -1518,62 +1736,65 @@ QPushButton:pressed { color: #0B5A42; }</string>
                  </property>
                 </widget>
                </item>
-               <item row="1" column="1">
-                <layout class="QHBoxLayout" name="latitudeLayout">
-                 <property name="spacing">
-                  <number>4</number>
-                 </property>
-                 <item>
-                  <widget class="QLineEdit" name="editLatitude">
-                   <property name="text">
-                    <string>55.7558</string>
-                   </property>
-                   <property name="placeholderText">
-                    <string>Введите широту</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QLabel" name="lblLatitudeType">
-                   <property name="styleSheet">
-                    <string notr="true">color: #666; font-size: 9pt;</string>
-                   </property>
-                   <property name="text">
-                    <string>СШ</string>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </item>
-               <item row="8" column="0" colspan="2">
-                <widget class="QPushButton" name="btnNavigation">
-                 <property name="visible">
-                  <bool>false</bool>
-                 </property>
-                 <property name="text">
-                  <string>Навигация</string>
-                 </property>
-                </widget>
-               </item>
               </layout>
-             </widget>
-            </item>
-            <item>
-             <spacer name="leftBottomSpacer">
-              <property name="orientation">
-               <enum>Qt::Vertical</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>20</width>
-                <height>40</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
-           </layout>
-          </widget>
-         </widget>
+             </item>
+             <item>
+              <spacer name="binsCardBottomSpacer">
+               <property name="orientation">
+                <enum>Qt::Vertical</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>20</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="positionFooterRow">
+          <item>
+           <widget class="QPushButton" name="btnNavigation">
+            <property name="visible">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Навигация</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="positionFooterSpacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btnManualInput">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>40</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Ручной ввод</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
        </layout>
       </widget>
@@ -1679,84 +1900,6 @@ QPushButton:pressed { color: #0B5A42; }</string>
             </widget>
            </item>
           </layout>
-          <widget class="QPushButton" name="btnMapCoordinates">
-           <property name="geometry">
-            <rect>
-             <x>1064</x>
-             <y>14</y>
-             <width>40</width>
-             <height>40</height>
-            </rect>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>40</width>
-             <height>40</height>
-            </size>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>40</width>
-             <height>40</height>
-            </size>
-           </property>
-           <property name="toolTip">
-            <string>Использовать координаты с карты</string>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">QPushButton {
-    background-color: rgba(255,255,255,235);
-    border: none;
-    border-radius: 12px;
-}
-QPushButton:hover {
-    background-color: #f0f0f0;
-}
-QPushButton:checked {
-    background-color: #4CAF50;
-    border: 2px solid #2E7D32;
-}</string>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-           <property name="checkable">
-            <bool>true</bool>
-           </property>
-          </widget>
-          <widget class="QCheckBox" name="checkboxGnss">
-           <property name="geometry">
-            <rect>
-             <x>1112</x>
-             <y>14</y>
-             <width>104</width>
-             <height>40</height>
-            </rect>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>40</height>
-            </size>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">QCheckBox {
-    background-color: rgba(255,255,255,235);
-    padding: 4px 12px;
-    border: none;
-    border-radius: 12px;
-    font-size: 9pt;
-    font-weight: 600;
-}
-QCheckBox:checked {
-    background-color: #E8F5E9;
-    color: #2E7D32;
-}</string>
-           </property>
-           <property name="text">
-            <string>GNSS</string>
-           </property>
-          </widget>
           <widget class="QComboBox" name="comboBox_mapTypes">
            <property name="geometry">
             <rect>

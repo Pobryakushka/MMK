@@ -81,7 +81,7 @@ private:
     void setFieldInvalid(QLineEdit *edit, QLabel *hint, bool invalid,
                           const QString &fieldLabel = QString());
     void shakeWidget(QWidget *w);                         // короткая анимация "встряски"
-    void setRawBulletinInvalid(bool invalid);              // рамка+подпись над строкой бюллетеня
+    void setupVirtualKeyboard();                          // привязка экранной клавиатуры к полям
 
     Ui::Meteo11 *ui;
 

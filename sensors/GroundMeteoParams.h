@@ -92,6 +92,13 @@ public:
     // ── Состояние приземных данных (единая точка правды) ────────────────────
     SurfaceState surfaceState() const { return m_surfaceState; }
 
+    // Текущие приземные данные пришли от ручного применения (кнопка
+    // "Применить" с правками оператора), а не от последнего опроса ИВС.
+    // Используется MainWindow для жёлтой подсветки плашки "ИВС" (см.
+    // updateIwsStatusLabel()). Сбрасывается в false при следующем успешном
+    // приёме данных от датчика (onDataReceived/updateTableWithData).
+    bool lastUpdateWasManual() const { return m_lastUpdateWasManual; }
+
     // Есть ли в таблице правки, которые ещё не применены кнопкой "Применить".
     // Используется в closeEvent для подтверждающего диалога.
     bool hasUnappliedChanges() const { return m_dirty; }
@@ -141,6 +148,10 @@ private:
     bool m_hasTemperature = false;
 
     SurfaceState m_surfaceState = NoData;
+
+    // См. lastUpdateWasManual(). true сразу после успешного applyManualInput(),
+    // false сразу после успешного updateTableWithData() (данные от IWS).
+    bool m_lastUpdateWasManual = false;
 
     QTimer *m_staleTimer = nullptr;   // singleShot на 30 мин
 

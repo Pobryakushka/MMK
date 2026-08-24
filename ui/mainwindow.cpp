@@ -507,6 +507,30 @@ double MainWindow::getCoordField(QLineEdit *edit, bool &ok) const
     return ok ? degrees : 0.0;
 }
 
+// ── Готовность положения (ГНСС) / ориентации (БИНС) ─────────────────────
+// "Есть данные" = все нужные поля непустые и парсятся. Источник (датчик /
+// карта / вручную) для самого факта готовности не важен — важен только для
+// подсветки (см. m_gnssManualHighlight/m_binsManualHighlight ниже).
+bool MainWindow::hasPositionData() const
+{
+    bool ok1 = false, ok2 = false;
+    getCoordField(ui->editLatitude, ok1);
+    getCoordField(ui->editLongitude, ok2);
+    const bool altOk = !ui->editAltitude->text().trimmed().isEmpty();
+    return ok1 && ok2 && altOk;
+}
+
+bool MainWindow::hasOrientationData() const
+{
+    bool ok = false;
+    ui->editDirectionAngle->text().toDouble(&ok);
+    if (!ok) return false;
+    ui->editRollAngle->text().toDouble(&ok);
+    if (!ok) return false;
+    ui->editPitchAngle->text().toDouble(&ok);
+    return ok;
+}
+
 void MainWindow::onCoordTextEdited(QLineEdit *edit)
 {
     if (!edit) return;
@@ -657,30 +681,35 @@ void MainWindow::updateMapCoordinatesButtonStyle()
 {
     QIcon markerIcon(":/dat/images/marker.png");
     ui->btnMapCoordinates->setIcon(markerIcon);
-    ui->btnMapCoordinates->setIconSize(QSize(20, 20));
+    ui->btnMapCoordinates->setIconSize(QSize(16, 16));
 
+    // Кнопка теперь живёт в карточке "Положение (ГНСС)" как плоский чип
+    // (см. QSS страницы page_position в .ui) — стиль ниже дублирует ту же
+    // палитру напрямую, т.к. checked-состояние выставляется программно
+    // чуть ниже и должно быть видно сразу, без ожидания re-polish.
     if (m_mapCoordinatesEnabled) {
         ui->btnMapCoordinates->setStyleSheet(
             "QPushButton {"
-            "   background-color: #4CAF50;"
-            "   border: 3px solid #2E7D32;"
-            "   border-radius: 12px;"
-            "}"
-            "QPushButton:hover {"
-            "   background-color: #45a049;"
-            "   border: 3px solid #1B5E20;"
+            "   background-color: #0F6B4F;"
+            "   color: #FFFFFF;"
+            "   border: 1px solid #0F6B4F;"
+            "   border-radius: 8px;"
+            "   font-size: 9pt;"
+            "   font-weight: 700;"
+            "   padding: 6px 12px;"
             "}"
             );
         ui->btnMapCoordinates->setToolTip("Режим координат с карты активен (нажмите для отключения)");
     } else {
         ui->btnMapCoordinates->setStyleSheet(
             "QPushButton {"
-            "   background-color: rgba(255,255,255,235);"
-            "   border: none;"
-            "   border-radius: 12px;"
-            "}"
-            "QPushButton:hover {"
-            "   background-color: #f0f0f0;"
+            "   background-color: #FFFFFF;"
+            "   color: #1C1F22;"
+            "   border: 1px solid #DDE1E3;"
+            "   border-radius: 8px;"
+            "   font-size: 9pt;"
+            "   font-weight: 700;"
+            "   padding: 6px 12px;"
             "}"
             );
         ui->btnMapCoordinates->setToolTip("Использовать координаты с карты (нажмите для включения)");
@@ -797,6 +826,14 @@ void MainWindow::onGnssDataReceived(const GNSSData &data)
     setCoordField(ui->editLongitude, data.longitude);
     ui->editAltitude->setText(QString::number(data.altitude, 'f', 2));
 
+    // Свежие данные с датчика перекрыли то, что могло быть введено
+    // вручную ранее — жёлтая подсветка ГНСС больше не актуальна.
+    if (m_gnssManualHighlight) {
+        m_gnssManualHighlight = false;
+        updateGnssStatusLabel(true);
+    }
+    updateOverallReadiness();
+
     // Передаем сигнал другим окнам
     emit coordinatesUpdatedFromMap(data.latitude, data.longitude);
 
@@ -821,14 +858,9 @@ void MainWindow::onGnssConnected()
     qDebug() << "GNSS приемник подключен";
     m_gnssLastError.clear();
     m_gnssLastDataAt = QDateTime::currentDateTime();
-    ui->checkboxGnss->setStyleSheet(
-        "QCheckBox {"
-        "   background-color: #E8F5E9;"
-        "   padding: 5px 10px;"
-        "   border: 2px solid #4CAF50;"
-        "   border-radius: 5px;"
-        "}"
-        );
+    // Внешний вид checkboxGnss теперь полностью определяется QSS страницы
+    // page_position (селектор QCheckBox#checkboxGnss:checked) — точечный
+    // setStyleSheet здесь раньше перебивал эту стилизацию.
     statusBar()->showMessage("GNSS приемник подключен успешно", 5000);
     updateGnssStatusLabel(true);
 }
@@ -843,14 +875,6 @@ void MainWindow::onGnssDisconnected()
         ui->checkboxGnss->setChecked(false);
     }
 
-    ui->checkboxGnss->setStyleSheet(
-        "QCheckBox {"
-        "   background-color: white;"
-        "   padding: 5px 10px;"
-        "   border: 2px solid gray;"
-        "   border-radius: 5px;"
-        "}"
-        );
     updateFieldsEditability();
     updateGnssStatusLabel(false);
 }
@@ -873,6 +897,11 @@ void MainWindow::checkAndDisableConflictingSources(const QString &activeSource)
             ui->checkboxGnss->setChecked(false);
         }
         m_manualInputEnabled = false;
+        // Координаты теперь с карты — предыдущая подсветка "введено вручную"
+        // (если была) больше не актуальна.
+        m_gnssManualHighlight = false;
+        updateGnssStatusLabel(m_gnssHandler && m_gnssHandler->isConnected());
+        updateOverallReadiness();
     } else if (activeSource == "gnss") {
         // Отключаем карту и ручной ввод
         if (m_mapCoordinatesEnabled) {
@@ -881,6 +910,9 @@ void MainWindow::checkAndDisableConflictingSources(const QString &activeSource)
             updateMapCoordinatesButtonStyle();
         }
         m_manualInputEnabled = false;
+        m_gnssManualHighlight = false;
+        updateGnssStatusLabel(m_gnssHandler && m_gnssHandler->isConnected());
+        updateOverallReadiness();
     } else if (activeSource == "manual") {
         // Отключаем карту и GNSS
         if (m_mapCoordinatesEnabled) {
@@ -1602,6 +1634,13 @@ void MainWindow::onBinsDataReceived(const BINSData &data)
     ui->editRollAngle->setText(QString::number(data.roll, 'f', 2));
     ui->editPitchAngle->setText(QString::number(data.pitch, 'f', 2));
 
+    // Свежие данные с датчика перекрыли ручной ввод — подсветка снимается.
+    if (m_binsManualHighlight) {
+        m_binsManualHighlight = false;
+        updateBinsStatusLabel(true);
+    }
+    updateOverallReadiness();
+
     // Обновляем строку состояния
     statusBar()->showMessage(
         QString("БИНС: Курс %1 град. | Крен %2 град. | Тангаж %3 град.")
@@ -1627,11 +1666,13 @@ void MainWindow::updateFieldsEditability()
     ui->editLongitude->setReadOnly(!fieldsEditable);
     ui->editAltitude->setReadOnly(!fieldsEditable);
 
-    // Визуальная индикация
-    QString style = fieldsEditable ? "" : "background-color: #F5F5F5;";
-    ui->editLatitude->setStyleSheet(style);
-    ui->editLongitude->setStyleSheet(style);
-    ui->editAltitude->setStyleSheet(style);
+    // Раньше здесь стоял точечный setStyleSheet(...) с серым фоном "не
+    // редактируется" — он перебивал общий стиль карточки положения
+    // (QSS страницы page_position, см. .ui). Визуальное отличие
+    // редактируемо/нередактируемо теперь достаточно даёт enabled/disabled
+    // самих полей (см. onManualInputClicked) — readOnly используется здесь
+    // только для источников "карта"/"ГНСС", когда поля остаются enabled,
+    // но не должны принимать ручной ввод.
 }
 
 void MainWindow::updateCoordinatesFromMap(double latitude, double longitude)
@@ -2283,7 +2324,27 @@ void MainWindow::onManualInputClicked()
         }
 
         updateDateTime();
+
+        // Ручной ввод положения/ориентации только что "зафиксирован" (поля
+        // снова стали readonly-по-факту) — определяем по итоговому
+        // содержимому полей, какую из групп (ГНСС/БИНС) подсвечивать жёлтым.
+        // Независимо: заполнили только положение — БИНС не загорается, и
+        // наоборот (см. header, вариант B).
+        updateManualHighlightAfterManualInput();
     }
+}
+
+// Вызывается сразу после выхода из режима ручного ввода (onManualInputClicked,
+// переход enabled→disabled). Смотрит на итоговое содержимое полей — какая
+// из групп (положение/ориентация) реально заполнена — и подсвечивает
+// соответствующую плашку датчика жёлтым. Группы независимы (вариант B).
+void MainWindow::updateManualHighlightAfterManualInput()
+{
+    m_gnssManualHighlight = hasPositionData();
+    m_binsManualHighlight = hasOrientationData();
+
+    updateGnssStatusLabel(m_gnssHandler && m_gnssHandler->isConnected());
+    updateBinsStatusLabel(m_binsHandler && m_binsHandler->isConnected());
 }
 
 void MainWindow::onInitialDataClicked()
@@ -2356,6 +2417,14 @@ void MainWindow::onStartClicked()
             updateMeasureReadinessLabel();
             return;
         }
+    }
+
+    // Страховочная проверка положения/ориентации — по той же логике, что
+    // и приземка выше (кнопка и так должна быть заблокирована при их
+    // отсутствии, см. updateMeasureReadinessLabel).
+    if (!hasPositionData() || !hasOrientationData()) {
+        updateMeasureReadinessLabel();
+        return;
     }
 
     // Обновляем UI
@@ -2485,11 +2554,12 @@ void MainWindow::onStopClicked()
             ui->btnStop->setEnabled(false);
 
             // Измерение завершено — перерисовываем lblStatus и доступность btnStart
-            // в соответствии с актуальным состоянием приземных данных. Если за время
-            // измерения данные успели устареть — увидим "ДАННЫЕ УСТАРЕЛИ" (пуск
-            // следующего измерения при этом остаётся разрешённым). Если оператор
-            // тем временем нажал "Очистить" — увидим "НЕТ ПРИЗЕМНЫХ ДАННЫХ" и кнопка
-            // снова заблокируется.
+            // через агрегированную готовность (updateOverallReadiness, вызывается
+            // изнутри onSurfaceStateChanged). Если за время измерения приземка
+            // успела устареть — увидим "ДАННЫЕ УСТАРЕЛИ" (пуск следующего
+            // измерения при этом остаётся разрешённым). Если оператор тем временем
+            // нажал "Очистить", или пропало положение/ориентация — увидим "ОТКАЗ"
+            // и кнопка снова заблокируется.
             if (GroundMeteoParams *gmp = GroundMeteoParams::instance())
                 onSurfaceStateChanged(gmp->surfaceState());
 
@@ -2532,7 +2602,18 @@ void MainWindow::updateGnssStatusLabel(bool connected)
             "background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2; "
             "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
     }
+    // Ручной ввод положения (широта/долгота/высота) перекрывает обычную
+    // зелёную/красную окраску жёлто-янтарной — независимо от того, что
+    // передал сюда вызывающий код (connected относится только к самому
+    // ГНСС-приёмнику, а не к источнику данных, которые сейчас в полях).
+    if (m_gnssManualHighlight) {
+        ui->lblGnssStatus->setText("GNSS: ручной ввод");
+        ui->lblGnssStatus->setStyleSheet(
+            "background-color: #FFF8E1; color: #8a6100; border: 1px solid #FFE082; "
+            "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
+    }
     updateConnectAllButtonVisibility();
+    updateOverallReadiness();
 }
 
 void MainWindow::updateAmsStatusLabel(bool connected)
@@ -2549,6 +2630,7 @@ void MainWindow::updateAmsStatusLabel(bool connected)
             "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
     }
     updateConnectAllButtonVisibility();
+    updateOverallReadiness();
 }
 
 void MainWindow::updateBinsStatusLabel(bool connected)
@@ -2564,7 +2646,16 @@ void MainWindow::updateBinsStatusLabel(bool connected)
             "background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2; "
             "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
     }
+    // Ручной ввод ориентации (курс/крен/тангаж) — та же жёлто-янтарная
+    // подсветка, независимая от подсветки ГНСС (вариант B).
+    if (m_binsManualHighlight) {
+        ui->lblBinsStatus->setText("БИНС: ручной ввод");
+        ui->lblBinsStatus->setStyleSheet(
+            "background-color: #FFF8E1; color: #8a6100; border: 1px solid #FFE082; "
+            "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
+    }
     updateConnectAllButtonVisibility();
+    updateOverallReadiness();
 }
 
 void MainWindow::updateIwsStatusLabel(bool connected)
@@ -2580,7 +2671,17 @@ void MainWindow::updateIwsStatusLabel(bool connected)
             "background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2; "
             "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
     }
+    // Ручной ввод приземных данных (ИВС не подключён, но GroundMeteoParams
+    // применил значения вручную через "Применить") — та же подсветка.
+    GroundMeteoParams *gmp = GroundMeteoParams::instance();
+    if (gmp && gmp->hasLastData() && gmp->lastUpdateWasManual()) {
+        ui->lblIwsStatus->setText("ИВС: ручной ввод");
+        ui->lblIwsStatus->setStyleSheet(
+            "background-color: #FFF8E1; color: #8a6100; border: 1px solid #FFE082; "
+            "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
+    }
     updateConnectAllButtonVisibility();
+    updateOverallReadiness();
 }
 
 void MainWindow::updateConnectAllButtonVisibility()
@@ -3091,48 +3192,86 @@ void MainWindow::onSurfaceStateChanged(GroundMeteoParams::SurfaceState newState)
     // индикатора даже когда lblStatus сейчас занят текстом "РАБОТА"/"ОШИБКА".
     m_lastKnownSurfaceState = newState;
 
+    // Приземные данные изменились (от ИВС или вручную) — плашка "ИВС" могла
+    // поменять источник (жёлтая подсветка "ручной ввод" вкл./выкл.).
+    updateIwsStatusLabel(m_iwsDeviceActive);
+
+    // Единая точка агрегированной готовности (ОТКАЗ/ДАННЫЕ УСТАРЕЛИ/ГОТОВ) —
+    // см. updateOverallReadiness(). Она же обновляет readinessIndicatorFrame/
+    // lblStatus/lblStartReadiness и, если попап открыт, его содержимое.
+    updateOverallReadiness();
+}
+
+// Собирает все непройденные проверки готовности комплекса в список
+// коротких причин на русском — по одной строке на пункт. Пустой список
+// означает "всё готово" (не считая возможной "устарелости" приземки,
+// которая уже НЕ считается отказом — см. updateOverallReadiness()).
+QStringList MainWindow::collectReadinessIssues() const
+{
+    QStringList issues;
+
+    const bool amsConnected = (m_amsHandler && m_amsHandler->isConnected());
+    if (!amsConnected)
+        issues << "Нет связи с АМС — проверьте подключение АМС.";
+
+    if (m_lastKnownSurfaceState == GroundMeteoParams::NoData)
+        issues << "Нет приземных данных — проверьте подключение ИВС.";
+
+    if (!hasPositionData())
+        issues << "Нет положения комплекса — проверьте подключение ГНСС.";
+
+    if (!hasOrientationData())
+        issues << "Нет ориентации комплекса — проверьте подключение БИНС.";
+
+    return issues;
+}
+
+// Единая точка правды для агрегированного индикатора "ОТКАЗ"/"ГОТОВ"
+// (readinessIndicatorFrame/lblStatus, левый верхний угол). Раньше плашка
+// отражала ТОЛЬКО GroundMeteoParams::SurfaceState — теперь агрегирует ВСЕ
+// датчики и все требуемые данные (приземка/положение/ориентация): если
+// чего-то не хватает — единый текст "ОТКАЗ", а конкретная причина(ы) видна
+// только в информационном попапе (см. populateReadinessPopupContent).
+// "Данные устарели" остаётся отдельным, более мягким состоянием — оно
+// показывается только когда ВСЁ остальное в порядке, а приземка именно
+// устарела (не отсутствует).
+void MainWindow::updateOverallReadiness()
+{
     const bool measurementRunning =
         (m_amsHandler && m_amsHandler->getMeasurementStatus() == STATUS_RUNNING);
 
-    // Доступность кнопки "Пуск" теперь считается в одном месте —
-    // updateMeasureReadinessLabel() (см. вызов в конце этой функции). Она
-    // учитывает то же самое условие (NoData блокирует, Stale — нет), но
-    // ЕЩЁ и подключение АМС, чтобы кнопка и поясняющая подпись над ней
-    // никогда не расходились.
+    const QStringList issues = collectReadinessIssues();
+    const bool stale = issues.isEmpty() && (m_lastKnownSurfaceState == GroundMeteoParams::Stale);
 
-    // Текст и стиль состояния — для использования и сейчас, и в statusBar.
     QString text;
     QString style;
     QString statusBarMsg;
     QString pillStyle;   // фон+рамка всей плашки readinessIndicatorFrame
     QString dotColor;    // цвет точки lblReadinessIcon
-    switch (newState) {
-    case GroundMeteoParams::NoData:
-        text = "НЕТ ПРИЗЕМНЫХ ДАННЫХ";
+
+    if (!issues.isEmpty()) {
+        text = "ОТКАЗ";
         style = "color: #C62828; font-weight: bold; font-size: 9pt; background: transparent;";
-        statusBarMsg = "Приземные данные не введены — пуск измерения заблокирован";
+        statusBarMsg = issues.first();
         pillStyle = "QFrame#readinessIndicatorFrame { background-color: #FFEBEE; border: 1px solid #FFCDD2; border-radius: 16px; }";
         dotColor = "#C62828";
-        break;
-    case GroundMeteoParams::Fresh:
-        text = "ГОТОВ";
-        style = "color: #2E7D32; font-weight: bold; font-size: 9pt; background: transparent;";
-        statusBarMsg = "Приземные данные получены — система готова";
-        pillStyle = "QFrame#readinessIndicatorFrame { background-color: #E8F5E9; border: 1px solid #A5D6A7; border-radius: 16px; }";
-        dotColor = "#43A047";
-        break;
-    case GroundMeteoParams::Stale:
+    } else if (stale) {
         text = "ДАННЫЕ УСТАРЕЛИ";
         style = "color: #e65100; font-weight: bold; font-size: 9pt; background: transparent;";
         statusBarMsg = "Приземные данные старше 30 минут — рекомендуется обновить";
         pillStyle = "QFrame#readinessIndicatorFrame { background-color: #FFF3E0; border: 1px solid #FFE0B2; border-radius: 16px; }";
         dotColor = "#E65100";
-        break;
+    } else {
+        text = "ГОТОВ";
+        style = "color: #2E7D32; font-weight: bold; font-size: 9pt; background: transparent;";
+        statusBarMsg = "Система готова";
+        pillStyle = "QFrame#readinessIndicatorFrame { background-color: #E8F5E9; border: 1px solid #A5D6A7; border-radius: 16px; }";
+        dotColor = "#43A047";
     }
 
-    // Сама плашка (фон+рамка+точка) отражает состояние приземных данных
-    // ВСЕГДА, независимо от того, идёт ли сейчас измерение — в отличие от
-    // lblStatus, у которого текст на время измерения занят под "РАБОТА".
+    // Сама плашка (фон+рамка+точка) отражает состояние ВСЕГДА, независимо
+    // от того, идёт ли сейчас измерение — в отличие от lblStatus, у
+    // которого текст на время измерения занят под "РАБОТА".
     ui->readinessIndicatorFrame->setStyleSheet(pillStyle);
     ui->lblReadinessIcon->setStyleSheet(
         QString("color: %1; font-size: 10pt; background: transparent;").arg(dotColor));
@@ -3141,23 +3280,18 @@ void MainWindow::onSurfaceStateChanged(GroundMeteoParams::SurfaceState newState)
         // Во время измерения lblStatus занят надписью "РАБОТА" — туда не пишем.
         // Только уведомление через статус-бар.
         statusBar()->showMessage(statusBarMsg, 8000);
-        qDebug() << "MainWindow: surfaceState изменилось во время измерения —"
-                 << text << "(показано в statusBar, lblStatus не трогаем)";
     } else {
-        // Измерение не идёт — обновляем lblStatus в полном объёме.
         ui->lblStatus->setText(text);
         ui->lblStatus->setStyleSheet(style);
-        qDebug() << "MainWindow: lblStatus →" << text;
     }
 
     // Если попап сейчас открыт — освежаем его содержимое под новое состояние
-    // (чтобы не показывать устаревший текст, если данные поменялись прямо
+    // (чтобы не показывать устаревший текст, если что-то поменялось прямо
     // во время просмотра уведомления).
     if (m_readinessPopup && m_readinessPopup->isVisible())
         populateReadinessPopupContent();
 
-    // Плитка "Готов к запуску" на экране "Пуск измерения" — отражает то же
-    // состояние приземных данных плюс подключение АМС (см. updateMeasureReadinessLabel).
+    // Плитка "Готов к запуску" на экране "Пуск измерения".
     updateMeasureReadinessLabel();
 }
 
@@ -3180,6 +3314,8 @@ void MainWindow::updateMeasureReadinessLabel()
         (m_amsHandler && m_amsHandler->getMeasurementStatus() == STATUS_RUNNING);
     const bool amsConnected = (m_amsHandler && m_amsHandler->isConnected());
     const bool hasGroundData = (m_lastKnownSurfaceState != GroundMeteoParams::NoData);
+    const bool hasPosition = hasPositionData();
+    const bool hasOrientation = hasOrientationData();
 
     QString text;
     QString color;
@@ -3194,7 +3330,15 @@ void MainWindow::updateMeasureReadinessLabel()
         color = "#C62828";
         startEnabled = false;
     } else if (!hasGroundData) {
-        text  = "Не готов к запуску: нет приземных данных.\nЗаполните «Исходные данные».";
+        text  = "Не готов к запуску: нет приземных данных.\nПроверьте ИВС вверху экрана.";
+        color = "#C62828";
+        startEnabled = false;
+    } else if (!hasPosition) {
+        text  = "Не готов к запуску: нет положения комплекса.\nПроверьте ГНСС вверху экрана.";
+        color = "#C62828";
+        startEnabled = false;
+    } else if (!hasOrientation) {
+        text  = "Не готов к запуску: нет ориентации комплекса.\nПроверьте БИНС вверху экрана.";
         color = "#C62828";
         startEnabled = false;
     } else if (m_lastKnownSurfaceState == GroundMeteoParams::Stale) {
@@ -3827,36 +3971,33 @@ void MainWindow::setupReadinessPopup()
     qApp->installEventFilter(this);
 }
 
+// Попап общего индикатора — ИСКЛЮЧИТЕЛЬНО информационный (см. header):
+// заголовок + список причин, без единой кнопки перехода к вводу данных.
+// Переход к ручному вводу конкретных данных делается из шторки конкретного
+// датчика — см. m_sensorPopupManualBtn/onSensorPopupManualClicked.
 void MainWindow::populateReadinessPopupContent()
 {
     const bool measurementRunning =
         (m_amsHandler && m_amsHandler->getMeasurementStatus() == STATUS_RUNNING);
 
+    m_readinessPopupYes->setVisible(false);
+    m_readinessPopupNo->setVisible(false);
+
     if (measurementRunning) {
         m_readinessPopupTitle->setText("Идёт измерение АМС");
         m_readinessPopupSubtitle->clear();
-        m_readinessPopupYes->setVisible(false);
-        m_readinessPopupNo->setVisible(false);
     } else {
-        switch (m_lastKnownSurfaceState) {
-        case GroundMeteoParams::NoData:
-            m_readinessPopupTitle->setText("Приземных данных нет");
-            m_readinessPopupSubtitle->setText("Перейти к их заполнению вручную?");
-            m_readinessPopupYes->setVisible(true);
-            m_readinessPopupNo->setVisible(true);
-            break;
-        case GroundMeteoParams::Stale:
-            m_readinessPopupTitle->setText("Приземные данные устарели");
-            m_readinessPopupSubtitle->setText("Перейти к их заполнению вручную?");
-            m_readinessPopupYes->setVisible(true);
-            m_readinessPopupNo->setVisible(true);
-            break;
-        case GroundMeteoParams::Fresh:
-            m_readinessPopupTitle->setText("Приземные данные актуальны");
+        const QStringList issues = collectReadinessIssues();
+        if (!issues.isEmpty()) {
+            m_readinessPopupTitle->setText("Отказ");
+            m_readinessPopupSubtitle->setText(issues.join("\n"));
+        } else if (m_lastKnownSurfaceState == GroundMeteoParams::Stale) {
+            m_readinessPopupTitle->setText("Данные устарели");
+            m_readinessPopupSubtitle->setText(
+                "Приземные данные старше 30 минут. Рекомендуется обновить.");
+        } else {
+            m_readinessPopupTitle->setText("Система готова");
             m_readinessPopupSubtitle->clear();
-            m_readinessPopupYes->setVisible(false);
-            m_readinessPopupNo->setVisible(false);
-            break;
         }
     }
 
@@ -4075,12 +4216,23 @@ void MainWindow::setupSensorPopup()
     m_sensorPopupActionBtn->setCursor(Qt::PointingHandCursor);
     m_sensorPopupActionBtn->setFixedHeight(36);
 
+    // Вторая кнопка — переход к ручному вводу данных этого датчика (ИВС →
+    // приземные данные, ГНСС/БИНС → положение/ориентация). Показывается
+    // только когда датчик не подключён И соответствующих данных ещё нет —
+    // см. populateSensorPopupContent()/sensorHasRequiredData().
+    m_sensorPopupManualBtn = new QPushButton(m_sensorPopup);
+    m_sensorPopupManualBtn->setFocusPolicy(Qt::NoFocus);
+    m_sensorPopupManualBtn->setCursor(Qt::PointingHandCursor);
+    m_sensorPopupManualBtn->setFixedHeight(36);
+    m_sensorPopupManualBtn->hide();
+
     layout->addWidget(m_sensorPopupTitle);
     layout->addWidget(m_sensorPopupStatus);
     layout->addWidget(m_sensorPopupInfo);
     layout->addWidget(m_sensorPopupReason);
     layout->addSpacing(4);
     layout->addWidget(m_sensorPopupActionBtn);
+    layout->addWidget(m_sensorPopupManualBtn);
 
     m_sensorPopup->hide();
 
@@ -4089,6 +4241,7 @@ void MainWindow::setupSensorPopup()
     m_sensorPopupAnimation->setEasingCurve(QEasingCurve::OutBack);
 
     connect(m_sensorPopupActionBtn, &QPushButton::clicked, this, &MainWindow::onSensorPopupActionClicked);
+    connect(m_sensorPopupManualBtn, &QPushButton::clicked, this, &MainWindow::onSensorPopupManualClicked);
 }
 
 void MainWindow::populateSensorPopupContent()
@@ -4116,6 +4269,7 @@ void MainWindow::populateSensorPopupContent()
         // отслеживается автоматически через health-check.
         m_sensorPopupReason->setVisible(false);
         m_sensorPopupActionBtn->setVisible(false);
+        m_sensorPopupManualBtn->setVisible(false);
     } else {
         m_sensorPopupStatus->setText("Не подключено");
         m_sensorPopupStatus->setStyleSheet(
@@ -4141,10 +4295,80 @@ void MainWindow::populateSensorPopupContent()
             " border-radius:8px; font-weight:700; }"
             "QPushButton:pressed { background:#0B5A41; }"
             "QPushButton:disabled { background:#B9BFC2; color:#FFFFFF; }");
+
+        // Кнопка перехода к ручному вводу — только для ИВС/ГНСС/БИНС и
+        // только пока соответствующих данных ДЕЙСТВИТЕЛЬНО нет (ни с
+        // датчика, ни введены вручную ранее). Для АМС не показывается —
+        // для него нет ручной замены.
+        const QString manualText = sensorManualEntryButtonText(type);
+        const bool showManual = !manualText.isEmpty() && !sensorHasRequiredData(type);
+        m_sensorPopupManualBtn->setVisible(showManual);
+        if (showManual) {
+            m_sensorPopupManualBtn->setText(manualText);
+            m_sensorPopupManualBtn->setStyleSheet(
+                "QPushButton { background:#FFF8E1; color:#8a6100; border:1px solid #FFE082;"
+                " border-radius:8px; font-weight:700; }"
+                "QPushButton:pressed { background:#FFECB3; }");
+        }
     }
 
     m_sensorPopup->adjustSize();
     m_sensorPopup->setFixedWidth(280);
+}
+
+// Есть ли уже сейчас данные, за которые отвечает этот датчик — неважно,
+// пришли они с самого датчика или введены вручную ранее. Используется,
+// чтобы решить, показывать ли в шторке кнопку "перейти к заполнению".
+bool MainWindow::sensorHasRequiredData(AutoConnector::DeviceType type) const
+{
+    switch (type) {
+    case AutoConnector::DEVICE_IWS: {
+        GroundMeteoParams *gmp = GroundMeteoParams::instance();
+        return gmp && gmp->surfaceState() != GroundMeteoParams::NoData;
+    }
+    case AutoConnector::DEVICE_GNSS: return hasPositionData();
+    case AutoConnector::DEVICE_BINS: return hasOrientationData();
+    default: return true; // АМС и прочее — у них нет понятия "данные"
+    }
+}
+
+QString MainWindow::sensorManualEntryButtonText(AutoConnector::DeviceType type) const
+{
+    switch (type) {
+    case AutoConnector::DEVICE_IWS:  return "Приземных данных нет — переход к заполнению";
+    case AutoConnector::DEVICE_GNSS: return "Положения нет — переход к заполнению";
+    case AutoConnector::DEVICE_BINS: return "Ориентации нет — переход к заполнению";
+    default: return QString();
+    }
+}
+
+// Переход к ручному вводу данных, которые обычно даёт этот датчик.
+// ИВС → страница GroundMeteoParams (свой класс). ГНСС/БИНС → поля
+// положения/ориентации живут прямо на странице "Исходные данные"
+// (mainwindow.ui) — переключаемся туда и, если ручной режим ещё не
+// включён, включаем его (onManualInputClicked), чтобы поля сразу стали
+// редактируемыми.
+void MainWindow::onSensorPopupManualClicked()
+{
+    const AutoConnector::DeviceType type = m_currentPopupSensor;
+    hideSensorPopup();
+
+    switch (type) {
+    case AutoConnector::DEVICE_IWS:
+        if (GroundMeteoParams *gmp = GroundMeteoParams::instance())
+            ui->stackedWidget->setCurrentWidget(gmp);
+        break;
+    case AutoConnector::DEVICE_GNSS:
+    case AutoConnector::DEVICE_BINS:
+        // Поля положения/ориентации живут на ui->page_position (см. .ui),
+        // а НЕ в sourceDataInstance (тот — для приземных данных/Метео-11).
+        ui->stackedWidget->setCurrentWidget(ui->page_position);
+        if (!m_manualInputEnabled)
+            onManualInputClicked();
+        break;
+    default:
+        break;
+    }
 }
 
 void MainWindow::showSensorPopup(AutoConnector::DeviceType type)

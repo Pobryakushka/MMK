@@ -1,12 +1,12 @@
 #include "Meteo11.h"
 #include "ui_Meteo11.h"
+#include "VirtualKeyboard.h"
 #include <QMessageBox>
 #include <QJsonDocument>
 #include <QRegularExpression>
 #include <QDebug>
 #include <QLineEdit>
 #include <QLabel>
-#include <QPlainTextEdit>
 #include <QPropertyAnimation>
 #include <QStyle>
 
@@ -45,20 +45,71 @@ Meteo11::Meteo11(QWidget *parent)
     connect(ui->btnMet11Clear,  &QPushButton::clicked, this, &Meteo11::onClearClicked);
     connect(ui->btnMet11Back,   &QPushButton::clicked, this, [this]{ emit backRequested(); });
 
-    // ── Экранная клавиатура: подсказки типа ввода для каждого поля ──────────
-    // Поля, где вводятся только цифры, — цифровая клавиатура.
-    ui->lineEdit_Met11StationNum->setInputMethodHints(Qt::ImhDigitsOnly);
-    ui->lineEdit_Met11DateTime->setInputMethodHints(Qt::ImhDigitsOnly);
-    ui->lineEdit_Met11StationHeight->setInputMethodHints(Qt::ImhDigitsOnly);
-    ui->lineEdit_Met11AchievedSensHeight->setInputMethodHints(Qt::ImhDigitsOnly);
-    // Поля со знаком (±) — цифровая клавиатура с поддержкой знака/точки.
-    ui->lineEdit_Met11GroundPresDev->setInputMethodHints(Qt::ImhFormattedNumbersOnly);
-    ui->lineEdit_Met11GroundVertTempDev->setInputMethodHints(Qt::ImhFormattedNumbersOnly);
-    // Строка бюллетеня содержит буквы ("Метео") — обычная клавиатура, без ограничений.
-    ui->plainEdit_rawBulletin->setInputMethodHints(Qt::ImhNone);
+    // ── Экранная клавиатура: для каждого поля — своя раскладка/ограничения ──
+    setupVirtualKeyboard();
 
     setupValidation();
     updateStatusPill();
+}
+
+void Meteo11::setupVirtualKeyboard()
+{
+    using VK = VirtualKeyboard;
+
+    // Номер МС — только цифры, 5 знаков
+    VK::Constraints stationNum;
+    stationNum.allowNegative   = false;
+    stationNum.allowDecimal    = false;
+    stationNum.maxLength       = 5;
+    stationNum.allowModeSwitch = false;
+    VK::attach(ui->lineEdit_Met11StationNum, VK::Mode::Numeric, stationNum);
+
+    // Дата/время ДДЧЧМ — только цифры, 5 знаков
+    VK::Constraints dateTime;
+    dateTime.allowNegative   = false;
+    dateTime.allowDecimal    = false;
+    dateTime.maxLength       = 5;
+    dateTime.allowModeSwitch = false;
+    VK::attach(ui->lineEdit_Met11DateTime, VK::Mode::Numeric, dateTime);
+
+    // Высота МС — только цифры
+    VK::Constraints stationHeight;
+    stationHeight.allowNegative   = false;
+    stationHeight.allowDecimal    = false;
+    stationHeight.maxLength       = 4;
+    stationHeight.allowModeSwitch = false;
+    VK::attach(ui->lineEdit_Met11StationHeight, VK::Mode::Numeric, stationHeight);
+
+    // Отклонение давления (ДДД) — код со знаком, без дробной части
+    VK::Constraints presDev;
+    presDev.allowNegative   = true;
+    presDev.allowDecimal    = false;
+    presDev.maxLength       = 4;
+    presDev.allowModeSwitch = false;
+    VK::attach(ui->lineEdit_Met11GroundPresDev, VK::Mode::Numeric, presDev);
+
+    // Отклонение вирт. температуры (T0T0) — код со знаком, без дробной части
+    VK::Constraints tempDev;
+    tempDev.allowNegative   = true;
+    tempDev.allowDecimal    = false;
+    tempDev.maxLength       = 3;
+    tempDev.allowModeSwitch = false;
+    VK::attach(ui->lineEdit_Met11GroundVertTempDev, VK::Mode::Numeric, tempDev);
+
+    // Достигнутая высота зондирования (BтBтBвBв) — только цифры, 4 знака
+    VK::Constraints achieved;
+    achieved.allowNegative   = false;
+    achieved.allowDecimal    = false;
+    achieved.maxLength       = 4;
+    achieved.allowModeSwitch = false;
+    VK::attach(ui->lineEdit_Met11AchievedSensHeight, VK::Mode::Numeric, achieved);
+
+    // Строка бюллетеня — содержит буквы ("Метео"), поэтому полная
+    // буквенная раскладка. Переключение на цифровую раскладку не нужно —
+    // цифры и так есть на верхнем ряду буквенной клавиатуры.
+    VK::Constraints rawBulletin;
+    rawBulletin.allowModeSwitch = false;
+    VK::attach(ui->lineEdit_rawBulletin, VK::Mode::Text, rawBulletin);
 }
 
 Meteo11::~Meteo11()
@@ -74,12 +125,12 @@ void Meteo11::updateStatusPill()
     if (m_applied) {
         ui->lblMet11StatusPill->setText(QString::fromUtf8("● БЮЛЛЕТЕНЬ ЗАГРУЖЕН"));
         ui->lblMet11StatusPill->setStyleSheet(
-            "padding: 6px 18px; border-radius: 17px; font-weight: bold; "
+            "padding: 4px 14px; border-radius: 13px; font-weight: bold; font-size: 9pt; "
             "background-color: #E8F5E9; color: #0F6B4F;");
     } else {
         ui->lblMet11StatusPill->setText(QString::fromUtf8("● БЮЛЛЕТЕНЬ НЕ ЗАГРУЖЕН"));
         ui->lblMet11StatusPill->setStyleSheet(
-            "padding: 6px 18px; border-radius: 17px; font-weight: bold; "
+            "padding: 4px 14px; border-radius: 13px; font-weight: bold; font-size: 9pt; "
             "background-color: #FFEBEE; color: #C62828;");
     }
 }
@@ -91,7 +142,11 @@ void Meteo11::onApplyClicked()
 {
     // Подсвечиваем красной рамкой все незаполненные обязательные поля разом
     // и уводим фокус на первое из них — вместо единичного QMessageBox.
-    if (!validateRequiredFields(/*focusFirst=*/true)) {
+    // Подсвечиваем красной рамкой все незаполненные обязательные поля разом —
+    // БЕЗ передачи фокуса (focusFirst=false), иначе setFocus() на QLineEdit
+    // сам откроет экранную клавиатуру поверх страницы, хотя нужна только
+    // видимая индикация "поле не заполнено".
+    if (!validateRequiredFields(/*focusFirst=*/false)) {
         ui->lblStatus->setText("Заполните обязательные поля, отмеченные красным");
         ui->lblStatus->setStyleSheet("color: #C62828; font-weight: bold;");
         return;
@@ -148,7 +203,7 @@ void Meteo11::onApplyClicked()
             json["achieved_wind_height"] = ach;
         }
     }
-    json["raw_string"]           = ui->plainEdit_rawBulletin->toPlainText().trimmed();
+    json["raw_string"]           = ui->lineEdit_rawBulletin->text().trimmed();
 
     // Считываем слои из таблицы (колонки: 0=ПП, 1=НН, 2=СС)
     // Код высоты берётся по позиции строки из kHeightCodes
@@ -192,13 +247,14 @@ void Meteo11::onApplyClicked()
 // ─────────────────────────────────────────────────────────────────────────────
 void Meteo11::onParseClicked()
 {
-    const QString raw = ui->plainEdit_rawBulletin->toPlainText().trimmed();
+    const QString raw = ui->lineEdit_rawBulletin->text().trimmed();
     if (raw.isEmpty()) {
-        setRawBulletinInvalid(true);
-        ui->plainEdit_rawBulletin->setFocus();
+        // Только видимая индикация (рамка + подпись), без setFocus() —
+        // иначе фокус на поле сам вызовет экранную клавиатуру.
+        setFieldInvalid(ui->lineEdit_rawBulletin, ui->lblRawBulletinHint, true, "Строка бюллетеня");
         return;
     }
-    setRawBulletinInvalid(false);
+    setFieldInvalid(ui->lineEdit_rawBulletin, ui->lblRawBulletinHint, false);
 
     // Нормализуем разделители: тире, дефисы, пробелы → одиночный пробел
     QString normalized = raw;
@@ -295,7 +351,7 @@ void Meteo11::onParseClicked()
 // ─────────────────────────────────────────────────────────────────────────────
 void Meteo11::onClearClicked()
 {
-    ui->plainEdit_rawBulletin->clear();
+    ui->lineEdit_rawBulletin->clear();
     ui->lineEdit_Met11StationNum->clear();
     ui->lineEdit_Met11DateTime->clear();
     ui->lineEdit_Met11StationHeight->clear();
@@ -321,7 +377,7 @@ void Meteo11::onClearClicked()
     // Сбрасываем всю подсветку "поле не заполнено"
     for (const auto &f : requiredFields())
         setFieldInvalid(f.edit, f.hint, false);
-    setRawBulletinInvalid(false);
+    setFieldInvalid(ui->lineEdit_rawBulletin, ui->lblRawBulletinHint, false);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -348,9 +404,9 @@ void Meteo11::setupValidation()
                 setFieldInvalid(f.edit, f.hint, false);
         });
     }
-    connect(ui->plainEdit_rawBulletin, &QPlainTextEdit::textChanged, this, [this]() {
-        if (!ui->plainEdit_rawBulletin->toPlainText().trimmed().isEmpty())
-            setRawBulletinInvalid(false);
+    connect(ui->lineEdit_rawBulletin, &QLineEdit::textChanged, this, [this](const QString &text) {
+        if (!text.trimmed().isEmpty())
+            setFieldInvalid(ui->lineEdit_rawBulletin, ui->lblRawBulletinHint, false);
     });
 }
 
@@ -392,20 +448,6 @@ void Meteo11::setFieldInvalid(QLineEdit *edit, QLabel *hint, bool invalid, const
         shakeWidget(edit);
 
     Q_UNUSED(fieldLabel);
-}
-
-void Meteo11::setRawBulletinInvalid(bool invalid)
-{
-    const bool wasInvalid = ui->plainEdit_rawBulletin->property("invalid").toBool();
-    ui->plainEdit_rawBulletin->setProperty("invalid", invalid);
-    ui->plainEdit_rawBulletin->style()->unpolish(ui->plainEdit_rawBulletin);
-    ui->plainEdit_rawBulletin->style()->polish(ui->plainEdit_rawBulletin);
-    ui->plainEdit_rawBulletin->update();
-
-    ui->lblRawBulletinError->setVisible(invalid);
-
-    if (invalid && !wasInvalid)
-        shakeWidget(ui->plainEdit_rawBulletin);
 }
 
 void Meteo11::shakeWidget(QWidget *w)

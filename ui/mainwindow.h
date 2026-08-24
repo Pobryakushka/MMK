@@ -306,6 +306,13 @@ private:
     QLabel *m_sensorPopupInfo = nullptr;
     QLabel *m_sensorPopupReason = nullptr;
     QPushButton *m_sensorPopupActionBtn = nullptr;
+    // Вторая кнопка шторки — переход к РУЧНОМУ вводу данных, которые обычно
+    // приходят от этого датчика (ИВС → приземные данные / GroundMeteoParams;
+    // ГНСС/БИНС → положение/ориентация на этой же странице). Показывается
+    // ТОЛЬКО когда датчик не подключён И соответствующих данных ещё нет —
+    // если данные уже есть (от датчика или введены вручную ранее), кнопка
+    // скрыта. Никогда не показывается для АМС — для него нет ручной замены.
+    QPushButton *m_sensorPopupManualBtn = nullptr;
     QPropertyAnimation *m_sensorPopupAnimation = nullptr;
     AutoConnector::DeviceType m_currentPopupSensor = AutoConnector::DEVICE_UNKNOWN;
 
@@ -326,6 +333,16 @@ private:
     QString sensorLastSeenText(AutoConnector::DeviceType type) const;
     bool isSensorConnected(AutoConnector::DeviceType type) const;
     QWidget* sensorIndicatorWidget(AutoConnector::DeviceType type) const;
+
+    // Есть ли уже сейчас (неважно откуда — с датчика или введены вручную)
+    // данные, за которые отвечает этот тип датчика. Для АМС всегда false
+    // (у него нет понятия "данные", есть только подключение).
+    bool sensorHasRequiredData(AutoConnector::DeviceType type) const;
+    // Текст кнопки перехода к ручному вводу для типа датчика (пусто, если
+    // для этого типа ручного ввода не предусмотрено — например, АМС).
+    QString sensorManualEntryButtonText(AutoConnector::DeviceType type) const;
+    // Переход к ручному вводу данных, которые должен был дать этот датчик.
+    void onSensorPopupManualClicked();
 
     // ── Шторка кнопки "Подключить всё" ──────────────────────────────────────
     // Открывается кликом по иконке btnConnectAll в статус-панели (видна
@@ -375,9 +392,17 @@ private:
     // обходит гонку подтверждения АМС).
     void finalizeAutoConnectorFinished();
 
-    // ── Всплывающая карточка у индикатора состояния приземных данных ───────
+    // ── Всплывающая карточка у общего индикатора готовности ────────────────
     // "Выезжает" из readinessIndicatorFrame (левый верхний угол), по тому же
     // принципу, что и m_toastWidget, но со своей геометрией/анимацией.
+    //
+    // С переходом на агрегированный индикатор "ОТКАЗ"/"ГОТОВ" (см.
+    // updateOverallReadiness()) эта карточка стала ИСКЛЮЧИТЕЛЬНО
+    // информационной: только заголовок + список причин, БЕЗ кнопок
+    // перехода к вводу данных (переход теперь делается из шторки
+    // конкретного датчика — см. m_sensorPopupManualBtn). Кнопки
+    // m_readinessPopupYes/No оставлены в коде для минимальных изменений
+    // разметки, но больше никогда не показываются (setVisible(false) всегда).
     QWidget      *m_readinessPopup = nullptr;
     QLabel       *m_readinessPopupTitle = nullptr;
     QLabel       *m_readinessPopupSubtitle = nullptr;
@@ -388,6 +413,35 @@ private:
     // текста lblStatus, т.к. во время измерения АМС в lblStatus временно
     // показывается "РАБОТА"/"ОШИБКА" поверх этого состояния.
     GroundMeteoParams::SurfaceState m_lastKnownSurfaceState = GroundMeteoParams::NoData;
+
+    // ── Готовность положения (ГНСС) / ориентации (БИНС) комплекса ──────────
+    // Поля editLatitude/editLongitude/editAltitude (ГНСС) и
+    // editDirectionAngle/editRollAngle/editPitchAngle (БИНС) живут прямо в
+    // mainwindow.ui — своего класса-состояния для них, в отличие от
+    // GroundMeteoParams, нет. hasPositionData()/hasOrientationData() читают
+    // эти поля "по требованию" вместо хранения отдельного флага готовности.
+    bool hasPositionData() const;
+    bool hasOrientationData() const;
+
+    // Подсветка датчика жёлтым, когда его данные введены ВРУЧНУЮ (вариант B):
+    // выставляется по факту — какая группа полей оказалась заполнена после
+    // выхода из режима ручного ввода (onManualInputClicked, переход
+    // enabled→disabled). Независимы друг от друга: заполнили только ГНСС —
+    // загорается только ГНСС, и наоборот.
+    bool m_gnssManualHighlight = false;
+    bool m_binsManualHighlight = false;
+    // Сбрасывает подсветку и пересчитывает её по текущему состоянию полей —
+    // вызывается при выходе из ручного режима и при выборе др. источника.
+    void updateManualHighlightAfterManualInput();
+
+    // Агрегированный индикатор готовности (заменяет прежнюю логику, где
+    // readinessIndicatorFrame/lblStatus отражали ТОЛЬКО SurfaceState).
+    // Собирает все непройденные проверки (приземные данные / положение /
+    // ориентация) в список причин для попапа и решает итоговый режим
+    // плашки: ОТКАЗ (чего-то не хватает) / ДАННЫЕ УСТАРЕЛИ (только
+    // приземка устарела, остальное в порядке) / ГОТОВ.
+    QStringList collectReadinessIssues() const;
+    void updateOverallReadiness();
 
     // Плавная анимация прогресс-бара измерения и стрелки компаса РПВ —
     // вместо мгновенного "прыжка" значения при каждом
