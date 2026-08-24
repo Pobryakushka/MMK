@@ -161,6 +161,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->btnManualInput, &QPushButton::clicked, this, &MainWindow::onManualInputClicked);
     connect(ui->btnInitialData, &QPushButton::clicked, this, &MainWindow::onInitialDataClicked);
     connect(ui->btnCalculations, &QPushButton::clicked, this, &MainWindow::onCalculationsClicked);
+    // Раздел "Расчёты" пока не нужен — прячем кнопку из главного меню, не
+    // удаляя саму реализацию (может понадобиться в будущем).
+    ui->btnCalculations->setVisible(false);
     connect(ui->btnMeasurementResults, &QPushButton::clicked, this, &MainWindow::onMeasurementResultsClicked);
     connect(ui->btnStart, &QPushButton::clicked, this, &MainWindow::onStartClicked);
     connect(ui->btnStop, &QPushButton::clicked, this, &MainWindow::onStopClicked);
@@ -173,6 +176,13 @@ MainWindow::MainWindow(QWidget *parent)
     // кнопки попапов ниже — та же причина.
     ui->btnConnectSensors->setFocusPolicy(Qt::NoFocus);
     connect(ui->btnConnectSensors, &QPushButton::clicked, this, &MainWindow::onConnectSensorsClicked);
+    // Кнопка "Подключить датчики" убрана из главного меню — её роль теперь
+    // играет btnConnectAll в статус-панели (см. onConnectAllClicked()).
+    // Реализация и сигнал выше оставлены нетронутыми на будущее.
+    ui->btnConnectSensors->setVisible(false);
+
+    ui->btnConnectAll->setFocusPolicy(Qt::NoFocus);
+    connect(ui->btnConnectAll, &QPushButton::clicked, this, &MainWindow::onConnectAllClicked);
     connect(ui->btnSyncTime, &QPushButton::clicked, this, &MainWindow::onSyncTimeClicked);
     connect(ui->editDateTime, &QLineEdit::editingFinished, this, &MainWindow::onDateTimeEditingFinished);
     connect(ui->editDateTime, &QLineEdit::textEdited, this, &MainWindow::onDateTimeEditingStarted);
@@ -419,17 +429,6 @@ MainWindow::MainWindow(QWidget *parent)
     // setupHealthChecks()) — в самом конце конструктора, когда
     // m_gnssHandler/m_amsHandler/m_binsHandler уже точно созданы.
     setupHealthChecks();
-
-    // Автоматический запуск поиска датчиков при старте программы.
-    // Небольшая отсрочка (не сразу в конструкторе) — чтобы главное окно
-    // успело полностью показаться и разложиться до того, как появится
-    // toast с прогрессом поиска: его анимация/позиционирование считается
-    // от текущей геометрии окна, а в момент конструктора окно ещё не
-    // показано (show() вызывается позже, в main()).
-    QTimer::singleShot(500, this, [this]() {
-        if (!m_autoConnector->isDetecting())
-            m_autoConnector->startDetection();
-    });
 
     runPlowSelfTest();
 }
@@ -696,8 +695,8 @@ void MainWindow::onMapCoordinatesToggled()
     } else {
         updateCoordinateSource("Нет");
     }
-
     updateFieldsEditability();
+
     emit mapCoordinatesModeChanged(m_mapCoordinatesEnabled);
 
     // Выводим сообщение о смене режима
@@ -713,8 +712,6 @@ void MainWindow::onGnssCheckboxToggled(bool checked)
         if (m_gnssComPort.isEmpty()) {
             qDebug() << "MainWindow: COM-порт не настроен, открываем настройки...";
             ui->checkboxGnss->setChecked(false);
-            QMessageBox::information(this, "Ошибка GNSS",
-                                     "Пожалуйста, подключите антенну GNSS через кнопку подключения датчиков");
             return;
         }
 
@@ -970,7 +967,7 @@ void MainWindow::configureAmsDatabase()
     int dbPort = 5432;
     QString dbName = "MMK";
     QString dbUser = "postgres";
-    QString dbPassword = "123";
+    QString dbPassword = "otdel412";
 
     qDebug() << "MainWindow: Настройка БД:" << dbName << "на" << dbHost;
 
@@ -1076,17 +1073,18 @@ void MainWindow::onAmsError(const QString &error)
     m_amsLastError = error;
     statusBar()->showMessage("Ошибка АМС: " + error, 10000);
 
-    // Передаём ошибку в диалог функционального контроля если он открыт
+    // Обновляем плашку статуса АМС и плитку готовности — причина уже
+    // доступна в шторке датчика (клик по "АМС:" наверху → sensorProblemReason()
+    // читает m_amsLastError). Отдельное модальное окно здесь больше НЕ
+    // показываем: при обрыве соединения (физическое отключение, ошибка
+    // порта, health-check без ответа) оно только мешает — оператор и так
+    // увидит красную плашку "АМС: отключен" наверху и причину в шторке.
+    updateAmsStatusLabel(m_amsHandler && m_amsHandler->isConnected());
+    updateMeasureReadinessLabel();
+
+    // Диалог функционального контроля, если открыт, получает ошибку отдельно
     if (m_functionalControlDialog->isVisible()) {
         m_functionalControlDialog->setErrorState(error);
-        // Диалог уже показывает ошибку — popup не нужен, чтобы не дублировать
-        return;
-    }
-
-    if (error.contains("Таймаут") || error.contains("контрольной суммы")) {
-        qDebug() << "MainWindow: Ошибка связи с АМС, будет повторная попытка";
-    } else {
-        QMessageBox::warning(this, "Ошибка АМС", error);
     }
 }
 
@@ -1310,11 +1308,11 @@ void MainWindow::onAmsMeasurementProgress(int percent, float angle)
     }
 
     int displayPercent = qBound(0, percent, 100);
-    ui->progressBarMeasurement->setValue(displayPercent);
+    animateProgressBarTo(displayPercent);
     ui->lblProgressPercent->setText(QString("%1%").arg(displayPercent));
     ui->lblRpvAngle->setText(QString("%1°").arg(angle, 0, 'f', 1));
-    // Обновляем индикатор положения РПВ
-    ui->rpvIndicator->setAngle(angle);
+    // Обновляем индикатор положения РПВ — плавный поворот кратчайшим путём
+    animateRpvAngleTo(angle);
 
     statusBar()->showMessage(
         QString("Измерение: %1%, Угол РПВ: %2°").arg(displayPercent).arg(angle, 0, 'f', 1)
@@ -1354,7 +1352,6 @@ void MainWindow::onAmsMeasurementCompleted(int recordId)
     ui->lblStatus->setText("ГОТОВ");
     ui->lblStatus->setStyleSheet("color: #2E7D32; font-weight: bold; font-size: 9pt;");
 
-    ui->btnStart->setEnabled(true);
     ui->btnStop->setEnabled(false);
 
     // Скрываем прогрессбар
@@ -1363,7 +1360,8 @@ void MainWindow::onAmsMeasurementCompleted(int recordId)
 
     statusBar()->showMessage("Измерение завершено успешно", 10000);
 
-    // Обновляем плитку готовности к запуску на экране "Пуск измерения"
+    // Обновляем плитку готовности к запуску (и доступность btnStart —
+    // теперь это её ответственность, см. updateMeasureReadinessLabel)
     updateMeasureReadinessLabel();
 
     if (m_gnssHandler && m_gnssHandler->isConnected() && m_gnssHandler->hasValidFix()) {
@@ -1387,10 +1385,11 @@ void MainWindow::onAmsMeasurementFailed(const QString &reason)
     ui->lblStatus->setText("ОШИБКА");
     ui->lblStatus->setStyleSheet("color: #C62828; font-weight: bold; font-size: 9pt;");
 
-    ui->btnStart->setEnabled(true);
     ui->btnStop->setEnabled(false);
 
-    // Перерисовываем по актуальному состоянию приземных данных.
+    // Перерисовываем по актуальному состоянию приземных данных. Это также
+    // вызовет updateMeasureReadinessLabel() (см. конец onSurfaceStateChanged),
+    // которая сама решит, включать ли btnStart — с учётом связи с АМС.
     // ЗАМЕЧАНИЕ: это перепишет "ОШИБКА" обратно на "ГОТОВ"/"УСТАРЕЛИ"/"НЕТ ДАННЫХ"
     // — то есть индикация ошибки исчезнет с lblStatus. Сообщение об ошибке
     // оператор уже видел в QMessageBox::critical (выше в этом же методе), а в
@@ -1764,6 +1763,17 @@ void MainWindow::onConnectSensorsClicked()
     }
     if (m_autoConnector->isDetecting()) return;
     m_autoConnector->startDetection();
+}
+
+void MainWindow::onConnectAllClicked()
+{
+    // Та же логика, что и у прежней кнопки главного меню — просто вызывается
+    // из статус-панели. Отдельная проверка "все уже подключены" не нужна:
+    // кнопка и так видна только когда ни один датчик не подключён (см.
+    // updateConnectAllButtonVisibility()).
+    if (m_autoConnector->isDetecting()) return;
+    m_autoConnector->startDetection();
+    updateConnectAllButtonVisibility();
 }
 
 bool MainWindow::connectIwsPort(const QString &port, int baudRate, QSerialPort::DataBits dataBits,
@@ -2298,30 +2308,30 @@ void MainWindow::onMeasurementResultsClicked()
 
 void MainWindow::onStartClicked()
 {
+    // В норме btnStart уже ЗАБЛОКИРОВАНА для всех трёх случаев ниже —
+    // см. updateMeasureReadinessLabel(), которая держит кнопку и подпись
+    // над ней синхронными. Проверки здесь — страховка на случай гонки
+    // состояний, а не основной механизм защиты. Модальных окон больше не
+    // показываем: причина и так постоянно видна в подписи над кнопкой.
+
     // Проверяем подключение к АМС
     if (!m_amsHandler || !m_amsHandler->isConnected()) {
-        QMessageBox::warning(this, "Ошибка",
-                             "АМС не подключен. Подключитесь к АМС через настройки датчиков.");
+        updateMeasureReadinessLabel();
         return;
     }
 
     // Проверяем, не выполняется ли уже измерение
     if (m_amsHandler->getMeasurementStatus() == STATUS_RUNNING) {
-        QMessageBox::warning(this, "Ошибка",
-                             "Измерение уже выполняется. Остановите текущее измерение перед запуском нового.");
+        updateMeasureReadinessLabel();
         return;
     }
 
     // Страховочная проверка: приземные данные должны быть применены целиком
     // (все 5 строк). По нормальной логике кнопка при NoData отключена
-    // (onSurfaceStateChanged), но мало ли — на всякий случай.
+    // (см. updateMeasureReadinessLabel), но мало ли — на всякий случай.
     if (GroundMeteoParams *gmp = GroundMeteoParams::instance()) {
         if (gmp->surfaceState() == GroundMeteoParams::NoData) {
-            QMessageBox::warning(this, "Не готово к измерению",
-                                 "Не введены приземные метеоданные.\n\n"
-                                 "Откройте «Исходные данные» и заполните все 5 строк "
-                                 "(скорость и направление ветра, давление, влажность, температура), "
-                                 "затем нажмите «Применить».");
+            updateMeasureReadinessLabel();
             return;
         }
     }
@@ -2401,9 +2411,16 @@ void MainWindow::onStartClicked()
     ui->btnStop->setEnabled(true);
 
     // Сбрасываем и показываем прогрессбар
+    if (m_progressBarAnimation) m_progressBarAnimation->stop();
     ui->progressBarMeasurement->setValue(0);
     ui->lblProgressPercent->setText("0%");
     ui->lblRpvAngle->setText("0.0°");
+    // Мгновенный (без анимации) сброс стрелки — это НОВОЕ измерение, а не
+    // продолжение предыдущего: анимировать долгий поворот от угла, на
+    // котором закончилось прошлое измерение, сюда не нужно.
+    if (m_rpvAngleAnimation) m_rpvAngleAnimation->stop();
+    m_rpvDisplayedAngle = 0.0;
+    ui->rpvIndicator->setAngle(0.0);
     ui->measurementProgressWidget->setVisible(true);
 
     statusBar()->showMessage("Измерение АМС запущено...", 5000);
@@ -2493,6 +2510,7 @@ void MainWindow::updateGnssStatusLabel(bool connected)
             "background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2; "
             "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
     }
+    updateConnectAllButtonVisibility();
 }
 
 void MainWindow::updateAmsStatusLabel(bool connected)
@@ -2508,6 +2526,7 @@ void MainWindow::updateAmsStatusLabel(bool connected)
             "background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2; "
             "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
     }
+    updateConnectAllButtonVisibility();
 }
 
 void MainWindow::updateBinsStatusLabel(bool connected)
@@ -2523,6 +2542,7 @@ void MainWindow::updateBinsStatusLabel(bool connected)
             "background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2; "
             "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
     }
+    updateConnectAllButtonVisibility();
 }
 
 void MainWindow::updateIwsStatusLabel(bool connected)
@@ -2538,12 +2558,38 @@ void MainWindow::updateIwsStatusLabel(bool connected)
             "background-color: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2; "
             "font-size: 10pt; padding: 4px 12px; border-radius: 4px; margin: 2px;");
     }
+    updateConnectAllButtonVisibility();
+}
+
+void MainWindow::updateConnectAllButtonVisibility()
+{
+    // Пока идёт поиск (полный или одиночный из шторки) — кнопку не
+    // показываем, за происходящим уже следит toast.
+    if (m_autoConnector && m_autoConnector->isDetecting()) {
+        ui->btnConnectAll->setVisible(false);
+        return;
+    }
+
+    const bool anyConnected =
+        (m_gnssHandler && m_gnssHandler->isConnected()) ||
+        (m_amsHandler  && m_amsHandler->isConnected())  ||
+        (m_binsHandler && m_binsHandler->isConnected())  ||
+        m_iwsDeviceActive;
+
+    // Показываем только когда НИ ОДИН датчик не подключён — это же правило
+    // само по себе покрывает и отмену поиска: если к моменту отмены хоть
+    // один датчик успел найтись, кнопка остаётся скрытой.
+    ui->btnConnectAll->setVisible(!anyConnected);
 }
 
 // ==================== Авто-подключение датчиков ====================
 
 void MainWindow::connectSensorsFromConfig()
 {
+    // Стартовый опрос при запуске программы ещё не завершён — пока не знаем
+    // итог, кнопка "Подключить всё" должна молчать (не мигать видимой).
+    ui->btnConnectAll->setVisible(false);
+
     // Try each sensor from sensorSettingsDialog (already loaded from QSettings)
     // Track which ones need AutoConnector
     QStringList needAutoSearch;
@@ -2656,6 +2702,10 @@ void MainWindow::onAutoConnectorFinished()
 
 void MainWindow::finalizeAutoConnectorFinished()
 {
+    // Поиск (полный или одиночный) завершён — пересчитываем видимость
+    // "Подключить всё" по актуальному состоянию подключений.
+    updateConnectAllButtonVisibility();
+
     const AutoConnector::DeviceType singleTarget = m_autoConnector->singleSearchTarget();
 
     if (singleTarget != AutoConnector::DEVICE_UNKNOWN) {
@@ -2993,13 +3043,11 @@ void MainWindow::onSurfaceStateChanged(GroundMeteoParams::SurfaceState newState)
     const bool measurementRunning =
         (m_amsHandler && m_amsHandler->getMeasurementStatus() == STATUS_RUNNING);
 
-    // Кнопка пуска: блокируется ТОЛЬКО при NoData. Stale разрешает пуск
-    // (по требованию: устаревание не блокирует, только уведомляет).
-    // Во время идущего измерения кнопку всё равно держим заблокированной
-    // (как и было — onStartClicked сам делает btnStart->setEnabled(false)).
-    if (!measurementRunning) {
-        ui->btnStart->setEnabled(newState != GroundMeteoParams::NoData);
-    }
+    // Доступность кнопки "Пуск" теперь считается в одном месте —
+    // updateMeasureReadinessLabel() (см. вызов в конце этой функции). Она
+    // учитывает то же самое условие (NoData блокирует, Stale — нет), но
+    // ЕЩЁ и подключение АМС, чтобы кнопка и поясняющая подпись над ней
+    // никогда не расходились.
 
     // Текст и стиль состояния — для использования и сейчас, и в statusBar.
     QString text;
@@ -3062,14 +3110,16 @@ void MainWindow::onSurfaceStateChanged(GroundMeteoParams::SurfaceState newState)
     updateMeasureReadinessLabel();
 }
 
-// Текстовая плитка "Готов к запуску" над кнопкой "Пуск" на экране
-// "Пуск измерения". В отличие от btnStart->setEnabled(...) (который
-// по-прежнему блокируется ТОЛЬКО при NoData — поведение не менялось),
-// эта подпись даёт оператору понятную причину, почему запуск может быть
-// недоступен или почему стоит быть внимательнее (устаревшие данные).
-// Порядок проверок совпадает с реальными условиями блокировки в
-// onStartClicked()/onSurfaceStateChanged() — источник истины не дублируется,
-// только поясняется словами.
+// Единая точка правды и для текста плитки "Готов к запуску" над кнопкой
+// "Пуск", и для доступности самой кнопки btnStart. Раньше это были два
+// независимых места (btnStart->setEnabled(...) в нескольких обработчиках +
+// отдельный текст) — из-за этого подпись и реальная кликабельность кнопки
+// могли разойтись (например, кнопка ещё активна, а подпись уже говорит
+// "не готов"). Теперь оба решения принимаются здесь и всегда согласованы.
+//
+// Условия ровно те же, что проверяет onStartClicked() при клике —
+// используются как страховка на случай прямого клика в узком окне между
+// событиями, а не как единственная защита.
 void MainWindow::updateMeasureReadinessLabel()
 {
     if (!ui->lblStartReadiness)
@@ -3077,31 +3127,95 @@ void MainWindow::updateMeasureReadinessLabel()
 
     const bool measurementRunning =
         (m_amsHandler && m_amsHandler->getMeasurementStatus() == STATUS_RUNNING);
+    const bool amsConnected = (m_amsHandler && m_amsHandler->isConnected());
+    const bool hasGroundData = (m_lastKnownSurfaceState != GroundMeteoParams::NoData);
 
     QString text;
     QString color;
+    bool startEnabled;
 
     if (measurementRunning) {
         text  = "Идёт измерение";
         color = "#1565C0";
-    } else if (!m_amsHandler || !m_amsHandler->isConnected()) {
+        startEnabled = false;
+    } else if (!amsConnected) {
         text  = "Не готов к запуску: нет подключения к АМС.\nПроверьте статус АМС вверху экрана.";
         color = "#C62828";
-    } else if (m_lastKnownSurfaceState == GroundMeteoParams::NoData) {
+        startEnabled = false;
+    } else if (!hasGroundData) {
         text  = "Не готов к запуску: нет приземных данных.\nЗаполните «Исходные данные».";
         color = "#C62828";
+        startEnabled = false;
     } else if (m_lastKnownSurfaceState == GroundMeteoParams::Stale) {
         text  = "Готов к запуску\n(приземные данные устарели)";
         color = "#E65100";
+        startEnabled = true;
     } else {
         text  = "Готов к запуску";
         color = "#2E7D32";
+        startEnabled = true;
     }
 
     ui->lblStartReadiness->setText(text);
     ui->lblStartReadiness->setStyleSheet(
         QString("font-size: 8pt; font-weight: bold; color: %1; border: none; background: transparent;")
             .arg(color));
+
+    if (ui->btnStart)
+        ui->btnStart->setEnabled(startEnabled);
+}
+
+// Плавно анимирует прогресс-бар измерения к новому значению вместо
+// мгновенной установки. Переиспользует один и тот же QPropertyAnimation —
+// если предыдущая анимация ещё не закончилась, она просто перенацеливается
+// на новое значение с текущей позиции (не дёргается назад к 0).
+void MainWindow::animateProgressBarTo(int value)
+{
+    if (!ui->progressBarMeasurement)
+        return;
+
+    if (!m_progressBarAnimation) {
+        m_progressBarAnimation = new QPropertyAnimation(ui->progressBarMeasurement, "value", this);
+        m_progressBarAnimation->setEasingCurve(QEasingCurve::OutCubic);
+    }
+
+    m_progressBarAnimation->stop();
+    m_progressBarAnimation->setDuration(350);
+    m_progressBarAnimation->setStartValue(ui->progressBarMeasurement->value());
+    m_progressBarAnimation->setEndValue(value);
+    m_progressBarAnimation->start();
+}
+
+// Плавно поворачивает стрелку компаса РПВ к новому углу — кратчайшим путём
+// (а не всегда "по часовой": иначе переход, например, 350° → 10° выглядел
+// бы как почти полный оборот назад, хотя реально угол изменился всего на
+// 20°). RpvIndicator::setAngle не нормализует значение внутри, поэтому
+// целевой угол может уйти за пределы 0..360 — это нормально, цифровая
+// подпись всё равно нормализуется при отрисовке (см. RpvIndicator.cpp).
+void MainWindow::animateRpvAngleTo(double targetAngleDeg)
+{
+    if (!ui->rpvIndicator)
+        return;
+
+    // Кратчайшая разница в диапазоне (-180; 180]
+    double delta = std::fmod(targetAngleDeg - m_rpvDisplayedAngle, 360.0);
+    if (delta > 180.0)  delta -= 360.0;
+    if (delta < -180.0) delta += 360.0;
+
+    const double target = m_rpvDisplayedAngle + delta;
+
+    if (!m_rpvAngleAnimation) {
+        m_rpvAngleAnimation = new QPropertyAnimation(ui->rpvIndicator, "angle", this);
+        m_rpvAngleAnimation->setEasingCurve(QEasingCurve::OutCubic);
+    }
+
+    m_rpvAngleAnimation->stop();
+    m_rpvAngleAnimation->setDuration(450);
+    m_rpvAngleAnimation->setStartValue(m_rpvDisplayedAngle);
+    m_rpvAngleAnimation->setEndValue(target);
+    m_rpvAngleAnimation->start();
+
+    m_rpvDisplayedAngle = target;
 }
 
 void MainWindow::runPlowSelfTest()
@@ -3565,6 +3679,11 @@ void MainWindow::onToastCloseClicked()
             statusBar()->clearMessage();
             m_toastCloseBtn->hide();
 
+            // Поиск прерван пользователем — пересчитываем видимость
+            // "Подключить всё": появится, только если к этому моменту не
+            // подключился ни один датчик.
+            updateConnectAllButtonVisibility();
+
             m_toastTitle->setText("Поиск остановлен");
             m_toastTitle->setStyleSheet("font-weight: bold; font-size: 10pt; color: #B71C1C; border: none; background: transparent;");
             m_toastPercent->setStyleSheet("font-size: 10pt; font-weight: bold; color: #B71C1C; border: none; background: transparent;");
@@ -4027,6 +4146,9 @@ void MainWindow::startSingleSensorSearch(AutoConnector::DeviceType type)
     }
     hideSensorPopup();
     m_autoConnector->startDetection(type);
+    // Поиск одного датчика тоже "поиск" — прячем "Подключить всё" на время,
+    // даже если до этого было 0 из 4 подключено.
+    updateConnectAllButtonVisibility();
 }
 
 // Вызывается ТОЛЬКО из health-check (onSilenceWatchdogTimer) при реальной

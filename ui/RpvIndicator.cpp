@@ -20,8 +20,8 @@ void RpvIndicator::setAngle(double degrees)
 // предпочтительный, и минимальный размер заметно больше, чем у прежнего
 // компактного индикатора. Реальный размер всё равно диктуется layout'ом
 // (см. minimumSize/maximumSize тайла в mainwindow.ui).
-QSize RpvIndicator::sizeHint()        const { return {260, 260}; }
-QSize RpvIndicator::minimumSizeHint() const { return {160, 160}; }
+QSize RpvIndicator::sizeHint()        const { return {210, 210}; }
+QSize RpvIndicator::minimumSizeHint() const { return {140, 140}; }
 
 void RpvIndicator::paintEvent(QPaintEvent *)
 {

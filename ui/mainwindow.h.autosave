@@ -132,7 +132,7 @@ private slots:
     // Кнопка "Подключить всё" в статус-панели (заменяет собой бывшую
     // btnConnectSensors из главного меню — см. onConnectAllClicked()).
     void onConnectAllClicked();
-
+Д
     // AutoConnector слоты
     void onAutoConnectorDeviceDetected(AutoConnector::DeviceType type, const QString &port, int baudRate);
     void onAutoConnectorFinished();

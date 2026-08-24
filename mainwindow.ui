@@ -158,6 +158,42 @@
         </spacer>
        </item>
        <item>
+        <widget class="QPushButton" name="btnConnectAll">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>30</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>30</height>
+          </size>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">QPushButton {
+    background-color: #FFF3E0;
+    color: #E65100;
+    border: 1px solid #FFCC80;
+    border-radius: 15px;
+    padding: 0px 14px;
+    font-size: 8pt;
+    font-weight: 600;
+}
+QPushButton:pressed {
+    background-color: #FFE0B2;
+}</string>
+         </property>
+         <property name="text">
+          <string>Подключить всё</string>
+         </property>
+         <property name="visible">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="ClickableLabel" name="lblGnssStatus">
          <property name="minimumSize">
           <size>
@@ -427,7 +463,7 @@ QPushButton:pressed {
           </property>
          </widget>
         </item>
-        <item row="1" column="0">
+        <item row="2" column="0">
          <widget class="QPushButton" name="btnCalculations">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -547,7 +583,7 @@ QPushButton:pressed {
           </property>
          </widget>
         </item>
-        <item row="2" column="0">
+        <item row="1" column="0">
          <widget class="QPushButton" name="btnOpenMap">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
