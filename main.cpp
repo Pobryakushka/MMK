@@ -58,6 +58,13 @@ int main(int argc, char *argv[])
     QApplication::setHighDpiScaleFactorRoundingPolicy(
         Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
     QApplication a(argc, argv);
+
+    // ВАЖНО: QApplication подхватывает системную локаль (setlocale(LC_ALL, "")),
+    // что на русской локали меняет десятичный разделитель на запятую и ломает
+    // locale-зависимый парсинг чисел (atof/strtod/std::stod) внутри climatData,
+    // читающей числа с точкой как разделителем. Возвращаем числовую локаль в "C".
+    std::setlocale(LC_NUMERIC, "C");
+
     // Необходимо для QSettings — настройки сохраняются в
     // ~/.config/MMK/MMK.conf
     a.setOrganizationName("412");

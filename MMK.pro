@@ -44,7 +44,7 @@ HEADERS *= \
     $$CLIMAT_DIR/climatdataprivate.h
 
 # Warn on deprecated Qt API usage (does not break the build, just emits warnings)
-DEFINES += QT_DEPRECATED_WARNINGS DEZHURNY_SELFTEST
+DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
     LocalTileServer.cpp \

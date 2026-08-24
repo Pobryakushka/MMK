@@ -46,30 +46,35 @@ add_library(PlowAlgoritm SHARED
     main.cpp
     mhn/mbulletin.h
     mhn/structures.h
+    main.cpp
+    mhn/mbulletin.h
+    mhn/structures.h
+    ../climatData/climatdata.cpp
+    ../climatData/climatdataprivate.cpp
 )
 target_include_directories(PlowAlgoritm PUBLIC
-    ../plow_aarch64/_include/ClimatData
+    ../climatData
 )
 
 target_compile_features(PlowAlgoritm PRIVATE
     cxx_std_11
 )
 
-if(UNIX AND NOT MACOS)
-    target_link_libraries(PlowAlgoritm PRIVATE
-        ClimatData
-    )
-target_link_directories(PlowAlgoritm PRIVATE
-    ../plow_aarch64/_lib
-)
-endif()
+# if(UNIX AND NOT MACOS)
+#    target_link_libraries(PlowAlgoritm PRIVATE
+#        ClimatData
+#    )
+#target_link_directories(PlowAlgoritm PRIVATE
+#    ../plow_aarch64/_lib
+#)
+#endif()
 
-add_custom_command(TARGET PlowAlgoritm POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy
-            $<TARGET_FILE:PlowAlgoritm>
-            "${CMAKE_SOURCE_DIR}/../plow_aarch64/_lib/"
-    COMMENT "Copying binary to destination..."
-)
+# add_custom_command(TARGET PlowAlgoritm POST_BUILD
+#    COMMAND ${CMAKE_COMMAND} -E copy
+#            $<TARGET_FILE:PlowAlgoritm>
+#            "${CMAKE_SOURCE_DIR}/../plow_aarch64/_lib/"
+#    COMMENT "Copying binary to destination..."
+# )
 set(CMAKE_INSTALL_PREFIX "/data-flash/soft")
 install(TARGETS PlowAlgoritm
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}

@@ -42,18 +42,23 @@ void BottomEval__2p::GetVsr__2p(const ClimatData* cl, OutData::V *VsrYl, OutData
 
 void BottomEval__2p::GetVsr__2_2p(const ClimatData* cl, OutData::V *VsrYl){
     ClimatData::Pr Vcl0Y1;
-    //!pr Climat::Get_Vcl(Climat::StandartLayer[0],Climat::Zone,Vcl0Y1);
     Vcl0Y1=cl->pr(Climat::StandartLayer[/*0*/1]);
-    OutData::V V0Y1=VsrYl[/*0*/1];//на 200м ?????
+    OutData::V V0Y1=VsrYl[/*0*/1];
+
+    std::cout << "[TRACE] StandartLayer[1]=" << Climat::StandartLayer[1]
+              << " Vcl0Y1.VZ=" << Vcl0Y1.VZ << " Vcl0Y1.VM=" << Vcl0Y1.VM << std::endl;
+
     ClimatData::Pr Vcl0Yl;
-    //ф.22
     for (int l=/*1*/2;l<Climat::numStL;l++){
-       //!pr Climat::Get_Vcl(Climat::StandartLayer[l],Climat::Zone,Vcl0Yl);
-       Vcl0Yl=cl->pr(Climat::StandartLayer[l]);
-       VsrYl[l].VZ=V0Y1.VZ+Vcl0Yl.VZ-Vcl0Y1.VZ;
-       VsrYl[l].VM=V0Y1.VM+Vcl0Yl.VM-Vcl0Y1.VM;
-       std::cout<<"VsrYl"<<"\t"<<VsrYl[l].VZ<<"\t"<<VsrYl[l].VM<<std::endl;
-   }
+        Vcl0Yl=cl->pr(Climat::StandartLayer[l]);
+
+        std::cout << "[TRACE] l=" << l << " h=" << Climat::StandartLayer[l]
+                  << " Vcl0Yl.VZ=" << Vcl0Yl.VZ << " Vcl0Yl.VM=" << Vcl0Yl.VM << std::endl;
+
+        VsrYl[l].VZ=V0Y1.VZ+Vcl0Yl.VZ-Vcl0Y1.VZ;
+        VsrYl[l].VM=V0Y1.VM+Vcl0Yl.VM-Vcl0Y1.VM;
+        std::cout<<"VsrYl"<<"\t"<<VsrYl[l].VZ<<"\t"<<VsrYl[l].VM<<std::endl;
+    }
 }
 
 //Получае номер метеобюллетеня для корректировки (начиная с 1)
