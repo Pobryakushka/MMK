@@ -9,6 +9,14 @@
 #include <QTableWidget>
 #include <QStyledItemDelegate>
 
+class QLabel;
+class QPainter;
+
+// Ширина колонки "Параметр" (px) — фиксируется явно и переустанавливается
+// после каждого закрытия редактора ячейки, чтобы VirtualKeyboard/делегат
+// не могли случайно "сдвинуть" подписи параметров влево и оставить так.
+static constexpr int kGroundParamColumnWidth = 450;
+
 namespace Ui {
 class GroundMeteoParams;
 }
@@ -21,11 +29,18 @@ class GroundParamValueDelegate : public QStyledItemDelegate
 {
     Q_OBJECT
 public:
-    explicit GroundParamValueDelegate(QObject *parent = nullptr);
+    explicit GroundParamValueDelegate(QTableWidget *table, QObject *parent = nullptr);
     QWidget* createEditor(QWidget *parent, const QStyleOptionViewItem &option,
                           const QModelIndex &index) const override;
     void setEditorData(QWidget *editor, const QModelIndex &index) const override;
     void destroyEditor(QWidget *editor, const QModelIndex &index) const override;
+    void paint(QPainter *painter, const QStyleOptionViewItem &option,
+               const QModelIndex &index) const override;
+
+private:
+    QTableWidget *m_table;   // нужен, чтобы восстановить ширину колонки "Параметр"
+                              // после закрытия редактора (защита от VirtualKeyboard,
+                              // который может временно менять геометрию таблицы).
 };
 
 class GroundMeteoParams : public QWidget {
@@ -48,6 +63,11 @@ public:
         Stale
     };
     Q_ENUM(SurfaceState)
+
+    // Роль для хранения признака "значение не заполнено" на QTableWidgetItem
+    // колонки "Значение" — читается делегатом в paint() для отрисовки красной
+    // рамки на невалидной ячейке.
+    static constexpr int kInvalidRole = Qt::UserRole + 1;
 
     // Длительность "свежести" данных, мс. Перезапускается при каждом применении.
     static constexpr int kStaleTimeoutMs = 30 * 60 * 1000; // 30 минут
@@ -130,6 +150,12 @@ private:
     // ячеек оператором (через сигнал itemChanged).
     bool m_dirty = false;
     bool m_suppressDirty = false;     // подавление itemChanged при программной записи
+
+    // ── Подсветка незаполненных строк (вариант "рамка + подпись") ──────────
+    QLabel *m_rowHintLabel = nullptr;  // единственная плавающая подпись-ошибка
+    void setRowInvalid(int row, bool invalid);
+    void showRowHint(int row, const QString &text);
+    void shakeWidget(QWidget *w);
 
     // Парсинг ответов (приватные методы)
     bool parseModbusResponse(const QByteArray& response, QMap<QString, double>& values);

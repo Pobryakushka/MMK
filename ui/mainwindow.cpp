@@ -56,33 +56,6 @@
 const int IWS_PROTOCOL = 1;  // 1 = Modbus RTU по умолчанию
 // ====================================================================
 
-// ─────────────────────────────────────────────────────────────────────────
-// ClickableFrame
-// ─────────────────────────────────────────────────────────────────────────
-
-ClickableFrame::ClickableFrame(QWidget *parent)
-    : QFrame(parent)
-{
-    setCursor(Qt::PointingHandCursor);
-}
-
-void ClickableFrame::mousePressEvent(QMouseEvent *event)
-{
-    if (event->button() == Qt::LeftButton)
-        m_pressed = true;
-    QFrame::mousePressEvent(event);
-}
-
-void ClickableFrame::mouseReleaseEvent(QMouseEvent *event)
-{
-    if (event->button() == Qt::LeftButton && m_pressed) {
-        m_pressed = false;
-        if (rect().contains(event->pos()))
-            emit clicked();
-    }
-    QFrame::mouseReleaseEvent(event);
-}
-
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -299,14 +272,22 @@ MainWindow::MainWindow(QWidget *parent)
     connect(sensorSettingsDialog, &SensorSettings::binsConnectRequested, this, &MainWindow::onBinsConnectFromSettings);
     connect(sensorSettingsDialog, &SensorSettings::binsDisconnectRequested, this, &MainWindow::onBinsDisconnectFromSettings);
 
+    // Функциональный контроль теперь встроен страницей в общий stackedWidget —
+    // как SourceData/GroundMeteoParams/Meteo11 — а не всплывающим QDialog.
     m_functionalControlDialog = new FunctionalControlDialog(this);
     m_functionalControlDialog->setSensorType(FunctionalControlDialog::AMS);
-    m_functionalControlDialog->adjustSize();
-    m_functionalControlDialog->setMinimumSize(m_functionalControlDialog->sizeHint());
-    m_functionalControlDialog->setSizeGripEnabled(true);
+    ui->stackedWidget->addWidget(m_functionalControlDialog);
 
-    connect(m_functionalControlDialog, &FunctionalControlDialog::refreshRequested,
-            this, &MainWindow::onFunctionalControlClicked);
+    // "‹ Назад" на странице функционального контроля — возврат на главный экран
+    connect(m_functionalControlDialog, &FunctionalControlDialog::backRequested,
+            this, &MainWindow::onBackToHome);
+
+    // ПРИМЕЧАНИЕ: старое дублирующее подключение
+    // connect(m_functionalControlDialog, refreshRequested, this, onFunctionalControlClicked)
+    // отсюда убрано — оно было лишним (onFunctionalControlClicked больше не
+    // занимается запросом данных, см. патч №2). Реальный обработчик
+    // refreshRequested — лямбда чуть ниже по файлу
+    // (setWaitingState()/requestFunctionalControl()) — она не меняется.
 
     // Создаём постоянный экземпляр SourceData (внутри создастся GroundMeteoParams)
     // Встраиваем страницей в общий stackedWidget — как экран "Расчёты"
@@ -316,6 +297,27 @@ MainWindow::MainWindow(QWidget *parent)
     connect(sourceDataInstance, &SourceData::backRequested,
             this, &MainWindow::onBackToHome);
     qDebug() << "SourceData instance created (with GroundMeteoParams inside)";
+
+    // Регламентные работы
+    m_workRegulationHubPage = new WorkRegulationHubPage(this);
+    m_inspectionPage = new InspectionPage(m_amsHandler, this);
+    m_angleCheckPage = new AngleCheckPage(m_amsHandler, this);
+
+    ui->stackedWidget->addWidget(m_workRegulationHubPage);
+    ui->stackedWidget->addWidget(m_inspectionPage);
+    ui->stackedWidget->addWidget(m_angleCheckPage);
+
+    connect(m_workRegulationHubPage, &WorkRegulationHubPage::backRequested,
+            this, &MainWindow::onBackToHome);
+    connect(m_workRegulationHubPage, &WorkRegulationHubPage::openInspectionRequested,
+            this, [this]() { ui->stackedWidget->setCurrentWidget(m_inspectionPage); });
+    connect(m_workRegulationHubPage, &WorkRegulationHubPage::openAngleCheckRequested,
+            this, [this]() { ui->stackedWidget->setCurrentWidget(m_angleCheckPage); });
+
+    connect(m_inspectionPage, &InspectionPage::backRequested,
+            this, [this]() { ui->stackedWidget->setCurrentWidget(m_workRegulationHubPage); });
+    connect(m_angleCheckPage, &AngleCheckPage::backRequested,
+            this, [this]() { ui->stackedWidget->setCurrentWidget(m_workRegulationHubPage); });
 
     // ── Подписка на состояние приземных данных + встраивание страницы ──────
     // GroundMeteoParams является единой точкой правды о готовности приземных
@@ -372,6 +374,7 @@ MainWindow::MainWindow(QWidget *parent)
     // ClickableLabel (Правой кнопкой → Promote to... → ClickableLabel,
     // header ClickableLabel.h), иначе clicked() у них не будет.
     setupSensorPopup();
+    setupConnectAllPopup();
     connect(ui->lblGnssStatus, &ClickableLabel::clicked, this, [this]() {
         showSensorPopup(AutoConnector::DEVICE_GNSS);
     });
@@ -1273,19 +1276,13 @@ void MainWindow::onAmsDatabaseError(const QString &error)
 
 void MainWindow::onFunctionalControlClicked()
 {
-    if (!m_amsHandler || !m_amsHandler->isConnected()) {
-        m_functionalControlDialog->setDisconnectedState();
-        m_functionalControlDialog->show();
-        m_functionalControlDialog->raise();
-        m_functionalControlDialog->activateWindow();
-        return;
-    }
-
-    // Просто показываем диалог — showEvent внутри него сам вызовет
-    // refreshRequested → onFunctionalControlRefresh → requestFunctionalControl
-    m_functionalControlDialog->show();
-    m_functionalControlDialog->raise();
-    m_functionalControlDialog->activateWindow();
+    // Переключаемся на страницу функционального контроля в общем стеке.
+    // showEvent внутри страницы сам вызовет refreshRequested → лямбда на
+    // functionalControlDialog->refreshRequested (см. setupConnections) сама
+    // разберётся, подключены ли мы, и вызовет setDisconnectedState() или
+    // setWaitingState()+requestFunctionalControl() — дублировать эту
+    // проверку здесь больше не нужно.
+    ui->stackedWidget->setCurrentWidget(m_functionalControlDialog);
 }
 
 void MainWindow::onAmsMeasurementStageChanged(MeasurementStage stage, const QString &description)
@@ -1677,6 +1674,11 @@ void MainWindow::resizeEvent(QResizeEvent *event)
             m_sensorPopup->move(bottomLeft.x(), bottomLeft.y() + 8);
         }
     }
+
+    if (m_connectAllPopup && m_connectAllPopup->isVisible()) {
+        const QPoint bottomLeft = ui->btnConnectAll->mapTo(this, QPoint(0, ui->btnConnectAll->height()));
+        m_connectAllPopup->move(bottomLeft.x(), bottomLeft.y() + 8);
+    }
 }
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event)
@@ -1717,6 +1719,19 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
             indicator->mapFromGlobal(globalPos));
         if (!insidePopup && !insideIndicator)
             hideSensorPopup();
+    }
+
+    // То же самое для шторки "Подключить всё".
+    if (event->type() == QEvent::MouseButtonPress &&
+        m_connectAllPopup && m_connectAllPopup->isVisible()) {
+        auto *me = static_cast<QMouseEvent*>(event);
+        const QPoint globalPos = me->globalPos();
+        const bool insidePopup = m_connectAllPopup->rect().contains(
+            m_connectAllPopup->mapFromGlobal(globalPos));
+        const bool insideIndicator = ui->btnConnectAll->rect().contains(
+            ui->btnConnectAll->mapFromGlobal(globalPos));
+        if (!insidePopup && !insideIndicator)
+            hideConnectAllPopup();
     }
 
     return QMainWindow::eventFilter(watched, event);
@@ -1767,11 +1782,22 @@ void MainWindow::onConnectSensorsClicked()
 
 void MainWindow::onConnectAllClicked()
 {
-    // Та же логика, что и у прежней кнопки главного меню — просто вызывается
-    // из статус-панели. Отдельная проверка "все уже подключены" не нужна:
-    // кнопка и так видна только когда ни один датчик не подключён (см.
+    // Клик по иконке в статус-панели теперь только открывает/закрывает
+    // шторку с пояснением (как у датчиков) — сам поиск запускается кнопкой
+    // внутри неё, см. onConnectAllPopupActionClicked().
+    showConnectAllPopup();
+}
+
+void MainWindow::onConnectAllPopupActionClicked()
+{
+    // Отдельная проверка "все уже подключены" не нужна: шторка и так
+    // доступна только когда ни один датчик не подключён (см.
     // updateConnectAllButtonVisibility()).
-    if (m_autoConnector->isDetecting()) return;
+    if (m_autoConnector->isDetecting()) {
+        hideConnectAllPopup();
+        return;
+    }
+    hideConnectAllPopup();
     m_autoConnector->startDetection();
     updateConnectAllButtonVisibility();
 }
@@ -2205,11 +2231,7 @@ void MainWindow::onDateTimeEditingStarted()
 
 void MainWindow::onWorkRegulationClicked()
 {
-    WorkRegulationDialog dlg(m_amsHandler, this);
-    dlg.adjustSize();
-    dlg.setMinimumSize(dlg.sizeHint());
-    dlg.setSizeGripEnabled(true);
-    dlg.exec();
+    ui->stackedWidget->setCurrentWidget(m_workRegulationHubPage);
 }
 
 void MainWindow::onManualInputClicked()
@@ -2563,10 +2585,30 @@ void MainWindow::updateIwsStatusLabel(bool connected)
 
 void MainWindow::updateConnectAllButtonVisibility()
 {
+    // Кнопка "Подключить всё" отключена по требованию — теперь при
+    // отсутствии подключения датчики подключаются по отдельности кликом по
+    // каждому из них (шторка датчика). Логику ниже не удаляю (может
+    // понадобиться вернуть в будущем) — просто держу её за флагом.
+    static constexpr bool kConnectAllButtonEnabled = false;
+    if (!kConnectAllButtonEnabled) {
+        ui->btnConnectAll->setVisible(false);
+        if (m_connectAllPopup) hideConnectAllPopup();
+        return;
+    }
+
+    // До первого завершения стартового опроса (успешного, неудачного или
+    // вовсе не потребовавшегося) кнопку не показываем ни при каких условиях.
+    if (!m_startupSensorCheckDone) {
+        ui->btnConnectAll->setVisible(false);
+        if (m_connectAllPopup) hideConnectAllPopup();
+        return;
+    }
+
     // Пока идёт поиск (полный или одиночный из шторки) — кнопку не
     // показываем, за происходящим уже следит toast.
     if (m_autoConnector && m_autoConnector->isDetecting()) {
         ui->btnConnectAll->setVisible(false);
+        if (m_connectAllPopup) hideConnectAllPopup();
         return;
     }
 
@@ -2580,6 +2622,9 @@ void MainWindow::updateConnectAllButtonVisibility()
     // само по себе покрывает и отмену поиска: если к моменту отмены хоть
     // один датчик успел найтись, кнопка остаётся скрытой.
     ui->btnConnectAll->setVisible(!anyConnected);
+    // Если кнопка только что скрылась (что-то подключилось), пока была
+    // открыта шторка — закрываем и её, чтобы не висела без иконки-якоря.
+    if (anyConnected && m_connectAllPopup) hideConnectAllPopup();
 }
 
 // ==================== Авто-подключение датчиков ====================
@@ -2634,6 +2679,11 @@ void MainWindow::connectSensorsFromConfig()
     bool anyNeedSearch = needAutoSearch.contains("gnss") || needAutoSearch.contains("ams") || needAutoSearch.contains("iws");
     if (anyNeedSearch) {
         m_autoConnector->startDetection();
+    } else {
+        // Автопоиск не понадобился — все настроенные датчики поднялись
+        // напрямую из конфига. Стартовый опрос считается завершённым.
+        m_startupSensorCheckDone = true;
+        updateConnectAllButtonVisibility();
     }
     // Note: if no auto-search needed, we're done (BINS failure shown after AutoConnector)
 }
@@ -2704,6 +2754,7 @@ void MainWindow::finalizeAutoConnectorFinished()
 {
     // Поиск (полный или одиночный) завершён — пересчитываем видимость
     // "Подключить всё" по актуальному состоянию подключений.
+    m_startupSensorCheckDone = true;
     updateConnectAllButtonVisibility();
 
     const AutoConnector::DeviceType singleTarget = m_autoConnector->singleSearchTarget();
@@ -4135,6 +4186,116 @@ void MainWindow::hideSensorPopup()
 void MainWindow::onSensorPopupActionClicked()
 {
     startSingleSensorSearch(m_currentPopupSensor);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Шторка кнопки "Подключить всё" — по стилю и механике повторяет шторку
+// датчика (m_sensorPopup), только без per-датчикового состояния: она и так
+// видна лишь когда ни один датчик не подключён.
+// Кнопка сейчас полностью скрыта (см. kConnectAllButtonEnabled в
+// updateConnectAllButtonVisibility()), поэтому иконки у неё нет — код ниже
+// оставлен нетронутым на случай, если понадобится вернуть.
+// ─────────────────────────────────────────────────────────────────────────
+
+void MainWindow::setupConnectAllPopup()
+{
+    m_connectAllPopup = new QWidget(this);
+    m_connectAllPopup->setObjectName("connectAllPopup");
+    m_connectAllPopup->setFixedWidth(260);
+    m_connectAllPopup->setStyleSheet(
+        "QWidget#connectAllPopup {"
+        "   background-color: #FFFFFF;"
+        "   border: 1px solid #DDE1E3;"
+        "   border-radius: 14px;"
+        "}"
+        );
+
+    QGraphicsDropShadowEffect *shadow = new QGraphicsDropShadowEffect(this);
+    shadow->setBlurRadius(18);
+    shadow->setColor(QColor(0, 0, 0, 50));
+    shadow->setOffset(0, 6);
+    m_connectAllPopup->setGraphicsEffect(shadow);
+
+    QVBoxLayout *layout = new QVBoxLayout(m_connectAllPopup);
+    layout->setContentsMargins(16, 14, 16, 14);
+    layout->setSpacing(6);
+
+    m_connectAllPopupTitle = new QLabel(m_connectAllPopup);
+    m_connectAllPopupTitle->setText("Ни один датчик не подключён");
+    m_connectAllPopupTitle->setStyleSheet(
+        "font-weight: bold; font-size: 11pt; color: #1C1F22; background: transparent; border: none;");
+    m_connectAllPopupTitle->setWordWrap(true);
+
+    m_connectAllPopupSubtitle = new QLabel(m_connectAllPopup);
+    m_connectAllPopupSubtitle->setText("Запустите поиск, чтобы найти и подключить GNSS, АМС, БИНС и ИВС");
+    m_connectAllPopupSubtitle->setWordWrap(true);
+    m_connectAllPopupSubtitle->setStyleSheet(
+        "font-size: 8.5pt; color: #6B7278; background: transparent; border: none;");
+
+    m_connectAllPopupActionBtn = new QPushButton(m_connectAllPopup);
+    m_connectAllPopupActionBtn->setText("Подключить все датчики");
+    m_connectAllPopupActionBtn->setFocusPolicy(Qt::NoFocus);
+    m_connectAllPopupActionBtn->setCursor(Qt::PointingHandCursor);
+    m_connectAllPopupActionBtn->setFixedHeight(36);
+    m_connectAllPopupActionBtn->setStyleSheet(
+        "QPushButton { background:#0F6B4F; color:#FFFFFF; border:none;"
+        " border-radius:8px; font-weight:700; }"
+        "QPushButton:pressed { background:#0B5A41; }");
+
+    layout->addWidget(m_connectAllPopupTitle);
+    layout->addWidget(m_connectAllPopupSubtitle);
+    layout->addSpacing(4);
+    layout->addWidget(m_connectAllPopupActionBtn);
+
+    m_connectAllPopup->hide();
+
+    m_connectAllPopupAnimation = new QPropertyAnimation(m_connectAllPopup, "pos", this);
+    m_connectAllPopupAnimation->setDuration(300);
+    m_connectAllPopupAnimation->setEasingCurve(QEasingCurve::OutBack);
+
+    connect(m_connectAllPopupActionBtn, &QPushButton::clicked, this, &MainWindow::onConnectAllPopupActionClicked);
+}
+
+void MainWindow::populateConnectAllPopupContent()
+{
+    // Состояние сейчас всегда одно и то же (шторка доступна только при
+    // 0 из 4 подключённых), но проверка на случай поиска в процессе не
+    // помешает — на будущее, если правило показа кнопки изменится.
+    const bool searching = m_autoConnector && m_autoConnector->isDetecting();
+    m_connectAllPopupActionBtn->setEnabled(!searching);
+    m_connectAllPopupActionBtn->setText(searching ? "Идёт поиск..." : "Подключить все датчики");
+}
+
+void MainWindow::showConnectAllPopup()
+{
+    // Повторный клик по иконке — закрыть (как у остальных шторок).
+    if (m_connectAllPopup->isVisible()) {
+        hideConnectAllPopup();
+        return;
+    }
+
+    populateConnectAllPopupContent();
+
+    const QPoint bottomLeft = ui->btnConnectAll->mapTo(this, QPoint(0, ui->btnConnectAll->height()));
+    const int targetX = bottomLeft.x();
+    const int targetY = bottomLeft.y() + 8;
+    const int startY  = bottomLeft.y() - 20;
+
+    m_connectAllPopup->raise();
+    m_connectAllPopupAnimation->stop();
+    m_connectAllPopup->move(targetX, startY);
+    m_connectAllPopup->show();
+    m_connectAllPopupAnimation->setStartValue(QPoint(targetX, startY));
+    m_connectAllPopupAnimation->setEndValue(QPoint(targetX, targetY));
+    m_connectAllPopupAnimation->start();
+}
+
+void MainWindow::hideConnectAllPopup()
+{
+    if (!m_connectAllPopup || !m_connectAllPopup->isVisible())
+        return;
+    m_connectAllPopupAnimation->stop();
+    m_connectAllPopup->hide();
 }
 
 void MainWindow::startSingleSensorSearch(AutoConnector::DeviceType type)

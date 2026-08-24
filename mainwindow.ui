@@ -2449,7 +2449,7 @@ QPushButton:disabled { background-color: #F5F5F5; color: #BDBDBD; border: 1px so
   <customwidget>
    <class>ClickableFrame</class>
    <extends>QFrame</extends>
-   <header>ui/mainwindow.h</header>
+   <header>ui/ClickableFrame.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>

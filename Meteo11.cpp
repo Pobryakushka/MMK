@@ -4,6 +4,11 @@
 #include <QJsonDocument>
 #include <QRegularExpression>
 #include <QDebug>
+#include <QLineEdit>
+#include <QLabel>
+#include <QPlainTextEdit>
+#include <QPropertyAnimation>
+#include <QStyle>
 
 // Коды высот строк таблицы (19 стандартных уровней Метео-11)
 const QStringList Meteo11::kHeightCodes = {
@@ -40,6 +45,19 @@ Meteo11::Meteo11(QWidget *parent)
     connect(ui->btnMet11Clear,  &QPushButton::clicked, this, &Meteo11::onClearClicked);
     connect(ui->btnMet11Back,   &QPushButton::clicked, this, [this]{ emit backRequested(); });
 
+    // ── Экранная клавиатура: подсказки типа ввода для каждого поля ──────────
+    // Поля, где вводятся только цифры, — цифровая клавиатура.
+    ui->lineEdit_Met11StationNum->setInputMethodHints(Qt::ImhDigitsOnly);
+    ui->lineEdit_Met11DateTime->setInputMethodHints(Qt::ImhDigitsOnly);
+    ui->lineEdit_Met11StationHeight->setInputMethodHints(Qt::ImhDigitsOnly);
+    ui->lineEdit_Met11AchievedSensHeight->setInputMethodHints(Qt::ImhDigitsOnly);
+    // Поля со знаком (±) — цифровая клавиатура с поддержкой знака/точки.
+    ui->lineEdit_Met11GroundPresDev->setInputMethodHints(Qt::ImhFormattedNumbersOnly);
+    ui->lineEdit_Met11GroundVertTempDev->setInputMethodHints(Qt::ImhFormattedNumbersOnly);
+    // Строка бюллетеня содержит буквы ("Метео") — обычная клавиатура, без ограничений.
+    ui->plainEdit_rawBulletin->setInputMethodHints(Qt::ImhNone);
+
+    setupValidation();
     updateStatusPill();
 }
 
@@ -71,14 +89,15 @@ void Meteo11::updateStatusPill()
 // ─────────────────────────────────────────────────────────────────────────────
 void Meteo11::onApplyClicked()
 {
-    const QString datetimeStr = ui->lineEdit_Met11DateTime->text().trimmed();
-
-    if (datetimeStr.isEmpty()) {
-        QMessageBox::warning(this, "Ошибка ввода",
-                             "Укажите дату и время бюллетеня (поле «Дата и время»).");
-        ui->lineEdit_Met11DateTime->setFocus();
+    // Подсвечиваем красной рамкой все незаполненные обязательные поля разом
+    // и уводим фокус на первое из них — вместо единичного QMessageBox.
+    if (!validateRequiredFields(/*focusFirst=*/true)) {
+        ui->lblStatus->setText("Заполните обязательные поля, отмеченные красным");
+        ui->lblStatus->setStyleSheet("color: #C62828; font-weight: bold;");
         return;
     }
+
+    const QString datetimeStr = ui->lineEdit_Met11DateTime->text().trimmed();
 
     // Пробуем несколько форматов даты/времени
     QDateTime dt;
@@ -175,10 +194,11 @@ void Meteo11::onParseClicked()
 {
     const QString raw = ui->plainEdit_rawBulletin->toPlainText().trimmed();
     if (raw.isEmpty()) {
-        QMessageBox::information(this, "Разбор строки",
-                                 "Вставьте строку бюллетеня в поле выше.");
+        setRawBulletinInvalid(true);
+        ui->plainEdit_rawBulletin->setFocus();
         return;
     }
+    setRawBulletinInvalid(false);
 
     // Нормализуем разделители: тире, дефисы, пробелы → одиночный пробел
     QString normalized = raw;
@@ -297,4 +317,109 @@ void Meteo11::onClearClicked()
     m_bulletinJson = QJsonObject();
     m_bulletinTime = QDateTime();
     updateStatusPill();
+
+    // Сбрасываем всю подсветку "поле не заполнено"
+    for (const auto &f : requiredFields())
+        setFieldInvalid(f.edit, f.hint, false);
+    setRawBulletinInvalid(false);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Валидация полей ввода — подсветка незаполненных (вариант «рамка + подпись»)
+// ─────────────────────────────────────────────────────────────────────────────
+QList<Meteo11::RequiredField> Meteo11::requiredFields() const
+{
+    return {
+        { ui->lineEdit_Met11StationNum,          ui->lblStationNumHint,   "Номер МС" },
+        { ui->lineEdit_Met11DateTime,             ui->lblDateTimeHint,     "Дата и время" },
+        { ui->lineEdit_Met11StationHeight,        ui->lblStationHeightHint,"Высота МС" },
+        { ui->lineEdit_Met11GroundPresDev,        ui->lblPresDevHint,      "Откл. давления" },
+        { ui->lineEdit_Met11GroundVertTempDev,    ui->lblTempDevHint,      "Откл. вирт. темп." },
+    };
+}
+
+void Meteo11::setupValidation()
+{
+    // Как только оператор начинает печатать — красная рамка/подпись сразу снимается
+    // с этого конкретного поля (не дожидаясь повторного нажатия «Применить»).
+    for (const auto &f : requiredFields()) {
+        connect(f.edit, &QLineEdit::textChanged, this, [this, f](const QString &text) {
+            if (!text.trimmed().isEmpty())
+                setFieldInvalid(f.edit, f.hint, false);
+        });
+    }
+    connect(ui->plainEdit_rawBulletin, &QPlainTextEdit::textChanged, this, [this]() {
+        if (!ui->plainEdit_rawBulletin->toPlainText().trimmed().isEmpty())
+            setRawBulletinInvalid(false);
+    });
+}
+
+bool Meteo11::validateRequiredFields(bool focusFirst)
+{
+    bool allValid = true;
+    QLineEdit *firstInvalid = nullptr;
+
+    for (const auto &f : requiredFields()) {
+        const bool empty = f.edit->text().trimmed().isEmpty();
+        setFieldInvalid(f.edit, f.hint, empty, f.label);
+        if (empty) {
+            allValid = false;
+            if (!firstInvalid) firstInvalid = f.edit;
+        }
+    }
+
+    if (!allValid && focusFirst && firstInvalid)
+        firstInvalid->setFocus();
+
+    return allValid;
+}
+
+void Meteo11::setFieldInvalid(QLineEdit *edit, QLabel *hint, bool invalid, const QString &fieldLabel)
+{
+    if (!edit) return;
+
+    const bool wasInvalid = edit->property("invalid").toBool();
+    edit->setProperty("invalid", invalid);
+    edit->style()->unpolish(edit);
+    edit->style()->polish(edit);
+    edit->update();
+
+    if (hint)
+        hint->setText(invalid ? "Поле не заполнено" : QString());
+
+    // Анимируем "встряску" только в момент появления ошибки, не на каждый вызов
+    if (invalid && !wasInvalid)
+        shakeWidget(edit);
+
+    Q_UNUSED(fieldLabel);
+}
+
+void Meteo11::setRawBulletinInvalid(bool invalid)
+{
+    const bool wasInvalid = ui->plainEdit_rawBulletin->property("invalid").toBool();
+    ui->plainEdit_rawBulletin->setProperty("invalid", invalid);
+    ui->plainEdit_rawBulletin->style()->unpolish(ui->plainEdit_rawBulletin);
+    ui->plainEdit_rawBulletin->style()->polish(ui->plainEdit_rawBulletin);
+    ui->plainEdit_rawBulletin->update();
+
+    ui->lblRawBulletinError->setVisible(invalid);
+
+    if (invalid && !wasInvalid)
+        shakeWidget(ui->plainEdit_rawBulletin);
+}
+
+void Meteo11::shakeWidget(QWidget *w)
+{
+    if (!w) return;
+    const QPoint basePos = w->pos();
+
+    auto *anim = new QPropertyAnimation(w, "pos", w);
+    anim->setDuration(280);
+    anim->setKeyValueAt(0.0,  basePos);
+    anim->setKeyValueAt(0.2,  basePos + QPoint(-6, 0));
+    anim->setKeyValueAt(0.4,  basePos + QPoint(6, 0));
+    anim->setKeyValueAt(0.6,  basePos + QPoint(-4, 0));
+    anim->setKeyValueAt(0.8,  basePos + QPoint(2, 0));
+    anim->setKeyValueAt(1.0,  basePos);
+    anim->start(QAbstractAnimation::DeleteWhenStopped);
 }

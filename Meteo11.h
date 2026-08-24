@@ -6,6 +6,10 @@
 #include <QJsonObject>
 #include <QJsonArray>
 
+class QLineEdit;
+class QLabel;
+class QWidget;
+
 namespace Ui {
 class Meteo11;
 }
@@ -64,6 +68,20 @@ private slots:
 
 private:
     void updateStatusPill();
+
+    // ── Валидация полей ввода (подсветка незаполненных) ─────────────────────
+    struct RequiredField {
+        QLineEdit *edit;
+        QLabel    *hint;
+        QString    label;   // человекочитаемое имя поля для подсказки
+    };
+    QList<RequiredField> requiredFields() const;
+    void setupValidation();                              // подключает сигналы очистки подсветки
+    bool validateRequiredFields(bool focusFirst = true);  // true, если все обязательные поля заполнены
+    void setFieldInvalid(QLineEdit *edit, QLabel *hint, bool invalid,
+                          const QString &fieldLabel = QString());
+    void shakeWidget(QWidget *w);                         // короткая анимация "встряски"
+    void setRawBulletinInvalid(bool invalid);              // рамка+подпись над строкой бюллетеня
 
     Ui::Meteo11 *ui;
 

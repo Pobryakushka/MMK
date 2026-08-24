@@ -25,7 +25,10 @@
 #include "sensorsettings.h"
 #include "surfacemeteosaver.h"
 #include "functionalcontroldialog.h"
-#include "workregulationdialog.h"
+#include "workregulationhubpage.h"
+#include "inspectionpage.h"
+#include "anglecheckpage.h"
+#include "ClickableFrame.h"
 #include "autoconnector.h"
 #include "LocalTileServer.h"
 #include "calculationAlgorithms/windprofilecalculator.h"
@@ -36,35 +39,13 @@
 class SourceData;
 class AlgorithmsCalculation;
 class LandingCalculation;
+class WorkRegulationHubPage;
+class InspectionPage;
+class AngleCheckPage;
 
 namespace Ui {
 class MainWindow;
 }
-
-// ─────────────────────────────────────────────────────────────────────────
-// ClickableFrame — обычный QFrame с сигналом clicked(). Реализовано через
-// прямое переопределение mousePressEvent/mouseReleaseEvent (НЕ через
-// installEventFilter — на этой платформе перехват мышиных событий через
-// eventFilter уже приводил к зависанию приложения в другом месте интерфейса,
-// поэтому для кликабельных элементов используем только штатный, надёжный
-// путь — тот же, что использует сам Qt внутри QAbstractButton).
-// ─────────────────────────────────────────────────────────────────────────
-class ClickableFrame : public QFrame
-{
-    Q_OBJECT
-public:
-    explicit ClickableFrame(QWidget *parent = nullptr);
-
-signals:
-    void clicked();
-
-protected:
-    void mousePressEvent(QMouseEvent *event) override;
-    void mouseReleaseEvent(QMouseEvent *event) override;
-
-private:
-    bool m_pressed = false;
-};
 
 class MainWindow : public QMainWindow
 {
@@ -130,8 +111,11 @@ private slots:
     void onDisconnectRequested();
 
     // Кнопка "Подключить всё" в статус-панели (заменяет собой бывшую
-    // btnConnectSensors из главного меню — см. onConnectAllClicked()).
+    // btnConnectSensors из главного меню). Клик по иконке открывает
+    // шторку (как у датчиков) — см. showConnectAllPopup(). Сам поиск
+    // запускается кнопкой внутри шторки — onConnectAllPopupActionClicked().
     void onConnectAllClicked();
+    void onConnectAllPopupActionClicked();
 
     // AutoConnector слоты
     void onAutoConnectorDeviceDetected(AutoConnector::DeviceType type, const QString &port, int baudRate);
@@ -203,6 +187,13 @@ private slots:
 private:
     Ui::MainWindow *ui;
     AutoConnector *m_autoConnector = nullptr;
+
+    // true после того, как стартовый опрос датчиков при запуске программы
+    // хоть раз завершился (успешно, неудачно или вовсе не потребовался —
+    // см. connectSensorsFromConfig()/finalizeAutoConnectorFinished()). Пока
+    // false, "Подключить всё" всегда скрыта — иначе она на секунду
+    // "мигает" видимой между стартом окна и стартовым автопоиском.
+    bool m_startupSensorCheckDone = false;
     QTimer *timer;
     QTimer *pollTimer;
     QSerialPort *serialPort;
@@ -210,6 +201,9 @@ private:
     SourceData *sourceDataInstance;
     AlgorithmsCalculation *m_algorithmsCalcWidget = nullptr;
     LandingCalculation *m_landingCalcWidget = nullptr;
+    WorkRegulationHubPage *m_workRegulationHubPage = nullptr;
+    InspectionPage *m_inspectionPage = nullptr;
+    AngleCheckPage *m_angleCheckPage = nullptr;
 
     QDateTime m_manualDateTime;
     bool m_useManualDateTime;
@@ -243,7 +237,7 @@ private:
     QString m_binsComPort;
     int m_binsBaudRate;
 
-    // ИВС — ожидание 3 минут после подключения
+    // Прогрев ИВС — ожидание 3 минут после подключения
     QTimer *m_iwsWarmupTimer;
     bool    m_iwsWarmupDone;
 
@@ -332,6 +326,24 @@ private:
     QString sensorLastSeenText(AutoConnector::DeviceType type) const;
     bool isSensorConnected(AutoConnector::DeviceType type) const;
     QWidget* sensorIndicatorWidget(AutoConnector::DeviceType type) const;
+
+    // ── Шторка кнопки "Подключить всё" ──────────────────────────────────────
+    // Открывается кликом по иконке btnConnectAll в статус-панели (видна
+    // только когда ни один датчик не подключён — см.
+    // updateConnectAllButtonVisibility()). Показывает пояснение и кнопку
+    // запуска полного поиска — по сути та же логика, что раньше вызывалась
+    // напрямую по клику, но теперь как отдельный шаг подтверждения, а не
+    // мгновенный запуск.
+    QWidget *m_connectAllPopup = nullptr;
+    QLabel *m_connectAllPopupTitle = nullptr;
+    QLabel *m_connectAllPopupSubtitle = nullptr;
+    QPushButton *m_connectAllPopupActionBtn = nullptr;
+    QPropertyAnimation *m_connectAllPopupAnimation = nullptr;
+
+    void setupConnectAllPopup();
+    void showConnectAllPopup();
+    void hideConnectAllPopup();
+    void populateConnectAllPopupContent();
 
     // ── Health-check: опрос "жив ли датчик" для уже подключённых ───────────
     // АМС — активный (LINE_TEST раз в 5с, только когда не идёт измерение).

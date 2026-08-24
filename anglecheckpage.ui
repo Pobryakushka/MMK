@@ -1,0 +1,404 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>AngleCheckPage</class>
+ <widget class="QWidget" name="AngleCheckPage">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1024</width>
+    <height>640</height>
+   </rect>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">background-color: #EFF1F1;</string>
+  </property>
+  <layout class="QVBoxLayout" name="pageLayout">
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+
+   <item>
+    <layout class="QHBoxLayout" name="headerLayout">
+     <property name="spacing">
+      <number>6</number>
+     </property>
+     <property name="leftMargin">
+      <number>8</number>
+     </property>
+     <property name="topMargin">
+      <number>8</number>
+     </property>
+     <property name="rightMargin">
+      <number>8</number>
+     </property>
+     <property name="bottomMargin">
+      <number>4</number>
+     </property>
+     <item>
+      <widget class="QPushButton" name="btnBackFromAngleCheck">
+       <property name="minimumSize">
+        <size>
+         <width>96</width>
+         <height>48</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton { font-size: 16pt; font-weight: bold; border: none; background: transparent; color: #0F6B4F; }
+QPushButton:pressed { color: #0B5A42; }</string>
+       </property>
+       <property name="text">
+        <string>‹ Назад</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="lblAngleCheckPageTitle">
+       <property name="styleSheet">
+        <string notr="true">font-size: 15pt; font-weight: bold; padding-left: 8px; background: transparent;</string>
+       </property>
+       <property name="text">
+        <string>Проверка установки углов (ТО-2)</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="headerSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+
+   <item>
+    <layout class="QVBoxLayout" name="stackLayout">
+     <property name="spacing">
+      <number>12</number>
+     </property>
+     <property name="leftMargin">
+      <number>20</number>
+     </property>
+     <property name="topMargin">
+      <number>8</number>
+     </property>
+     <property name="rightMargin">
+      <number>20</number>
+     </property>
+     <property name="bottomMargin">
+      <number>16</number>
+     </property>
+
+     <item alignment="Qt::AlignHCenter|Qt::AlignTop">
+      <widget class="QFrame" name="amsBannerFrame">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>44</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>640</width>
+         <height>44</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QFrame#amsBannerFrame { background-color: #E8F5E9; border: 1px solid #A5D6A7; border-radius: 14px; }</string>
+       </property>
+       <property name="frameShape">
+        <enum>QFrame::NoFrame</enum>
+       </property>
+       <layout class="QHBoxLayout" name="amsBannerLayout">
+        <property name="leftMargin">
+         <number>18</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>18</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="lblAmsBannerText">
+          <property name="styleSheet">
+           <string notr="true">color: #2E7D32; font-weight: 600; font-size: 10pt; background: transparent; border: none;</string>
+          </property>
+          <property name="text">
+           <string>АМС подключён — команды доступны</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+
+     <item alignment="Qt::AlignHCenter|Qt::AlignTop">
+      <widget class="QFrame" name="cardFrame">
+       <property name="maximumSize">
+        <size>
+         <width>640</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QFrame#cardFrame { background-color: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 16px; }</string>
+       </property>
+       <property name="frameShape">
+        <enum>QFrame::NoFrame</enum>
+       </property>
+       <layout class="QVBoxLayout" name="cardLayout">
+        <property name="leftMargin">
+         <number>20</number>
+        </property>
+        <property name="topMargin">
+         <number>18</number>
+        </property>
+        <property name="rightMargin">
+         <number>20</number>
+        </property>
+        <property name="bottomMargin">
+         <number>18</number>
+        </property>
+        <property name="spacing">
+         <number>8</number>
+        </property>
+
+        <item>
+         <widget class="QLabel" name="sectionLabelAngle">
+          <property name="styleSheet">
+           <string notr="true">font-size: 9pt; font-weight: 700; letter-spacing: 1px; color: #5B6167; background: transparent; border: none;</string>
+          </property>
+          <property name="text">
+           <string>ПОЛОЖЕНИЕ РПВ</string>
+          </property>
+         </widget>
+        </item>
+
+        <!-- Компас — живое текущее положение РПВ -->
+        <item alignment="Qt::AlignHCenter">
+         <widget class="RpvIndicator" name="rpvAngleIndicator" native="true">
+          <property name="minimumSize">
+           <size>
+            <width>140</width>
+            <height>140</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>180</width>
+            <height>180</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+
+        <!-- Ввод целевого угла -->
+        <item>
+         <layout class="QHBoxLayout" name="angleRow">
+          <property name="spacing">
+           <number>8</number>
+          </property>
+          <item>
+           <spacer name="angleRowLeftSpacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="editTargetAngle">
+            <property name="minimumSize">
+             <size>
+              <width>110</width>
+              <height>50</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>110</width>
+              <height>50</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">font-size: 17pt; font-weight: 700; border: 1px solid #DDE1E3; border-radius: 13px; padding: 2px;</string>
+            </property>
+            <property name="text">
+             <string>000</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="lblAngleDeg">
+            <property name="styleSheet">
+             <string notr="true">font-size: 15pt; color: #5B6167; background: transparent; border: none;</string>
+            </property>
+            <property name="text">
+             <string>°</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="angleRowRightSpacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </item>
+
+        <item alignment="Qt::AlignHCenter">
+         <widget class="QLabel" name="lblKbNote">
+          <property name="styleSheet">
+           <string notr="true">font-size: 8.5pt; color: #5B6167; background: transparent; border: none;</string>
+          </property>
+          <property name="text">
+           <string>При касании поля откроется экранная клавиатура</string>
+          </property>
+         </widget>
+        </item>
+
+        <item>
+         <layout class="QHBoxLayout" name="startStopRow">
+          <property name="spacing">
+           <number>12</number>
+          </property>
+          <item>
+           <widget class="QPushButton" name="btnStop">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>58</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">QPushButton {
+    background-color: #FFFFFF; color: #1C1F22; border: 1px solid #DDE1E3;
+    border-radius: 14px; font-size: 12.5pt; font-weight: 700;
+}
+QPushButton:pressed { background-color: #E8EAEA; }
+QPushButton:disabled { background-color: #F8F8F8; color: #A0A0A0; border-color: #EDEDED; }</string>
+            </property>
+            <property name="text">
+             <string>Стоп</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btnStart">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>58</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">QPushButton {
+    background-color: #0F6B4F; color: #FFFFFF; border: 1px solid #0F6B4F;
+    border-radius: 14px; font-size: 12.5pt; font-weight: 700;
+}
+QPushButton:pressed { background-color: #0B5A42; }
+QPushButton:disabled { background-color: #A9C9BE; border-color: #A9C9BE; color: #F0F5F3; }</string>
+            </property>
+            <property name="text">
+             <string>Пуск</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+
+       </layout>
+      </widget>
+     </item>
+
+     <item alignment="Qt::AlignHCenter|Qt::AlignTop">
+      <widget class="QLabel" name="lblStatus">
+       <property name="maximumSize">
+        <size>
+         <width>640</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">font-size: 11pt; font-weight: 600; color: #2E7D32; background-color: #E8F5E9; border: 1px solid #A5D6A7; padding: 12px 16px; border-radius: 12px;</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+
+     <item>
+      <spacer name="stackBottomSpacer">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>20</width>
+         <height>10</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+
+    </layout>
+   </item>
+
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>RpvIndicator</class>
+   <extends>QWidget</extends>
+   <header>ui/RpvIndicator.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>
