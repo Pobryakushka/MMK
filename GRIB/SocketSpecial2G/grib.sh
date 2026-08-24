@@ -138,7 +138,20 @@ if [ -n "$POINT" ]; then
     RIGHTLON=$(awk -v lo="$POINT_LONG" -v w="$POINT_WINDOW" 'BEGIN{printf "%.4f", lo+w}')
     TOPLAT=$(awk -v la="$POINT_LAT" -v w="$POINT_WINDOW" 'BEGIN{v=la+w; if (v>90) v=90; printf "%.4f", v}')
     BOTTOMLAT=$(awk -v la="$POINT_LAT" -v w="$POINT_WINDOW" 'BEGIN{v=la-w; if (v<-90) v=-90; printf "%.4f", v}')
+
+    # Имя выгружаемого файла (gfs.tRUNz.pgrb2.0p25.fFH) не зависит от даты
+    # и точки, поэтому общий FILES_DIR не годится: при повторном запросе на
+    # тот же цикл (00/06/12/18), но на другую дату или другую станцию,
+    # скрипт увидел бы уже лежащий там чужой файл и тихо отдал бы данные не
+    # для той даты/точки. Поэтому под каждый (дата, цикл, точка) — свой
+    # подкаталог. Ключ подкаталога должен точно совпадать с тем, что
+    # вычисляет GribMeteo11Pipeline::pointDataDir() на стороне C++
+    # (Meteo11Grib/GribMeteo11Pipeline.cpp) — там указывается тот же
+    # каталог для запуска Mushroom.
+    FILES_DIR="${FILES_DIR}/${CURRENT_DATE}_${RUN}_pt${POINT_LAT}_${POINT_LONG}"
 fi
+
+mkdir -p "$FILES_DIR"
 
 exec 200>"$LOCKFILE"
 flock -n 200 || { msg "Скрипт уже запущен."; exit 1; }

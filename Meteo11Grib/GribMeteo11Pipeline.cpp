@@ -31,10 +31,21 @@ void GribMeteo11Pipeline::run(double lat, double lon, const QDateTime &sondingTi
 
     const QString runCycle = nearestGfsRunCycle(sondingTime);
 
+    m_runCycle = runCycle;
+
     emit logLine(QStringLiteral("GRIB Метео-11: точка %1,%2, дата %3, цикл %4")
                      .arg(lat).arg(lon).arg(m_date, runCycle));
 
     m_downloadRunner.start(m_config.downloadScriptPath, m_date, runCycle, lat, lon);
+}
+
+QString GribMeteo11Pipeline::pointDataDir() const
+{
+    // Должно совпадать с тем, как grib.sh переопределяет FILES_DIR в
+    // ветке --point: "${FILES_DIR}/${CURRENT_DATE}_${RUN}_pt${POINT_LAT}_${POINT_LONG}"
+    return QStringLiteral("%1/%2_%3_pt%4_%5")
+        .arg(m_config.dataDir, m_date, m_runCycle,
+             GfsDownloadRunner::formatCoord(m_lat), GfsDownloadRunner::formatCoord(m_lon));
 }
 
 void GribMeteo11Pipeline::onDownloadFinished(bool success, int exitCode)
@@ -45,7 +56,7 @@ void GribMeteo11Pipeline::onDownloadFinished(bool success, int exitCode)
     }
 
     emit logLine(QStringLiteral("GRIB скачан, запускаем Mushroom..."));
-    m_mushroomRunner.start(m_config.mushroomExePath, m_config.dataDir, m_lat, m_lon, m_date);
+    m_mushroomRunner.start(m_config.mushroomExePath, pointDataDir(), m_lat, m_lon, m_date);
 }
 
 void GribMeteo11Pipeline::onMushroomFinished(bool success, const QVector<MushroomMessage> &messages)

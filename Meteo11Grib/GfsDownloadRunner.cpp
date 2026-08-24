@@ -18,13 +18,16 @@ GfsDownloadRunner::GfsDownloadRunner(QObject *parent) : QObject(parent)
             });
 }
 
+QString GfsDownloadRunner::formatCoord(double value)
+{
+    return QString::number(value, 'f', 4);
+}
+
 void GfsDownloadRunner::start(const QString &scriptPath, const QString &date,
                                const QString &run, double lat, double lon)
 {
     // Формат точки соответствует ожидаемому в gfs_download.sh: LAT:LONG
-    const QString point = QStringLiteral("%1:%2")
-        .arg(lat, 0, 'f', 4)
-        .arg(lon, 0, 'f', 4);
+    const QString point = formatCoord(lat) + QLatin1Char(':') + formatCoord(lon);
 
     // START=0 END=0 — нам всегда нужен только текущий момент (f000),
     // прогноз на будущее для этой задачи не требуется.
