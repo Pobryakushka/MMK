@@ -327,6 +327,9 @@ QPushButton:pressed {
        <number>0</number>
       </property>
       <widget class="QWidget" name="page_home">
+       <property name="styleSheet">
+        <string notr="true">background-color: #F5F5F5;</string>
+       </property>
        <layout class="QGridLayout" name="homeGridLayout">
         <property name="leftMargin">
          <number>20</number>
@@ -369,9 +372,9 @@ QPushButton:pressed {
     color: #1C1F22;
     border: 1px solid #DDE1E3;
     border-radius: 16px;
-    font-size: 10pt;
+    font-size: 11pt;
     font-weight: 600;
-    text-align: left;
+    text-align: center;
     padding: 10px;
 }
 QPushButton:pressed {
@@ -379,7 +382,8 @@ QPushButton:pressed {
 }</string>
           </property>
           <property name="text">
-           <string>Функциональный контроль</string>
+           <string>Функциональный
+контроль</string>
           </property>
          </widget>
         </item>
@@ -409,9 +413,9 @@ QPushButton:pressed {
     color: #1C1F22;
     border: 1px solid #DDE1E3;
     border-radius: 16px;
-    font-size: 10pt;
+    font-size: 11pt;
     font-weight: 600;
-    text-align: left;
+    text-align: center;
     padding: 10px;
 }
 QPushButton:pressed {
@@ -419,7 +423,8 @@ QPushButton:pressed {
 }</string>
           </property>
           <property name="text">
-           <string>Положение метеокомплекса</string>
+           <string>Положение
+метеокомплекса</string>
           </property>
          </widget>
         </item>
@@ -449,9 +454,9 @@ QPushButton:pressed {
     color: #1C1F22;
     border: 1px solid #DDE1E3;
     border-radius: 16px;
-    font-size: 10pt;
+    font-size: 11pt;
     font-weight: 600;
-    text-align: left;
+    text-align: center;
     padding: 10px;
 }
 QPushButton:pressed {
@@ -489,9 +494,9 @@ QPushButton:pressed {
     color: #1C1F22;
     border: 1px solid #DDE1E3;
     border-radius: 16px;
-    font-size: 10pt;
+    font-size: 11pt;
     font-weight: 600;
-    text-align: left;
+    text-align: center;
     padding: 10px;
 }
 QPushButton:pressed {
@@ -529,9 +534,9 @@ QPushButton:pressed {
     color: #1C1F22;
     border: 1px solid #DDE1E3;
     border-radius: 16px;
-    font-size: 10pt;
+    font-size: 11pt;
     font-weight: 600;
-    text-align: left;
+    text-align: center;
     padding: 10px;
 }
 QPushButton:pressed {
@@ -569,9 +574,9 @@ QPushButton:pressed {
     color: #1C1F22;
     border: 1px solid #DDE1E3;
     border-radius: 16px;
-    font-size: 10pt;
+    font-size: 11pt;
     font-weight: 600;
-    text-align: left;
+    text-align: center;
     padding: 10px;
 }
 QPushButton:pressed {
@@ -579,7 +584,8 @@ QPushButton:pressed {
 }</string>
           </property>
           <property name="text">
-           <string>Регламентные работы</string>
+           <string>Регламентные
+работы</string>
           </property>
          </widget>
         </item>
@@ -609,9 +615,9 @@ QPushButton:pressed {
     color: #1C1F22;
     border: 1px solid #DDE1E3;
     border-radius: 16px;
-    font-size: 10pt;
+    font-size: 11pt;
     font-weight: 600;
-    text-align: left;
+    text-align: center;
     padding: 10px;
 }
 QPushButton:pressed {
@@ -649,9 +655,9 @@ QPushButton:pressed {
     color: white;
     border: 1px solid #0F6B4F;
     border-radius: 16px;
-    font-size: 10pt;
+    font-size: 11pt;
     font-weight: 600;
-    text-align: left;
+    text-align: center;
     padding: 10px;
 }
 QPushButton:pressed {
@@ -1158,9 +1164,9 @@ QPushButton:pressed {
     color: #1C1F22;
     border: 1px solid #DDE1E3;
     border-radius: 16px;
-    font-size: 10pt;
+    font-size: 11pt;
     font-weight: 600;
-    text-align: left;
+    text-align: center;
     padding: 10px;
 }
 QPushButton:pressed {
@@ -1168,7 +1174,8 @@ QPushButton:pressed {
 }</string>
           </property>
           <property name="text">
-           <string>Подключить датчики</string>
+           <string>Подключить
+датчики</string>
           </property>
          </widget>
         </item>

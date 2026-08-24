@@ -16,13 +16,8 @@ contains(QWT_VER,^5\\..*\\..*) {
 }
 
 unix {
-    QWT_BUILD_PATH = $$PWD/qwt/qwt-6.1.5
-
-    INCLUDEPATH += $${QWT_BUILD_PATH}/src
-
-    LIBS += -L$${QWT_BUILD_PATH}/lib -lqwt
-
-    QMAKE_LFLAGS += -Wl,-rpath,$${QWT_BUILD_PATH}/lib
+    CONFIG += qwt
+    LIBS += -lqwt-qt5
 }
 
 win32 {
