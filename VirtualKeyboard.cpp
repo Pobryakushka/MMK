@@ -244,18 +244,38 @@ void VirtualKeyboard::repositionFor(QWidget *target)
     if (!topLevel)
         return;
 
-    const QRect avail = topLevel->rect();
+    // Верхняя часть окна приложения занята его собственной несъёмной шапкой
+    // (пилюли состояния ГНСС/АМС/БИНС/ИВС, часы, статус бюллетеня) — сама
+    // VirtualKeyboard об этом ничего не знает, т.к. работает с координатами
+    // ВСЕГО top-level окна. Резервируем безопасный отступ сверху, чтобы
+    // клавиатура не могла лечь поверх этой шапки, даже если считает, что
+    // места "сверху" достаточно.
+    static constexpr int kTopSafeMargin = 96;
+    QRect avail = topLevel->rect();
+    avail.setTop(avail.top() + kTopSafeMargin);
 
-    if (QLayout *l = layout())
+    // Сначала полностью сбрасываем физический размер клавиатуры и
+    // инвалидируем layout — и только ПОТОМ спрашиваем sizeHint()/
+    // minimumSizeHint(). Без этого клавиатура может ещё "помнить" размер от
+    // ПРЕДЫДУЩЕГО показа (например, широкой буквенной раскладки), и новая,
+    // более компактная раскладка (например, цифровая) окажется растянута
+    // растягивающими факторами сетки на эту старую, большую площадь.
+    resize(0, 0);
+    if (m_grid)
+        m_grid->invalidate();
+    if (QLayout *l = layout()) {
+        l->invalidate();
         l->activate();
+    }
+
     const QSize hint = sizeHint();
     const QSize minHint = minimumSizeHint();
 
     int maxWidth = (m_shownMode == Mode::Text)
-        ? qMin(avail.width() * 92 / 100, 980)
-        : qMin(avail.width() * 70 / 100, 560);
+        ? qMin(avail.width() * 85 / 100, 760)
+        : qMin(avail.width() * 45 / 100, 340);
 
-    int maxHeight = qMin(avail.height() * 55 / 100, m_shownMode == Mode::Text ? 380 : 340);
+    int maxHeight = qMin(avail.height() * 45 / 100, m_shownMode == Mode::Text ? 300 : 240);
 
     int kbWidth  = qMax(minHint.width(), qMin(hint.width(), maxWidth));
     int kbHeight = qMax(minHint.height(), qMin(hint.height(), maxHeight));
@@ -279,10 +299,11 @@ void VirtualKeyboard::repositionFor(QWidget *target)
         y = targetRect.top() - kbHeight - margin;
     } else {
         // Ни сверху, ни снизу не хватает места целиком — прижимаем туда,
-        // где места больше, и не даём выйти за пределы окна. Перекрытие
-        // самого поля ввода в этом случае невозможно (мы всё равно кладём
-        // клавиатуру строго выше или строго ниже поля), но клавиатура
-        // будет неизбежно у самого края окна.
+        // где места больше, и не даём выйти за пределы окна (с учётом
+        // зарезервированной сверху шапки). Перекрытие самого поля ввода в
+        // этом случае невозможно (мы всё равно кладём клавиатуру строго
+        // выше или строго ниже поля), но клавиатура будет неизбежно у
+        // самого края доступной области.
         y = (spaceBelow >= spaceAbove)
                 ? qMax(targetRect.bottom() + margin, avail.bottom() - kbHeight)
                 : qMin(targetRect.top() - kbHeight - margin, avail.top());
@@ -321,12 +342,25 @@ void VirtualKeyboard::updateHint()
 
 void VirtualKeyboard::rebuildLayout()
 {
-    QLayoutItem *child;
-    while ((child = m_grid->takeAt(0)) != nullptr) {
-        if (QWidget *w = child->widget())
-            w->deleteLater();
-        delete child;
+    // Не просто чистим содержимое grid'а, а пересоздаём сам layout.
+    // QGridLayout запоминает максимальное число строк/столбцов, когда-либо
+    // использованных, и НЕ уменьшает его при удалении виджетов через
+    // takeAt(). Из-за этого при переключении с буквенной раскладки
+    // (12 колонок) на цифровую (4 колонки) оставались пустые растянутые
+    // колонки, а сам виджет клавиатуры "залипал" на прежнем масштабе и не
+    // ужимался/не расширялся обратно. Пересоздание QGridLayout с нуля
+    // полностью убирает эту память о старых размерах.
+    if (m_grid) {
+        QLayoutItem *child;
+        while ((child = m_grid->takeAt(0)) != nullptr) {
+            if (QWidget *w = child->widget())
+                w->deleteLater();   // deleteLater — мы можем быть внутри clicked() этой же кнопки
+            delete child;
+        }
+        delete m_grid;
     }
+    m_grid = new QGridLayout(m_keysContainer);
+    m_grid->setSpacing(6);
 
     if (m_shownMode == Mode::Numeric)
         buildNumericLayout();
@@ -340,7 +374,7 @@ void VirtualKeyboard::buildNumericLayout()
     auto mkKey = [this](const QString &label, auto slotFn, const char *objName = nullptr) {
         auto *btn = new QPushButton(label, m_keysContainer);
         btn->setFocusPolicy(Qt::NoFocus);
-        btn->setMinimumSize(64, 52);
+        btn->setMinimumSize(56, 44);
         if (objName)
             btn->setObjectName(objName);
         connect(btn, &QPushButton::clicked, this, slotFn);
@@ -571,7 +605,17 @@ void VirtualKeyboard::commitAndClose()
         target->setText(text);
     }
 
+    // Важно: обнуляем m_target ДО hide()/clearFocus(). clearFocus() ниже сам
+    // сгенерирует QEvent::FocusOut на target, который в eventFilter() снова
+    // вызвал бы commitAndClose() — с уже обнулённым m_target это не произойдёт.
+    m_target = nullptr;
     hide();
+
+    // Явно снимаем фокус с поля: иначе Qt считает его по-прежнему
+    // сфокусированным, повторный тап по нему не создаёт FocusIn — и
+    // клавиатура больше не открывается, пока не кликнуть в другое поле.
+    target->clearFocus();
+
     emit doneEditing(target);
 }
 

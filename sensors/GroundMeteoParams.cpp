@@ -6,6 +6,12 @@
 #include <algorithm>
 #include <QMessageBox>
 #include <QLineEdit>
+#include <QLabel>
+#include <QPainter>
+#include <QPropertyAnimation>
+#include <QHeaderView>
+#include <QPointer>
+#include <QScrollBar>
 
 GroundMeteoParams* GroundMeteoParams::s_instance = nullptr;
 
@@ -30,9 +36,19 @@ constexpr RowFormat kRowFormat[5] = {
 // GroundParamValueDelegate
 // ─────────────────────────────────────────────────────────────────────────
 
-GroundParamValueDelegate::GroundParamValueDelegate(QObject *parent)
+GroundParamValueDelegate::GroundParamValueDelegate(QTableWidget *table, QObject *parent)
     : QStyledItemDelegate(parent)
+    , m_table(table)
 {
+    // Защита от "сдвига" колонки "Параметр": какой бы код (VirtualKeyboard
+    // или сам делегат) ни поменял геометрию таблицы во время редактирования
+    // ячейки, после закрытия редактора мы всегда возвращаем колонку 0
+    // к фиксированной ширине.
+    connect(this, &QAbstractItemDelegate::closeEditor, this, [this]() {
+        if (!m_table) return;
+        m_table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
+        m_table->setColumnWidth(0, kGroundParamColumnWidth);
+    });
 }
 
 QWidget* GroundParamValueDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &option,
@@ -76,6 +92,24 @@ void GroundParamValueDelegate::destroyEditor(QWidget *editor, const QModelIndex 
     QStyledItemDelegate::destroyEditor(editor, index);
 }
 
+void GroundParamValueDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option,
+                                      const QModelIndex &index) const
+{
+    QStyledItemDelegate::paint(painter, option, index);
+
+    if (index.data(GroundMeteoParams::kInvalidRole).toBool()) {
+        painter->save();
+        painter->setRenderHint(QPainter::Antialiasing, true);
+        QPen pen(QColor("#C62828"));
+        pen.setWidthF(1.6);
+        painter->setPen(pen);
+        painter->setBrush(Qt::NoBrush);
+        const QRectF r = QRectF(option.rect).adjusted(2, 2, -2, -2);
+        painter->drawRoundedRect(r, 4, 4);
+        painter->restore();
+    }
+}
+
 GroundMeteoParams::GroundMeteoParams(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::GroundMeteoParams)
@@ -111,9 +145,27 @@ GroundMeteoParams::GroundMeteoParams(QWidget *parent)
         item->setFlags(item->flags() | Qt::ItemIsEditable);
     }
 
+    // Колонка "Параметр" — фиксированная ширина (не должна "плавать" при
+    // открытии/закрытии редактора ячейки или появлении экранной клавиатуры).
+    // Колонка "Значение" тянется на всё оставшееся место.
+    table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
+    table->setColumnWidth(0, kGroundParamColumnWidth);
+    table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+
+    // Защита от "сдвига подписей влево": horizontalScrollBarPolicy=AlwaysOff
+    // прячет полосу прокрутки, но НЕ отключает саму прокрутку — Qt может
+    // молча сдвинуть viewport по горизонтали при открытии редактора ячейки
+    // (например, вызовом внутреннего scrollTo()), и вернуть обратно после
+    // некому, т.к. полоса скрыта. Поэтому любое такое смещение немедленно
+    // обнуляем сами.
+    connect(table->horizontalScrollBar(), &QScrollBar::valueChanged, table,
+            [table](int value) {
+                if (value != 0) table->horizontalScrollBar()->setValue(0);
+            });
+
     // Валидированный редактор + автопривязка экранной клавиатуры для ячеек
     // столбца "Значение" (см. GroundParamValueDelegate выше).
-    table->setItemDelegateForColumn(1, new GroundParamValueDelegate(table));
+    table->setItemDelegateForColumn(1, new GroundParamValueDelegate(table, table));
 
     // Отслеживаем ручные правки ячеек — для m_dirty (подтверждение при закрытии).
     // Программные записи в таблицу обёрнуты в m_suppressDirty, чтобы не путать.
@@ -294,6 +346,12 @@ void GroundMeteoParams::deleteDataFromTable()
 
     // Сбрасываем dirty (после очистки правок "нет")
     m_dirty = false;
+    m_lastUpdateWasManual = false;
+
+    // Снимаем подсветку "поле не заполнено" со всех строк
+    for (int row = 0; row < rowCount; ++row)
+        setRowInvalid(row, false);
+    if (m_rowHintLabel) m_rowHintLabel->hide();
 
     // Пересчёт состояния → NoData → сигнал
     recomputeSurfaceState();
@@ -318,6 +376,24 @@ void GroundMeteoParams::applyManualInput()
     auto [presOk,  pres]  = readRow(2);   // ВРУЧНУЮ — уже мм рт.ст.
     auto [humOk,   hum]   = readRow(3);
     auto [tempOk,  temp]  = readRow(4);
+
+    // ── Видимая подсветка незаполненных строк ────────────────────────────
+    // Раньше при неполном вводе ничего не происходило видимо для оператора
+    // (только qWarning в консоль). Теперь каждая незаполненная строка сразу
+    // получает красную рамку в колонке "Значение" и подсвеченное красным имя
+    // параметра; у первой из них дополнительно всплывает подпись-подсказка.
+    const bool rowOk[5] = { speedOk, dirOk, presOk, humOk, tempOk };
+    int firstInvalidRow = -1;
+    for (int row = 0; row < 5; ++row) {
+        setRowInvalid(row, !rowOk[row]);
+        if (!rowOk[row] && firstInvalidRow < 0)
+            firstInvalidRow = row;
+    }
+    if (firstInvalidRow >= 0) {
+        showRowHint(firstInvalidRow, "Поле не заполнено");
+        table->setCurrentCell(firstInvalidRow, 1);
+        table->scrollToItem(table->item(firstInvalidRow, 1));
+    }
 
     // Обновляем флаги готовности по каждому параметру независимо
     m_hasSpeed       = speedOk;
@@ -357,6 +433,11 @@ void GroundMeteoParams::applyManualInput()
 
     // Кнопка "Применить" нажата → правки считаются применёнными
     m_dirty = false;
+
+    // Это был РУЧНОЙ ввод (кнопка "Применить"), а не приём от ИВС — see
+    // lastUpdateWasManual(). MainWindow использует это для жёлтой подсветки
+    // плашки "ИВС".
+    m_lastUpdateWasManual = true;
 
     // Перезапускаем таймер 30 мин — данные свежие
     restartStaleTimer();
@@ -537,6 +618,10 @@ void GroundMeteoParams::onDataReceived(const QByteArray& data)
 void GroundMeteoParams::updateTableWithData(const QMap<QString, double>& values)
 {
     qDebug() << "updateTableWithData called with" << values.size() << "values";
+
+    // Данные пришли от ИВС, а не введены вручную — снимаем возможную
+    // жёлтую подсветку "ручной ввод" на плашке ИВС.
+    m_lastUpdateWasManual = false;
 
     // Программная запись — не помечаем как ручную правку
     m_suppressDirty = true;
@@ -1134,9 +1219,13 @@ bool GroundMeteoParams::convertModbusRegisterToValue(
 
 void GroundMeteoParams::onTableItemChanged(QTableWidgetItem *item)
 {
-    Q_UNUSED(item);
     if (m_suppressDirty) return;   // программная запись — не считаем правкой
     m_dirty = true;
+
+    // Как только оператор начал заполнять ранее подсвеченную строку —
+    // снимаем с неё красную рамку и подпись, не дожидаясь "Применить".
+    if (item && item->column() == 1 && !item->text().trimmed().isEmpty())
+        setRowInvalid(item->row(), false);
 }
 
 void GroundMeteoParams::recomputeSurfaceState()
@@ -1178,6 +1267,68 @@ void GroundMeteoParams::onStaleTimerTimeout()
     qDebug() << "GroundMeteoParams: таймер 30 мин истёк — данные устарели";
     // Если данные есть — состояние станет Stale; если уже нет — останется NoData.
     recomputeSurfaceState();
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Подсветка незаполненных строк ("рамка + подпись", с анимацией встряски)
+// ─────────────────────────────────────────────────────────────────────────
+
+void GroundMeteoParams::setRowInvalid(int row, bool invalid)
+{
+    QTableWidget *table = ui->tableWidget_GroundParams;
+    QTableWidgetItem *valueItem = table->item(row, 1);
+    QTableWidgetItem *nameItem  = table->item(row, 0);
+
+    if (valueItem) valueItem->setData(kInvalidRole, invalid);
+    if (nameItem)  nameItem->setForeground(QColor(invalid ? "#C62828" : "#1C1F22"));
+
+    table->viewport()->update();
+}
+
+void GroundMeteoParams::showRowHint(int row, const QString &text)
+{
+    QTableWidget *table = ui->tableWidget_GroundParams;
+    const QModelIndex idx = table->model()->index(row, 1);
+    const QRect cellRect = table->visualRect(idx);
+    const QPoint topLeftInParent = table->mapTo(this, cellRect.topLeft());
+
+    if (!m_rowHintLabel) {
+        m_rowHintLabel = new QLabel(this);
+        m_rowHintLabel->setStyleSheet(
+            "background-color:#C62828; color:#FFFFFF; font-weight:bold; font-size:9pt;"
+            "border-radius:5px; padding:4px 10px;");
+        m_rowHintLabel->setAttribute(Qt::WA_TransparentForMouseEvents);
+    }
+    m_rowHintLabel->setText(text);
+    m_rowHintLabel->adjustSize();
+
+    const int x = topLeftInParent.x() + cellRect.width() - m_rowHintLabel->width() - 10;
+    const int y = topLeftInParent.y() + (cellRect.height() - m_rowHintLabel->height()) / 2;
+    m_rowHintLabel->move(x, y);
+    m_rowHintLabel->raise();
+    m_rowHintLabel->show();
+    shakeWidget(m_rowHintLabel);
+
+    QPointer<QLabel> hintGuard(m_rowHintLabel);
+    QTimer::singleShot(2500, this, [hintGuard]() {
+        if (hintGuard) hintGuard->hide();
+    });
+}
+
+void GroundMeteoParams::shakeWidget(QWidget *w)
+{
+    if (!w) return;
+    const QPoint basePos = w->pos();
+
+    auto *anim = new QPropertyAnimation(w, "pos", w);
+    anim->setDuration(280);
+    anim->setKeyValueAt(0.0, basePos);
+    anim->setKeyValueAt(0.2, basePos + QPoint(-6, 0));
+    anim->setKeyValueAt(0.4, basePos + QPoint(6, 0));
+    anim->setKeyValueAt(0.6, basePos + QPoint(-4, 0));
+    anim->setKeyValueAt(0.8, basePos + QPoint(2, 0));
+    anim->setKeyValueAt(1.0, basePos);
+    anim->start(QAbstractAnimation::DeleteWhenStopped);
 }
 
 // ─────────────────────────────────────────────────────────────────────────

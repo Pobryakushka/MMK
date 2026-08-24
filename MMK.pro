@@ -28,15 +28,23 @@ QMAKE_LFLAGS += -Wl,-rpath,$$PLOW_DIR
 # Исходники (.cpp) отсюда убраны, так как они уже скомпилированы в .so.
 # Оставляем только заголовочные файлы для корректного отображения структуры в дереве Qt Creator.
 PLOW_HEADERS = $$files($$PLOW_DIR/*.h,   true)
-HEADERS *= $$PLOW_HEADERS
+HEADERS *= $$PLOW_HEADERS \
+    ui/ClickableFrame.h \
+    ui/anglecheckpage.h \
+    ui/inspectionpage.h \
+    ui/workregulationhubpage.h \
 
 # ─── ClimatData — климатические данные по широте/долготе/месяцу ───
 CLIMAT_DIR = $$THIRDPARTY/climatData
 INCLUDEPATH += $$CLIMAT_DIR
 
-# SOURCES *= \
-#     $$CLIMAT_DIR/climatdata.cpp \
-#     $$CLIMAT_DIR/climatdataprivate.cpp
+SOURCES *= \
+    $$CLIMAT_DIR/climatdata.cpp \
+    $$CLIMAT_DIR/climatdataprivate.cpp \
+    ui/ClickableFrame.cpp \
+    ui/anglecheckpage.cpp \
+    ui/inspectionpage.cpp \
+    ui/workregulationhubpage.cpp \
 
 HEADERS *= \
     $$CLIMAT_DIR/climatdata.h \
@@ -75,7 +83,6 @@ SOURCES += \
     autoconnector.cpp \
     calculationAlgorithms/WindShearCalculator.cpp \
     surfacemeteosaver.cpp \
-    ui/workregulationdialog.cpp \
     ui/RpvIndicator.cpp \
     calculationAlgorithms/windprofilecalculator.cpp \
     VirtualKeyboard.cpp \
@@ -121,7 +128,6 @@ HEADERS += \
     autoconnector.h \
     calculationAlgorithms/WindShearCalculator.h \
     surfacemeteosaver.h \
-    ui/workregulationdialog.h \
     ui/RpvIndicator.h \
     calculationAlgorithms/windprofilecalculator.h \
     VirtualKeyboard.h \
@@ -152,10 +158,13 @@ FORMS += \
     MeasurementResults.ui \
     Meteo11.ui \
     SourceData.ui \
+    anglecheckpage.ui \
     functionalcontroldialog.ui \
+    inspectionpage.ui \
     mainwindow.ui \
     sensorsettings.ui \
-    ExportDialog.ui
+    ExportDialog.ui \
+    workregulationhubpage.ui \
 
 RESOURCES += \
     Resources.qrc
