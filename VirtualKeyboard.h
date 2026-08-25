@@ -26,6 +26,7 @@ struct VirtualKeyboardConstraints {
     int    maxDecimals     = -1;     // максимум цифр после разделителя, -1 = не ограничено
     int    maxLength       = -1;     // максимальная длина строки, -1 = не ограничено
     bool   allowModeSwitch = true;   // показывать кнопку переключения цифры/буквы
+    bool   allowSlash      = false;  // разрешить "/" (напр. код "//" — значение не измерялось)
     double minValue = std::numeric_limits<double>::lowest();
     double maxValue = std::numeric_limits<double>::max();
     bool   clampOnDone = true;       // при "Готово" подрезать значение к [min, max]
