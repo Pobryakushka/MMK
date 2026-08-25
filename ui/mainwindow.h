@@ -321,6 +321,12 @@ private:
     void hideSensorPopup();
     void populateSensorPopupContent();
     void startSingleSensorSearch(AutoConnector::DeviceType type);
+    // Поиск в очереди: AutoConnector умеет искать только один тип за раз.
+    // Заявки, пришедшие пока поиск уже идёт, копятся здесь и стартуют сами,
+    // одна за другой, по мере завершения предыдущих (см. startSingleSensorSearch
+    // и startNextQueuedSearch, вызывается из finalizeAutoConnectorFinished).
+    QList<AutoConnector::DeviceType> m_sensorSearchQueue;
+    void startNextQueuedSearch();
     // Вызывается ТОЛЬКО изнутри health-check при реальной потере связи
     // (не из UI — кнопки отключения в шторке больше нет).
     void disconnectSensor(AutoConnector::DeviceType type);
@@ -418,10 +424,25 @@ private:
     // Поля editLatitude/editLongitude/editAltitude (ГНСС) и
     // editDirectionAngle/editRollAngle/editPitchAngle (БИНС) живут прямо в
     // mainwindow.ui — своего класса-состояния для них, в отличие от
-    // GroundMeteoParams, нет. hasPositionData()/hasOrientationData() читают
-    // эти поля "по требованию" вместо хранения отдельного флага готовности.
+    // GroundMeteoParams, нет. hasPositionData()/hasOrientationData()
+    // возвращают ФЛАГИ (см. ниже), а не парсят текст полей: поля в .ui
+    // изначально содержат непустые демонстрационные значения (Designer),
+    // поэтому "текст не пуст" НЕ означает "данные реально получены".
     bool hasPositionData() const;
     bool hasOrientationData() const;
+
+    // Реально получены ли координаты/ориентация — от карты, ГНСС/БИНС или
+    // подтверждённого ручного ввода. false с самого старта программы, пока
+    // не сработает один из перечисленных путей — см. onGnssDataReceived,
+    // updateCoordinatesFromMap, onBinsDataReceived, updateManualHighlightAfterManualInput.
+    bool m_hasGnssPosition = false;
+    bool m_hasBinsOrientation = false;
+
+    // "Сырая" проверка — валидны ли ЧИСЛА в полях ПРЯМО СЕЙЧАС, независимо
+    // от того, как они туда попали. Используется только для решения о
+    // подсветке при выходе из ручного режима (см. ниже) — НЕ для готовности.
+    bool fieldsLookLikePosition() const;
+    bool fieldsLookLikeOrientation() const;
 
     // Подсветка датчика жёлтым, когда его данные введены ВРУЧНУЮ (вариант B):
     // выставляется по факту — какая группа полей оказалась заполнена после
@@ -480,7 +501,15 @@ private:
      */
     void setupMapCoordinatesButton();
     void updateMapCoordinatesButtonStyle();
-    void setupGnssCheckbox();
+    // Страница "Положение" дублирует чипы "Карта"/"ГНСС-датчик" (см. .ui:
+    // btnMapCoordinatesPos/checkboxGnssPos) — это ВТОРОЙ набор виджетов,
+    // синхронизируемый с оригиналами на карте (btnMapCoordinates/checkboxGnss),
+    // а не одни и те же объекты (Qt не позволяет одному виджету жить в двух
+    // родителях). btnMapCoordinates* синхронизируются просто — оба виджета
+    // всегда получают одинаковый checked+стиль внутри updateMapCoordinatesButtonStyle().
+    // Для чекбокса нужна отдельная синхронизация, т.к. toggled(bool)
+    // рекурсивно вызывал бы обработчик — см. syncGnssPosCheckbox().
+    void syncGnssPosCheckbox();    void setupGnssCheckbox();
     void setupGnssSettingsButton();
     void updateCoordinateSource(const QString &source);
     void checkAndDisableConflictingSources(const QString &activeSource);

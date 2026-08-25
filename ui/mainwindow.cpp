@@ -8,6 +8,7 @@
 #include "calculationAlgorithms/AlgorithmsCalc.h"
 #include "MeasurementResults.h"
 #include "sensors/GroundMeteoParams.h"
+#include "VirtualKeyboard.h"
 #include "calculationAlgorithms/LandingCalculation.h"
 #include "sensors/amshandler.h"
 #include "databasemanager.h"
@@ -179,8 +180,47 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->editLatitude, &QLineEdit::textEdited, this, [this](){ onCoordTextEdited(ui->editLatitude); });
     connect(ui->editLongitude, &QLineEdit::textEdited, this, [this](){ onCoordTextEdited(ui->editLongitude); });
 
-    setCoordField(ui->editLatitude, 55.7558);
-    setCoordField(ui->editLongitude, 37.6173);
+    // Поля положения/ориентации ОСТАЮТСЯ пустыми до реальных данных (карта/
+    // ГНСС/БИНС/подтверждённый ручной ввод) — раньше здесь стоял
+    // setCoordField(...) с демо-координатами Москвы, из-за чего поля
+    // выглядели заполненными ещё до старта программы, а индикатор "Отказ"
+    // при этом (справедливо) не видел готовых данных — путаница для
+    // оператора. См. m_hasGnssPosition/m_hasBinsOrientation.
+
+    // Виртуальная клавиатура для ручного ввода положения/ориентации — тот
+    // же механизм, что и у ячеек таблицы GroundMeteoParams. Поля постоянные
+    // (не пересоздаются как редакторы делегата), поэтому attach() вызывается
+    // один раз здесь и живёт всё время жизни MainWindow — VirtualKeyboard
+    // сама показывается только когда поле получает фокус (а получить фокус
+    // получится только когда поле enabled, см. onManualInputClicked).
+    {
+        VirtualKeyboard::Constraints coordC;
+        coordC.allowNegative = true;   // широта/долгота могут быть отрицательными
+        coordC.allowDecimal  = true;
+        coordC.maxDecimals   = 6;
+        coordC.maxLength     = 12;
+        coordC.allowModeSwitch = false;
+        VirtualKeyboard::attach(ui->editLatitude,  VirtualKeyboard::Mode::Numeric, coordC);
+        VirtualKeyboard::attach(ui->editLongitude, VirtualKeyboard::Mode::Numeric, coordC);
+
+        VirtualKeyboard::Constraints altC;
+        altC.allowNegative = true;     // высота над УМ теоретически может быть отрицательной
+        altC.allowDecimal  = true;
+        altC.maxDecimals   = 2;
+        altC.maxLength     = 8;
+        altC.allowModeSwitch = false;
+        VirtualKeyboard::attach(ui->editAltitude, VirtualKeyboard::Mode::Numeric, altC);
+
+        VirtualKeyboard::Constraints angleC;
+        angleC.allowNegative = true;   // крен/тангаж — знаковые; дир. угол оставляем так же
+        angleC.allowDecimal  = true;
+        angleC.maxDecimals   = 2;
+        angleC.maxLength     = 8;
+        angleC.allowModeSwitch = false;
+        VirtualKeyboard::attach(ui->editDirectionAngle, VirtualKeyboard::Mode::Numeric, angleC);
+        VirtualKeyboard::attach(ui->editRollAngle,       VirtualKeyboard::Mode::Numeric, angleC);
+        VirtualKeyboard::attach(ui->editPitchAngle,      VirtualKeyboard::Mode::Numeric, angleC);
+    }
 
     ui->editAltitude->setEnabled(false);
     ui->editDirectionAngle->setEnabled(false);
@@ -508,10 +548,25 @@ double MainWindow::getCoordField(QLineEdit *edit, bool &ok) const
 }
 
 // ── Готовность положения (ГНСС) / ориентации (БИНС) ─────────────────────
-// "Есть данные" = все нужные поля непустые и парсятся. Источник (датчик /
-// карта / вручную) для самого факта готовности не важен — важен только для
-// подсветки (см. m_gnssManualHighlight/m_binsManualHighlight ниже).
+// ВАЖНО: это флаги "данные реально получены", а НЕ парсинг текста полей —
+// поля editLatitude/../editPitchAngle в .ui изначально содержат непустые
+// демонстрационные значения (Designer), поэтому "текст непустой" не значит
+// "данные реальные". Флаги выставляются только настоящими источниками —
+// см. onGnssDataReceived/updateCoordinatesFromMap/onBinsDataReceived/
+// updateManualHighlightAfterManualInput.
 bool MainWindow::hasPositionData() const
+{
+    return m_hasGnssPosition;
+}
+
+bool MainWindow::hasOrientationData() const
+{
+    return m_hasBinsOrientation;
+}
+
+// "Сырая" проверка полей — используется ТОЛЬКО для решения о жёлтой
+// подсветке при выходе из ручного режима (см. updateManualHighlightAfterManualInput).
+bool MainWindow::fieldsLookLikePosition() const
 {
     bool ok1 = false, ok2 = false;
     getCoordField(ui->editLatitude, ok1);
@@ -520,7 +575,7 @@ bool MainWindow::hasPositionData() const
     return ok1 && ok2 && altOk;
 }
 
-bool MainWindow::hasOrientationData() const
+bool MainWindow::fieldsLookLikeOrientation() const
 {
     bool ok = false;
     ui->editDirectionAngle->text().toDouble(&ok);
@@ -560,12 +615,25 @@ void MainWindow::setupMapCoordinatesButton()
     ui->btnMapCoordinates->setIconSize(QSize(20, 20));
 
     connect(ui->btnMapCoordinates, &QPushButton::clicked, this, &MainWindow::onMapCoordinatesToggled);
+    // Дубликат-чип на странице "Положение" — тот же обработчик (он не
+    // принимает параметров, просто флипает m_mapCoordinatesEnabled и красит
+    // оба виджета через updateMapCoordinatesButtonStyle()).
+    connect(ui->btnMapCoordinatesPos, &QPushButton::clicked, this, &MainWindow::onMapCoordinatesToggled);
 }
 
 void MainWindow::setupGnssCheckbox()
 {
     // Чекбокс теперь в UI файле, просто подключаем сигнал
     connect(ui->checkboxGnss, &QCheckBox::toggled, this, &MainWindow::onGnssCheckboxToggled);
+    // Дубликат-чекбокс на странице "Положение" — не подключаем к реальному
+    // обработчику напрямую (двойной вызов connectToGnss/disconnectFromGnss),
+    // а просто ПЕРЕСЫЛАЕМ клик на настоящий checkboxGnss; настоящая логика
+    // отработает через его собственный toggled, а состояние обоих потом
+    // выравнивает syncGnssPosCheckbox() в конце onGnssCheckboxToggled.
+    connect(ui->checkboxGnssPos, &QCheckBox::toggled, this, [this](bool checked) {
+        if (ui->checkboxGnss->isChecked() != checked)
+            ui->checkboxGnss->setChecked(checked);
+    });
 }
 
 //void MainWindow::setupGnssSettingsButton()
@@ -680,39 +748,53 @@ void MainWindow::updateGnssMarkerOnMap(double latitude, double longitude)
 void MainWindow::updateMapCoordinatesButtonStyle()
 {
     QIcon markerIcon(":/dat/images/marker.png");
-    ui->btnMapCoordinates->setIcon(markerIcon);
-    ui->btnMapCoordinates->setIconSize(QSize(16, 16));
 
-    // Кнопка теперь живёт в карточке "Положение (ГНСС)" как плоский чип
-    // (см. QSS страницы page_position в .ui) — стиль ниже дублирует ту же
-    // палитру напрямую, т.к. checked-состояние выставляется программно
-    // чуть ниже и должно быть видно сразу, без ожидания re-polish.
+    // Есть ДВА виджета этой кнопки — оригинал на карте (плавающий маркер,
+    // по которому и правда тапают) и чип-дубликат на странице "Положение"
+    // (см. .ui). Одно состояние m_mapCoordinatesEnabled — оба отражают его
+    // одинаково, каждый в своём стиле.
+    ui->btnMapCoordinates->setIcon(markerIcon);
+    ui->btnMapCoordinates->setIconSize(QSize(20, 20));
+    ui->btnMapCoordinates->setChecked(m_mapCoordinatesEnabled);
+    if (ui->btnMapCoordinatesPos)
+        ui->btnMapCoordinatesPos->setChecked(m_mapCoordinatesEnabled);
+
     if (m_mapCoordinatesEnabled) {
         ui->btnMapCoordinates->setStyleSheet(
             "QPushButton {"
             "   background-color: #0F6B4F;"
-            "   color: #FFFFFF;"
-            "   border: 1px solid #0F6B4F;"
-            "   border-radius: 8px;"
-            "   font-size: 9pt;"
-            "   font-weight: 700;"
-            "   padding: 6px 12px;"
+            "   border: 2px solid #0B5A41;"
+            "   border-radius: 12px;"
             "}"
+            "QPushButton:hover { background-color: #0B5A41; }"
             );
-        ui->btnMapCoordinates->setToolTip("Режим координат с карты активен (нажмите для отключения)");
+        ui->btnMapCoordinates->setToolTip("Режим координат с карты активен — тапните точку на карте");
+        if (ui->btnMapCoordinatesPos) {
+            ui->btnMapCoordinatesPos->setStyleSheet(
+                "QPushButton {"
+                "   background-color: #0F6B4F; color: #FFFFFF; border: 1px solid #0F6B4F;"
+                "   border-radius: 8px; font-size: 9pt; font-weight: 700; padding: 6px 12px;"
+                "}"
+                );
+        }
     } else {
         ui->btnMapCoordinates->setStyleSheet(
             "QPushButton {"
-            "   background-color: #FFFFFF;"
-            "   color: #1C1F22;"
-            "   border: 1px solid #DDE1E3;"
-            "   border-radius: 8px;"
-            "   font-size: 9pt;"
-            "   font-weight: 700;"
-            "   padding: 6px 12px;"
+            "   background-color: rgba(255,255,255,235);"
+            "   border: none;"
+            "   border-radius: 12px;"
             "}"
+            "QPushButton:hover { background-color: #f0f0f0; }"
             );
-        ui->btnMapCoordinates->setToolTip("Использовать координаты с карты (нажмите для включения)");
+        ui->btnMapCoordinates->setToolTip("Использовать координаты с карты (нажмите, затем тапните точку на карте)");
+        if (ui->btnMapCoordinatesPos) {
+            ui->btnMapCoordinatesPos->setStyleSheet(
+                "QPushButton {"
+                "   background-color: #FFFFFF; color: #1C1F22; border: 1px solid #DDE1E3;"
+                "   border-radius: 8px; font-size: 9pt; font-weight: 700; padding: 6px 12px;"
+                "}"
+                );
+        }
     }
 }
 
@@ -744,6 +826,7 @@ void MainWindow::onGnssCheckboxToggled(bool checked)
         if (m_gnssComPort.isEmpty()) {
             qDebug() << "MainWindow: COM-порт не настроен, открываем настройки...";
             ui->checkboxGnss->setChecked(false);
+            syncGnssPosCheckbox();
             return;
         }
 
@@ -751,6 +834,22 @@ void MainWindow::onGnssCheckboxToggled(bool checked)
     } else {
         disconnectFromGnss();
     }
+
+    syncGnssPosCheckbox();
+}
+
+// Выравнивает checkboxGnssPos (дубликат-чип на странице "Положение") по
+// текущему checked-состоянию "настоящего" checkboxGnss (на карте).
+// blockSignals — чтобы не спровоцировать повторный вызов пересылки на
+// checkboxGnss (см. лямбду в setupUi/конструкторе) и не зациклиться.
+void MainWindow::syncGnssPosCheckbox()
+{
+    if (!ui->checkboxGnssPos) return;
+    const bool checked = ui->checkboxGnss->isChecked();
+    if (ui->checkboxGnssPos->isChecked() == checked) return;
+    ui->checkboxGnssPos->blockSignals(true);
+    ui->checkboxGnssPos->setChecked(checked);
+    ui->checkboxGnssPos->blockSignals(false);
 }
 
 void MainWindow::connectToGnss()
@@ -826,6 +925,9 @@ void MainWindow::onGnssDataReceived(const GNSSData &data)
     setCoordField(ui->editLongitude, data.longitude);
     ui->editAltitude->setText(QString::number(data.altitude, 'f', 2));
 
+    // Реальные данные получены с датчика.
+    m_hasGnssPosition = true;
+
     // Свежие данные с датчика перекрыли то, что могло быть введено
     // вручную ранее — жёлтая подсветка ГНСС больше не актуальна.
     if (m_gnssManualHighlight) {
@@ -874,6 +976,7 @@ void MainWindow::onGnssDisconnected()
     if (ui->checkboxGnss->isChecked()) {
         ui->checkboxGnss->setChecked(false);
     }
+    syncGnssPosCheckbox();
 
     updateFieldsEditability();
     updateGnssStatusLabel(false);
@@ -1634,6 +1737,9 @@ void MainWindow::onBinsDataReceived(const BINSData &data)
     ui->editRollAngle->setText(QString::number(data.roll, 'f', 2));
     ui->editPitchAngle->setText(QString::number(data.pitch, 'f', 2));
 
+    // Реальные данные получены с датчика.
+    m_hasBinsOrientation = true;
+
     // Свежие данные с датчика перекрыли ручной ввод — подсветка снимается.
     if (m_binsManualHighlight) {
         m_binsManualHighlight = false;
@@ -1679,6 +1785,11 @@ void MainWindow::updateCoordinatesFromMap(double latitude, double longitude)
 {
     setCoordField(ui->editLatitude, latitude);
     setCoordField(ui->editLongitude, longitude);
+
+    // Координаты выбраны на карте — это реальные данные положения (высота
+    // от карты не приходит, но широта/долгота — основа "положения").
+    m_hasGnssPosition = true;
+    updateOverallReadiness();
 
     // Передаем сигнал другим окнам
     emit coordinatesUpdatedFromMap(latitude, longitude);
@@ -2340,11 +2451,23 @@ void MainWindow::onManualInputClicked()
 // соответствующую плашку датчика жёлтым. Группы независимы (вариант B).
 void MainWindow::updateManualHighlightAfterManualInput()
 {
-    m_gnssManualHighlight = hasPositionData();
-    m_binsManualHighlight = hasOrientationData();
+    const bool posOk = fieldsLookLikePosition();
+    const bool oriOk = fieldsLookLikeOrientation();
+
+    m_gnssManualHighlight = posOk;
+    m_binsManualHighlight = oriOk;
+
+    // Ручной ввод подтверждён (кнопка "Ручной ввод" выключена) — если поля
+    // валидны, это ТЕПЕРЬ реальные данные положения/ориентации, а не просто
+    // текст в поле. Не сбрасываем в false при !posOk/!oriOk — оператор мог
+    // выключить ручной режим, не тронув эту группу полей вовсе, тогда как
+    // они были данные с датчика ранее.
+    if (posOk) m_hasGnssPosition = true;
+    if (oriOk) m_hasBinsOrientation = true;
 
     updateGnssStatusLabel(m_gnssHandler && m_gnssHandler->isConnected());
     updateBinsStatusLabel(m_binsHandler && m_binsHandler->isConnected());
+    updateOverallReadiness();
 }
 
 void MainWindow::onInitialDataClicked()
@@ -2797,6 +2920,7 @@ void MainWindow::onAutoConnectorDeviceDetected(AutoConnector::DeviceType type, c
             if (m_gnssHandler->connectToGnss(port, baudRate)) {
                 m_gnssEnabled = true;
                 ui->checkboxGnss->setChecked(true);
+                syncGnssPosCheckbox();
             }
         }
         break;
@@ -2892,6 +3016,13 @@ void MainWindow::finalizeAutoConnectorFinished()
             populateSensorPopupContent();
 
         m_toastHideTimer->start(4000);
+
+        // Если пока искали этот датчик, в очередь встали другие заявки —
+        // запускаем следующую. Небольшая пауза даёт порту время освободиться
+        // и не даёт тосту "найдено/не найдено" смениться мгновенно.
+        if (!m_sensorSearchQueue.isEmpty())
+            QTimer::singleShot(500, this, &MainWindow::startNextQueuedSearch);
+
         return;
     }
 
@@ -4280,12 +4411,18 @@ void MainWindow::populateSensorPopupContent()
         m_sensorPopupReason->setVisible(true);
 
         m_sensorPopupActionBtn->setVisible(true);
+        const bool queued = m_sensorSearchQueue.contains(type);
         if (searchingThis) {
             m_sensorPopupActionBtn->setText("Идёт поиск...");
             m_sensorPopupActionBtn->setEnabled(false);
-        } else if (searchRunning) {
-            m_sensorPopupActionBtn->setText("Дождитесь окончания поиска");
+        } else if (queued) {
+            m_sensorPopupActionBtn->setText("В очереди поиска...");
             m_sensorPopupActionBtn->setEnabled(false);
+        } else if (searchRunning) {
+            // Другой датчик уже ищется — не блокируем, а ставим в очередь
+            // по клику (см. startSingleSensorSearch).
+            m_sensorPopupActionBtn->setText("Подключить (в очередь)");
+            m_sensorPopupActionBtn->setEnabled(true);
         } else {
             m_sensorPopupActionBtn->setText("Подключить");
             m_sensorPopupActionBtn->setEnabled(true);
@@ -4307,7 +4444,7 @@ void MainWindow::populateSensorPopupContent()
             m_sensorPopupManualBtn->setText(manualText);
             m_sensorPopupManualBtn->setStyleSheet(
                 "QPushButton { background:#FFF8E1; color:#8a6100; border:1px solid #FFE082;"
-                " border-radius:8px; font-weight:700; }"
+                " border-radius:8px; font-weight:700; font-size:8pt; padding:4px 6px; }"
                 "QPushButton:pressed { background:#FFECB3; }");
         }
     }
@@ -4335,9 +4472,9 @@ bool MainWindow::sensorHasRequiredData(AutoConnector::DeviceType type) const
 QString MainWindow::sensorManualEntryButtonText(AutoConnector::DeviceType type) const
 {
     switch (type) {
-    case AutoConnector::DEVICE_IWS:  return "Приземных данных нет — переход к заполнению";
-    case AutoConnector::DEVICE_GNSS: return "Положения нет — переход к заполнению";
-    case AutoConnector::DEVICE_BINS: return "Ориентации нет — переход к заполнению";
+    case AutoConnector::DEVICE_IWS:  return "Заполнить вручную";
+    case AutoConnector::DEVICE_GNSS: return "Указать положение";
+    case AutoConnector::DEVICE_BINS: return "Указать ориентацию";
     default: return QString();
     }
 }
@@ -4524,16 +4661,47 @@ void MainWindow::hideConnectAllPopup()
 
 void MainWindow::startSingleSensorSearch(AutoConnector::DeviceType type)
 {
+    hideSensorPopup();
+
     if (m_autoConnector->isDetecting()) {
-        QMessageBox::information(this, "Поиск датчиков",
-            "Поиск уже выполняется, дождитесь его завершения.");
+        if (m_autoConnector->singleSearchTarget() == type) {
+            // Этот же датчик уже ищется — просто ждём, дублировать не нужно.
+            statusBar()->showMessage(sensorDisplayName(type) + ": поиск уже выполняется", 3000);
+            return;
+        }
+        // Поиск другого датчика уже идёт — AutoConnector умеет искать
+        // только один тип за раз, поэтому не блокируем кнопку, а ставим
+        // заявку в очередь: она стартует сама, как только текущий поиск
+        // завершится (см. startNextQueuedSearch, вызывается из
+        // finalizeAutoConnectorFinished). Уведомления по-прежнему идут в
+        // один и тот же тост снизу — просто по очереди.
+        if (!m_sensorSearchQueue.contains(type)) {
+            m_sensorSearchQueue.append(type);
+            statusBar()->showMessage(sensorDisplayName(type) + ": добавлено в очередь поиска", 3000);
+        }
         return;
     }
-    hideSensorPopup();
+
     m_autoConnector->startDetection(type);
     // Поиск одного датчика тоже "поиск" — прячем "Подключить всё" на время,
     // даже если до этого было 0 из 4 подключено.
     updateConnectAllButtonVisibility();
+}
+
+// Запускает следующий поиск из очереди (см. startSingleSensorSearch) —
+// вызывается из finalizeAutoConnectorFinished сразу после завершения
+// предыдущего одиночного поиска. Пропускает датчики, которые тем временем
+// уже подключились другим путём (вручную/автопоиском).
+void MainWindow::startNextQueuedSearch()
+{
+    while (!m_sensorSearchQueue.isEmpty()) {
+        const AutoConnector::DeviceType next = m_sensorSearchQueue.takeFirst();
+        if (isSensorConnected(next))
+            continue;
+        if (!m_autoConnector->isDetecting())
+            m_autoConnector->startDetection(next);
+        return;
+    }
 }
 
 // Вызывается ТОЛЬКО из health-check (onSilenceWatchdogTimer) при реальной
