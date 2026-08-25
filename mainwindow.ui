@@ -327,6 +327,9 @@ QPushButton:pressed {
        <number>0</number>
       </property>
       <widget class="QWidget" name="page_home">
+       <property name="styleSheet">
+        <string notr="true">background-color: #F5F5F5;</string>
+       </property>
        <layout class="QGridLayout" name="homeGridLayout">
         <property name="leftMargin">
          <number>20</number>
