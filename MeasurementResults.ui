@@ -19,6 +19,9 @@
   <property name="windowTitle">
    <string>Просмотр результатов измерений</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">background-color: #EFF1F1;</string>
+  </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <property name="spacing">
     <number>10</number>
