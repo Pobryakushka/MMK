@@ -263,6 +263,19 @@ void VirtualKeyboard::repositionFor(QWidget *target)
     resize(0, 0);
     if (m_grid)
         m_grid->invalidate();
+
+    // m_grid->invalidate() только помечает layout самого m_keysContainer
+    // грязным и планирует АСИНХРОННЫЙ QEvent::LayoutRequest — реального
+    // пересчёта до следующей прокрутки цикла событий не происходит. Но
+    // m_rootLayout (наш собственный layout(), см. ниже) хранит РАЗМЕР
+    // m_keysContainer в собственном отдельном кэше (QWidgetItemV2), который
+    // синхронно инвалидируется только явным updateGeometry() на самом
+    // m_keysContainer. Без этого вызова layout()->sizeHint() ниже вернёт
+    // сохранённый размер ПРЕДЫДУЩЕЙ раскладки (например, узкую цифровую),
+    // даже если m_keysContainer->sizeHint() уже честно возвращает новый —
+    // и клавиатура визуально "залипает" на старом масштабе.
+    m_keysContainer->updateGeometry();
+
     if (QLayout *l = layout()) {
         l->invalidate();
         l->activate();
@@ -353,8 +366,16 @@ void VirtualKeyboard::rebuildLayout()
     if (m_grid) {
         QLayoutItem *child;
         while ((child = m_grid->takeAt(0)) != nullptr) {
-            if (QWidget *w = child->widget())
+            if (QWidget *w = child->widget()) {
+                // Прячем сразу: deleteLater() выполнится только на следующей
+                // итерации цикла событий, а до этого момента виджет остаётся
+                // видимым на СТАРОМ месте/размере. При смене раскладок с
+                // сильно разными размерами (например, компактная цифровая →
+                // широкая буквенная) это давало "осколки" прежней раскладки
+                // поверх новой — клавиатура выглядела уменьшенной/сломанной.
+                w->hide();
                 w->deleteLater();   // deleteLater — мы можем быть внутри clicked() этой же кнопки
+            }
             delete child;
         }
         delete m_grid;

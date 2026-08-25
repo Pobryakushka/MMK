@@ -144,17 +144,40 @@ QPushButton:pressed { color: #0B5A42; }</string>
          <number>4</number>
         </property>
         <item>
-         <widget class="QLineEdit" name="lineEdit_rawBulletin">
-          <property name="minimumSize">
-           <size>
-            <width>0</width>
-            <height>36</height>
-           </size>
+         <layout class="QHBoxLayout" name="hLayoutRawBulletin">
+          <property name="spacing">
+           <number>6</number>
           </property>
-          <property name="placeholderText">
-           <string>Метео 1101 — 15011 — 0100 — 51258 — 0256 — 581704 — 0456 — ...</string>
-          </property>
-         </widget>
+          <item>
+           <widget class="QLineEdit" name="lineEdit_rawBulletin">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>36</height>
+             </size>
+            </property>
+            <property name="placeholderText">
+             <string>Метео 1101 — 15011 — 0100 — 51258 — 0256 — 581704 — 0456 — ...</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btnMet11Paste">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>36</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>Вставить текст из буфера обмена</string>
+            </property>
+            <property name="text">
+             <string>Вставить из буфера</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
         <item>
          <widget class="QLabel" name="lblRawBulletinHint">

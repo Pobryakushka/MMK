@@ -15,7 +15,7 @@ VARS=""
 LEVS=""
 REGION=""
 POINT=""
-POINT_WINDOW=5   # градусов в каждую сторону от точки клиента
+POINT_WINDOW=2   # градусов в каждую сторону от точки клиента (Kriging заменён на билинейную интерполяцию — нужна только ячейка сетки 0.25° вокруг точки, окно оставлено с запасом)
 POINT_VARS="HGT:TMP:UGRD:VGRD:PRMSL:RH"   # соответствует h/gh, t, u, v, p/prmsl, r в Mushroom
 # Стандартные изобарические уровни (мбар), покрывающие с запасом диапазон
 # высот 0-8000 м по стандартной атмосфере (8000 м ~= 356 гПа), плюс
@@ -169,8 +169,18 @@ trap on_int INT TERM
 log "Дата       : $CURRENT_DATE"
 log "Цикл       : $RUN"
 log "Источник   : $SOURCE"
-log "Режим      : $([ $PARTIAL -eq 1 ] && echo "частичный (vars=$VARS levs=$LEVS)" || echo "полный файл")"
-log "Регион     : $([ -n "$REGION" ] && echo "$REGION (leftlon:rightlon:toplat:bottomlat)" || echo "весь земной шар")"
+if [ -n "$POINT" ]; then
+    MODE_LOG="точка (vars=$POINT_VARS levs=$POINT_LEVS)"
+    REGION_LOG="окно ±${POINT_WINDOW}° вокруг точки, см. строку «Точка» ниже"
+elif [ $PARTIAL -eq 1 ]; then
+    MODE_LOG="частичный (vars=$VARS levs=$LEVS)"
+    REGION_LOG="$([ -n "$REGION" ] && echo "$REGION (leftlon:rightlon:toplat:bottomlat)" || echo "весь земной шар")"
+else
+    MODE_LOG="полный файл"
+    REGION_LOG="весь земной шар"
+fi
+log "Режим      : $MODE_LOG"
+log "Регион     : $REGION_LOG"
 log "Точка      : $([ -n "$POINT" ] && echo "$POINT, окно ±${POINT_WINDOW}° (leftlon=$LEFTLON rightlon=$RIGHTLON toplat=$TOPLAT bottomlat=$BOTTOMLAT), vars=$POINT_VARS, levs=$POINT_LEVS" || echo "не задана")"
 log "Диапазон   : f$(printf "%03d" "$START") - f$(printf "%03d" "$END")"
 
