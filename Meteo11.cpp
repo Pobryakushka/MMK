@@ -20,48 +20,6 @@ const QStringList Meteo11::kHeightCodes = {
     "10", "12", "14", "18", "22", "26", "30"           // 10–30 км
 };
 
-namespace {
-
-// Делегат для колонок НН/СС таблицы Метео-11: при редактировании ячейки
-// показывает маску "две цифры" (шаблон с видимыми пустыми позициями),
-// чтобы оператору было наглядно видно ожидаемый формат значения.
-// На ячейки ПП маска не ставится — там допустимо и число, и "//" (нет
-// измерения), смешанный формат под простую цифровую маску не ложится.
-class WindCellDelegate : public QStyledItemDelegate {
-public:
-    using QStyledItemDelegate::QStyledItemDelegate;
-
-    QWidget *createEditor(QWidget *parent, const QStyleOptionViewItem &option,
-                           const QModelIndex &index) const override
-    {
-        if (index.column() == 1 || index.column() == 2) {
-            auto *editor = new QLineEdit(parent);
-            editor->setInputMask("99;_");
-            editor->setAlignment(Qt::AlignCenter);
-            return editor;
-        }
-        return QStyledItemDelegate::createEditor(parent, option, index);
-    }
-
-    void setModelData(QWidget *editor, QAbstractItemModel *model,
-                       const QModelIndex &index) const override
-    {
-        if (index.column() == 1 || index.column() == 2) {
-            if (auto *le = qobject_cast<QLineEdit *>(editor)) {
-                // Маска использует "_" как заполнитель пустых позиций —
-                // отбрасываем всё, кроме реально введённых цифр.
-                QString digits = le->text();
-                digits.remove(QRegularExpression("[^0-9]"));
-                model->setData(index, digits, Qt::EditRole);
-                return;
-            }
-        }
-        QStyledItemDelegate::setModelData(editor, model, index);
-    }
-};
-
-} // namespace
-
 Meteo11::Meteo11(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::Meteo11)
