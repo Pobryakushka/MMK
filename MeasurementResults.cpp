@@ -2080,6 +2080,21 @@ void MeasurementResults::updateMeteo11Display()
         stationStale    = (stationAgeH > 12.0);
     }
 
+    // TTL самого бюллетеня «Из GRIB»: он рассчитывается для конкретного
+    // m_currentSondingTime (см. onFromGribButtonClicked), но остаётся в
+    // памяти и дальше показывается как есть, если пользователь просто
+    // переключится на другую запись (navigateToRecord), не нажимая кнопку
+    // "Из GRIB" повторно. Через 12 ч после времени, для которого он
+    // реально был посчитан, считаем его устаревшим — как и бюллетень "От МС".
+    double gribAgeH  = -1.0;
+    bool   gribStale = false;
+    if (m_meteo11FromGrib.isValid && m_currentSondingTime.isValid()
+            && m_meteo11FromGrib.bulletinTime.isValid()) {
+        qint64 ageSec = m_meteo11FromGrib.bulletinTime.secsTo(m_currentSondingTime);
+        gribAgeH      = qAbs(ageSec) / 3600.0;
+        gribStale     = (gribAgeH > 12.0);
+    }
+
     // Скрываем поля, не применимые к приближённому бюллетеню
     const bool isApprox = (currentButtelinType == Approximate);
     ui->lineEdit_numStation->setVisible(!isApprox);
@@ -2112,6 +2127,16 @@ void MeasurementResults::updateMeteo11Display()
                 text  = "ГОДНЫЙ (с данными МС)";
                 style = "color: #2e7d32; font-weight: bold;";
             }
+        } else if (currentButtelinType == FromGrib && gribAgeH >= 0.0) {
+            // "Из GRIB" — годен 12 ч с момента расчёта (относительно текущей
+            // отображаемой записи); дальше нужен пересчёт по свежим данным.
+            if (gribStale) {
+                text  = QString("УСТАРЕЛ (%1 ч)").arg(gribAgeH, 0, 'f', 1);
+                style = "color: #e65100; font-weight: bold; background-color: #fff8e1;";
+            } else {
+                text  = QString("ГОДНЫЙ (%1 ч)").arg(gribAgeH, 0, 'f', 1);
+                style = "color: #2e7d32; font-weight: bold;";
+            }
         } else {
             text  = "ГОДНЫЙ";
             style = "color: #2e7d32; font-weight: bold;";
@@ -2130,7 +2155,8 @@ void MeasurementResults::updateMeteo11Display()
             ? d->bulletinTime.toString("dd.MM.yyyy hh:mm")
             : "—"
         );
-    if (currentButtelinType == FromMeteoStat && stationStale && d->isValid) {
+    if (((currentButtelinType == FromMeteoStat && stationStale) ||
+         (currentButtelinType == FromGrib && gribStale)) && d->isValid) {
         ui->lineEdit_bulletenTime->setStyleSheet(
             "QLineEdit { background-color: #fff3e0; color: #e65100; font-weight: bold; }");
     } else {
@@ -2173,6 +2199,22 @@ void MeasurementResults::updateMeteo11Display()
                 .arg(stationAgeH, 0, 'f', 1));
     } else {
         ui->pushButton_fromMeteoStat->setToolTip("");
+    }
+
+    // Кнопка «Из GRIB» — тот же янтарный индикатор, когда посчитанный
+    // бюллетень старше 12 ч относительно текущей отображаемой записи.
+    if (gribStale && m_meteo11FromGrib.isValid) {
+        const bool sel = (currentButtelinType == FromGrib);
+        ui->pushButton_fromGrib->setStyleSheet(sel
+            ? "QPushButton { background-color: #e65100; color: white; font-weight: bold; "
+              "border: 2px inset #bf360c; border-radius: 4px; padding: 4px 8px; }"
+            : "QPushButton { color: #e65100; font-weight: bold; "
+              "border: 1px solid #e65100; border-radius: 4px; padding: 4px 8px; }");
+        ui->pushButton_fromGrib->setToolTip(
+            QString("Бюллетень «Из GRIB» устарел на %1 ч (>12 ч) — пересчитайте для текущей записи")
+                .arg(gribAgeH, 0, 'f', 1));
+    } else {
+        ui->pushButton_fromGrib->setToolTip("");
     }
 
     if (!d->isValid) {
