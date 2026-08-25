@@ -214,6 +214,16 @@ if [ $PARTIAL -eq 1 ] && [ -z "$REGION" ]; then
     LEVS_RE=$(build_regex "$LEVS")
 fi
 
+# Счётчик реально полученных файлов (скачанных сейчас или уже лежавших
+# на диске с прошлого запуска). Скрипт исторически не выставлял ненулевой
+# exit code при неудачах curl/пустых файлах внутри цикла — он просто
+# логировал ошибку и переходил к следующему часу, поэтому вызывающая
+# сторона (GfsDownloadRunner в MMK, который проверяет только exit code)
+# видела "успех", даже если ни один файл не был скачан. Ниже по коду
+# считаем успехи и в конце скрипта завершаемся с ошибкой, если не
+# получили вообще ничего.
+OK_COUNT=0
+
 for ((HOUR=START; HOUR<=END; HOUR++))
 do
     FH=$(printf "%03d" "$HOUR")
@@ -230,6 +240,7 @@ do
 
     if [ -f "$DESTFILE" ]; then
         log "f${FH} уже существует."
+        OK_COUNT=$((OK_COUNT + 1))
         continue
     fi
 
@@ -256,6 +267,7 @@ do
             if [ "$SIZE" -gt 0 ]; then
                 mv "$TMPFILE" "$DESTFILE"
                 log "f${FH} успешно скачан (регион)."
+                OK_COUNT=$((OK_COUNT + 1))
             else
                 log "Получен пустой файл (нет совпадений vars/levs/region?)."
                 rm -f "$TMPFILE"
@@ -292,6 +304,7 @@ do
             if [ "$SIZE" -gt 0 ]; then
                 mv "$TMPFILE" "$DESTFILE"
                 log "f${FH} успешно скачан (точка $POINT)."
+                OK_COUNT=$((OK_COUNT + 1))
             else
                 log "Получен пустой файл (нет данных для этой точки/даты?)."
                 rm -f "$TMPFILE"
@@ -354,6 +367,7 @@ do
         then
             mv "$TMPFILE" "$DESTFILE"
             log "f${FH} успешно скачан (частично)."
+            OK_COUNT=$((OK_COUNT + 1))
         else
             RC=$?
             log "f${FH} ошибка частичного скачивания."
@@ -373,6 +387,7 @@ do
             if [ "$SIZE" -gt 1000000 ]; then
                 mv "$TMPFILE" "$DESTFILE"
                 log "f${FH} успешно скачан."
+                OK_COUNT=$((OK_COUNT + 1))
             else
                 log "Получен слишком маленький файл."
                 rm -f "$TMPFILE"
@@ -390,3 +405,11 @@ do
 
     CURRENT_TMPFILE=""
 done
+
+if [ "$OK_COUNT" -eq 0 ]; then
+    log "Ни один файл не получен (0 из $((END - START + 1))) — завершаем с ошибкой."
+    exit 1
+fi
+
+log "Готово: получено файлов $OK_COUNT из $((END - START + 1))."
+exit 0
