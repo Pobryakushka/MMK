@@ -26,6 +26,7 @@ Meteo11::Meteo11(QWidget *parent)
     , m_applied(false)
 {
     ui->setupUi(this);
+    setAttribute(Qt::WA_StyledBackground, true);
 
     // Настраиваем таблицу: 3 колонки — ПП, НН, СС
     ui->tableWidget_meteo11->setColumnCount(3);

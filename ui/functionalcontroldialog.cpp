@@ -73,6 +73,7 @@ FunctionalControlDialog::FunctionalControlDialog(QWidget *parent)
     , m_sensorType(AMS)
 {
     ui->setupUi(this);
+    setAttribute(Qt::WA_StyledBackground, true);
 
     connect(ui->btnBackFromFuncControl, &QPushButton::clicked,
             this, &FunctionalControlDialog::backRequested);

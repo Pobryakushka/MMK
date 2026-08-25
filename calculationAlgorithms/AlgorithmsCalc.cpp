@@ -6,6 +6,7 @@ AlgorithmsCalculation::AlgorithmsCalculation(QWidget *parent)
     , ui(new Ui::AlgorithmsCalculation)
 {
     ui->setupUi(this);
+    setAttribute(Qt::WA_StyledBackground, true);
 
     connect(ui->btnAlgBack, &QPushButton::clicked, this, [this](){
         emit backRequested();

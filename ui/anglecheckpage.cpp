@@ -10,6 +10,7 @@ AngleCheckPage::AngleCheckPage(AMSHandler *amsHandler, QWidget *parent)
     , m_amsHandler(amsHandler)
 {
     ui->setupUi(this);
+    setAttribute(Qt::WA_StyledBackground, true);
 
     ui->editTargetAngle->setValidator(new QDoubleValidator(0.0, 330.0, 1, this));
     ui->lblStatus->setVisible(false);

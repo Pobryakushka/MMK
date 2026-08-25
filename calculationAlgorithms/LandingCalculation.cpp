@@ -10,6 +10,7 @@ LandingCalculation::LandingCalculation(QWidget *parent) :
     previousCellColumn(-1)
 {
     ui->setupUi(this);
+    setAttribute(Qt::WA_StyledBackground, true);
 
     // Равномерно растягиваем колонки таблиц по всей ширине карточки
     // (вместо растяжения только последней колонки, которое оставляло

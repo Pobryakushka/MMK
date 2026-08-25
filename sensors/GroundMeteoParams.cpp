@@ -120,6 +120,7 @@ GroundMeteoParams::GroundMeteoParams(QWidget *parent)
     , m_hasLastData(false)
 {
     ui->setupUi(this);
+    setAttribute(Qt::WA_StyledBackground, true);
 
     s_instance = this;
 

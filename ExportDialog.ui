@@ -4,6 +4,7 @@
  <widget class="QDialog" name="ExportDialog">
   <property name="windowTitle"><string>Экспорт данных измерений</string></property>
   <property name="minimumSize"><size><width>540</width><height>0</height></size></property>
+  <property name="styleSheet"><string notr="true">background-color: #EFF1F1;</string></property>
   <layout class="QVBoxLayout" name="vLayout_root">
    <property name="spacing"><number>10</number></property>
    <property name="leftMargin"><number>12</number></property>

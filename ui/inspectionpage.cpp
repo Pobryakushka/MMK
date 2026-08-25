@@ -9,6 +9,7 @@ InspectionPage::InspectionPage(AMSHandler *amsHandler, QWidget *parent)
     , m_amsHandler(amsHandler)
 {
     ui->setupUi(this);
+    setAttribute(Qt::WA_StyledBackground, true);
     ui->lblStatus->setVisible(false);
 
     connect(ui->btnBackFromInspection, &QPushButton::clicked,

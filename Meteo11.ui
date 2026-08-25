@@ -20,7 +20,7 @@
    <string>Метео-11 — ввод бюллетеня от метеостанции</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">background-color: #FFFFFF;
+   <string notr="true">background-color: #EFF1F1;
 QLineEdit {
   background-color: #FFFFFF;
   border: 1.5px solid #C7CCCF;
