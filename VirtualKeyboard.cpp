@@ -15,6 +15,51 @@
 QHash<QLineEdit*, VirtualKeyboard::AttachInfo> VirtualKeyboard::s_registry;
 VirtualKeyboard* VirtualKeyboard::s_instance = nullptr;
 
+// ─────────────────────────────────────────────────────────────────────────
+// Фиксированные размеры клавиатуры по режимам.
+//
+// Раньше размер вычислялся через sizeHint()/minimumSizeHint(), что зависело
+// от текущего состояния полировки стиля виджетов (QStyle::polish) в момент
+// вызова — из-за этого клавиатура то "сжималась", то "расширялась" при
+// переключении между цифровой и буквенной раскладками. Теперь размер
+// каждого режима задан явными константами, посчитанными из фиксированных
+// размеров кнопок и интервалов сетки — он не может стать ни больше, ни
+// меньше этого значения, независимо от порядка/истории показов.
+// ─────────────────────────────────────────────────────────────────────────
+static constexpr int kBtnSpacing = 6;
+static constexpr int kNumBtnW = 56, kNumBtnH = 44;   // цифровая панель: 4x4
+static constexpr int kNumActionW = 88;               // 4-й столбец (⌫ / C / Готово / АБВ) —
+                                                       // шире обычной цифровой кнопки, иначе
+                                                       // текст "Готово" не помещается
+static constexpr int kTextBtnW = 48, kTextBtnH = 48; // буквенная раскладка: 12x5
+static constexpr int kNumCols = 4,  kNumRows = 4;
+static constexpr int kTextCols = 12, kTextRows = 5;
+static constexpr int kHintH = 20;
+// contentsMargins корневого layout'а: left, top, right, bottom (см. конструктор)
+static constexpr int kRootMarginL = 10, kRootMarginT = 8, kRootMarginR = 10, kRootMarginB = 10;
+static constexpr int kRootSpacing = 6; // между подсказкой и сеткой клавиш
+
+static QSize numericKeysAreaSize()
+{
+    // 3 обычные колонки цифр + 1 расширенная колонка действий (⌫/C/Готово/АБВ)
+    const int width = (kNumCols - 1) * kNumBtnW + kNumActionW + (kNumCols - 1) * kBtnSpacing;
+    return QSize(width, kNumRows * kNumBtnH + (kNumRows - 1) * kBtnSpacing);
+}
+
+static QSize textKeysAreaSize()
+{
+    return QSize(kTextCols * kTextBtnW + (kTextCols - 1) * kBtnSpacing,
+                 kTextRows * kTextBtnH + (kTextRows - 1) * kBtnSpacing);
+}
+
+static QSize keyboardFixedSize(VirtualKeyboard::Mode mode)
+{
+    const QSize keys = (mode == VirtualKeyboard::Mode::Numeric)
+        ? numericKeysAreaSize() : textKeysAreaSize();
+    return QSize(kRootMarginL + kRootMarginR + keys.width(),
+                 kRootMarginT + kRootMarginB + kHintH + kRootSpacing + keys.height());
+}
+
 VirtualKeyboard::VirtualKeyboard(QWidget *parent)
     : QWidget(parent)
 {
@@ -45,6 +90,7 @@ VirtualKeyboard::VirtualKeyboard(QWidget *parent)
 
     m_hintLabel = new QLabel(this);
     m_hintLabel->setObjectName("vkHint");
+    m_hintLabel->setFixedHeight(20);
     m_rootLayout->addWidget(m_hintLabel);
 
     m_keysContainer = new QWidget(this);
@@ -133,7 +179,19 @@ QString VirtualKeyboard::numericPattern(const Constraints &c)
                                         : "[0-9]*";
         fracPart = QString("([\\.,]%1)?").arg(digits);
     }
-    return QString("^%1%2%3$").arg(sign, intPart, fracPart);
+    QString numberPattern = QString("%1%2%3").arg(sign, intPart, fracPart);
+
+    if (c.allowSlash) {
+        // "/" — не часть числа, а самостоятельный код "значение не
+        // измерялось" (напр. "//" в колонке ПП таблицы слоёв ветра).
+        // Разрешаем его независимо от числовой грамматики: либо обычное
+        // число, либо строка из одних "/".
+        return QString("^(%1|/{0,%2})$")
+            .arg(numberPattern)
+            .arg(c.maxLength >= 0 ? c.maxLength : 2);
+    }
+
+    return QString("^%1$").arg(numberPattern);
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -254,33 +312,11 @@ void VirtualKeyboard::repositionFor(QWidget *target)
     QRect avail = topLevel->rect();
     avail.setTop(avail.top() + kTopSafeMargin);
 
-    // Сначала полностью сбрасываем физический размер клавиатуры и
-    // инвалидируем layout — и только ПОТОМ спрашиваем sizeHint()/
-    // minimumSizeHint(). Без этого клавиатура может ещё "помнить" размер от
-    // ПРЕДЫДУЩЕГО показа (например, широкой буквенной раскладки), и новая,
-    // более компактная раскладка (например, цифровая) окажется растянута
-    // растягивающими факторами сетки на эту старую, большую площадь.
-    resize(0, 0);
-    if (m_grid)
-        m_grid->invalidate();
-    if (QLayout *l = layout()) {
-        l->invalidate();
-        l->activate();
-    }
-
-    const QSize hint = sizeHint();
-    const QSize minHint = minimumSizeHint();
-
-    int maxWidth = (m_shownMode == Mode::Text)
-        ? qMin(avail.width() * 85 / 100, 760)
-        : qMin(avail.width() * 45 / 100, 340);
-
-    int maxHeight = qMin(avail.height() * 45 / 100, m_shownMode == Mode::Text ? 300 : 240);
-
-    int kbWidth  = qMax(minHint.width(), qMin(hint.width(), maxWidth));
-    int kbHeight = qMax(minHint.height(), qMin(hint.height(), maxHeight));
-
-    resize(kbWidth, kbHeight);
+    // Размер клавиатуры уже жёстко зафиксирован в rebuildLayout() под
+    // текущий режим (setFixedSize) — здесь только позиционируем её
+    // относительно поля, без каких-либо пересчётов размера.
+    const int kbWidth  = width();
+    const int kbHeight = height();
 
     // Координаты поля — в системе координат ТОГО ЖЕ topLevel-окна, куда
     // мы только что перепривязали клавиатуру (move() ниже интерпретирует
@@ -322,7 +358,12 @@ void VirtualKeyboard::repositionFor(QWidget *target)
 void VirtualKeyboard::updateHint()
 {
     if (m_shownMode != Mode::Numeric) {
-        m_hintLabel->setText(m_target ? m_target->objectName() : QString());
+        // Для буквенной раскладки подсказывать нечего (диапазон значений
+        // относится только к числовым полям) — просто ничего не показываем.
+        // Раньше здесь по ошибке выводилось техническое имя объекта поля
+        // (target->objectName(), например "lineEdit_rawBulletin") — это был
+        // отладочный вывод, который утёк в интерфейс.
+        m_hintLabel->clear();
         return;
     }
     const auto &c = m_current.constraints;
@@ -360,12 +401,25 @@ void VirtualKeyboard::rebuildLayout()
         delete m_grid;
     }
     m_grid = new QGridLayout(m_keysContainer);
-    m_grid->setSpacing(6);
+    m_grid->setSpacing(kBtnSpacing);
+    m_grid->setContentsMargins(0, 0, 0, 0);
 
     if (m_shownMode == Mode::Numeric)
         buildNumericLayout();
     else
         buildTextLayout();
+
+    // Жёстко фиксируем размер контейнера клавиш и всей клавиатуры под
+    // конкретный режим — заранее известными константами (см. их объявление
+    // выше), а не через sizeHint()/minimumSizeHint(). Кнопки внутри тоже
+    // имеют setFixedSize (см. buildNumericLayout/buildTextLayout), поэтому
+    // сетке физически некуда "растягиваться" или "сжиматься" — итоговый
+    // размер клавиатуры однозначно определён режимом и не зависит от
+    // порядка/истории предыдущих показов или состояния полировки стиля.
+    const QSize keysArea = (m_shownMode == Mode::Numeric)
+        ? numericKeysAreaSize() : textKeysAreaSize();
+    m_keysContainer->setFixedSize(keysArea);
+    setFixedSize(keyboardFixedSize(m_shownMode));
 }
 
 void VirtualKeyboard::buildNumericLayout()
@@ -374,7 +428,7 @@ void VirtualKeyboard::buildNumericLayout()
     auto mkKey = [this](const QString &label, auto slotFn, const char *objName = nullptr) {
         auto *btn = new QPushButton(label, m_keysContainer);
         btn->setFocusPolicy(Qt::NoFocus);
-        btn->setMinimumSize(56, 44);
+        btn->setFixedSize(kNumBtnW, kNumBtnH);
         if (objName)
             btn->setObjectName(objName);
         connect(btn, &QPushButton::clicked, this, slotFn);
@@ -385,7 +439,7 @@ void VirtualKeyboard::buildNumericLayout()
         {"7", "8", "9"},
         {"4", "5", "6"},
         {"1", "2", "3"},
-        {c.allowNegative ? "-" : "", "0", c.allowDecimal ? "." : ""}
+        {c.allowSlash ? "/" : (c.allowNegative ? "-" : ""), "0", c.allowDecimal ? "." : ""}
     };
 
     for (int r = 0; r < 4; ++r) {
@@ -401,16 +455,20 @@ void VirtualKeyboard::buildNumericLayout()
     }
 
     auto *btnBack = mkKey(QString::fromUtf8("⌫"), &VirtualKeyboard::backspace, "vkAction");
+    btnBack->setFixedSize(kNumActionW, kNumBtnH);
     m_grid->addWidget(btnBack, 0, 3);
 
     auto *btnClear = mkKey(QString::fromUtf8("C"), &VirtualKeyboard::clearField, "vkAction");
+    btnClear->setFixedSize(kNumActionW, kNumBtnH);
     m_grid->addWidget(btnClear, 1, 3);
 
     auto *btnDone = mkKey(QString::fromUtf8("Готово"), &VirtualKeyboard::commitAndClose, "vkDone");
+    btnDone->setFixedSize(kNumActionW, kNumBtnH * 2 + kBtnSpacing); // span 2 строки
     m_grid->addWidget(btnDone, 2, 3, 2, 1);
 
     if (c.allowModeSwitch) {
         auto *btnAbc = mkKey(QString::fromUtf8("АБВ"), &VirtualKeyboard::toggleMode, "vkAction");
+        btnAbc->setFixedSize(kNumActionW, kNumBtnH);
         m_grid->addWidget(btnAbc, 3, 3);
     }
 
@@ -425,7 +483,7 @@ void VirtualKeyboard::buildTextLayout()
     auto mkKey = [this](const QString &label, auto slotFn, const char *objName = nullptr) {
         auto *btn = new QPushButton(label, m_keysContainer);
         btn->setFocusPolicy(Qt::NoFocus);
-        btn->setMinimumSize(48, 48);
+        btn->setFixedSize(kTextBtnW, kTextBtnH);
         if (objName)
             btn->setObjectName(objName);
         connect(btn, &QPushButton::clicked, this, slotFn);
@@ -443,6 +501,7 @@ void VirtualKeyboard::buildTextLayout()
         m_grid->addWidget(btn, r, i);
     }
     auto *btnBack = mkKey(QString::fromUtf8("⌫"), &VirtualKeyboard::backspace, "vkAction");
+    btnBack->setFixedSize(kTextBtnW * 2 + kBtnSpacing, kTextBtnH); // span 2 колонки
     m_grid->addWidget(btnBack, r, row0.size(), 1, 2);
 
     r = 1;
@@ -479,15 +538,17 @@ void VirtualKeyboard::buildTextLayout()
     r = 4;
     if (m_current.constraints.allowModeSwitch) {
         auto *btn123 = mkKey(QString::fromUtf8("123"), &VirtualKeyboard::toggleMode, "vkAction");
+        btn123->setFixedSize(kTextBtnW * 2 + kBtnSpacing, kTextBtnH); // span 2 колонки
         m_grid->addWidget(btn123, r, 0, 1, 2);
     }
     auto *btnSpace = new QPushButton(QString::fromUtf8("Пробел"), m_keysContainer);
     btnSpace->setFocusPolicy(Qt::NoFocus);
     btnSpace->setObjectName("vkAction");
-    btnSpace->setMinimumSize(48, 48);
+    btnSpace->setFixedSize(kTextBtnW * 6 + 6 * 5, kTextBtnH); // Пробел растянут на 6 колонок (span), фиксируем ту же сумму, что займёт addWidget(...,1,6)
     connect(btnSpace, &QPushButton::clicked, this, [this]() { insertText(" "); });
     m_grid->addWidget(btnSpace, r, 2, 1, 6);
     auto *btnDone = mkKey(QString::fromUtf8("Готово"), &VirtualKeyboard::commitAndClose, "vkDone");
+    btnDone->setFixedSize(kTextBtnW * 4 + kBtnSpacing * 3, kTextBtnH); // span 4 колонки
     m_grid->addWidget(btnDone, r, 8, 1, 4);
 
     for (int col = 0; col < 12; ++col)
@@ -581,28 +642,35 @@ void VirtualKeyboard::commitAndClose()
         (m_current.mode == Mode::Auto && m_shownMode == Mode::Numeric)) {
         const auto &c = m_current.constraints;
         QString text = target->text();
-        text.replace(',', '.');
-        text = normalizeNumericText(text);
 
-        if (!text.isEmpty()) {
-            bool ok = false;
-            double value = text.toDouble(&ok);
-            if (ok) {
-                if (value < c.minValue || value > c.maxValue) {
-                    if (c.clampOnDone) {
-                        value = qBound(c.minValue, value, c.maxValue);
-                        int decimals = c.maxDecimals >= 0 ? c.maxDecimals : 1;
-                        text = QString::number(value, 'f', decimals);
-                    } else {
-                        text.clear();
+        // "/" — самостоятельный код ("значение не измерялось"), а не часть
+        // числа. Если он разрешён и присутствует в тексте — пропускаем
+        // числовой парсинг/обрезку по диапазону целиком, иначе toDouble()
+        // не распознает "//" как число и просто ОЧИСТИТ поле.
+        if (!(c.allowSlash && text.contains('/'))) {
+            text.replace(',', '.');
+            text = normalizeNumericText(text);
+
+            if (!text.isEmpty()) {
+                bool ok = false;
+                double value = text.toDouble(&ok);
+                if (ok) {
+                    if (value < c.minValue || value > c.maxValue) {
+                        if (c.clampOnDone) {
+                            value = qBound(c.minValue, value, c.maxValue);
+                            int decimals = c.maxDecimals >= 0 ? c.maxDecimals : 1;
+                            text = QString::number(value, 'f', decimals);
+                        } else {
+                            text.clear();
+                        }
                     }
+                } else {
+                    text.clear(); // осталась незавершённая запись вроде "-" — считаем полем пустым
                 }
-            } else {
-                text.clear(); // осталась незавершённая запись вроде "-" — считаем полем пустым
             }
-        }
 
-        target->setText(text);
+            target->setText(text);
+        }
     }
 
     // Важно: обнуляем m_target ДО hide()/clearFocus(). clearFocus() ниже сам

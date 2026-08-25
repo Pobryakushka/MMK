@@ -31,6 +31,7 @@ Meteo11::Meteo11(QWidget *parent)
     ui->tableWidget_meteo11->setColumnWidth(2, 100);  // СС — скорость
     ui->tableWidget_meteo11->horizontalHeader()->setStretchLastSection(true);
     ui->tableWidget_meteo11->setEditTriggers(QAbstractItemView::AllEditTriggers);
+    ui->tableWidget_meteo11->setItemDelegate(new Meteo11LayerCellDelegate(ui->tableWidget_meteo11));
 
     // Колонка ПП — поправка за плотность воздуха.
     // По умолчанию "//" (не измерялась); оператор может вписать значение вручную.
@@ -464,4 +465,48 @@ void Meteo11::shakeWidget(QWidget *w)
     anim->setKeyValueAt(0.8,  basePos + QPoint(2, 0));
     anim->setKeyValueAt(1.0,  basePos);
     anim->start(QAbstractAnimation::DeleteWhenStopped);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Meteo11LayerCellDelegate — редактор ячеек таблицы "Слои ветра" с
+// привязанной экранной клавиатурой (цифровая раскладка для всех колонок:
+// ПП — поправка за плотность, Напр. — направление 0-360, СС — скорость).
+// ─────────────────────────────────────────────────────────────────────────
+
+Meteo11LayerCellDelegate::Meteo11LayerCellDelegate(QObject *parent)
+    : QStyledItemDelegate(parent)
+{
+}
+
+QWidget* Meteo11LayerCellDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &option,
+                                                 const QModelIndex &index) const
+{
+    QWidget *editor = QStyledItemDelegate::createEditor(parent, option, index);
+    auto *lineEdit = qobject_cast<QLineEdit*>(editor);
+    if (!lineEdit)
+        return editor;
+
+    VirtualKeyboard::Constraints c;
+    c.allowNegative   = false;
+    c.allowDecimal    = false;
+    c.allowModeSwitch = false;
+
+    switch (index.column()) {
+    case 0: // ПП — двузначный код поправки за плотность воздуха; по
+            // умолчанию "//" (не измерялось) — разрешаем "/" вместе с цифрами.
+        c.maxLength  = 2;
+        c.allowSlash = true;
+        break;
+    case 1: // Напр. — направление ветра, 0–360°
+        c.maxLength = 3;
+        break;
+    case 2: // СС — скорость, м/с
+        c.maxLength = 2;
+        break;
+    default:
+        break;
+    }
+
+    VirtualKeyboard::attach(lineEdit, VirtualKeyboard::Mode::Numeric, c);
+    return editor;
 }

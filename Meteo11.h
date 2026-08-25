@@ -5,6 +5,7 @@
 #include <QDateTime>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QStyledItemDelegate>
 
 class QLineEdit;
 class QLabel;
@@ -13,6 +14,19 @@ class QWidget;
 namespace Ui {
 class Meteo11;
 }
+
+// Делегат ячеек таблицы "Слои ветра": редактор ячейки — обычный QLineEdit
+// (как и создаёт QStyledItemDelegate по умолчанию для строковых данных),
+// но с привязанной экранной клавиатурой (VirtualKeyboard) — цифровая
+// раскладка для всех трёх колонок (ПП, Напр., СС).
+class Meteo11LayerCellDelegate : public QStyledItemDelegate
+{
+    Q_OBJECT
+public:
+    explicit Meteo11LayerCellDelegate(QObject *parent = nullptr);
+    QWidget* createEditor(QWidget *parent, const QStyleOptionViewItem &option,
+                          const QModelIndex &index) const override;
+};
 
 // Страница "Метео-11" — встраивается в общий стек MainWindow (QStackedWidget),
 // как и SourceData/GroundMeteoParams, а не открывается отдельным окном.

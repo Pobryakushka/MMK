@@ -21,7 +21,16 @@
   </property>
   <property name="styleSheet">
    <string notr="true">background-color: #FFFFFF;
-QLineEdit[invalid="true"] { border: 1.5px solid #C62828; background-color: #FFF5F5; }</string>
+QLineEdit {
+  background-color: #FFFFFF;
+  border: 1.5px solid #C7CCCF;
+  border-radius: 4px;
+  padding: 0 6px;
+  color: #1C1F22;
+}
+QLineEdit:focus { border-color: #0F6B4F; }
+QLineEdit:disabled { background-color: #F2F3F3; color: #9AA0A3; }
+QLineEdit[invalid="true"] { border-color: #C62828; background-color: #FFF5F5; }</string>
   </property>
   <layout class="QVBoxLayout" name="met11MainVLayout">
    <property name="spacing">
@@ -117,19 +126,19 @@ QPushButton:pressed { color: #0B5A42; }</string>
    <item>
     <layout class="QVBoxLayout" name="met11ContentLayout">
      <property name="spacing">
-      <number>8</number>
+      <number>6</number>
      </property>
      <property name="leftMargin">
-      <number>32</number>
+      <number>28</number>
      </property>
      <property name="topMargin">
-      <number>8</number>
+      <number>6</number>
      </property>
      <property name="rightMargin">
-      <number>32</number>
+      <number>28</number>
      </property>
      <property name="bottomMargin">
-      <number>12</number>
+      <number>10</number>
      </property>
      <item>
       <widget class="QGroupBox" name="grpRawString">
@@ -148,7 +157,13 @@ QPushButton:pressed { color: #0B5A42; }</string>
           <property name="minimumSize">
            <size>
             <width>0</width>
-            <height>36</height>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>32</height>
            </size>
           </property>
           <property name="placeholderText">
@@ -161,13 +176,13 @@ QPushButton:pressed { color: #0B5A42; }</string>
           <property name="minimumSize">
            <size>
             <width>0</width>
-            <height>14</height>
+            <height>12</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>16777215</width>
-            <height>14</height>
+            <height>12</height>
            </size>
           </property>
           <property name="styleSheet">
@@ -183,7 +198,7 @@ QPushButton:pressed { color: #0B5A42; }</string>
           <property name="minimumSize">
            <size>
             <width>0</width>
-            <height>38</height>
+            <height>34</height>
            </size>
           </property>
           <property name="styleSheet">
@@ -227,19 +242,19 @@ QPushButton:pressed { color: #0B5A42; }</string>
          </property>
          <layout class="QFormLayout" name="formHeader">
           <property name="verticalSpacing">
-           <number>6</number>
+           <number>4</number>
           </property>
           <property name="leftMargin">
            <number>10</number>
           </property>
           <property name="topMargin">
-           <number>10</number>
+           <number>8</number>
           </property>
           <property name="rightMargin">
            <number>10</number>
           </property>
           <property name="bottomMargin">
-           <number>10</number>
+           <number>8</number>
           </property>
           <item row="0" column="0">
            <widget class="QLabel" name="lblMet11StationNum">
@@ -251,14 +266,14 @@ QPushButton:pressed { color: #0B5A42; }</string>
           <item row="0" column="1">
            <layout class="QVBoxLayout" name="vLayoutStationNum">
             <property name="spacing">
-             <number>2</number>
+             <number>0</number>
             </property>
             <item>
              <widget class="QLineEdit" name="lineEdit_Met11StationNum">
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>28</height>
+                <height>25</height>
                </size>
               </property>
               <property name="maxLength">
@@ -277,13 +292,13 @@ QPushButton:pressed { color: #0B5A42; }</string>
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>14</height>
+                <height>12</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
                 <width>16777215</width>
-                <height>14</height>
+                <height>12</height>
                </size>
               </property>
               <property name="styleSheet">
@@ -306,14 +321,14 @@ QPushButton:pressed { color: #0B5A42; }</string>
           <item row="1" column="1">
            <layout class="QVBoxLayout" name="vLayoutDateTime">
             <property name="spacing">
-             <number>2</number>
+             <number>0</number>
             </property>
             <item>
              <widget class="QLineEdit" name="lineEdit_Met11DateTime">
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>28</height>
+                <height>25</height>
                </size>
               </property>
               <property name="maxLength">
@@ -329,13 +344,13 @@ QPushButton:pressed { color: #0B5A42; }</string>
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>14</height>
+                <height>12</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
                 <width>16777215</width>
-                <height>14</height>
+                <height>12</height>
                </size>
               </property>
               <property name="styleSheet">
@@ -358,14 +373,14 @@ QPushButton:pressed { color: #0B5A42; }</string>
           <item row="2" column="1">
            <layout class="QVBoxLayout" name="vLayoutStationHeight">
             <property name="spacing">
-             <number>2</number>
+             <number>0</number>
             </property>
             <item>
              <widget class="QLineEdit" name="lineEdit_Met11StationHeight">
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>28</height>
+                <height>25</height>
                </size>
               </property>
               <property name="placeholderText">
@@ -378,13 +393,13 @@ QPushButton:pressed { color: #0B5A42; }</string>
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>14</height>
+                <height>12</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
                 <width>16777215</width>
-                <height>14</height>
+                <height>12</height>
                </size>
               </property>
               <property name="styleSheet">
@@ -402,22 +417,19 @@ QPushButton:pressed { color: #0B5A42; }</string>
             <property name="text">
              <string>Откл. давления, мм рт.ст. (ДДД):</string>
             </property>
-            <property name="wordWrap">
-             <bool>true</bool>
-            </property>
            </widget>
           </item>
           <item row="3" column="1">
            <layout class="QVBoxLayout" name="vLayoutPresDev">
             <property name="spacing">
-             <number>2</number>
+             <number>0</number>
             </property>
             <item>
              <widget class="QLineEdit" name="lineEdit_Met11GroundPresDev">
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>28</height>
+                <height>25</height>
                </size>
               </property>
               <property name="placeholderText">
@@ -430,13 +442,13 @@ QPushButton:pressed { color: #0B5A42; }</string>
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>14</height>
+                <height>12</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
                 <width>16777215</width>
-                <height>14</height>
+                <height>12</height>
                </size>
               </property>
               <property name="styleSheet">
@@ -454,22 +466,19 @@ QPushButton:pressed { color: #0B5A42; }</string>
             <property name="text">
              <string>Откл. вирт. темп., °С (T₀T₀):</string>
             </property>
-            <property name="wordWrap">
-             <bool>true</bool>
-            </property>
            </widget>
           </item>
           <item row="4" column="1">
            <layout class="QVBoxLayout" name="vLayoutTempDev">
             <property name="spacing">
-             <number>2</number>
+             <number>0</number>
             </property>
             <item>
              <widget class="QLineEdit" name="lineEdit_Met11GroundVertTempDev">
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>28</height>
+                <height>25</height>
                </size>
               </property>
               <property name="placeholderText">
@@ -482,13 +491,13 @@ QPushButton:pressed { color: #0B5A42; }</string>
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>14</height>
+                <height>12</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
                 <width>16777215</width>
-                <height>14</height>
+                <height>12</height>
                </size>
               </property>
               <property name="styleSheet">
@@ -506,23 +515,55 @@ QPushButton:pressed { color: #0B5A42; }</string>
             <property name="text">
              <string>Высота ветр. зондир., км (BвBв):</string>
             </property>
-            <property name="wordWrap">
-             <bool>true</bool>
-            </property>
            </widget>
           </item>
           <item row="5" column="1">
-           <widget class="QLineEdit" name="lineEdit_Met11AchievedSensHeight">
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>32</height>
-             </size>
+           <layout class="QVBoxLayout" name="vLayoutAchievedSensHeight">
+            <property name="spacing">
+             <number>0</number>
             </property>
-            <property name="placeholderText">
-             <string>км</string>
-            </property>
-           </widget>
+            <item>
+             <widget class="QLineEdit" name="lineEdit_Met11AchievedSensHeight">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="placeholderText">
+               <string>км</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="lblAchievedSensHeightHint">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>12</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>12</height>
+               </size>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">color: #C62828; font-weight: bold; font-size: 8pt;</string>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </item>
          </layout>
         </widget>
@@ -540,36 +581,36 @@ QPushButton:pressed { color: #0B5A42; }</string>
            <number>4</number>
           </property>
           <property name="leftMargin">
-           <number>8</number>
+           <number>6</number>
           </property>
           <property name="topMargin">
-           <number>8</number>
+           <number>6</number>
           </property>
           <property name="rightMargin">
-           <number>8</number>
+           <number>6</number>
           </property>
           <property name="bottomMargin">
-           <number>8</number>
+           <number>6</number>
           </property>
           <item>
            <widget class="QTableWidget" name="tableWidget_meteo11">
             <property name="minimumSize">
              <size>
               <width>0</width>
-              <height>200</height>
+              <height>180</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
               <width>16777215</width>
-              <height>320</height>
+              <height>280</height>
              </size>
             </property>
             <property name="verticalScrollBarPolicy">
              <enum>Qt::ScrollBarAsNeeded</enum>
             </property>
             <property name="styleSheet">
-             <string notr="true">QTableWidget { border: 1px solid #DDE1E3; border-radius: 6px; }</string>
+             <string notr="true">QTableWidget { border: 1px solid #DDE1E3; }</string>
             </property>
             <attribute name="horizontalHeaderDefaultSectionSize">
              <number>90</number>
@@ -736,7 +777,7 @@ QPushButton:pressed { color: #0B5A42; }</string>
          <property name="minimumSize">
           <size>
            <width>160</width>
-           <height>44</height>
+           <height>42</height>
           </size>
          </property>
          <property name="styleSheet">
@@ -752,7 +793,7 @@ QPushButton:pressed { color: #0B5A42; }</string>
          <property name="minimumSize">
           <size>
            <width>200</width>
-           <height>44</height>
+           <height>42</height>
           </size>
          </property>
          <property name="styleSheet">
