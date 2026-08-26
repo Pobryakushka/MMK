@@ -33,6 +33,7 @@
 #include "LocalTileServer.h"
 #include "calculationAlgorithms/windprofilecalculator.h"
 #include "sensors/GroundMeteoParams.h"   // для типа GroundMeteoParams::SurfaceState в слоте
+#include "ui/notificationtoast.h"
 
 
 // Forward declaration
@@ -272,6 +273,11 @@ private:
     QPropertyAnimation *m_toastAnimation = nullptr;
     QTimer *m_toastHideTimer = nullptr;
     QPushButton *m_toastCloseBtn = nullptr; // маленькая красная кнопка остановки поиска
+
+    // Единый плавающий тост для разовых уведомлений об ошибках/успехе,
+    // заменяющий старые модальные QMessageBox (см. ui/notificationtoast.h).
+    NotificationToast *m_notifyToast = nullptr;
+    void showNotice(const QString &text, NotificationToast::Kind kind);
 
     // Окно подтверждения (оверлей поверх всего окна) — ОБЩЕЕ для остановки
     // поиска датчиков и для отключения датчика из шторки. Что именно
