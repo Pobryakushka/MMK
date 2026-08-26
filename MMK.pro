@@ -33,6 +33,7 @@ HEADERS *= $$PLOW_HEADERS \
     ui/anglecheckpage.h \
     ui/inspectionpage.h \
     ui/workregulationhubpage.h \
+    ui/notificationtoast.h \
 
 # ─── ClimatData — климатические данные по широте/долготе/месяцу ───
 CLIMAT_DIR = $$THIRDPARTY/climatData
@@ -45,6 +46,7 @@ SOURCES *= \
     ui/anglecheckpage.cpp \
     ui/inspectionpage.cpp \
     ui/workregulationhubpage.cpp \
+    ui/notificationtoast.cpp \
 
 HEADERS *= \
     $$CLIMAT_DIR/climatdata.h \
