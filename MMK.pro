@@ -60,6 +60,8 @@ SOURCES += \
     LocalTileServer.cpp \
     calculationAlgorithms/AlgorithmsCalc.cpp \
     ui/ExportDialog.cpp \
+    ui/ArchiveDatePopup.cpp \
+    ui/ArchiveExportView.cpp \
     sensors/GroundMeteoParams.cpp \
     calculationAlgorithms/LandingCalculation.cpp \
     Map/FormMapView.cpp \
@@ -103,6 +105,8 @@ HEADERS += \
     calculationAlgorithms/AlgorithmsCalc.h \
     CoordHelper.h \
     ui/ExportDialog.h \
+    ui/ArchiveDatePopup.h \
+    ui/ArchiveExportView.h \
     sensors/GroundMeteoParams.h \
     calculationAlgorithms/LandingCalculation.h \
     LandingCalculationState.h \

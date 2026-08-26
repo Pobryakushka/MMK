@@ -5,7 +5,11 @@
 #include "sensors/amsprotocol.h"
 #include "ui/MeasurementExporter.h"
 #include "ui/ExportDialog.h"
+#include "ui/ArchiveDatePopup.h"
+#include "ui/ArchiveExportView.h"
 #include <qwt_plot_renderer.h>
+#include <QPushButton>
+#include <QLabel>
 #include <QFileDialog>
 #include <QCheckBox>
 #include <QRadioButton>
@@ -23,6 +27,9 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QRegularExpression>
+#include <QStyleFactory>
+#include <QGridLayout>
+#include <QTabBar>
 #include <limits>
 #include <algorithm>  // Для std::sort
 #include <cmath>       // Для std::pow (расчёт давления МСА в Метео-11)
@@ -47,6 +54,10 @@ MeasurementResults::MeasurementResults(QWidget *parent)
     , m_currentActualWind()
     , m_currentMeasuredWind()
     , m_gribPipeline(new GribMeteo11Pipeline(this))
+    , m_datePopup(nullptr)
+    , m_exportView(nullptr)
+    , m_amsProbeFieldsVisible(false)
+    , m_customTabBar(nullptr)
 //    , m_dbPort(5432)
 //    , m_dbConfigured(false)
 {
@@ -54,9 +65,32 @@ MeasurementResults::MeasurementResults(QWidget *parent)
 
     m_toast = new NotificationToast(this);
 
-    // Скрываем нереализованные вкладки
-    ui->tabWidget->removeTab(ui->tabWidget->indexOf(ui->tab_landingCalc));
-    ui->tabWidget->removeTab(ui->tabWidget->indexOf(ui->tab_VNGO));
+    applyArchiveStyle();
+    setupCustomTabBar();
+
+    // Разделы ВНГО/Десант пока не реализованы — показываем как в макете:
+    // видимые вкладки с плейсхолдером "в разработке" вместо полного скрытия.
+    setupArchivePlaceholders();
+
+    // Встроенный экран экспорта — вторая страница rootStack (индекс 1),
+    // подменяет содержимое архива вместо модального ExportDialog.
+    m_exportView = new ArchiveExportView(this);
+    ui->rootStack->addWidget(m_exportView);
+    connect(m_exportView, &ArchiveExportView::backRequested,
+            this, &MeasurementResults::onExportBackRequested);
+    connect(m_exportView, &ArchiveExportView::exportRequested,
+            this, &MeasurementResults::onExportSubmitted);
+
+    // Popup выбора даты/времени (взамен модального QDialog с QCalendarWidget)
+    m_datePopup = new ArchiveDatePopup(this);
+    connect(m_datePopup, &ArchiveDatePopup::dateTimeSelected,
+            this, &MeasurementResults::onDatePopupDateTimeSelected);
+
+    // Дублирующая большая метка даты/времени скрыта — в новом виде рельса
+    // дата и время показываются на самой кнопке btnSelectDate.
+    ui->lblCurrentDateTime->setVisible(false);
+
+    setupAmsProbeCollapse();
 
     currentDateTime = QDateTime::currentDateTime();
     int minutes = currentDateTime.time().minute();
@@ -131,6 +165,296 @@ MeasurementResults::MeasurementResults(QWidget *parent)
 void MeasurementResults::showStatus(const QString &text, NotificationToast::Kind kind)
 {
     m_toast->showMessage(text, kind, kind == NotificationToast::Success ? 3000 : 0);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Визуальный стиль архива — зелёная палитра/типографика по макету
+// "archive v1 docked sidebar.html". Здесь задаются только статические
+// (не зависящие от состояния) правила; переключаемые состояния (выбранная
+// вкладка бюллетеня Метео-11, активный формат экспорта и т.п.) по-прежнему
+// переключаются точечно через setStyleSheet() конкретных виджетов — как это
+// уже было принято в остальном коде этого класса.
+// ─────────────────────────────────────────────────────────────────────────────
+void MeasurementResults::applyArchiveStyle()
+{
+    // Стиль архива рассчитан на QSS поверх Fusion — единственного кроссплатформенного
+    // QStyle, который последовательно уважает border-radius/background из стилшита.
+    // На нативных стилях (Windows/GTK-темы) часть chrome (вкладки, комбобоксы,
+    // выпадающие стрелки) рисуется поверх QSS и выглядит "как в Windows" —
+    // фиксируем Fusion только для этого диалога, не трогая стиль всего приложения.
+    setStyle(QStyleFactory::create("Fusion"));
+
+    setStyleSheet(
+        "QDialog#MeasurementResults, QWidget#archivePage, QStackedWidget#rootStack {"
+        "  background-color: #EFF1F1;"
+        "}"
+        "QWidget { font-family: 'Segoe UI','Inter',sans-serif; color: #1B211F; }"
+        // --- Базовая карточка для любого QGroupBox (кроме переопределённых ниже) ---
+        "QGroupBox {"
+        "  border: 1px solid #DDE1E3; border-radius: 10px; background: #FFFFFF;"
+        "  margin-top: 10px; padding-top: 8px;"
+        "}"
+        "QGroupBox::title {"
+        "  subcontrol-origin: margin; subcontrol-position: top left; left: 10px; padding: 0 6px;"
+        "  color: #6E7876; font-size: 11px; font-weight: 600; background: transparent;"
+        "}"
+        "QGroupBox#dateTimeGroup, QGroupBox#parametersGroup {"
+        "  border: none; border-top: 1px solid #DDE1E3; border-radius: 0px;"
+        "  margin-top: 8px; padding-top: 6px; background: transparent;"
+        "}"
+        "QGroupBox#dataGroup { border: none; background: #EFF1F1; margin: 0; padding: 0; }"
+        // Тулбар Метео-11 (тип/формат бюллетеня) — плоский контейнер без рамки/подписи,
+        // сами кнопки уже стилизуются как пилюли из кода (setPressed/setFmtPressed)
+        "QGroupBox#groupBox_bulletenType, QGroupBox#groupBox_bulletenFormat {"
+        "  border: none; background: transparent; margin: 0; padding: 0;"
+        "}"
+        "QPushButton#btnPrevDate, QPushButton#btnNextDate {"
+        "  background: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 6px; color: #0B5A41;"
+        "}"
+        "QPushButton#btnPrevDate:hover, QPushButton#btnNextDate:hover { background: #E4F1EC; }"
+        "QPushButton#btnExport, QPushButton#btnClose {"
+        "  border: 1px solid #DDE1E3; border-radius: 6px; background: #FFFFFF;"
+        "  font-weight: 600; font-size: 13px; color: #1B211F;"
+        "}"
+        "QPushButton#btnExport:hover { background: #F3F5F4; }"
+        "QPushButton#btnClose { background: #0F6B4F; border-color: #0F6B4F; color: #FFFFFF; }"
+        "QPushButton#btnClose:hover { background: #0B5A41; }"
+        // --- Базовый плоский вид для всех остальных кнопок (не переопределённых выше
+        // и не перекрашиваемых во время выполнения, как pushButton_updated и т.п.) ---
+        "QPushButton {"
+        "  background: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 6px;"
+        "  padding: 5px 12px; color: #1B211F;"
+        "}"
+        "QPushButton:hover { background: #F3F5F4; border-color: #0F6B4F; }"
+        "QPushButton:disabled { color: #B7BEBB; background: #F1F3F2; }"
+        "QComboBox {"
+        "  border: 1px solid #DDE1E3; border-radius: 6px; padding: 3px 8px; background: #FFFFFF;"
+        "}"
+        "QComboBox:disabled { background: #F7F8F8; color: #9AA3A0; }"
+        "QComboBox::drop-down { border: none; width: 20px; }"
+        "QLineEdit, QTextEdit, QPlainTextEdit {"
+        "  border: 1px solid #DDE1E3; border-radius: 6px; padding: 4px 6px; background: #FFFFFF;"
+        "}"
+        "QLineEdit:read-only { background: #F7F8F8; }"
+        // Параметры станции — плоские строки "подпись / значение" как в макете
+        // (param-row), а не поля ввода: убираем рамку/фон у полей и комбобоксов,
+        // хотя они и остаются формально QLineEdit/QComboBox (в архиве всегда read-only).
+        "QGroupBox#parametersGroup QLabel#lblLatitude, QGroupBox#parametersGroup QLabel#lblLongitude,"
+        "QGroupBox#parametersGroup QLabel#lblAltitude, QGroupBox#parametersGroup QLabel#lblDirectionAngle {"
+        "  color: #6E7876; font-size: 12.5px; padding: 5px 0;"
+        "}"
+        "QGroupBox#parametersGroup QLabel#lblLatitude, QGroupBox#parametersGroup QLabel#lblLongitude,"
+        "QGroupBox#parametersGroup QLabel#lblAltitude {"
+        "  border-bottom: 1px dashed #DDE1E3;"
+        "}"
+        "QLineEdit#editLatitude, QLineEdit#editLongitude, QLineEdit#editAltitude, QLineEdit#editDirectionAngle {"
+        "  font-family: 'JetBrains Mono','Consolas','Courier New',monospace; font-weight: 600; font-size: 12.5px;"
+        "  background: transparent; border: none; border-bottom: 1px dashed #DDE1E3; padding: 5px 0;"
+        "}"
+        "QLineEdit#editDirectionAngle { border-bottom: none; }"
+        "QGroupBox#parametersGroup QComboBox {"
+        "  font-family: 'JetBrains Mono','Consolas','Courier New',monospace; font-weight: 600; font-size: 12.5px;"
+        "  background: transparent; border: none; border-bottom: 1px dashed #DDE1E3; padding: 5px 2px; color: #1B211F;"
+        "}"
+        "QGroupBox#parametersGroup QComboBox:disabled { color: #1B211F; }"
+        "QGroupBox#parametersGroup QComboBox::drop-down { width: 0px; border: none; }"
+        "QGroupBox#parametersGroup QComboBox::down-arrow { image: none; width: 0; height: 0; }"
+        "QLabel#lblDataStatus {"
+        "  background: #FFFFFF; border-bottom: 1px solid #DDE1E3; color: #6E7876;"
+        "  font-weight: 600; font-size: 12px; padding: 8px 20px;"
+        "}"
+        "QTabWidget::pane { border: none; background: #FFFFFF; }"
+        "QTabBar::tab {"
+        "  background: #E4E7E6; color: #6E7876; font-weight: 600; font-size: 12px;"
+        "  padding: 9px 16px; border-top-left-radius: 8px; border-top-right-radius: 8px; margin-right: 2px;"
+        "}"
+        "QTabBar::tab:selected { background: #FFFFFF; color: #0B5A41; border-bottom: 2px solid #0F6B4F; }"
+        "QTabBar::tab:hover { color: #0B5A41; }"
+        "QTableWidget {"
+        "  border: 1px solid #DDE1E3; border-radius: 8px; gridline-color: #EEF0EF;"
+        "  background: #FFFFFF; alternate-background-color: #F7F8F8; font-size: 12px;"
+        "}"
+        "QHeaderView::section {"
+        "  background: #E4F1EC; color: #0B5A41; font-weight: 600; border: none;"
+        "  border-bottom: 1px solid #DDE1E3; padding: 6px;"
+        "}"
+        "QTextEdit#textEdit_meteo11, QTextEdit#textEdit_meteo11_updated {"
+        "  background: #F7F8F8; border: 1px solid #DDE1E3; border-radius: 8px;"
+        "  font-family: 'JetBrains Mono','Consolas','Courier New',monospace;"
+        "}"
+        // Бейдж годности бюллетеня (lineEdit_bulleten) — фон/скругление задаём тут
+        // как базу, но код (updateMeteo11Display/clearMeteo11Display) при каждом
+        // обновлении подставляет ПОЛНУЮ строку стиля с тем же радиусом — иначе
+        // setStyleSheet() на конкретном виджете стирает эти правила.
+        "QLineEdit#lineEdit_bulleten {"
+        "  border: none; border-radius: 999px; padding: 4px 14px; font-weight: 700;"
+        "  font-size: 11px; qproperty-alignment: AlignCenter;"
+        "}"
+        "QLineEdit#lineEdit_bulletenTime {"
+        "  border: none; background: transparent; color: #6E7876; font-size: 11px;"
+        "  font-family: 'JetBrains Mono','Consolas','Courier New',monospace;"
+        "}"
+        // --- Карточки графиков (chart-card из макета): рамка+скругление на самой
+        // карточке, плоский график без своей рамки внутри, зелёная "шапка" сверху ---
+        "QFrame#cardFrame_avgWindSpeed, QFrame#cardFrame_avgWindDir,"
+        "QFrame#cardFrame_realWindSpeed, QFrame#cardFrame_realWindDir,"
+        "QFrame#cardFrame_measWindSpeed, QFrame#cardFrame_measWindDir,"
+        "QFrame#cardFrame_shearSpeed, QFrame#cardFrame_shearDir {"
+        "  border: 1px solid #DDE1E3; border-radius: 10px; background: #FFFFFF;"
+        "}"
+        "QFrame#cardFrame_avgWindSpeed QwtPlot, QFrame#cardFrame_avgWindDir QwtPlot,"
+        "QFrame#cardFrame_realWindSpeed QwtPlot, QFrame#cardFrame_realWindDir QwtPlot,"
+        "QFrame#cardFrame_measWindSpeed QwtPlot, QFrame#cardFrame_measWindDir QwtPlot,"
+        "QFrame#cardFrame_shearSpeed QwtPlot, QFrame#cardFrame_shearDir QwtPlot {"
+        "  border: none; border-radius: 0; background-color: transparent;"
+        "}"
+        // Заголовки над графиками ветра — зелёная "шапка карточки" как в макете
+        // (левый край текста, скруглены только верхние углы — карточка снизу продолжается графиком)
+        "QLabel#label_avgWindSpeed, QLabel#label_avgWindDirection,"
+        "QLabel#label_realWindSpeed, QLabel#label_realWindDirection,"
+        "QLabel#label_measuredWindSpeed, QLabel#label_measuredWindDirection {"
+        "  background: #E4F1EC; color: #0B5A41; font-weight: 600; font-size: 12px;"
+        "  border-top-left-radius: 9px; border-top-right-radius: 9px;"
+        "  padding: 9px 12px; qproperty-alignment: AlignVCenter | AlignLeft;"
+        "}"
+        // --- Самодельная строка вкладок (заменяет нативную QTabBar, см.
+        // setupCustomTabBar) — рисуется исключительно через QSS на QPushButton,
+        // никакого системного QStyle для формы вкладок не используется. ---
+        "QWidget#customTabBar { background: #EFF1F1; }"
+        "QPushButton[archtab=\"true\"] {"
+        "  background: #E4E7E6; color: #6E7876; font-weight: 600; font-size: 12.5px;"
+        "  padding: 9px 16px; border: none; border-radius: 8px 8px 0 0; margin-right: 2px;"
+        "}"
+        "QPushButton[archtab=\"true\"]:hover { color: #0B5A41; }"
+        "QPushButton[archtab=\"true\"][active=\"true\"] {"
+        "  background: #FFFFFF; color: #0B5A41; border-bottom: 2px solid #0F6B4F;"
+        "}"
+        );
+}
+
+// Строит самодельную строку вкладок поверх скрытой нативной QTabBar (см.
+// комментарий у объявления m_customTabBar в .h) — единственный способ
+// гарантированно получить плоские скруглённые сверху вкладки макета
+// независимо от системной темы/QStyle.
+void MeasurementResults::setupCustomTabBar()
+{
+    QTabWidget *tabs = ui->tabWidget;
+    if (!tabs) return;
+
+    tabs->tabBar()->hide();
+
+    m_customTabBar = new QWidget(this);
+    m_customTabBar->setObjectName("customTabBar");
+    auto *layout = new QHBoxLayout(m_customTabBar);
+    layout->setContentsMargins(16, 10, 16, 0);
+    layout->setSpacing(2);
+
+    m_tabButtons.clear();
+    for (int i = 0; i < tabs->count(); ++i) {
+        auto *btn = new QPushButton(tabs->tabText(i), m_customTabBar);
+        btn->setProperty("archtab", true);
+        btn->setProperty("active", i == tabs->currentIndex());
+        btn->setCursor(Qt::PointingHandCursor);
+        connect(btn, &QPushButton::clicked, this, [tabs, i] { tabs->setCurrentIndex(i); });
+        layout->addWidget(btn);
+        m_tabButtons.append(btn);
+    }
+    layout->addStretch(1);
+
+    connect(tabs, &QTabWidget::currentChanged, this, &MeasurementResults::updateCustomTabBarHighlight);
+
+    // Вставляем строку кнопок между статусной строкой (row 0) и самим
+    // QTabWidget (row 1) в gridLayout_2, сдвигая tabWidget на row 2.
+    QGridLayout *grid = ui->gridLayout_2;
+    if (grid) {
+        grid->removeWidget(tabs);
+        grid->addWidget(m_customTabBar, 1, 0);
+        grid->addWidget(tabs, 2, 0);
+    }
+}
+
+void MeasurementResults::updateCustomTabBarHighlight(int currentIndex)
+{
+    for (int i = 0; i < m_tabButtons.size(); ++i) {
+        QPushButton *btn = m_tabButtons[i];
+        if (!btn) continue;
+        btn->setProperty("active", i == currentIndex);
+        btn->style()->unpolish(btn);
+        btn->style()->polish(btn);
+    }
+}
+
+// Разделы ВНГО и Десант пока не реализованы — в макете это видимые вкладки
+// с текстом-заглушкой "Раздел находится в разработке", а не скрытые вкладки.
+void MeasurementResults::setupArchivePlaceholders()
+{
+    auto addPlaceholder = [](QWidget *tab) {
+        if (!tab) return;
+        auto *layout = new QVBoxLayout(tab);
+        auto *label = new QLabel("Раздел находится в разработке", tab);
+        label->setAlignment(Qt::AlignCenter);
+        label->setStyleSheet("color: #6E7876; font-style: italic; font-size: 13px;");
+        layout->addWidget(label);
+    };
+    addPlaceholder(ui->tab_VNGO);
+    addPlaceholder(ui->tab_landingCalc);
+}
+
+// Дополнительные поля АМС/зонда (координаты, поправки, даты) на странице
+// "приближённый" бюллетень Метео-11 отсутствуют в новом макете архива —
+// оставляем функциональность, но по умолчанию сворачиваем блок за кнопкой.
+void MeasurementResults::setupAmsProbeCollapse()
+{
+    m_amsProbeWidgets = {
+        ui->label_amsDegrees1, ui->lineEdit_AMSDegrees1, ui->label_amsMinutes1, ui->lineEdit_AMSMinutes1,
+        ui->label_amsSeconds1, ui->lineEdit_AMSSeconds1, ui->label_amsLongitude, ui->lineEdit_AMSLongtitude,
+        ui->label_amsDegrees2, ui->lineEdit_AMSDegrees2, ui->label_amsMinutes2, ui->lineEdit_AMSMinutes2,
+        ui->label_amsSeconds2, ui->lineEdit_AMSSeconds2, ui->label_amsLatitude, ui->lineEdit_AMSLatitude,
+        ui->label_ams_title,
+        ui->label_minutesFromProbe, ui->lineEdit_AMSMinutesFromProbe, ui->label_probeDistance, ui->lineEdit_ProbeDistance,
+        ui->label_bulletinType, ui->lineEdit_AMSTypeBl, ui->label_bulletinDate, ui->lineEdit_AMSDateBl,
+        ui->label_amsBias, ui->lineEdit_AMSBias,
+        ui->label_lastProbeDate, ui->lineEdit_DateLastUTC, ui->label_biasUTC, ui->lineEdit_BiasUTC,
+        ui->label_avgTime, ui->lineEdit_avgTime,
+        ui->label_probeDegrees1, ui->lineEdit_probeDegrees1, ui->label_probeMinutes1, ui->lineEdit_probeMinutes1,
+        ui->label_probeSeconds1, ui->lineEdit_probeSeconds1, ui->label_probeLongitude, ui->lineEdit_probeLongtitude,
+        ui->label_probeDegrees2, ui->lineEdit_probeDegrees2, ui->label_probeMinutes2, ui->lineEdit_probeMinutes2,
+        ui->label_probeSeconds2, ui->lineEdit_probeSeconds2, ui->label_probeLatitude, ui->lineEdit_probeLatitude,
+        ui->label_probe_title,
+    };
+
+    for (QWidget *w : qAsConst(m_amsProbeWidgets))
+        if (w) w->setVisible(false);
+
+    auto *toggleBtn = new QPushButton("Показать доп. поля АМС/зонда ▾", ui->page_meteo11_approximate);
+    toggleBtn->setStyleSheet(
+        "QPushButton { border: 1px solid #DDE1E3; border-radius: 8px; background: #F7F8F8;"
+        " color: #6E7876; font-size: 11px; font-weight: 600; padding: 6px 12px; }"
+        "QPushButton:hover { border-color: #0F6B4F; color: #0B5A41; }");
+    connect(toggleBtn, &QPushButton::clicked, this, [this, toggleBtn] {
+        m_amsProbeFieldsVisible = !m_amsProbeFieldsVisible;
+        for (QWidget *w : qAsConst(m_amsProbeWidgets))
+            if (w) w->setVisible(m_amsProbeFieldsVisible);
+        toggleBtn->setText(m_amsProbeFieldsVisible
+                                ? "Скрыть доп. поля АМС/зонда ▴"
+                                : "Показать доп. поля АМС/зонда ▾");
+    });
+
+    // Добавляем новой строкой в конец существующей сетки — не задевает
+    // расположение уже имеющихся полей.
+    if (ui->gridLayout_approximate)
+        ui->gridLayout_approximate->addWidget(toggleBtn, ui->gridLayout_approximate->rowCount(), 0, 1, -1);
+}
+
+void MeasurementResults::onExportBackRequested()
+{
+    ui->rootStack->setCurrentWidget(ui->archivePage);
+}
+
+void MeasurementResults::onDatePopupDateTimeSelected(const QDateTime &dt)
+{
+    currentDateTime = dt;
+    updateDisplay();
 }
 
 MeasurementResults::~MeasurementResults()
@@ -1030,7 +1354,7 @@ void MeasurementResults::updateDateTimeDisplay()
 {
     QString dateTimeStr = currentDateTime.toString("dd.MM.yyyy hh:mm");
     ui->lblCurrentDateTime->setText(dateTimeStr);
-    ui->btnSelectDate->setText(currentDateTime.toString("dd.MM.yyyy"));
+    ui->btnSelectDate->setText(currentDateTime.toString("dd.MM.yyyy hh:mm"));
 
     loadMeasurementData(currentDateTime);
 }
@@ -1224,128 +1548,27 @@ void MeasurementResults::onNextDateClicked()
 
 void MeasurementResults::onSelectDateClicked()
 {
-    QDialog *dateDialog = new QDialog(this);
-    dateDialog->setWindowTitle("Выбор даты и времени");
-    dateDialog->resize(500, 600);
-
-    QVBoxLayout *layout = new QVBoxLayout(dateDialog);
-
-    // Календарь
-    QCalendarWidget *calendar = new QCalendarWidget(dateDialog);
-    calendar->setSelectedDate(currentDateTime.date());
-
-    // Подсвечиваем даты с доступными измерениями
-    QTextCharFormat availableFormat;
-    availableFormat.setBackground(QColor(144, 238, 144)); // Светло-зеленый
-    availableFormat.setFontWeight(QFont::Bold);
-
-    QTextCharFormat todayFormat;
-    todayFormat.setBackground(QColor(173, 216, 230)); // Голубой
-    todayFormat.setFontWeight(QFont::Bold);
-
+    // Собираем доступные даты/времена в лёгком формате для попапа —
+    // вместе с флагами полноты данных, чтобы попап мог подсветить,
+    // у каких записей есть все профили ветра, а у каких нет.
+    QMap<QDate, QVector<ArchiveRecordInfo>> available;
     for (auto it = availableMeasurements.constBegin(); it != availableMeasurements.constEnd(); ++it) {
-        if (it.key() == QDate::currentDate()) {
-            calendar->setDateTextFormat(it.key(), todayFormat);
-        } else {
-            calendar->setDateTextFormat(it.key(), availableFormat);
+        QVector<ArchiveRecordInfo> records;
+        records.reserve(it.value().size());
+        for (const MeasurementRecord &record : it.value()) {
+            ArchiveRecordInfo info;
+            info.time             = record.measurementTime;
+            info.hasAvgWind       = record.hasAvgWind;
+            info.hasActualWind    = record.hasActualWind;
+            info.hasMeasuredWind  = record.hasMeasuredWind;
+            records.append(info);
         }
+        available.insert(it.key(), records);
     }
 
-    layout->addWidget(calendar);
-
-    // Группа с доступными измерениями
-    QGroupBox *timeGroup = new QGroupBox("Доступные измерения", dateDialog);
-    QVBoxLayout *timeLayout = new QVBoxLayout(timeGroup);
-
-    QListWidget *timeList = new QListWidget(dateDialog);
-    timeList->setStyleSheet(
-        "QListWidget::item { padding: 5px; }"
-        "QListWidget::item:selected { background-color: #4CAF50; color: white; }"
-        );
-    timeLayout->addWidget(timeList);
-
-    QLabel *infoLabel = new QLabel(dateDialog);
-    infoLabel->setWordWrap(true);
-    infoLabel->setStyleSheet("color: #666; font-style: italic; padding: 5px;");
-    timeLayout->addWidget(infoLabel);
-
-    layout->addWidget(timeGroup);
-
-    // Функция обновления списка времен
-    auto updateTimeList = [this, timeList, calendar, infoLabel](){
-        timeList->clear();
-        QDate selectedDate = calendar->selectedDate();
-        QVector<MeasurementRecord> records = getRecordsForDate(selectedDate);
-
-        if (records.isEmpty()){
-            QListWidgetItem *item = new QListWidgetItem("📭 Нет данных за выбранную дату");
-            item->setFlags(item->flags() & ~Qt::ItemIsSelectable);
-            item->setForeground(Qt::red);
-            timeList->addItem(item);
-            infoLabel->setText("Выберите другую дату");
-        } else {
-            infoLabel->setText(QString("Найдено измерений: %1").arg(records.size()));
-
-            for (const MeasurementRecord &record : records){
-
-                // Формируем строку с информацией о типах данных
-                QStringList dataTypes;
-                if (record.hasAvgWind) dataTypes << "Ср";
-                if (record.hasActualWind) dataTypes << "Действ";
-                if (record.hasMeasuredWind) dataTypes << "Изм";
-
-                QString timeStr = QString("🕐 %1:00 — %2")
-                                      .arg(record.measurementTime.toString("hh:mm:ss"))
-                                      .arg(dataTypes.isEmpty() ? "Нет данных" : dataTypes.join(", "));
-
-                if (!record.notes.isEmpty()) {
-                    timeStr += " - " + record.notes;
-                }
-
-                QListWidgetItem *item = new QListWidgetItem(timeStr);
-                item->setData(Qt::UserRole, record.measurementTime);
-
-                // Цветовое кодирование по количеству типов данных
-                if (dataTypes.size() == 3) {
-                    item->setBackground(QColor(144, 238, 144)); // Зеленый - все данные
-                } else if (dataTypes.size() == 2) {
-                    item->setBackground(QColor(255, 255, 200)); // Желтый - частично
-                } else {
-                    item->setBackground(QColor(255, 228, 196)); // Бежевый - минимум
-                }
-
-                timeList->addItem(item);
-            }
-        }
-    };
-
-    connect(calendar, &QCalendarWidget::selectionChanged, updateTimeList);
-    updateTimeList();
-
-    // Кнопки
-    QDialogButtonBox *buttonBox = new QDialogButtonBox(
-        QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
-        dateDialog);
-    layout->addWidget(buttonBox);
-
-    connect(buttonBox, &QDialogButtonBox::accepted, dateDialog, &QDialog::accept);
-    connect(buttonBox, &QDialogButtonBox::rejected, dateDialog, &QDialog::reject);
-
-    if (dateDialog->exec() == QDialog::Accepted){
-        QDate selectedDate = calendar->selectedDate();
-
-        if (timeList->currentItem() && timeList->currentItem()->data(Qt::UserRole).isValid()){
-            currentDateTime = timeList->currentItem()->data(Qt::UserRole).toDateTime();
-        } else {
-            QVector<MeasurementRecord> records = getRecordsForDate(selectedDate);
-            if (!records.isEmpty()) {
-                currentDateTime = records.first().measurementTime;
-            }
-        }
-        updateDisplay();
-    }
-
-    delete dateDialog;
+    m_datePopup->setAvailable(available);
+    m_datePopup->setCurrent(currentDateTime);
+    m_datePopup->popupNear(ui->btnSelectDate);
 }
 
 void MeasurementResults::setupPlots()
@@ -2112,47 +2335,62 @@ void MeasurementResults::updateMeteo11Display()
     if (d->isValid) {
         QString text, style;
 
+        // Бейдж-пилюля годности бюллетеня — стиль всегда задаём целиком (радиус/
+        // отступы/шрифт включены), т.к. setStyleSheet() на конкретном виджете
+        // полностью заменяет унаследованный из applyArchiveStyle() стиль.
+        const QString kBadgeOk =
+            "border:none; border-radius:999px; padding:4px 14px; font-weight:700; font-size:11px;"
+            "background-color:#E4F1EC; color:#0B5A41;";
+        const QString kBadgeWarn =
+            "border:none; border-radius:999px; padding:4px 14px; font-weight:700; font-size:11px;"
+            "background-color:#FFF4DC; color:#8A6100;";
+        const QString kBadgeError =
+            "border:none; border-radius:999px; padding:4px 14px; font-weight:700; font-size:11px;"
+            "background-color:#FBE4E4; color:#B3261E;";
+
         if (currentButtelinType == FromMeteoStat && stationAgeH >= 0.0) {
             // "От МС" — показываем давность и годность входящего бюллетеня
             if (stationStale) {
                 text  = QString("УСТАРЕЛ (%1 ч)").arg(stationAgeH, 0, 'f', 1);
-                style = "color: #e65100; font-weight: bold; background-color: #fff8e1;";
+                style = kBadgeWarn;
             } else {
                 text  = QString("ГОДНЫЙ (%1 ч)").arg(stationAgeH, 0, 'f', 1);
-                style = "color: #2e7d32; font-weight: bold;";
+                style = kBadgeOk;
             }
         } else if (currentButtelinType == Updated) {
             // "Уточнённый" — бюллетень построен, цвет всегда зелёный
             if (!m_meteo11FromStation.isValid) {
                 text  = "ГОДНЫЙ";
-                style = "color: #2e7d32; font-weight: bold;";
+                style = kBadgeOk;
             } else if (stationStale) {
                 text  = QString("ГОДНЫЙ (МС устарел %1 ч)").arg(stationAgeH, 0, 'f', 0);
-                style = "color: #2e7d32; font-weight: bold;";
+                style = kBadgeOk;
             } else {
                 text  = "ГОДНЫЙ (с данными МС)";
-                style = "color: #2e7d32; font-weight: bold;";
+                style = kBadgeOk;
             }
         } else if (currentButtelinType == FromGrib && gribAgeH >= 0.0) {
             // "Из GRIB" — годен 12 ч с момента расчёта (относительно текущей
             // отображаемой записи); дальше нужен пересчёт по свежим данным.
             if (gribStale) {
                 text  = QString("УСТАРЕЛ (%1 ч)").arg(gribAgeH, 0, 'f', 1);
-                style = "color: #e65100; font-weight: bold; background-color: #fff8e1;";
+                style = kBadgeWarn;
             } else {
                 text  = QString("ГОДНЫЙ (%1 ч)").arg(gribAgeH, 0, 'f', 1);
-                style = "color: #2e7d32; font-weight: bold;";
+                style = kBadgeOk;
             }
         } else {
             text  = "ГОДНЫЙ";
-            style = "color: #2e7d32; font-weight: bold;";
+            style = kBadgeOk;
         }
 
         ui->lineEdit_bulleten->setText(text);
         ui->lineEdit_bulleten->setStyleSheet(style);
     } else {
         ui->lineEdit_bulleten->setText("НЕТ ДАННЫХ");
-        ui->lineEdit_bulleten->setStyleSheet("color: red; font-weight: bold;");
+        ui->lineEdit_bulleten->setStyleSheet(
+            "border:none; border-radius:999px; padding:4px 14px; font-weight:700; font-size:11px;"
+            "background-color:#FBE4E4; color:#B3261E;");
     }
 
     // Время составления бюллетеня — янтарный фон когда устарел
@@ -2164,7 +2402,8 @@ void MeasurementResults::updateMeteo11Display()
     if (((currentButtelinType == FromMeteoStat && stationStale) ||
          (currentButtelinType == FromGrib && gribStale)) && d->isValid) {
         ui->lineEdit_bulletenTime->setStyleSheet(
-            "QLineEdit { background-color: #fff3e0; color: #e65100; font-weight: bold; }");
+            "border:none; border-radius:6px; padding:2px 8px; background-color: #fff3e0; "
+            "color: #e65100; font-weight: bold;");
     } else {
         ui->lineEdit_bulletenTime->setStyleSheet("");
     }
@@ -2173,9 +2412,10 @@ void MeasurementResults::updateMeteo11Display()
     auto setPressed = [](QPushButton *btn, bool pressed) {
         if (!btn) return;
         btn->setStyleSheet(pressed
-                               ? "QPushButton { background-color: #3a7bd5; color: white; font-weight: bold; "
-                                 "border: 2px inset #1a4fa0; border-radius: 4px; padding: 4px 8px; }"
-                               : "");
+                               ? "QPushButton { background-color: #0F6B4F; color: white; font-weight: 600; "
+                                 "border: 1px solid #0F6B4F; border-radius: 8px; padding: 8px 13px; }"
+                               : "QPushButton { background-color: #FFFFFF; color: #6E7876; font-weight: 600; "
+                                 "border: 1px solid #DDE1E3; border-radius: 8px; padding: 8px 13px; }");
     };
     setPressed(ui->pushButton_updated,       currentButtelinType == Updated);
     setPressed(ui->pushButton_approximate,   currentButtelinType == Approximate);
@@ -2185,9 +2425,10 @@ void MeasurementResults::updateMeteo11Display()
     auto setFmtPressed = [](QPushButton *btn, bool pressed) {
         if (!btn) return;
         btn->setStyleSheet(pressed
-                               ? "QPushButton { background-color: #3a7bd5; color: white; font-weight: bold; "
-                                 "border: 2px inset #1a4fa0; border-radius: 4px; padding: 4px 8px; }"
-                               : "");
+                               ? "QPushButton { background-color: #0F6B4F; color: white; font-weight: 600; "
+                                 "border: 1px solid #0F6B4F; border-radius: 8px; padding: 8px 13px; }"
+                               : "QPushButton { background-color: #FFFFFF; color: #6E7876; font-weight: 600; "
+                                 "border: 1px solid #DDE1E3; border-radius: 8px; padding: 8px 13px; }");
     };
     setFmtPressed(ui->pushButton_string, currentOutputFormat == String);
     setFmtPressed(ui->pushButton_table,  currentOutputFormat == Table);
@@ -2196,10 +2437,10 @@ void MeasurementResults::updateMeteo11Display()
     if (stationStale && m_meteo11FromStation.isValid) {
         const bool sel = (currentButtelinType == FromMeteoStat);
         ui->pushButton_fromMeteoStat->setStyleSheet(sel
-            ? "QPushButton { background-color: #e65100; color: white; font-weight: bold; "
-              "border: 2px inset #bf360c; border-radius: 4px; padding: 4px 8px; }"
-            : "QPushButton { color: #e65100; font-weight: bold; "
-              "border: 1px solid #e65100; border-radius: 4px; padding: 4px 8px; }");
+            ? "QPushButton { background-color: #e65100; color: white; font-weight: 600; "
+              "border: 1px solid #e65100; border-radius: 8px; padding: 8px 13px; }"
+            : "QPushButton { background-color: #fff8e1; color: #e65100; font-weight: 600; "
+              "border: 1px solid #e65100; border-radius: 8px; padding: 8px 13px; }");
         ui->pushButton_fromMeteoStat->setToolTip(
             QString("Бюллетень МС устарел на %1 ч (>12 ч) — не используется в уточнённом")
                 .arg(stationAgeH, 0, 'f', 1));
@@ -2212,10 +2453,10 @@ void MeasurementResults::updateMeteo11Display()
     if (gribStale && m_meteo11FromGrib.isValid) {
         const bool sel = (currentButtelinType == FromGrib);
         ui->pushButton_fromGrib->setStyleSheet(sel
-            ? "QPushButton { background-color: #e65100; color: white; font-weight: bold; "
-              "border: 2px inset #bf360c; border-radius: 4px; padding: 4px 8px; }"
-            : "QPushButton { color: #e65100; font-weight: bold; "
-              "border: 1px solid #e65100; border-radius: 4px; padding: 4px 8px; }");
+            ? "QPushButton { background-color: #e65100; color: white; font-weight: 600; "
+              "border: 1px solid #e65100; border-radius: 8px; padding: 8px 13px; }"
+            : "QPushButton { background-color: #fff8e1; color: #e65100; font-weight: 600; "
+              "border: 1px solid #e65100; border-radius: 8px; padding: 8px 13px; }");
         ui->pushButton_fromGrib->setToolTip(
             QString("Бюллетень «Из GRIB» устарел на %1 ч (>12 ч) — пересчитайте для текущей записи")
                 .arg(gribAgeH, 0, 'f', 1));
@@ -2444,7 +2685,10 @@ void MeasurementResults::clearMeteo11Display()
     ui->lineEdit_hw->clear();
     ui->lineEdit_numStation->clear();
     ui->lineEdit_bulleten->setText("НЕТ ДАННЫХ");
-    ui->lineEdit_bulleten->setStyleSheet("color: gray;");
+    ui->lineEdit_bulleten->setStyleSheet(
+        "border:none; border-radius:999px; padding:4px 14px; font-weight:700; font-size:11px;"
+        "background-color:#EEF0EF; color:#6E7876;");
+    ui->lineEdit_bulletenTime->setStyleSheet("");
     ui->lineEdit_bulletenTime->clear();
 }
 
@@ -2829,7 +3073,8 @@ MeasurementSnapshot MeasurementResults::buildSnapshot() const
 // ─────────────────────────────────────────────────────────────────────────────
 void MeasurementResults::onExportClicked()
 {
-    // 1. Собираем снимок данных
+    // Собираем снимок данных и переключаемся на встроенный экран экспорта
+    // (страница 1 rootStack) вместо модального ExportDialog.
     MeasurementSnapshot snap = buildSnapshot();
 
     if (snap.recordId <= 0) {
@@ -2838,14 +3083,13 @@ void MeasurementResults::onExportClicked()
         return;
     }
 
-    // 2. Показываем диалог настройки экспорта (из .ui-файла)
-    ExportDialog dlg(snap, this);
-    if (dlg.exec() != QDialog::Accepted)
-        return;
+    m_exportView->setSnapshot(snap);
+    ui->rootStack->setCurrentWidget(m_exportView);
+}
 
-    ExportOptions opts = dlg.getOptions();
-
-    // 3. Диалог выбора пути
+void MeasurementResults::onExportSubmitted(const MeasurementSnapshot &snap, const ExportOptions &opts)
+{
+    // Диалог выбора пути
     const struct { ExportOptions::Format fmt; const char *filter; } kFilters[] = {
                     { ExportOptions::TXT,  "Текстовый файл (*.txt);;Все файлы (*)"  },
                     { ExportOptions::CSV,  "CSV файл (*.csv);;Все файлы (*)"        },
@@ -2912,6 +3156,10 @@ void MeasurementResults::onExportClicked()
             showStatus("Ошибка экспорта: " + errorMsg, NotificationToast::Error);
         return;
     }
+
+    // Успешный экспорт — возвращаемся к архиву, чтобы не держать пользователя
+    // на экране экспорта; при ошибке остаёмся, чтобы можно было поправить опции.
+    ui->rootStack->setCurrentWidget(ui->archivePage);
 
     m_toast->showMessageWithAction(
         QString("Файл успешно сохранён: %1").arg(QFileInfo(path).fileName()),

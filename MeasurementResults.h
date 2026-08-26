@@ -29,6 +29,10 @@ namespace Ui {
 class MeasurementResults;
 }
 
+class ArchiveDatePopup;
+class ArchiveExportView;
+class QPushButton;
+
 struct MeasurementRecord {
     int recordId;
     QDateTime measurementTime;
@@ -69,6 +73,9 @@ private slots:
     void onTableFormatClicked();
 
     void onExportClicked();
+    void onExportBackRequested();
+    void onExportSubmitted(const MeasurementSnapshot &snap, const ExportOptions &opts);
+    void onDatePopupDateTimeSelected(const QDateTime &dt);
 
 public slots:
     void updateCoordinatesFromMainWindow(double latitude, double longitude);
@@ -273,6 +280,26 @@ private:
 
     NotificationToast *m_toast;
     void showStatus(const QString &text, NotificationToast::Kind kind);
+
+    // ============ НОВЫЙ ВИЗУАЛЬНЫЙ СЛОЙ (боковая панель / попап даты / встроенный экспорт) ============
+    ArchiveDatePopup  *m_datePopup;
+    ArchiveExportView *m_exportView;
+    bool m_amsProbeFieldsVisible;
+    QList<QWidget *> m_amsProbeWidgets; // доп. поля АМС/зонда на странице "приближённый" — скрыты по умолчанию
+
+    void applyArchiveStyle();          // общий QSS-стиль архива под макет
+    void setupArchivePlaceholders();   // плейсхолдеры "в разработке" для ВНГО/Десант
+    void setupAmsProbeCollapse();      // сворачиваемый блок доп. полей АМС/зонда
+
+    // Нативная QTabBar рисуется системным QStyle и не даёт гарантированно
+    // повторить плоские скруглённые вкладки макета ни на одной платформе —
+    // поэтому сама QTabBar скрывается (tabBar()->hide()), а вместо неё
+    // строится полностью самодельная строка кнопок, переключающая страницы
+    // того же QTabWidget через setCurrentIndex().
+    QWidget *m_customTabBar;
+    QList<QPushButton *> m_tabButtons;
+    void setupCustomTabBar();
+    void updateCustomTabBarHighlight(int currentIndex);
 };
 
 #endif // MEASUREMENTRESULTS_H
