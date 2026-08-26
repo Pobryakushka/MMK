@@ -18,27 +18,35 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
 {
     setStyleSheet(
         "ArchiveExportView { background: #FFFFFF; }"
-        "QLabel { color: #1B211F; font-family: 'Segoe UI','Inter',sans-serif; }"
+        "QWidget#expHead { background: #FFFFFF; border-bottom: 1px solid #DDE1E3; }"
+        "QWidget#expFoot { background: #FFFFFF; border-top: 1px solid #DDE1E3; }"
+        "QLabel { color: #1B211F; font-family: 'Inter','Segoe UI','DejaVu Sans',sans-serif; }"
         "QLabel#expTitle { font-size: 15px; font-weight: 700; }"
         "QLabel#expRecInfo { color: #6E7876; font-size: 11px; }"
         "QLabel#expRecInfo b { color: #1B211F; }"
         "QLabel[class=\"sectionTitle\"] { color: #6E7876; font-size: 11px; font-weight: 600; }"
         "QPushButton#expBackBtn { background: none; border: none; color: #0F6B4F; font-weight: 600; font-size: 13px; text-align: left; }"
         "QPushButton#expBackBtn:hover { text-decoration: underline; }"
-        "QPushButton[class=\"fmtCard\"] { border: 1.5px solid #DDE1E3; border-radius: 12px; background: #FFFFFF; padding: 10px; font-family: 'JetBrains Mono','Consolas','Courier New',monospace; font-weight: 800; font-size: 15px; color: #6E7876; }"
+        "QPushButton[class=\"fmtCard\"] { border: 1.5px solid #DDE1E3; border-radius: 12px; background: #FFFFFF; padding: 10px; font-family: 'JetBrains Mono','DejaVu Sans Mono','Consolas',monospace; font-weight: 800; font-size: 15px; color: #6E7876; }"
         "QPushButton[class=\"fmtCard\"]:hover { border-color: #0F6B4F; }"
         "QPushButton[class=\"fmtCard\"][sel=\"true\"] { border-color: #0F6B4F; background: #E4F1EC; color: #0B5A41; }"
         "QWidget#expOptionsPanel { background: #F7F8F8; border: 1px solid #DDE1E3; border-radius: 12px; }"
         "QPushButton[class=\"segBtn\"] { border: none; background: #FFFFFF; padding: 7px 14px; font-size: 12px; font-weight: 600; color: #6E7876; }"
         "QPushButton[class=\"segBtn\"][sel=\"true\"] { background: #0F6B4F; color: #FFFFFF; }"
         "QWidget[class=\"segGroup\"] { border: 1px solid #DDE1E3; border-radius: 8px; }"
-        "QCheckBox { font-size: 12.5px; color: #1B211F; spacing: 8px; }"
+        "QCheckBox { font-size: 12px; color: #1B211F; spacing: 8px; }"
         "QCheckBox:disabled { color: #A9AFAD; }"
+        "QWidget#expSecItem { border-bottom: 1px dashed #DDE1E3; }"
+        "QLabel#expSecBadge {"
+        "  background: #E1E6E4; color: #6E7876; font-size: 10px;"
+        "  border-radius: 8px; padding: 2px 7px;"
+        "}"
         // Плоский индикатор чекбокса (без нативной галочки системного QStyle) —
         // залитый зелёный квадрат со скруглением вместо неё, как toggle в макете.
         "QCheckBox::indicator { width: 16px; height: 16px; border: 1.5px solid #DDE1E3; border-radius: 4px; background: #FFFFFF; }"
         "QCheckBox::indicator:hover { border-color: #0F6B4F; }"
-        "QCheckBox::indicator:checked { background: #0F6B4F; border-color: #0F6B4F; }"
+        "QCheckBox::indicator:checked { background: #0F6B4F; border-color: #0F6B4F;"
+        "  image: url(:/icons/checkmark_white.svg); }"
         "QCheckBox::indicator:disabled { background: #F1F3F2; border-color: #DDE1E3; }"
         "QPushButton#expCancelBtn, QPushButton#expSaveBtn { border-radius: 6px; font-weight: 600; font-size: 13px; padding: 8px 20px; }"
         "QPushButton#expCancelBtn { background: #FFFFFF; border: 1px solid #DDE1E3; color: #1B211F; }"
@@ -53,7 +61,7 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
 
     // ── Шапка ────────────────────────────────────────────────────────────
     auto *head = new QWidget(this);
-    head->setStyleSheet("background: #FFFFFF; border-bottom: 1px solid #DDE1E3;");
+    head->setObjectName("expHead");
     auto *headLayout = new QHBoxLayout(head);
     headLayout->setContentsMargins(20, 14, 20, 14);
     headLayout->setSpacing(14);
@@ -102,7 +110,13 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
         connect(card, &QPushButton::clicked, this, [this, fmt = kf.fmt] { selectFormat(fmt); });
         fmtRow->addWidget(card, 1);
     }
-    bodyLayout->addLayout(fmtRow);
+    // В макете карточки форматов ограничены по ширине (max-width: 760px),
+    // иначе на широком экране они растягиваются в непропорциональные плашки.
+    auto *fmtRowHolder = new QWidget(body);
+    fmtRowHolder->setMaximumWidth(760);
+    fmtRowHolder->setLayout(fmtRow);
+    fmtRow->setContentsMargins(0, 0, 0, 0);
+    bodyLayout->addWidget(fmtRowHolder);
     bodyLayout->addSpacing(18);
 
     auto *optTitle = new QLabel("Параметры формата", body);
@@ -124,7 +138,7 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
         rowLayout->setSpacing(14);
         auto *lbl = new QLabel(labelText, row);
         lbl->setFixedWidth(150);
-        lbl->setStyleSheet("color: #6E7876; font-size: 12.5px;");
+        lbl->setStyleSheet("color: #6E7876; font-size: 12px;");
         rowLayout->addWidget(lbl);
         rowLayout->addWidget(control, 1);
         optionsLayout->addWidget(row);
@@ -183,7 +197,7 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
 
     // No options placeholder
     auto *noOptLabel = new QLabel("Дополнительных параметров для этого формата нет", optionsPanel);
-    noOptLabel->setStyleSheet("color: #6E7876; font-style: italic; font-size: 12.5px;");
+    noOptLabel->setStyleSheet("color: #6E7876; font-style: italic; font-size: 12px;");
     m_noOptionsRow = makeOptRow(QString(), noOptLabel);
 
     bodyLayout->addWidget(optionsPanel);
@@ -213,16 +227,33 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
     };
     for (int i = 0; i < 9; ++i) {
         secBoxes[i]->setChecked(true);
-        secGrid->addWidget(secBoxes[i], i / 2, i % 2);
+        // Каждый раздел — строка с пунктирным разделителем снизу и местом под
+        // бейдж "нет данных" справа (sec-item из макета).
+        auto *row = new QWidget(body);
+        row->setObjectName("expSecItem");
+        auto *rowLayout = new QHBoxLayout(row);
+        rowLayout->setContentsMargins(2, 5, 2, 5);
+        rowLayout->setSpacing(8);
+        rowLayout->addWidget(secBoxes[i], 1);
+        auto *badge = new QLabel("нет данных", row);
+        badge->setObjectName("expSecBadge");
+        badge->setVisible(false);
+        m_secBadges[i] = badge;
+        rowLayout->addWidget(badge);
+        secGrid->addWidget(row, i / 2, i % 2);
     }
-    bodyLayout->addLayout(secGrid);
+    auto *secGridHolder = new QWidget(body);
+    secGridHolder->setMaximumWidth(760);
+    secGridHolder->setLayout(secGrid);
+    secGrid->setContentsMargins(0, 0, 0, 0);
+    bodyLayout->addWidget(secGridHolder);
     bodyLayout->addStretch(1);
 
     root->addWidget(body, 1);
 
     // ── Футер ────────────────────────────────────────────────────────────
     auto *foot = new QWidget(this);
-    foot->setStyleSheet("background: #FFFFFF; border-top: 1px solid #DDE1E3;");
+    foot->setObjectName("expFoot");
     auto *footLayout = new QHBoxLayout(foot);
     footLayout->setContentsMargins(20, 14, 20, 14);
     footLayout->setSpacing(10);
@@ -251,7 +282,7 @@ QPushButton *ArchiveExportView::makeFormatCard(const QString &ext, const QString
     auto *card = new QPushButton(this);
     card->setProperty("class", "fmtCard");
     card->setCursor(Qt::PointingHandCursor);
-    card->setMinimumHeight(64);
+    card->setMinimumHeight(58);
     card->setText(ext + "\n" + label);
     return card;
 }
@@ -339,19 +370,30 @@ void ArchiveExportView::updateOptionRows()
 
 void ArchiveExportView::updateSectionsAvailability()
 {
-    auto apply = [](QCheckBox *cb, bool available) {
-        cb->setEnabled(available);
-        cb->setChecked(available);
+    // Порядок должен совпадать с порядком создания чекбоксов в конструкторе —
+    // бейдж "нет данных" ищется по тому же индексу.
+    const bool availability[9] = {
+        m_snap.coordinatesValid,
+        m_snap.surfaceMeteoValid,
+        !m_snap.avgWind.isEmpty(),
+        !m_snap.actualWind.isEmpty(),
+        !m_snap.measuredWind.isEmpty(),
+        !m_snap.windShear.isEmpty(),
+        m_snap.meteo11Updated.valid,
+        m_snap.meteo11Approximate.valid,
+        m_snap.meteo11FromStation.valid,
     };
-    apply(m_secCoordinates,    m_snap.coordinatesValid);
-    apply(m_secSurfaceMeteo,   m_snap.surfaceMeteoValid);
-    apply(m_secAvgWind,        !m_snap.avgWind.isEmpty());
-    apply(m_secActualWind,     !m_snap.actualWind.isEmpty());
-    apply(m_secMeasuredWind,   !m_snap.measuredWind.isEmpty());
-    apply(m_secWindShear,      !m_snap.windShear.isEmpty());
-    apply(m_secMeteo11Updated, m_snap.meteo11Updated.valid);
-    apply(m_secMeteo11Approx,  m_snap.meteo11Approximate.valid);
-    apply(m_secMeteo11Station, m_snap.meteo11FromStation.valid);
+    QCheckBox *boxes[9] = {
+        m_secCoordinates, m_secSurfaceMeteo, m_secAvgWind, m_secActualWind,
+        m_secMeasuredWind, m_secWindShear, m_secMeteo11Updated,
+        m_secMeteo11Approx, m_secMeteo11Station
+    };
+    for (int i = 0; i < 9; ++i) {
+        boxes[i]->setEnabled(availability[i]);
+        boxes[i]->setChecked(availability[i]);
+        if (m_secBadges[i])
+            m_secBadges[i]->setVisible(!availability[i]);
+    }
 }
 
 ExportOptions ArchiveExportView::buildOptions() const

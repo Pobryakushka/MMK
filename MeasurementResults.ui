@@ -19,9 +19,6 @@
     <property name="windowTitle">
       <string>Просмотр результатов измерений</string>
     </property>
-    <property name="styleSheet">
-      <string notr="true">background-color: #EFF1F1;</string>
-    </property>
     <layout class="QVBoxLayout" name="outerLayout">
       <property name="spacing">
         <number>0</number>
@@ -58,375 +55,221 @@
                 <number>0</number>
               </property>
               <item>
-                <widget class="QWidget" name="titleWidget" native="true">
-                  <property name="minimumSize">
-                    <size>
-                      <width>280</width>
-                      <height>0</height>
-                    </size>
-                  </property>
-                  <property name="maximumSize">
-                    <size>
-                      <width>300</width>
-                      <height>16777215</height>
-                    </size>
-                  </property>
-                  <property name="styleSheet">
-                    <string notr="true">background-color: #FFFFFF; border-right: 1px solid #DDE1E3;</string>
-                  </property>
-                  <layout class="QVBoxLayout" name="verticalLayout_2">
-                    <property name="spacing">
-                      <number>0</number>
-                    </property>
-                    <property name="leftMargin">
-                      <number>0</number>
-                    </property>
-                    <property name="topMargin">
-                      <number>0</number>
-                    </property>
-                    <property name="rightMargin">
-                      <number>0</number>
-                    </property>
-                    <property name="bottomMargin">
-                      <number>0</number>
-                    </property>
+                <widget class="QFrame" name="titleWidget">
+                  <property name="minimumSize"><size><width>270</width><height>0</height></size></property>
+                  <property name="maximumSize"><size><width>270</width><height>16777215</height></size></property>
+                  <layout class="QVBoxLayout" name="railLayout">
+                    <property name="spacing"><number>0</number></property>
+                    <property name="leftMargin"><number>0</number></property>
+                    <property name="topMargin"><number>0</number></property>
+                    <property name="rightMargin"><number>0</number></property>
+                    <property name="bottomMargin"><number>0</number></property>
                     <item>
-                      <widget class="QLabel" name="lblTitle">
-                        <property name="styleSheet">
-                          <string notr="true">color: #1B211F; font-size: 15px; font-weight: 700; padding: 14px 16px 0px;</string>
-                        </property>
-                        <property name="text">
-                          <string>Архив измерений</string>
-                        </property>
-                        <property name="alignment">
-                          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                        </property>
-                      </widget>
-                    </item>
-                    <item>
-                      <widget class="QLabel" name="lblSubtitle">
-                        <property name="styleSheet">
-                          <string notr="true">color: #6E7876; font-size: 11px; padding: 0px 16px 10px;</string>
-                        </property>
-                        <property name="text">
-                          <string>Просмотр результатов зондирования</string>
-                        </property>
-                      </widget>
-                    </item>
-                    <item>
-                      <widget class="QGroupBox" name="dateTimeGroup">
-                        <property name="title">
-                          <string>Дата и время</string>
-                        </property>
-                        <layout class="QVBoxLayout" name="verticalLayout_3">
-                          <property name="spacing">
-                            <number>10</number>
-                          </property>
+                      <widget class="QFrame" name="railHead">
+                        <layout class="QVBoxLayout" name="railHeadLayout">
+                          <property name="spacing"><number>2</number></property>
+                          <property name="leftMargin"><number>16</number></property>
+                          <property name="topMargin"><number>12</number></property>
+                          <property name="rightMargin"><number>16</number></property>
+                          <property name="bottomMargin"><number>12</number></property>
                           <item>
-                            <layout class="QHBoxLayout" name="dateNavigationLayout">
-                              <property name="spacing">
-                                <number>10</number>
-                              </property>
-                              <item>
-                                <widget class="QPushButton" name="btnPrevDate">
-                                  <property name="minimumSize">
-                                    <size>
-                                      <width>36</width>
-                                      <height>28</height>
-                                    </size>
-                                  </property>
-                                  <property name="maximumSize">
-                                    <size>
-                                      <width>36</width>
-                                      <height>16777215</height>
-                                    </size>
-                                  </property>
-                                  <property name="font">
-                                    <font>
-                                      <pointsize>12</pointsize>
-                                      <bold>true</bold>
-                                    </font>
-                                  </property>
-                                  <property name="text">
-                                    <string>◄</string>
-                                  </property>
-                                </widget>
-                              </item>
-                              <item>
-                                <widget class="QPushButton" name="btnSelectDate">
-                                  <property name="minimumSize">
-                                    <size>
-                                      <width>0</width>
-                                      <height>28</height>
-                                    </size>
-                                  </property>
-                                  <property name="styleSheet">
-                                    <string notr="true">background-color: #E4F1EC; border: 1.5px solid #0F6B4F; border-radius: 6px; padding: 5px; color: #0B5A41; font-weight: 700;</string>
-                                  </property>
-                                  <property name="text">
-                                    <string/>
-                                  </property>
-                                </widget>
-                              </item>
-                              <item>
-                                <widget class="QPushButton" name="btnNextDate">
-                                  <property name="minimumSize">
-                                    <size>
-                                      <width>36</width>
-                                      <height>28</height>
-                                    </size>
-                                  </property>
-                                  <property name="maximumSize">
-                                    <size>
-                                      <width>36</width>
-                                      <height>16777215</height>
-                                    </size>
-                                  </property>
-                                  <property name="font">
-                                    <font>
-                                      <pointsize>12</pointsize>
-                                      <bold>true</bold>
-                                    </font>
-                                  </property>
-                                  <property name="text">
-                                    <string>►</string>
-                                  </property>
-                                </widget>
-                              </item>
-                            </layout>
-                          </item>
-                          <item>
-                            <widget class="QLabel" name="lblCurrentDateTime">
-                              <property name="styleSheet">
-                                <string notr="true">font-size: 12pt; font-weight: bold; color: #333;</string>
-                              </property>
-                              <property name="text">
-                                <string>01.01.2024 00:00</string>
-                              </property>
-                              <property name="alignment">
-                                <set>Qt::AlignCenter</set>
-                              </property>
+                            <widget class="QPushButton" name="btnBack">
+                              <property name="text"><string>‹ Назад</string></property>
+                              <property name="sizePolicy"><sizepolicy hsizetype="Maximum" vsizetype="Fixed"><horstretch>0</horstretch><verstretch>0</verstretch></sizepolicy></property>
+                              <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
                             </widget>
                           </item>
                           <item>
-                            <widget class="QLabel" name="lblTimeSliderLabel">
-                              <property name="text">
-                                <string>Время измерений (для выбранной даты):</string>
-                              </property>
+                            <widget class="QLabel" name="lblTitle">
+                              <property name="text"><string>Архив измерений</string></property>
                             </widget>
                           </item>
                           <item>
-                            <widget class="QSlider" name="timeSlider">
-                              <property name="maximum">
-                                <number>143</number>
-                              </property>
-                              <property name="orientation">
-                                <enum>Qt::Horizontal</enum>
-                              </property>
-                              <property name="tickPosition">
-                                <enum>QSlider::TicksBelow</enum>
-                              </property>
-                              <property name="tickInterval">
-                                <number>6</number>
-                              </property>
-                            </widget>
-                          </item>
-                          <item>
-                            <layout class="QHBoxLayout" name="timeLabelsLayout">
-                              <item>
-                                <widget class="QLabel" name="lblTimeStart">
-                                  <property name="text">
-                                    <string>00:00</string>
-                                  </property>
-                                </widget>
-                              </item>
-                              <item>
-                                <spacer name="horizontalSpacer">
-                                  <property name="orientation">
-                                    <enum>Qt::Horizontal</enum>
-                                  </property>
-                                  <property name="sizeHint" stdset="0">
-                                    <size>
-                                      <width>40</width>
-                                      <height>20</height>
-                                    </size>
-                                  </property>
-                                </spacer>
-                              </item>
-                              <item>
-                                <widget class="QLabel" name="lblTimeMiddle">
-                                  <property name="text">
-                                    <string>12:00</string>
-                                  </property>
-                                </widget>
-                              </item>
-                              <item>
-                                <spacer name="horizontalSpacer_2">
-                                  <property name="orientation">
-                                    <enum>Qt::Horizontal</enum>
-                                  </property>
-                                  <property name="sizeHint" stdset="0">
-                                    <size>
-                                      <width>40</width>
-                                      <height>20</height>
-                                    </size>
-                                  </property>
-                                </spacer>
-                              </item>
-                              <item>
-                                <widget class="QLabel" name="lblTimeEnd">
-                                  <property name="text">
-                                    <string>23:50</string>
-                                  </property>
-                                </widget>
-                              </item>
-                            </layout>
-                          </item>
-                          <item>
-                            <widget class="QLabel" name="lblAvailableRecords">
-                              <property name="styleSheet">
-                                <string notr="true">color: #6E7876; font-style: italic; font-size: 11px;</string>
-                              </property>
-                              <property name="text">
-                                <string>Доступно записей: 0</string>
-                              </property>
-                              <property name="alignment">
-                                <set>Qt::AlignCenter</set>
-                              </property>
+                            <widget class="QLabel" name="lblSubtitle">
+                              <property name="text"><string>Просмотр результатов зондирования</string></property>
+                              <property name="wordWrap"><bool>true</bool></property>
                             </widget>
                           </item>
                         </layout>
                       </widget>
                     </item>
                     <item>
-                      <widget class="QGroupBox" name="parametersGroup">
-                        <property name="title">
-                          <string>Параметры станции</string>
-                        </property>
-                        <layout class="QFormLayout" name="formLayout_params">
-                          <property name="verticalSpacing">
-                            <number>8</number>
-                          </property>
-                          <property name="leftMargin">
-                            <number>10</number>
-                          </property>
-                          <property name="topMargin">
-                            <number>10</number>
-                          </property>
-                          <property name="rightMargin">
-                            <number>10</number>
-                          </property>
-                          <property name="bottomMargin">
-                            <number>10</number>
-                          </property>
-                          <item row="0" column="0">
-                            <widget class="QLabel" name="lblLatitude">
-                              <property name="text">
-                                <string>Широта:</string>
-                              </property>
+                      <widget class="QFrame" name="sectionDateTime">
+                        <layout class="QVBoxLayout" name="sectionDateTimeLayout">
+                          <property name="spacing"><number>8</number></property>
+                          <property name="leftMargin"><number>16</number></property>
+                          <property name="topMargin"><number>14</number></property>
+                          <property name="rightMargin"><number>16</number></property>
+                          <property name="bottomMargin"><number>14</number></property>
+                          <item>
+                            <widget class="QLabel" name="capDateTime">
+                              <property name="text"><string>ДАТА И ВРЕМЯ</string></property>
                             </widget>
                           </item>
-                          <item row="0" column="1">
-                            <layout class="QHBoxLayout" name="latLayout">
-                              <property name="spacing">
-                                <number>4</number>
-                              </property>
+                          <item>
+                            <layout class="QHBoxLayout" name="dateNavigationLayout">
+                              <property name="spacing"><number>6</number></property>
                               <item>
-                                <widget class="QLineEdit" name="editLatitude">
-                                  <property name="readOnly">
-                                    <bool>true</bool>
-                                  </property>
-                                  <property name="placeholderText">
-                                    <string>55°45'21"</string>
-                                  </property>
+                                <widget class="QPushButton" name="btnPrevDate">
+                                  <property name="minimumSize"><size><width>34</width><height>34</height></size></property>
+                                  <property name="maximumSize"><size><width>34</width><height>34</height></size></property>
+                                  <property name="text"><string>◄</string></property>
                                 </widget>
                               </item>
                               <item>
-                                <widget class="QComboBox" name="cmbLatitudeType">
-                                  <item>
-                                    <property name="text">
-                                      <string>Северная</string>
-                                    </property>
-                                  </item>
-                                  <item>
-                                    <property name="text">
-                                      <string>Южная</string>
-                                    </property>
-                                  </item>
+                                <widget class="QPushButton" name="btnSelectDate">
+                                  <property name="minimumSize"><size><width>0</width><height>34</height></size></property>
+                                  <property name="maximumSize"><size><width>16777215</width><height>34</height></size></property>
+                                  <property name="text"><string/></property>
+                                  <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+                                </widget>
+                              </item>
+                              <item>
+                                <widget class="QPushButton" name="btnNextDate">
+                                  <property name="minimumSize"><size><width>34</width><height>34</height></size></property>
+                                  <property name="maximumSize"><size><width>34</width><height>34</height></size></property>
+                                  <property name="text"><string>►</string></property>
                                 </widget>
                               </item>
                             </layout>
                           </item>
-                          <item row="1" column="0">
-                            <widget class="QLabel" name="lblLongitude">
-                              <property name="text">
-                                <string>Долгота:</string>
-                              </property>
+                          <item>
+                            <widget class="QLabel" name="lblAvailableRecords">
+                              <property name="text"><string>Доступно записей: 0</string></property>
+                              <property name="alignment"><set>Qt::AlignCenter</set></property>
+                              <property name="wordWrap"><bool>true</bool></property>
                             </widget>
                           </item>
-                          <item row="1" column="1">
-                            <layout class="QHBoxLayout" name="lonLayout">
-                              <property name="spacing">
-                                <number>4</number>
-                              </property>
-                              <item>
-                                <widget class="QLineEdit" name="editLongitude">
-                                  <property name="readOnly">
-                                    <bool>true</bool>
-                                  </property>
-                                  <property name="placeholderText">
-                                    <string>37°37'02"</string>
-                                  </property>
-                                </widget>
-                              </item>
-                              <item>
-                                <widget class="QComboBox" name="cmbLongitudeType">
-                                  <item>
-                                    <property name="text">
-                                      <string>Восточная</string>
-                                    </property>
-                                  </item>
-                                  <item>
-                                    <property name="text">
-                                      <string>Западная</string>
-                                    </property>
-                                  </item>
-                                </widget>
-                              </item>
-                            </layout>
-                          </item>
-                          <item row="2" column="0">
-                            <widget class="QLabel" name="lblAltitude">
-                              <property name="text">
-                                <string>Высота над УМ:</string>
-                              </property>
+                        </layout>
+                      </widget>
+                    </item>
+                    <item>
+                      <widget class="QFrame" name="sectionParams">
+                        <layout class="QVBoxLayout" name="sectionParamsLayout">
+                          <property name="spacing"><number>0</number></property>
+                          <property name="leftMargin"><number>16</number></property>
+                          <property name="topMargin"><number>14</number></property>
+                          <property name="rightMargin"><number>16</number></property>
+                          <property name="bottomMargin"><number>10</number></property>
+                          <item>
+                            <widget class="QLabel" name="capParams">
+                              <property name="text"><string>ПАРАМЕТРЫ СТАНЦИИ</string></property>
                             </widget>
                           </item>
-                          <item row="2" column="1">
-                            <widget class="QLineEdit" name="editAltitude">
-                              <property name="readOnly">
-                                <bool>true</bool>
-                              </property>
-                              <property name="placeholderText">
-                                <string>156 м</string>
-                              </property>
+                          <item>
+                            <widget class="QFrame" name="rowLatitude">
+                              <property name="minimumSize"><size><width>0</width><height>30</height></size></property>
+                              <layout class="QHBoxLayout" name="rowLatitudeLayout">
+                                <property name="spacing"><number>8</number></property>
+                                <property name="leftMargin"><number>0</number></property>
+                                <property name="topMargin"><number>0</number></property>
+                                <property name="rightMargin"><number>0</number></property>
+                                <property name="bottomMargin"><number>0</number></property>
+                                <item>
+                                  <widget class="QLabel" name="lblLatitude">
+                                    <property name="text"><string>Широта</string></property>
+                                  </widget>
+                                </item>
+                                <item>
+                                  <spacer name="rowLatitudeSpacer">
+                                    <property name="orientation"><enum>Qt::Horizontal</enum></property>
+                                    <property name="sizeHint" stdset="0"><size><width>10</width><height>10</height></size></property>
+                                  </spacer>
+                                </item>
+                                <item>
+                                  <widget class="QLabel" name="valLatitude">
+                                    <property name="text"><string>—</string></property>
+                                    <property name="alignment"><set>Qt::AlignRight|Qt::AlignVCenter</set></property>
+                                  </widget>
+                                </item>
+                              </layout>
                             </widget>
                           </item>
-                          <item row="3" column="0">
-                            <widget class="QLabel" name="lblDirectionAngle">
-                              <property name="text">
-                                <string>Дирекц. угол:</string>
-                              </property>
+                          <item>
+                            <widget class="QFrame" name="rowLongitude">
+                              <property name="minimumSize"><size><width>0</width><height>30</height></size></property>
+                              <layout class="QHBoxLayout" name="rowLongitudeLayout">
+                                <property name="spacing"><number>8</number></property>
+                                <property name="leftMargin"><number>0</number></property>
+                                <property name="topMargin"><number>0</number></property>
+                                <property name="rightMargin"><number>0</number></property>
+                                <property name="bottomMargin"><number>0</number></property>
+                                <item>
+                                  <widget class="QLabel" name="lblLongitude">
+                                    <property name="text"><string>Долгота</string></property>
+                                  </widget>
+                                </item>
+                                <item>
+                                  <spacer name="rowLongitudeSpacer">
+                                    <property name="orientation"><enum>Qt::Horizontal</enum></property>
+                                    <property name="sizeHint" stdset="0"><size><width>10</width><height>10</height></size></property>
+                                  </spacer>
+                                </item>
+                                <item>
+                                  <widget class="QLabel" name="valLongitude">
+                                    <property name="text"><string>—</string></property>
+                                    <property name="alignment"><set>Qt::AlignRight|Qt::AlignVCenter</set></property>
+                                  </widget>
+                                </item>
+                              </layout>
                             </widget>
                           </item>
-                          <item row="3" column="1">
-                            <widget class="QLineEdit" name="editDirectionAngle">
-                              <property name="readOnly">
-                                <bool>true</bool>
-                              </property>
-                              <property name="placeholderText">
-                                <string>0.0 град.</string>
-                              </property>
+                          <item>
+                            <widget class="QFrame" name="rowAltitude">
+                              <property name="minimumSize"><size><width>0</width><height>30</height></size></property>
+                              <layout class="QHBoxLayout" name="rowAltitudeLayout">
+                                <property name="spacing"><number>8</number></property>
+                                <property name="leftMargin"><number>0</number></property>
+                                <property name="topMargin"><number>0</number></property>
+                                <property name="rightMargin"><number>0</number></property>
+                                <property name="bottomMargin"><number>0</number></property>
+                                <item>
+                                  <widget class="QLabel" name="lblAltitude">
+                                    <property name="text"><string>Высота</string></property>
+                                  </widget>
+                                </item>
+                                <item>
+                                  <spacer name="rowAltitudeSpacer">
+                                    <property name="orientation"><enum>Qt::Horizontal</enum></property>
+                                    <property name="sizeHint" stdset="0"><size><width>10</width><height>10</height></size></property>
+                                  </spacer>
+                                </item>
+                                <item>
+                                  <widget class="QLabel" name="valAltitude">
+                                    <property name="text"><string>—</string></property>
+                                    <property name="alignment"><set>Qt::AlignRight|Qt::AlignVCenter</set></property>
+                                  </widget>
+                                </item>
+                              </layout>
+                            </widget>
+                          </item>
+                          <item>
+                            <widget class="QFrame" name="rowDirectionAngle">
+                              <property name="minimumSize"><size><width>0</width><height>30</height></size></property>
+                              <layout class="QHBoxLayout" name="rowDirectionAngleLayout">
+                                <property name="spacing"><number>8</number></property>
+                                <property name="leftMargin"><number>0</number></property>
+                                <property name="topMargin"><number>0</number></property>
+                                <property name="rightMargin"><number>0</number></property>
+                                <property name="bottomMargin"><number>0</number></property>
+                                <item>
+                                  <widget class="QLabel" name="lblDirectionAngle">
+                                    <property name="text"><string>Дирекц. угол</string></property>
+                                  </widget>
+                                </item>
+                                <item>
+                                  <spacer name="rowDirectionAngleSpacer">
+                                    <property name="orientation"><enum>Qt::Horizontal</enum></property>
+                                    <property name="sizeHint" stdset="0"><size><width>10</width><height>10</height></size></property>
+                                  </spacer>
+                                </item>
+                                <item>
+                                  <widget class="QLabel" name="valDirectionAngle">
+                                    <property name="text"><string>0.0°</string></property>
+                                    <property name="alignment"><set>Qt::AlignRight|Qt::AlignVCenter</set></property>
+                                  </widget>
+                                </item>
+                              </layout>
                             </widget>
                           </item>
                         </layout>
@@ -434,80 +277,48 @@
                     </item>
                     <item>
                       <spacer name="railSpacer">
-                        <property name="orientation">
-                          <enum>Qt::Vertical</enum>
-                        </property>
-                        <property name="sizeHint" stdset="0">
-                          <size>
-                            <width>20</width>
-                            <height>40</height>
-                          </size>
-                        </property>
+                        <property name="orientation"><enum>Qt::Vertical</enum></property>
+                        <property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property>
                       </spacer>
                     </item>
                     <item>
-                      <layout class="QHBoxLayout" name="bottomButtonsLayout">
-                        <property name="leftMargin">
-                          <number>16</number>
-                        </property>
-                        <property name="topMargin">
-                          <number>14</number>
-                        </property>
-                        <property name="rightMargin">
-                          <number>16</number>
-                        </property>
-                        <property name="bottomMargin">
-                          <number>14</number>
-                        </property>
-                        <item>
-                          <widget class="QPushButton" name="btnExport">
-                            <property name="sizePolicy">
-                              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                                <horstretch>1</horstretch>
-                                <verstretch>0</verstretch>
-                              </sizepolicy>
-                            </property>
-                            <property name="minimumSize">
-                              <size>
-                                <width>0</width>
-                                <height>36</height>
-                              </size>
-                            </property>
-                            <property name="text">
-                              <string>Экспорт</string>
-                            </property>
-                          </widget>
-                        </item>
-                        <item>
-                          <widget class="QPushButton" name="btnClose">
-                            <property name="sizePolicy">
-                              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                                <horstretch>1</horstretch>
-                                <verstretch>0</verstretch>
-                              </sizepolicy>
-                            </property>
-                            <property name="minimumSize">
-                              <size>
-                                <width>0</width>
-                                <height>36</height>
-                              </size>
-                            </property>
-                            <property name="text">
-                              <string>Закрыть</string>
-                            </property>
-                          </widget>
-                        </item>
-                      </layout>
+                      <widget class="QFrame" name="railFoot">
+                        <layout class="QHBoxLayout" name="bottomButtonsLayout">
+                          <property name="spacing"><number>8</number></property>
+                          <property name="leftMargin"><number>16</number></property>
+                          <property name="topMargin"><number>14</number></property>
+                          <property name="rightMargin"><number>16</number></property>
+                          <property name="bottomMargin"><number>14</number></property>
+                          <item>
+                            <widget class="QPushButton" name="btnExport">
+                              <property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Fixed"><horstretch>1</horstretch><verstretch>0</verstretch></sizepolicy></property>
+                              <property name="minimumSize"><size><width>0</width><height>38</height></size></property>
+                              <property name="text"><string>Экспорт</string></property>
+                              <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+                            </widget>
+                          </item>
+                          <item>
+                            <widget class="QPushButton" name="btnClose">
+                              <property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Fixed"><horstretch>1</horstretch><verstretch>0</verstretch></sizepolicy></property>
+                              <property name="minimumSize"><size><width>0</width><height>38</height></size></property>
+                              <property name="text"><string>Закрыть</string></property>
+                              <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+                            </widget>
+                          </item>
+                        </layout>
+                      </widget>
                     </item>
                   </layout>
                 </widget>
               </item>
               <item>
-                <widget class="QGroupBox" name="dataGroup">
-                  <property name="title">
-                    <string/>
-                  </property>
+                <widget class="QFrame" name="dataGroup">
                   <layout class="QGridLayout" name="gridLayout_2">
+                    <property name="spacing"><number>0</number></property>
+                    <property name="leftMargin"><number>0</number></property>
+                    <property name="topMargin"><number>0</number></property>
+                    <property name="rightMargin"><number>0</number></property>
+                    <property name="bottomMargin"><number>0</number></property>
                     <item row="1" column="0">
                       <widget class="QTabWidget" name="tabWidget">
                         <property name="currentIndex">
@@ -577,9 +388,6 @@
                                         <widget class="QLabel" name="labelGribStatus">
                                           <property name="visible">
                                             <bool>false</bool>
-                                          </property>
-                                          <property name="styleSheet">
-                                            <string notr="true">color: #666; font-size: 10px;</string>
                                           </property>
                                           <property name="text">
                                             <string/>
@@ -745,32 +553,10 @@
                                 </property>
                                 <widget class="QWidget" name="page_meteo11_string">
                                   <layout class="QGridLayout" name="gridLayout_meteo11_string">
-                                    <item row="0" column="1">
-                                      <spacer name="verticalSpacer_meteo11_top">
-                                        <property name="orientation">
-                                          <enum>Qt::Vertical</enum>
-                                        </property>
-                                        <property name="sizeHint" stdset="0">
-                                          <size>
-                                            <width>20</width>
-                                            <height>180</height>
-                                          </size>
-                                        </property>
-                                      </spacer>
-                                    </item>
-                                    <item row="1" column="0">
-                                      <spacer name="horizontalSpacer_meteo11_left">
-                                        <property name="orientation">
-                                          <enum>Qt::Horizontal</enum>
-                                        </property>
-                                        <property name="sizeHint" stdset="0">
-                                          <size>
-                                            <width>182</width>
-                                            <height>20</height>
-                                          </size>
-                                        </property>
-                                      </spacer>
-                                    </item>
+                                <property name="leftMargin"><number>0</number></property>
+                                <property name="topMargin"><number>0</number></property>
+                                <property name="rightMargin"><number>0</number></property>
+                                <property name="bottomMargin"><number>0</number></property>
                                     <item row="1" column="1">
                                       <widget class="QTextEdit" name="textEdit_meteo11">
                                         <property name="enabled">
@@ -801,32 +587,6 @@ li.checked::marker { content: "\2612"; }
 &lt;p align="justify" style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"&gt;&lt;span style=" font-family:'Tahoma'; font-size:14pt;"&gt;30-000000-0000&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                                         </property>
                                       </widget>
-                                    </item>
-                                    <item row="1" column="2">
-                                      <spacer name="horizontalSpacer_meteo11_right">
-                                        <property name="orientation">
-                                          <enum>Qt::Horizontal</enum>
-                                        </property>
-                                        <property name="sizeHint" stdset="0">
-                                          <size>
-                                            <width>182</width>
-                                            <height>20</height>
-                                          </size>
-                                        </property>
-                                      </spacer>
-                                    </item>
-                                    <item row="2" column="1">
-                                      <spacer name="verticalSpacer_meteo11_bottom">
-                                        <property name="orientation">
-                                          <enum>Qt::Vertical</enum>
-                                        </property>
-                                        <property name="sizeHint" stdset="0">
-                                          <size>
-                                            <width>20</width>
-                                            <height>180</height>
-                                          </size>
-                                        </property>
-                                      </spacer>
                                     </item>
                                   </layout>
                                 </widget>
@@ -1800,16 +1560,16 @@ li.checked::marker { content: "\2612"; }
                                         <number>0</number>
                                       </property>
                                       <property name="leftMargin">
-                                        <number>0</number>
+                                        <number>1</number>
                                       </property>
                                       <property name="topMargin">
                                         <number>0</number>
                                       </property>
                                       <property name="rightMargin">
-                                        <number>0</number>
+                                        <number>1</number>
                                       </property>
                                       <property name="bottomMargin">
-                                        <number>0</number>
+                                        <number>8</number>
                                       </property>
                                       <item>
                                         <widget class="QLabel" name="label_avgWindSpeed">
@@ -1859,16 +1619,16 @@ li.checked::marker { content: "\2612"; }
                                         <number>0</number>
                                       </property>
                                       <property name="leftMargin">
-                                        <number>0</number>
+                                        <number>1</number>
                                       </property>
                                       <property name="topMargin">
                                         <number>0</number>
                                       </property>
                                       <property name="rightMargin">
-                                        <number>0</number>
+                                        <number>1</number>
                                       </property>
                                       <property name="bottomMargin">
-                                        <number>0</number>
+                                        <number>8</number>
                                       </property>
                                       <item>
                                         <widget class="QLabel" name="label_avgWindDirection">
@@ -1997,12 +1757,17 @@ li.checked::marker { content: "\2612"; }
                                 </row>
                                 <column>
                                   <property name="text">
-                                    <string>Скорость</string>
+                                    <string>Высота, м</string>
                                   </property>
                                 </column>
                                 <column>
                                   <property name="text">
-                                    <string>Направление</string>
+                                    <string>Скорость, м/с</string>
+                                  </property>
+                                </column>
+                                <column>
+                                  <property name="text">
+                                    <string>Направление, °</string>
                                   </property>
                                 </column>
                                 <item row="3" column="0">
@@ -2126,16 +1891,16 @@ li.checked::marker { content: "\2612"; }
                                         <number>0</number>
                                       </property>
                                       <property name="leftMargin">
-                                        <number>0</number>
+                                        <number>1</number>
                                       </property>
                                       <property name="topMargin">
                                         <number>0</number>
                                       </property>
                                       <property name="rightMargin">
-                                        <number>0</number>
+                                        <number>1</number>
                                       </property>
                                       <property name="bottomMargin">
-                                        <number>0</number>
+                                        <number>8</number>
                                       </property>
                                       <item>
                                         <widget class="QLabel" name="label_realWindSpeed">
@@ -2185,16 +1950,16 @@ li.checked::marker { content: "\2612"; }
                                         <number>0</number>
                                       </property>
                                       <property name="leftMargin">
-                                        <number>0</number>
+                                        <number>1</number>
                                       </property>
                                       <property name="topMargin">
                                         <number>0</number>
                                       </property>
                                       <property name="rightMargin">
-                                        <number>0</number>
+                                        <number>1</number>
                                       </property>
                                       <property name="bottomMargin">
-                                        <number>0</number>
+                                        <number>8</number>
                                       </property>
                                       <item>
                                         <widget class="QLabel" name="label_realWindDirection">
@@ -2243,12 +2008,17 @@ li.checked::marker { content: "\2612"; }
                                 </property>
                                 <column>
                                   <property name="text">
-                                    <string>Скорость</string>
+                                    <string>Высота, м</string>
                                   </property>
                                 </column>
                                 <column>
                                   <property name="text">
-                                    <string>Направление</string>
+                                    <string>Скорость, м/с</string>
+                                  </property>
+                                </column>
+                                <column>
+                                  <property name="text">
+                                    <string>Направление, °</string>
                                   </property>
                                 </column>
                               </widget>
@@ -2302,16 +2072,16 @@ li.checked::marker { content: "\2612"; }
                                         <number>0</number>
                                       </property>
                                       <property name="leftMargin">
-                                        <number>0</number>
+                                        <number>1</number>
                                       </property>
                                       <property name="topMargin">
                                         <number>0</number>
                                       </property>
                                       <property name="rightMargin">
-                                        <number>0</number>
+                                        <number>1</number>
                                       </property>
                                       <property name="bottomMargin">
-                                        <number>0</number>
+                                        <number>8</number>
                                       </property>
                                       <item>
                                         <widget class="QLabel" name="label_measuredWindSpeed">
@@ -2361,16 +2131,16 @@ li.checked::marker { content: "\2612"; }
                                         <number>0</number>
                                       </property>
                                       <property name="leftMargin">
-                                        <number>0</number>
+                                        <number>1</number>
                                       </property>
                                       <property name="topMargin">
                                         <number>0</number>
                                       </property>
                                       <property name="rightMargin">
-                                        <number>0</number>
+                                        <number>1</number>
                                       </property>
                                       <property name="bottomMargin">
-                                        <number>0</number>
+                                        <number>8</number>
                                       </property>
                                       <item>
                                         <widget class="QLabel" name="label_measuredWindDirection">
@@ -2419,12 +2189,17 @@ li.checked::marker { content: "\2612"; }
                                 </property>
                                 <column>
                                   <property name="text">
-                                    <string>Скорость</string>
+                                    <string>Высота, м</string>
                                   </property>
                                 </column>
                                 <column>
                                   <property name="text">
-                                    <string>Направление</string>
+                                    <string>Скорость, м/с</string>
+                                  </property>
+                                </column>
+                                <column>
+                                  <property name="text">
+                                    <string>Направление, °</string>
                                   </property>
                                 </column>
                               </widget>
@@ -2478,17 +2253,22 @@ li.checked::marker { content: "\2612"; }
                                         <number>0</number>
                                       </property>
                                       <property name="leftMargin">
-                                        <number>0</number>
+                                        <number>1</number>
                                       </property>
                                       <property name="topMargin">
                                         <number>0</number>
                                       </property>
                                       <property name="rightMargin">
-                                        <number>0</number>
+                                        <number>1</number>
                                       </property>
                                       <property name="bottomMargin">
-                                        <number>0</number>
+                                        <number>8</number>
                                       </property>
+                                      <item>
+                                        <widget class="QLabel" name="label_shearSpeed">
+                                          <property name="text"><string>Сдвиг скорости, м/с/30 м</string></property>
+                                        </widget>
+                                      </item>
                                       <item>
                                         <widget class="QwtPlot" name="plot_windShearSpeed">
                                           <property name="sizePolicy">
@@ -2524,17 +2304,22 @@ li.checked::marker { content: "\2612"; }
                                         <number>0</number>
                                       </property>
                                       <property name="leftMargin">
-                                        <number>0</number>
+                                        <number>1</number>
                                       </property>
                                       <property name="topMargin">
                                         <number>0</number>
                                       </property>
                                       <property name="rightMargin">
-                                        <number>0</number>
+                                        <number>1</number>
                                       </property>
                                       <property name="bottomMargin">
-                                        <number>0</number>
+                                        <number>8</number>
                                       </property>
+                                      <item>
+                                        <widget class="QLabel" name="label_shearDirection">
+                                          <property name="text"><string>Сдвиг направления, °</string></property>
+                                        </widget>
+                                      </item>
                                       <item>
                                         <widget class="QwtPlot" name="plot_windShearDirection">
                                           <property name="sizePolicy">
@@ -2593,32 +2378,10 @@ li.checked::marker { content: "\2612"; }
                             <string>Наземн. усл.</string>
                           </attribute>
                           <layout class="QGridLayout" name="gridLayout_12">
-                            <item row="0" column="1">
-                              <spacer name="verticalSpacer_5">
-                                <property name="orientation">
-                                  <enum>Qt::Vertical</enum>
-                                </property>
-                                <property name="sizeHint" stdset="0">
-                                  <size>
-                                    <width>20</width>
-                                    <height>192</height>
-                                  </size>
-                                </property>
-                              </spacer>
-                            </item>
-                            <item row="1" column="0">
-                              <spacer name="horizontalSpacer_25">
-                                <property name="orientation">
-                                  <enum>Qt::Horizontal</enum>
-                                </property>
-                                <property name="sizeHint" stdset="0">
-                                  <size>
-                                    <width>408</width>
-                                    <height>20</height>
-                                  </size>
-                                </property>
-                              </spacer>
-                            </item>
+                            <property name="leftMargin"><number>16</number></property>
+                            <property name="topMargin"><number>14</number></property>
+                            <property name="rightMargin"><number>16</number></property>
+                            <property name="bottomMargin"><number>16</number></property>
                             <item row="1" column="1">
                               <widget class="QTableWidget" name="tableWidget_parm1b65">
                                 <property name="minimumSize">
@@ -2671,56 +2434,17 @@ li.checked::marker { content: "\2612"; }
                                 </column>
                               </widget>
                             </item>
-                            <item row="1" column="2">
-                              <spacer name="horizontalSpacer_26">
-                                <property name="orientation">
-                                  <enum>Qt::Horizontal</enum>
-                                </property>
-                                <property name="sizeHint" stdset="0">
-                                  <size>
-                                    <width>407</width>
-                                    <height>20</height>
-                                  </size>
-                                </property>
-                              </spacer>
-                            </item>
-                            <item row="2" column="1">
-                              <spacer name="verticalSpacer_7">
-                                <property name="orientation">
-                                  <enum>Qt::Vertical</enum>
-                                </property>
-                                <property name="sizeHint" stdset="0">
-                                  <size>
-                                    <width>20</width>
-                                    <height>191</height>
-                                  </size>
-                                </property>
-                              </spacer>
-                            </item>
                           </layout>
-                        </widget>
-                        <widget class="QWidget" name="tab_VNGO">
-                          <attribute name="title">
-                            <string>ВНГО</string>
-                          </attribute>
-                        </widget>
-                        <widget class="QWidget" name="tab_landingCalc">
-                          <attribute name="title">
-                            <string>Расчет на десант.</string>
-                          </attribute>
                         </widget>
                       </widget>
                     </item>
                     <item row="0" column="0">
                       <widget class="QLabel" name="lblDataStatus">
-                        <property name="styleSheet">
-                          <string notr="true">font-weight: bold; padding: 5px;</string>
-                        </property>
                         <property name="text">
                           <string>Выберите дату и время для просмотра данных</string>
                         </property>
                         <property name="alignment">
-                          <set>Qt::AlignCenter</set>
+                          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
                         </property>
                       </widget>
                     </item>

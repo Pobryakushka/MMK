@@ -288,8 +288,29 @@ private:
     QList<QWidget *> m_amsProbeWidgets; // доп. поля АМС/зонда на странице "приближённый" — скрыты по умолчанию
 
     void applyArchiveStyle();          // общий QSS-стиль архива под макет
-    void setupArchivePlaceholders();   // плейсхолдеры "в разработке" для ВНГО/Десант
+    static void setWidgetState(QWidget *w, const QString &state); // состояние через свойство [state]
+    void clearStationCoordinates();    // сброс строк координат в прочерки
+    void setupArchiveTables();         // общий вид таблиц архива под макет
+    void setBulletinBadge(const QString &text, const QString &state); // пилюля годности Метео-11
+    void fitMeteo11TextHeight();       // высота блока бюллетеня по содержимому
+    void setupMeteo11TableLayout();    // компактная сетка табличного вида Метео-11
     void setupAmsProbeCollapse();      // сворачиваемый блок доп. полей АМС/зонда
+
+    // Оформление графиков Qwt под макет. QSS на QwtPlot почти не действует
+    // (Qwt рисует холст, оси и кривые сам), поэтому цвета/шрифты/сетка
+    // задаются через его собственный API.
+    static void styleArchivePlot(QwtPlot *plot);
+    static QwtPlotGrid *makeArchiveGrid();
+    static void styleArchiveCurve(QwtPlotCurve *curve, const QColor &color);
+
+    // Цвета кривых по макету: скорость — зелёная, направление — янтарное.
+    static QColor archiveSpeedColor()     { return QColor("#0F6B4F"); }
+    static QColor archiveDirectionColor() { return QColor("#F9A825"); }
+
+    // Координаты станции показываются плоскими строками "подпись/значение"
+    // (QLabel), а не полями ввода — в архиве они всегда только для чтения.
+    // Флаг заменяет прежнюю проверку "поле координат не пустое".
+    bool m_stationCoordsValid = false;
 
     // Нативная QTabBar рисуется системным QStyle и не даёт гарантированно
     // повторить плоские скруглённые вкладки макета ни на одной платформе —

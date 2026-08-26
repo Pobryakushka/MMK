@@ -64,6 +64,7 @@ private:
     QCheckBox *m_secMeteo11Updated;
     QCheckBox *m_secMeteo11Approx;
     QCheckBox *m_secMeteo11Station;
+    QLabel    *m_secBadges[9] = {};   // бейджи "нет данных" по индексу раздела
 
     void selectFormat(ExportOptions::Format fmt);
     void selectCsvSep(int idx);

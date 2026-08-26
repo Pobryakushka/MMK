@@ -10,5 +10,6 @@
         <file>dat/images/marker.png</file>
         <file>icons/clock_manual_time.svg</file>
         <file>icons/clock_manual_time_pressed.svg</file>
+        <file>icons/checkmark_white.svg</file>
     </qresource>
 </RCC>

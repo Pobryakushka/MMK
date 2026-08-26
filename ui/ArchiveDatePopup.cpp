@@ -26,20 +26,20 @@ ArchiveDatePopup::ArchiveDatePopup(QWidget *parent)
 {
     setWindowFlags(Qt::Popup);
     setAttribute(Qt::WA_DeleteOnClose, false);
-    setFixedWidth(360);
+    setFixedWidth(400);   // как в макете (388 + запас на рамку)
     // Popup — отдельное top-level окно, стиль родителя на него не наследуется,
     // а QSS ниже рассчитан на Fusion (см. MeasurementResults::applyArchiveStyle).
     setStyle(QStyleFactory::create("Fusion"));
     setStyleSheet(
         "ArchiveDatePopup { background: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 14px; }"
-        "QLabel { color: #1B211F; font-family: 'Segoe UI','Inter',sans-serif; }"
+        "QLabel { color: #1B211F; font-family: 'Inter','Segoe UI','DejaVu Sans',sans-serif; }"
         "QLabel#dpHead { color: #0B5A41; font-size: 11px; font-weight: 700; }"
-        "QLabel#dpBigDate { font-size: 18px; font-weight: 700; font-family: 'JetBrains Mono','Consolas','Courier New',monospace; }"
+        "QLabel#dpBigDate { font-size: 18px; font-weight: 700; font-family: 'JetBrains Mono','DejaVu Sans Mono','Consolas',monospace; }"
         "QLabel#dpTimesLabel { color: #6E7876; font-size: 11px; font-style: italic; }"
         "QLabel#dpCalMonth { font-size: 13px; font-weight: 700; }"
         "QLabel[class=\"dow\"] { color: #6E7876; font-size: 10px; font-weight: 700; qproperty-alignment: AlignCenter; }"
-        "QPushButton { font-family: 'Segoe UI','Inter',sans-serif; }"
-        "QPushButton[class=\"navbtn\"] { background: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 6px; font-weight: 700; color: #0B5A41; min-width: 34px; min-height: 30px; }"
+        "QPushButton { font-family: 'Inter','Segoe UI','DejaVu Sans',sans-serif; }"
+        "QPushButton[class=\"navbtn\"] { background: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 6px; font-weight: 700; color: #0B5A41; }"
         "QPushButton[class=\"navbtn\"]:hover { background: #E4F1EC; }"
         "QPushButton[class=\"quick\"] { font-size: 11px; padding: 7px 12px; border-radius: 999px; border: 1px solid #DDE1E3; background: #F7F8F8; color: #6E7876; }"
         "QPushButton[class=\"quick\"]:hover { border-color: #0F6B4F; color: #0B5A41; }"
@@ -49,9 +49,12 @@ ArchiveDatePopup::ArchiveDatePopup(QWidget *parent)
         "QPushButton[class=\"calday\"][complete=\"full\"][avail=\"true\"] { background: #E4F1EC; border-color: #A9D3C3; }"
         "QPushButton[class=\"calday\"][complete=\"partial\"][avail=\"true\"] { background: #FFF8E8; border-color: #F0D28C; }"
         "QPushButton[class=\"calday\"][avail=\"true\"]:hover { border-color: #0F6B4F; background: #E4F1EC; }"
-        "QPushButton[class=\"calday\"][selected=\"true\"] { background: #0F6B4F; border-color: #0F6B4F; color: #FFFFFF; }"
+        // Выбранный день должен перебивать раскраску по полноте данных: в QSS при
+        // равной специфичности выигрывает более «нагруженный» селектор, поэтому
+        // здесь перечислены все три свойства.
+        "QPushButton[class=\"calday\"][avail=\"true\"][selected=\"true\"] { background: #0F6B4F; border-color: #0F6B4F; color: #FFFFFF; }"
         "QPushButton[class=\"calday\"][today=\"true\"] { border-color: #F9A825; border-width: 2px; }"
-        "QPushButton[class=\"timechip\"] { font-size: 12px; padding: 7px 10px 7px 8px; border-radius: 8px; border: 1px solid #DDE1E3; border-left: 4px solid #DDE1E3; background: #FFFFFF; color: #1B211F; font-family: 'JetBrains Mono','Consolas','Courier New',monospace; }"
+        "QPushButton[class=\"timechip\"] { font-size: 12px; padding: 7px 10px 7px 8px; border-radius: 8px; border: 1px solid #DDE1E3; border-left: 4px solid #DDE1E3; background: #FFFFFF; color: #1B211F; font-family: 'JetBrains Mono','DejaVu Sans Mono','Consolas',monospace; }"
         "QPushButton[class=\"timechip\"]:hover { border-color: #0F6B4F; }"
         "QPushButton[class=\"timechip\"][complete=\"full\"] { border-left-color: #0F6B4F; background: #E4F1EC; }"
         "QPushButton[class=\"timechip\"][complete=\"partial\"] { border-left-color: #F9A825; background: #FFF8E8; }"
@@ -59,7 +62,7 @@ ArchiveDatePopup::ArchiveDatePopup(QWidget *parent)
         "QPushButton[class=\"timechip\"][active=\"true\"] { background: #0F6B4F; border-color: #0F6B4F; border-left-color: #0B5A41; color: #FFFFFF; }"
         "QPushButton#dpDoneBtn { background: #0F6B4F; border: none; border-radius: 8px; color: #FFFFFF; font-weight: 600; padding: 8px 18px; }"
         "QPushButton#dpDoneBtn:hover { background: #0B5A41; }"
-        "QLabel#dpLegend { color: #6E7876; font-size: 10.5px; }"
+        "QLabel#dpLegend { color: #6E7876; font-size: 10px; }"
         );
 
     auto *root = new QVBoxLayout(this);
@@ -74,12 +77,14 @@ ArchiveDatePopup::ArchiveDatePopup(QWidget *parent)
     nav->setSpacing(14);
     auto *prevBtn = new QPushButton("◄", this);
     prevBtn->setProperty("class", "navbtn");
+    prevBtn->setFixedSize(34, 34);   // как в макете — квадратная кнопка рядом с датой
     connect(prevBtn, &QPushButton::clicked, this, [this] { stepDate(-1); });
     m_bigDate = new QLabel(this);
     m_bigDate->setObjectName("dpBigDate");
     m_bigDate->setAlignment(Qt::AlignCenter);
     auto *nextBtn = new QPushButton("►", this);
     nextBtn->setProperty("class", "navbtn");
+    nextBtn->setFixedSize(34, 34);
     connect(nextBtn, &QPushButton::clicked, this, [this] { stepDate(1); });
     nav->addWidget(prevBtn);
     nav->addWidget(m_bigDate, 1);
@@ -112,12 +117,14 @@ ArchiveDatePopup::ArchiveDatePopup(QWidget *parent)
     calHead->setSpacing(10);
     auto *calPrev = new QPushButton("◄", m_calendarBox);
     calPrev->setProperty("class", "navbtn");
+    calPrev->setFixedSize(32, 32);
     connect(calPrev, &QPushButton::clicked, this, [this] { stepMonth(-1); });
     m_calMonthLabel = new QLabel(m_calendarBox);
     m_calMonthLabel->setObjectName("dpCalMonth");
     m_calMonthLabel->setAlignment(Qt::AlignCenter);
     auto *calNext = new QPushButton("►", m_calendarBox);
     calNext->setProperty("class", "navbtn");
+    calNext->setFixedSize(32, 32);
     connect(calNext, &QPushButton::clicked, this, [this] { stepMonth(1); });
     calHead->addWidget(calPrev);
     calHead->addWidget(m_calMonthLabel, 1);

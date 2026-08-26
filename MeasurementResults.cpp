@@ -8,6 +8,9 @@
 #include "ui/ArchiveDatePopup.h"
 #include "ui/ArchiveExportView.h"
 #include <qwt_plot_renderer.h>
+#include <qwt_plot_layout.h>
+#include <qwt_scale_widget.h>
+#include <qwt_text.h>
 #include <QPushButton>
 #include <QLabel>
 #include <QFileDialog>
@@ -30,9 +33,13 @@
 #include <QStyleFactory>
 #include <QGridLayout>
 #include <QTabBar>
+#include <QStyle>
+#include <QHeaderView>
 #include <limits>
 #include <algorithm>  // Для std::sort
-#include <cmath>       // Для std::pow (расчёт давления МСА в Метео-11)
+#include <cmath>
+#include <QtMath>
+#include <QTextDocument>       // Для std::pow (расчёт давления МСА в Метео-11)
 
 MeasurementResults::MeasurementResults(QWidget *parent)
     : QDialog(parent)
@@ -68,9 +75,16 @@ MeasurementResults::MeasurementResults(QWidget *parent)
     applyArchiveStyle();
     setupCustomTabBar();
 
-    // Разделы ВНГО/Десант пока не реализованы — показываем как в макете:
-    // видимые вкладки с плейсхолдером "в разработке" вместо полного скрытия.
-    setupArchivePlaceholders();
+    // Кнопки-переключатели Метео-11 оформлены как «пилюли» из макета —
+    // помечаем их свойством, на которое есть правила в applyArchiveStyle().
+    for (QPushButton *b : { ui->pushButton_updated, ui->pushButton_approximate,
+                            ui->pushButton_fromMeteoStat, ui->pushButton_fromGrib,
+                            ui->pushButton_string, ui->pushButton_table }) {
+        if (b) {
+            b->setProperty("pill", true);
+            b->setCursor(Qt::PointingHandCursor);
+        }
+    }
 
     // Встроенный экран экспорта — вторая страница rootStack (индекс 1),
     // подменяет содержимое архива вместо модального ExportDialog.
@@ -86,9 +100,7 @@ MeasurementResults::MeasurementResults(QWidget *parent)
     connect(m_datePopup, &ArchiveDatePopup::dateTimeSelected,
             this, &MeasurementResults::onDatePopupDateTimeSelected);
 
-    // Дублирующая большая метка даты/времени скрыта — в новом виде рельса
-    // дата и время показываются на самой кнопке btnSelectDate.
-    ui->lblCurrentDateTime->setVisible(false);
+    connect(ui->btnBack, &QPushButton::clicked, this, &MeasurementResults::accept);
 
     setupAmsProbeCollapse();
 
@@ -141,25 +153,105 @@ MeasurementResults::MeasurementResults(QWidget *parent)
 
     connect(ui->btnExport, &QPushButton::clicked, this, &MeasurementResults::onExportClicked);
 
-    switchMeteo11Display();
+    // Бейдж годности бюллетеня — пилюля по ширине текста, как в макете,
+    // а не поле ввода во всю строку.
+    ui->lineEdit_bulleten->setReadOnly(true);
+    ui->lineEdit_bulleten->setAlignment(Qt::AlignCenter);
+    ui->lineEdit_bulleten->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    ui->lineEdit_bulletenTime->setReadOnly(true);
+    ui->lineEdit_bulletenTime->setFrame(false);
 
-    // Поля координат — только для отображения данных из архива, редактирование запрещено
-    ui->editLatitude->setReadOnly(true);
-    ui->editLongitude->setReadOnly(true);
-    ui->editAltitude->setReadOnly(true);
-    ui->cmbLatitudeType->setEnabled(false);
-    ui->cmbLongitudeType->setEnabled(false);
+    switchMeteo11Display();
 
     // Все графики инициализируются ДО загрузки данных —
     // иначе displayWindProfile/clearWindShearDisplay обращаются к неготовым виджетам
     setupPlots();
     setupZoom();
     setupWindShearTab();
+    setupArchiveTables();
+    setupMeteo11TableLayout();
 
     loadAvailableMeasurements();
 
     updateDateTimeDisplay();
     updateSliderRange();
+}
+
+// Переключение визуального состояния виджета через динамическое свойство.
+// Именно так (а не через setStyleSheet() на самом виджете) состояние можно
+// менять, не стирая остальные правила из общего стилшита диалога: setStyleSheet()
+// на конкретном виджете имеет приоритет над стилшитом предка и заменяет собой
+// весь его набор правил для этого виджета.
+void MeasurementResults::setWidgetState(QWidget *w, const QString &state)
+{
+    if (!w) return;
+    if (w->property("state").toString() == state) return;
+    w->setProperty("state", state);
+    w->style()->unpolish(w);
+    w->style()->polish(w);
+    w->update();
+}
+
+// Бейдж годности бюллетеня — пилюля шириной по тексту, цвет задаётся
+// состоянием (ok/warn/bad/none), правила для которых лежат в applyArchiveStyle().
+void MeasurementResults::setBulletinBadge(const QString &text, const QString &state)
+{
+    QLineEdit *badge = ui->lineEdit_bulleten;
+    if (!badge) return;
+    badge->setText(text);
+    setWidgetState(badge, state);
+    // QLineEdit по умолчанию просит ширину «под 17 символов» независимо от
+    // содержимого — для пилюли считаем ширину по фактическому тексту.
+    badge->setFixedWidth(badge->fontMetrics().horizontalAdvance(text) + 30);
+}
+
+// Блок бюллетеня в макете — карточка по высоте текста, а не поле во всю
+// панель. QTextEdit сам по себе всегда занимает всё доступное место, поэтому
+// после каждой смены содержимого подгоняем высоту под документ.
+void MeasurementResults::fitMeteo11TextHeight()
+{
+    QTextEdit *view = ui->textEdit_meteo11;
+    if (!view) return;
+
+    view->document()->setTextWidth(view->viewport()->width());
+    const int docHeight = qCeil(view->document()->size().height());
+    const int frame     = 2 * view->frameWidth() + 28; // рамка + вертикальные отступы из QSS
+    view->setFixedHeight(qBound(90, docHeight + frame, 460));
+
+    // Иначе единственный элемент сетки центрируется по вертикали и карточка
+    // с бюллетенем «висит» посреди пустой вкладки вместо верха, как в макете.
+    if (ui->gridLayout_meteo11_string)
+        ui->gridLayout_meteo11_string->setAlignment(view, Qt::AlignTop);
+}
+
+// Табличный вид Метео-11: слева компактная сетка расшифрованных полей,
+// справа таблица ПП/ТТДДСС во всю оставшуюся ширину. В .ui у сетки крупные
+// шрифты и растянутые строки, из-за чего вкладка выглядела разреженной.
+void MeasurementResults::setupMeteo11TableLayout()
+{
+    if (QGridLayout *g = ui->gridLayout_Meteo11Params) {
+        g->setVerticalSpacing(6);
+        g->setHorizontalSpacing(12);
+        g->setContentsMargins(0, 0, 16, 0);
+        g->setColumnStretch(0, 1);
+        g->setColumnStretch(1, 0);
+        g->setRowStretch(g->rowCount(), 1);   // прижать поля к верху
+    }
+    if (QGridLayout *g = ui->gridLayout_4) {
+        g->setContentsMargins(0, 0, 0, 0);
+        g->setColumnStretch(0, 3);
+        g->setColumnStretch(2, 2);
+    }
+    if (QTableWidget *t = ui->tableWidget_meteo11Formalize)
+        t->setMinimumWidth(320);
+}
+
+void MeasurementResults::clearStationCoordinates()
+{
+    ui->valLatitude->setText("—");
+    ui->valLongitude->setText("—");
+    ui->valAltitude->setText("—");
+    m_stationCoordsValid = false;
 }
 
 void MeasurementResults::showStatus(const QString &text, NotificationToast::Kind kind)
@@ -177,159 +269,376 @@ void MeasurementResults::showStatus(const QString &text, NotificationToast::Kind
 // ─────────────────────────────────────────────────────────────────────────────
 void MeasurementResults::applyArchiveStyle()
 {
-    // Стиль архива рассчитан на QSS поверх Fusion — единственного кроссплатформенного
-    // QStyle, который последовательно уважает border-radius/background из стилшита.
-    // На нативных стилях (Windows/GTK-темы) часть chrome (вкладки, комбобоксы,
-    // выпадающие стрелки) рисуется поверх QSS и выглядит "как в Windows" —
-    // фиксируем Fusion только для этого диалога, не трогая стиль всего приложения.
-    setStyle(QStyleFactory::create("Fusion"));
-
+    // Стиль архива — QSS поверх Fusion (фиксируется глобально в main.cpp).
+    // Fusion выбран потому, что ничего не дорисовывает там, где оформление
+    // задано стилшитом; системные темы (например cleanlooks на Astra/Fly)
+    // игнорируют часть правил и рисуют поверх свой объёмный chrome.
+    //
+    // Правила ниже покрывают и "служебные" части виджетов — полосы прокрутки,
+    // индикаторы чекбоксов, стрелку комбобокса, шапки таблиц. Если их не
+    // покрыть, именно через них и проступает вид Fusion.
+    //
+    // Здесь задаются только статические правила. Переключаемые состояния
+    // (выбранный тип бюллетеня Метео-11, активная вкладка, наличие записей
+    // за дату) выражены динамическими свойствами и селекторами вида
+    // [state="..."] — так состояние не требует setStyleSheet() на конкретном
+    // виджете, который стирал бы остальные правила для него.
     setStyleSheet(
+        // ── палитра макета ────────────────────────────────────────────────
+        // green #0F6B4F · green-dark #0B5A41 · green-soft #E4F1EC
+        // bg #EFF1F1 · card #FFFFFF · border #DDE1E3
+        // text #1B211F · mute #6E7876 · amber #F9A825
         "QDialog#MeasurementResults, QWidget#archivePage, QStackedWidget#rootStack {"
         "  background-color: #EFF1F1;"
         "}"
-        "QWidget { font-family: 'Segoe UI','Inter',sans-serif; color: #1B211F; }"
-        // --- Базовая карточка для любого QGroupBox (кроме переопределённых ниже) ---
-        "QGroupBox {"
-        "  border: 1px solid #DDE1E3; border-radius: 10px; background: #FFFFFF;"
-        "  margin-top: 10px; padding-top: 8px;"
+        "QWidget { font-family: 'Inter','Segoe UI','DejaVu Sans',sans-serif; color: #1B211F; }"
+
+        // ── левая панель ─────────────────────────────────────────────────
+        "QFrame#titleWidget { background: #FFFFFF; border: none; border-right: 1px solid #DDE1E3; }"
+        "QFrame#railHead, QFrame#sectionDateTime, QFrame#sectionParams, QFrame#railFoot {"
+        "  background: transparent; border: none;"
         "}"
-        "QGroupBox::title {"
-        "  subcontrol-origin: margin; subcontrol-position: top left; left: 10px; padding: 0 6px;"
-        "  color: #6E7876; font-size: 11px; font-weight: 600; background: transparent;"
+        "QFrame#sectionDateTime, QFrame#sectionParams, QFrame#railFoot {"
+        "  border-top: 1px solid #DDE1E3;"
         "}"
-        "QGroupBox#dateTimeGroup, QGroupBox#parametersGroup {"
-        "  border: none; border-top: 1px solid #DDE1E3; border-radius: 0px;"
-        "  margin-top: 8px; padding-top: 6px; background: transparent;"
+        "QPushButton#btnBack {"
+        "  background: transparent; border: none; border-radius: 8px;"
+        "  color: #0F6B4F; font-weight: 600; font-size: 13px; padding: 6px 8px; text-align: left;"
         "}"
-        "QGroupBox#dataGroup { border: none; background: #EFF1F1; margin: 0; padding: 0; }"
-        // Тулбар Метео-11 (тип/формат бюллетеня) — плоский контейнер без рамки/подписи,
-        // сами кнопки уже стилизуются как пилюли из кода (setPressed/setFmtPressed)
-        "QGroupBox#groupBox_bulletenType, QGroupBox#groupBox_bulletenFormat {"
-        "  border: none; background: transparent; margin: 0; padding: 0;"
+        "QPushButton#btnBack:hover { background: #E4F1EC; }"
+        "QLabel#lblTitle { color: #1B211F; font-size: 15px; font-weight: 700; }"
+        "QLabel#lblSubtitle { color: #6E7876; font-size: 11px; }"
+        "QLabel#capDateTime, QLabel#capParams {"
+        "  color: #6E7876; font-size: 11px; font-weight: 600; padding-bottom: 2px;"
         "}"
         "QPushButton#btnPrevDate, QPushButton#btnNextDate {"
-        "  background: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 6px; color: #0B5A41;"
+        "  background: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 6px;"
+        "  color: #0B5A41; font-size: 13px; padding: 0px;"
         "}"
         "QPushButton#btnPrevDate:hover, QPushButton#btnNextDate:hover { background: #E4F1EC; }"
+        "QPushButton#btnPrevDate:disabled, QPushButton#btnNextDate:disabled {"
+        "  color: #B7BEBB; background: #F7F8F8;"
+        "}"
+        "QPushButton#btnSelectDate {"
+        "  background: #E4F1EC; border: 2px solid #0F6B4F; border-radius: 6px;"
+        "  color: #0B5A41; font-weight: 700; font-size: 13px;"
+        "  font-family: 'JetBrains Mono','DejaVu Sans Mono','Consolas',monospace;"
+        "}"
+        "QPushButton#btnSelectDate:hover { background: #D8ECE3; }"
+        "QLabel#lblAvailableRecords { color: #6E7876; font-size: 11px; font-style: italic; }"
+        "QLabel#lblAvailableRecords[state=\"empty\"] { color: #B03A2E; }"
+
+        // Строки параметров станции: подпись слева, значение справа моноширинным,
+        // разделитель пунктиром — как param-row в макете. У последней строки
+        // разделителя нет.
+        "QFrame#rowLatitude, QFrame#rowLongitude, QFrame#rowAltitude {"
+        "  background: transparent; border: none; border-bottom: 1px dashed #DDE1E3;"
+        "}"
+        "QFrame#rowDirectionAngle { background: transparent; border: none; }"
+        "QLabel#lblLatitude, QLabel#lblLongitude, QLabel#lblAltitude, QLabel#lblDirectionAngle {"
+        "  color: #6E7876; font-size: 12px;"
+        "}"
+        "QLabel#valLatitude, QLabel#valLongitude, QLabel#valAltitude, QLabel#valDirectionAngle {"
+        "  color: #1B211F; font-size: 12px; font-weight: 600;"
+        "  font-family: 'JetBrains Mono','DejaVu Sans Mono','Consolas',monospace;"
+        "}"
+
         "QPushButton#btnExport, QPushButton#btnClose {"
         "  border: 1px solid #DDE1E3; border-radius: 6px; background: #FFFFFF;"
         "  font-weight: 600; font-size: 13px; color: #1B211F;"
         "}"
         "QPushButton#btnExport:hover { background: #F3F5F4; }"
         "QPushButton#btnClose { background: #0F6B4F; border-color: #0F6B4F; color: #FFFFFF; }"
-        "QPushButton#btnClose:hover { background: #0B5A41; }"
-        // --- Базовый плоский вид для всех остальных кнопок (не переопределённых выше
-        // и не перекрашиваемых во время выполнения, как pushButton_updated и т.п.) ---
-        "QPushButton {"
-        "  background: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 6px;"
-        "  padding: 5px 12px; color: #1B211F;"
-        "}"
-        "QPushButton:hover { background: #F3F5F4; border-color: #0F6B4F; }"
-        "QPushButton:disabled { color: #B7BEBB; background: #F1F3F2; }"
-        "QComboBox {"
-        "  border: 1px solid #DDE1E3; border-radius: 6px; padding: 3px 8px; background: #FFFFFF;"
-        "}"
-        "QComboBox:disabled { background: #F7F8F8; color: #9AA3A0; }"
-        "QComboBox::drop-down { border: none; width: 20px; }"
-        "QLineEdit, QTextEdit, QPlainTextEdit {"
-        "  border: 1px solid #DDE1E3; border-radius: 6px; padding: 4px 6px; background: #FFFFFF;"
-        "}"
-        "QLineEdit:read-only { background: #F7F8F8; }"
-        // Параметры станции — плоские строки "подпись / значение" как в макете
-        // (param-row), а не поля ввода: убираем рамку/фон у полей и комбобоксов,
-        // хотя они и остаются формально QLineEdit/QComboBox (в архиве всегда read-only).
-        "QGroupBox#parametersGroup QLabel#lblLatitude, QGroupBox#parametersGroup QLabel#lblLongitude,"
-        "QGroupBox#parametersGroup QLabel#lblAltitude, QGroupBox#parametersGroup QLabel#lblDirectionAngle {"
-        "  color: #6E7876; font-size: 12.5px; padding: 5px 0;"
-        "}"
-        "QGroupBox#parametersGroup QLabel#lblLatitude, QGroupBox#parametersGroup QLabel#lblLongitude,"
-        "QGroupBox#parametersGroup QLabel#lblAltitude {"
-        "  border-bottom: 1px dashed #DDE1E3;"
-        "}"
-        "QLineEdit#editLatitude, QLineEdit#editLongitude, QLineEdit#editAltitude, QLineEdit#editDirectionAngle {"
-        "  font-family: 'JetBrains Mono','Consolas','Courier New',monospace; font-weight: 600; font-size: 12.5px;"
-        "  background: transparent; border: none; border-bottom: 1px dashed #DDE1E3; padding: 5px 0;"
-        "}"
-        "QLineEdit#editDirectionAngle { border-bottom: none; }"
-        "QGroupBox#parametersGroup QComboBox {"
-        "  font-family: 'JetBrains Mono','Consolas','Courier New',monospace; font-weight: 600; font-size: 12.5px;"
-        "  background: transparent; border: none; border-bottom: 1px dashed #DDE1E3; padding: 5px 2px; color: #1B211F;"
-        "}"
-        "QGroupBox#parametersGroup QComboBox:disabled { color: #1B211F; }"
-        "QGroupBox#parametersGroup QComboBox::drop-down { width: 0px; border: none; }"
-        "QGroupBox#parametersGroup QComboBox::down-arrow { image: none; width: 0; height: 0; }"
+        "QPushButton#btnClose:hover { background: #0B5A41; border-color: #0B5A41; }"
+
+        // ── статусная строка над вкладками ────────────────────────────────
         "QLabel#lblDataStatus {"
         "  background: #FFFFFF; border-bottom: 1px solid #DDE1E3; color: #6E7876;"
-        "  font-weight: 600; font-size: 12px; padding: 8px 20px;"
+        "  font-weight: 600; font-size: 12px; padding: 9px 20px;"
         "}"
-        "QTabWidget::pane { border: none; background: #FFFFFF; }"
-        "QTabBar::tab {"
+        "QLabel#lblDataStatus[state=\"empty\"] { color: #B03A2E; }"
+
+        // ── самодельная строка вкладок (нативная QTabBar скрыта) ──────────
+        "QWidget#customTabBar { background: #EFF1F1; }"
+        "QPushButton#archiveTabButton {"
         "  background: #E4E7E6; color: #6E7876; font-weight: 600; font-size: 12px;"
-        "  padding: 9px 16px; border-top-left-radius: 8px; border-top-right-radius: 8px; margin-right: 2px;"
+        "  padding: 9px 16px; border: none;"
+        "  border-top-left-radius: 8px; border-top-right-radius: 8px;"
+        "  border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;"
         "}"
-        "QTabBar::tab:selected { background: #FFFFFF; color: #0B5A41; border-bottom: 2px solid #0F6B4F; }"
-        "QTabBar::tab:hover { color: #0B5A41; }"
-        "QTableWidget {"
-        "  border: 1px solid #DDE1E3; border-radius: 8px; gridline-color: #EEF0EF;"
-        "  background: #FFFFFF; alternate-background-color: #F7F8F8; font-size: 12px;"
+        "QPushButton#archiveTabButton:hover { color: #0B5A41; }"
+        "QPushButton#archiveTabButton[active=\"true\"] {"
+        "  background: #FFFFFF; color: #0B5A41; border-bottom: 2px solid #0F6B4F;"
         "}"
-        "QHeaderView::section {"
-        "  background: #E4F1EC; color: #0B5A41; font-weight: 600; border: none;"
-        "  border-bottom: 1px solid #DDE1E3; padding: 6px;"
-        "}"
-        "QTextEdit#textEdit_meteo11, QTextEdit#textEdit_meteo11_updated {"
-        "  background: #F7F8F8; border: 1px solid #DDE1E3; border-radius: 8px;"
-        "  font-family: 'JetBrains Mono','Consolas','Courier New',monospace;"
-        "}"
-        // Бейдж годности бюллетеня (lineEdit_bulleten) — фон/скругление задаём тут
-        // как базу, но код (updateMeteo11Display/clearMeteo11Display) при каждом
-        // обновлении подставляет ПОЛНУЮ строку стиля с тем же радиусом — иначе
-        // setStyleSheet() на конкретном виджете стирает эти правила.
-        "QLineEdit#lineEdit_bulleten {"
-        "  border: none; border-radius: 999px; padding: 4px 14px; font-weight: 700;"
-        "  font-size: 11px; qproperty-alignment: AlignCenter;"
-        "}"
-        "QLineEdit#lineEdit_bulletenTime {"
-        "  border: none; background: transparent; color: #6E7876; font-size: 11px;"
-        "  font-family: 'JetBrains Mono','Consolas','Courier New',monospace;"
-        "}"
-        // --- Карточки графиков (chart-card из макета): рамка+скругление на самой
-        // карточке, плоский график без своей рамки внутри, зелёная "шапка" сверху ---
+        "QFrame#dataGroup { background: #EFF1F1; border: none; }"
+        "QTabWidget::pane { border: none; background: #FFFFFF; }"
+        "QTabWidget > QWidget { background: #FFFFFF; }"
+
+        // ── карточки графиков (chart-card из макета) ──────────────────────
         "QFrame#cardFrame_avgWindSpeed, QFrame#cardFrame_avgWindDir,"
         "QFrame#cardFrame_realWindSpeed, QFrame#cardFrame_realWindDir,"
         "QFrame#cardFrame_measWindSpeed, QFrame#cardFrame_measWindDir,"
         "QFrame#cardFrame_shearSpeed, QFrame#cardFrame_shearDir {"
         "  border: 1px solid #DDE1E3; border-radius: 10px; background: #FFFFFF;"
         "}"
-        "QFrame#cardFrame_avgWindSpeed QwtPlot, QFrame#cardFrame_avgWindDir QwtPlot,"
-        "QFrame#cardFrame_realWindSpeed QwtPlot, QFrame#cardFrame_realWindDir QwtPlot,"
-        "QFrame#cardFrame_measWindSpeed QwtPlot, QFrame#cardFrame_measWindDir QwtPlot,"
-        "QFrame#cardFrame_shearSpeed QwtPlot, QFrame#cardFrame_shearDir QwtPlot {"
-        "  border: none; border-radius: 0; background-color: transparent;"
-        "}"
-        // Заголовки над графиками ветра — зелёная "шапка карточки" как в макете
-        // (левый край текста, скруглены только верхние углы — карточка снизу продолжается графиком)
+        "QwtPlot { border: none; background: transparent; }"
         "QLabel#label_avgWindSpeed, QLabel#label_avgWindDirection,"
         "QLabel#label_realWindSpeed, QLabel#label_realWindDirection,"
-        "QLabel#label_measuredWindSpeed, QLabel#label_measuredWindDirection {"
+        "QLabel#label_measuredWindSpeed, QLabel#label_measuredWindDirection,"
+        "QLabel#label_shearSpeed, QLabel#label_shearDirection {"
         "  background: #E4F1EC; color: #0B5A41; font-weight: 600; font-size: 12px;"
         "  border-top-left-radius: 9px; border-top-right-radius: 9px;"
-        "  padding: 9px 12px; qproperty-alignment: AlignVCenter | AlignLeft;"
+        "  border-bottom: 1px solid #DDE1E3; padding: 9px 12px;"
         "}"
-        // --- Самодельная строка вкладок (заменяет нативную QTabBar, см.
-        // setupCustomTabBar) — рисуется исключительно через QSS на QPushButton,
-        // никакого системного QStyle для формы вкладок не используется. ---
-        "QWidget#customTabBar { background: #EFF1F1; }"
-        "QPushButton[archtab=\"true\"] {"
-        "  background: #E4E7E6; color: #6E7876; font-weight: 600; font-size: 12.5px;"
-        "  padding: 9px 16px; border: none; border-radius: 8px 8px 0 0; margin-right: 2px;"
+
+        // ── таблицы ──────────────────────────────────────────────────────
+        "QTableWidget, QTableView {"
+        "  border: 1px solid #DDE1E3; border-radius: 8px; gridline-color: #EEF0EF;"
+        "  background: #FFFFFF; alternate-background-color: #F7F8F8; font-size: 12px;"
+        "  selection-background-color: #E4F1EC; selection-color: #0B5A41;"
         "}"
-        "QPushButton[archtab=\"true\"]:hover { color: #0B5A41; }"
-        "QPushButton[archtab=\"true\"][active=\"true\"] {"
-        "  background: #FFFFFF; color: #0B5A41; border-bottom: 2px solid #0F6B4F;"
+        "QTableWidget::item, QTableView::item { padding: 5px 8px; border: none; }"
+        "QTableWidget::item:selected, QTableView::item:selected { background: #E4F1EC; color: #0B5A41; }"
+        "QHeaderView { background: transparent; border: none; }"
+        "QHeaderView::section {"
+        "  background: #E4F1EC; color: #0B5A41; font-weight: 600; font-size: 12px;"
+        "  border: none; border-bottom: 1px solid #DDE1E3; border-right: 1px solid #EEF0EF;"
+        "  padding: 7px 8px;"
         "}"
+        "QHeaderView::section:last { border-right: none; }"
+        "QTableCornerButton::section { background: #E4F1EC; border: none; border-bottom: 1px solid #DDE1E3; }"
+        // В «Наземных условиях» подпись параметра живёт в вертикальном
+        // заголовке, но по макету это обычная ячейка, а не шапка таблицы.
+        "QTableWidget#tableWidget_parm1b65 QHeaderView::section {"
+        "  background: transparent; color: #1B211F; font-weight: 400;"
+        "  border: none; border-bottom: 1px solid #EEF0EF; padding: 7px 10px;"
+        "}"
+
+        // ── поля ввода и выпадающие списки ───────────────────────────────
+        "QLineEdit, QTextEdit, QPlainTextEdit {"
+        "  border: 1px solid #DDE1E3; border-radius: 6px; padding: 4px 6px; background: #FFFFFF;"
+        "  selection-background-color: #E4F1EC; selection-color: #0B5A41;"
+        "}"
+        "QLineEdit:read-only { background: #F7F8F8; }"
+        "QComboBox {"
+        "  border: 1px solid #DDE1E3; border-radius: 6px; padding: 4px 8px; background: #FFFFFF;"
+        "}"
+        "QComboBox:disabled { background: #F7F8F8; color: #9AA3A0; }"
+        "QComboBox::drop-down { border: none; width: 18px; }"
+        "QComboBox QAbstractItemView {"
+        "  border: 1px solid #DDE1E3; border-radius: 6px; background: #FFFFFF;"
+        "  selection-background-color: #E4F1EC; selection-color: #0B5A41; outline: none;"
+        "}"
+
+        // ── кнопки по умолчанию ──────────────────────────────────────────
+        "QPushButton {"
+        "  background: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 6px;"
+        "  padding: 7px 13px; color: #1B211F; font-size: 12px;"
+        "}"
+        "QPushButton:hover { background: #F3F5F4; border-color: #0F6B4F; }"
+        "QPushButton:disabled { color: #B7BEBB; background: #F1F3F2; border-color: #E6E9E8; }"
+
+        // Тулбар Метео-11 — плоские контейнеры без рамки и заголовка,
+        // сами кнопки-пилюли переключаются через свойство [pressed].
+        "QGroupBox#groupBox_bulletenType, QGroupBox#groupBox_bulletenFormat {"
+        "  border: none; background: transparent; margin: 0; padding: 0;"
+        "}"
+        "QGroupBox { border: 1px solid #DDE1E3; border-radius: 10px; background: #FFFFFF;"
+        "  margin-top: 10px; padding-top: 8px; }"
+        "QGroupBox::title {"
+        "  subcontrol-origin: margin; subcontrol-position: top left; left: 10px; padding: 0 6px;"
+        "  color: #6E7876; font-size: 11px; font-weight: 600; background: transparent;"
+        "}"
+        "QPushButton[pill=\"true\"] {"
+        "  background: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 8px;"
+        "  color: #6E7876; font-weight: 600; font-size: 12px; padding: 8px 13px;"
+        "}"
+        "QPushButton[pill=\"true\"]:hover { border-color: #0F6B4F; color: #0B5A41; }"
+        "QPushButton[pill=\"true\"][pressed=\"true\"] {"
+        "  background: #0F6B4F; border-color: #0F6B4F; color: #FFFFFF;"
+        "}"
+        "QPushButton[pill=\"true\"]:disabled { background: #F1F3F2; border-color: #E6E9E8; color: #B7BEBB; }"
+        // Бюллетень старше 12 ч — янтарная пилюля-предупреждение
+        "QPushButton[pill=\"true\"][state=\"stale\"] {"
+        "  background: #FFF4DC; border-color: #F9A825; color: #8A6100;"
+        "}"
+        "QPushButton[pill=\"true\"][state=\"stale\"][pressed=\"true\"] {"
+        "  background: #E65100; border-color: #E65100; color: #FFFFFF;"
+        "}"
+
+        // Бейдж годности бюллетеня и время составления
+        "QLineEdit#lineEdit_bulleten {"
+        "  border: none; border-radius: 10px; padding: 5px 12px; font-weight: 700;"
+        "  font-size: 11px; background: #E4F1EC; color: #0B5A41;"
+        "}"
+        "QLineEdit#lineEdit_bulleten[state=\"warn\"] { background: #FFF4DC; color: #8A6100; }"
+        "QLineEdit#lineEdit_bulleten[state=\"none\"] { background: #F1F3F2; color: #9AA3A0; }"
+        "QLineEdit#lineEdit_bulleten[state=\"bad\"]  { background: #FBE4E4; color: #B3261E; }"
+        "QLineEdit#lineEdit_bulletenTime {"
+        "  border: none; background: transparent; color: #6E7876; font-size: 11px;"
+        "  font-family: 'JetBrains Mono','DejaVu Sans Mono','Consolas',monospace;"
+        "}"
+        "QLineEdit#lineEdit_bulletenTime[state=\"stale\"] {"
+        "  background: #FFF4DC; color: #8A6100; border-radius: 6px; padding: 2px 8px; font-weight: 700;"
+        "}"
+        // Табличный вид Метео-11: компактные подписи и узкие поля значений —
+        // без этого подписи наследуют крупный шрифт из .ui и строки расползаются.
+        "QWidget#page_meteo11_table QLabel { font-size: 12px; color: #6E7876; font-weight: 400; }"
+        "QWidget#page_meteo11_table QLineEdit {"
+        "  font-family: 'JetBrains Mono','DejaVu Sans Mono','Consolas',monospace;"
+        "  font-size: 12px; font-weight: 600; color: #1B211F; max-width: 130px;"
+        "}"
+        "QWidget#page_meteo11_approximate QLabel { font-size: 12px; color: #6E7876; }"
+        "QWidget#page_meteo11_approximate QLineEdit {"
+        "  font-family: 'JetBrains Mono','DejaVu Sans Mono','Consolas',monospace;"
+        "  font-size: 12px; color: #1B211F;"
+        "}"
+        "QTextEdit#textEdit_meteo11, QTextEdit#textEdit_meteo11_updated {"
+        "  background: #F7F8F8; border: 1px solid #DDE1E3; border-radius: 8px; padding: 12px 14px;"
+        "  font-family: 'JetBrains Mono','DejaVu Sans Mono','Consolas',monospace; font-size: 13px;"
+        "}"
+
+        // ── чекбоксы ─────────────────────────────────────────────────────
+        "QCheckBox { spacing: 8px; font-size: 12px; }"
+        "QCheckBox::indicator { width: 18px; height: 18px; border-radius: 4px;"
+        "  border: 1px solid #C7CDCB; background: #FFFFFF; }"
+        "QCheckBox::indicator:hover { border-color: #0F6B4F; }"
+        // Галочку QSS сам не рисует, если фон индикатора задан стилшитом,
+        // поэтому подкладываем её изображением из ресурсов.
+        "QCheckBox::indicator:checked { background: #0F6B4F; border-color: #0F6B4F;"
+        "  image: url(:/icons/checkmark_white.svg); }"
+        "QCheckBox::indicator:disabled { background: #F1F3F2; border-color: #E6E9E8; }"
+
+        // ── полосы прокрутки (иначе через них проступает Fusion) ─────────
+        "QScrollBar:vertical { background: transparent; width: 11px; margin: 0px; }"
+        "QScrollBar::handle:vertical { background: #C7CDCB; border-radius: 5px; min-height: 30px; }"
+        "QScrollBar::handle:vertical:hover { background: #A9B2AF; }"
+        "QScrollBar:horizontal { background: transparent; height: 11px; margin: 0px; }"
+        "QScrollBar::handle:horizontal { background: #C7CDCB; border-radius: 5px; min-width: 30px; }"
+        "QScrollBar::handle:horizontal:hover { background: #A9B2AF; }"
+        "QScrollBar::add-line, QScrollBar::sub-line { width: 0px; height: 0px; border: none; background: none; }"
+        "QScrollBar::add-page, QScrollBar::sub-page { background: none; }"
+        "QAbstractScrollArea::corner { background: transparent; border: none; }"
+
+        "QToolTip { background: #1B211F; color: #FFFFFF; border: none; padding: 5px 8px; }"
         );
+}
+
+// Единая настройка таблиц архива. В макете таблица занимает всю ширину
+// панели, строки равной высоты чередуются полосами, вертикального заголовка
+// нет (высота вынесена в обычную колонку), выделение — светло-зелёное.
+void MeasurementResults::setupArchiveTables()
+{
+    const QList<QTableWidget *> tables = {
+        ui->tableWidget_AverageWind, ui->tableWidget_realWind,
+        ui->tableWidget_izmWind_2,   ui->table_windShear,
+        ui->tableWidget_meteo11Formalize
+    };
+
+    for (QTableWidget *t : tables) {
+        if (!t) continue;
+        t->verticalHeader()->setVisible(false);
+        t->setAlternatingRowColors(true);
+        t->setShowGrid(false);
+        t->setFocusPolicy(Qt::NoFocus);
+        t->setEditTriggers(QAbstractItemView::NoEditTriggers);
+        t->setSelectionBehavior(QAbstractItemView::SelectRows);
+        t->setSelectionMode(QAbstractItemView::SingleSelection);
+        t->setWordWrap(false);
+        t->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+        t->horizontalHeader()->setHighlightSections(false);
+        t->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+        t->verticalHeader()->setDefaultSectionSize(32);
+        t->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    }
+
+    // Наземные условия: подпись параметра остаётся в вертикальном заголовке,
+    // поэтому он виден и занимает основную ширину, а колонка значения узкая.
+    if (QTableWidget *t = ui->tableWidget_parm1b65) {
+        t->verticalHeader()->setVisible(true);
+        t->horizontalHeader()->setVisible(false);
+        t->setAlternatingRowColors(true);
+        t->setShowGrid(false);
+        t->setFocusPolicy(Qt::NoFocus);
+        t->setEditTriggers(QAbstractItemView::NoEditTriggers);
+        t->setSelectionMode(QAbstractItemView::NoSelection);
+        t->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+        t->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+        t->verticalHeader()->setDefaultSectionSize(36);
+        t->verticalHeader()->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+        t->verticalHeader()->setMinimumWidth(360);
+        // Таблица наземных условий короткая и фиксированной длины — прижимаем
+        // её к верху вкладки по фактической высоте строк, как в макете, вместо
+        // растягивания пустой рамки на всю панель.
+        t->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        t->setFixedHeight(t->rowCount() * 36 + 2 * t->frameWidth() + 2);
+        t->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        // Иначе единственный элемент сетки центрируется по вертикали и
+        // таблица «висит» посреди пустой вкладки.
+        if (ui->gridLayout_12)
+            ui->gridLayout_12->setAlignment(t, Qt::AlignTop);
+    }
+}
+
+// Оформление графиков Qwt под макет: карточка рисуется рамкой QFrame вокруг,
+// поэтому сам график остаётся плоским и прозрачным. Ось высот вертикальная —
+// привычный вид профиля; из макета взяты только цвета, пунктирная сетка и
+// отсутствие подписей осей (название вынесено в зелёную шапку карточки).
+void MeasurementResults::styleArchivePlot(QwtPlot *plot)
+{
+    if (!plot) return;
+
+    plot->setAutoFillBackground(false);
+    plot->setCanvasBackground(Qt::white);
+    plot->setContentsMargins(0, 0, 0, 0);
+    plot->plotLayout()->setCanvasMargin(0);
+    plot->plotLayout()->setAlignCanvasToScales(true);
+
+    if (auto *canvas = qobject_cast<QwtPlotCanvas *>(plot->canvas())) {
+        canvas->setFrameStyle(QFrame::NoFrame);
+        canvas->setBorderRadius(0);
+        canvas->setPalette(QColor(Qt::white));
+    }
+
+    // Заголовок и подписи осей убраны — их роль играет шапка карточки
+    plot->setTitle(QwtText());
+    plot->setAxisTitle(QwtPlot::xBottom, QwtText());
+    plot->setAxisTitle(QwtPlot::yLeft,   QwtText());
+
+    QFont tickFont = plot->font();
+    tickFont.setPixelSize(10);
+    for (int axis : {QwtPlot::xBottom, QwtPlot::yLeft}) {
+        plot->setAxisFont(axis, tickFont);
+        if (QwtScaleWidget *sw = plot->axisWidget(axis)) {
+            QPalette pal = sw->palette();
+            pal.setColor(QPalette::WindowText, QColor("#C7CDCB")); // линия оси и засечки
+            pal.setColor(QPalette::Text,       QColor("#6E7876")); // цифры на оси
+            sw->setPalette(pal);
+            sw->setMargin(0);
+            sw->setSpacing(4);
+        }
+    }
+}
+
+// Единая пунктирная сетка макета (#EEF0EF) — заменяет чёрно-серую по умолчанию.
+QwtPlotGrid *MeasurementResults::makeArchiveGrid()
+{
+    auto *grid = new QwtPlotGrid();
+    grid->setMajorPen(QPen(QColor("#E2E6E4"), 0, Qt::DashLine));
+    grid->enableXMin(false);
+    grid->enableYMin(false);
+    return grid;
+}
+
+// Линия профиля: тонкая цветная кривая с белыми точками-кружками, как в макете.
+void MeasurementResults::styleArchiveCurve(QwtPlotCurve *curve, const QColor &color)
+{
+    if (!curve) return;
+    curve->setPen(QPen(color, 2));
+    curve->setStyle(QwtPlotCurve::Lines);
+    curve->setRenderHint(QwtPlotItem::RenderAntialiased, true);
+    curve->setSymbol(new QwtSymbol(QwtSymbol::Ellipse,
+                                   QBrush(Qt::white), QPen(color, 2), QSize(6, 6)));
 }
 
 // Строит самодельную строку вкладок поверх скрытой нативной QTabBar (см.
@@ -341,7 +650,12 @@ void MeasurementResults::setupCustomTabBar()
     QTabWidget *tabs = ui->tabWidget;
     if (!tabs) return;
 
+    // Одного hide() недостаточно: QTabWidget при перекладке (setUpLayout)
+    // возвращает своей QTabBar видимость, и системные вкладки снова
+    // проступают поверх самодельной строки. Дополнительно зажимаем её
+    // высоту в ноль, чтобы она не занимала места ни в каком случае.
     tabs->tabBar()->hide();
+    tabs->tabBar()->setFixedHeight(0);
 
     m_customTabBar = new QWidget(this);
     m_customTabBar->setObjectName("customTabBar");
@@ -352,7 +666,7 @@ void MeasurementResults::setupCustomTabBar()
     m_tabButtons.clear();
     for (int i = 0; i < tabs->count(); ++i) {
         auto *btn = new QPushButton(tabs->tabText(i), m_customTabBar);
-        btn->setProperty("archtab", true);
+        btn->setObjectName("archiveTabButton");
         btn->setProperty("active", i == tabs->currentIndex());
         btn->setCursor(Qt::PointingHandCursor);
         connect(btn, &QPushButton::clicked, this, [tabs, i] { tabs->setCurrentIndex(i); });
@@ -382,22 +696,6 @@ void MeasurementResults::updateCustomTabBarHighlight(int currentIndex)
         btn->style()->unpolish(btn);
         btn->style()->polish(btn);
     }
-}
-
-// Разделы ВНГО и Десант пока не реализованы — в макете это видимые вкладки
-// с текстом-заглушкой "Раздел находится в разработке", а не скрытые вкладки.
-void MeasurementResults::setupArchivePlaceholders()
-{
-    auto addPlaceholder = [](QWidget *tab) {
-        if (!tab) return;
-        auto *layout = new QVBoxLayout(tab);
-        auto *label = new QLabel("Раздел находится в разработке", tab);
-        label->setAlignment(Qt::AlignCenter);
-        label->setStyleSheet("color: #6E7876; font-style: italic; font-size: 13px;");
-        layout->addWidget(label);
-    };
-    addPlaceholder(ui->tab_VNGO);
-    addPlaceholder(ui->tab_landingCalc);
 }
 
 // Дополнительные поля АМС/зонда (координаты, поправки, даты) на странице
@@ -761,7 +1059,7 @@ void MeasurementResults::loadSurfaceMeteoData(int recordId)
 
     auto setCell = [&](int row, const QString &text) {
         QTableWidgetItem *item = new QTableWidgetItem(text);
-        item->setTextAlignment(Qt::AlignCenter);
+        item->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
         ui->tableWidget_parm1b65->setItem(row, 0, item);
     };
 
@@ -792,9 +1090,7 @@ void MeasurementResults::loadStationCoordinates(int recordId)
 
     if (!query.exec() || !query.next()) {
         qDebug() << "MeasurementResults: Нет координат для record_id=" << recordId;
-        ui->editLatitude->clear();
-        ui->editLongitude->clear();
-        ui->editAltitude->clear();
+        clearStationCoordinates();
         return;
     }
 
@@ -805,13 +1101,12 @@ void MeasurementResults::loadStationCoordinates(int recordId)
     m_currentLatitude = lat;
     m_currentLongitude = lon;
 
-    ui->editLatitude->setText(CoordHelper::toDisplayDMS(qAbs(lat)));
-    ui->cmbLatitudeType->setCurrentIndex(lat >= 0 ? 0 : 1);  // 0=Северная, 1=Южная
-
-    ui->editLongitude->setText(CoordHelper::toDisplayDMS(qAbs(lon)));
-    ui->cmbLongitudeType->setCurrentIndex(lon >= 0 ? 0 : 1); // 0=Восточная, 1=Западная
-
-    ui->editAltitude->setText(QString::number(alt, 'f', 1));
+    // Значения выводятся одной строкой с буквой полушария — как в макете
+    // ("55°45'21\" N"), поэтому отдельные выпадающие списки больше не нужны.
+    ui->valLatitude->setText(CoordHelper::toDisplayDMS(qAbs(lat)) + (lat >= 0 ? " N" : " S"));
+    ui->valLongitude->setText(CoordHelper::toDisplayDMS(qAbs(lon)) + (lon >= 0 ? " E" : " W"));
+    ui->valAltitude->setText(QString::number(alt, 'f', 1) + " м");
+    m_stationCoordsValid = true;
 
     // Сохраняем высоту станции для Метео-11
     m_currentStationAltitude = alt;
@@ -1094,52 +1389,51 @@ void MeasurementResults::displayWindProfile(const QVector<WindProfileData> &avgW
                                             const QVector<WindProfileData> &actualWind,
                                             const QVector<MeasuredWindData> &measuredWind)
 {
-    // Заполняем таблицу среднего ветра: высота из БД — в заголовок строки
+    // Высота теперь обычная первая колонка (а не заголовок строки) — таблица
+    // читается как в макете: Высота | Скорость | Направление.
+    auto fillRow = [](QTableWidget *t, int row, const QString &h,
+                      const QString &speed, const QString &dir) {
+        t->setItem(row, 0, new QTableWidgetItem(h));
+        t->setItem(row, 1, new QTableWidgetItem(speed));
+        t->setItem(row, 2, new QTableWidgetItem(dir));
+    };
+
     ui->tableWidget_AverageWind->setRowCount(avgWind.size());
     for (int i = 0; i < avgWind.size(); i++) {
-        ui->tableWidget_AverageWind->setVerticalHeaderItem(
-            i, new QTableWidgetItem(QString::number(qRound(avgWind[i].height))));
-        ui->tableWidget_AverageWind->setItem(i, 0,
-            new QTableWidgetItem(QString::number(avgWind[i].windSpeed, 'f', 2)));
-        ui->tableWidget_AverageWind->setItem(i, 1,
-            new QTableWidgetItem(QString::number(avgWind[i].windDirection)));
+        fillRow(ui->tableWidget_AverageWind, i,
+                QString::number(qRound(avgWind[i].height)),
+                QString::number(avgWind[i].windSpeed, 'f', 2),
+                QString::number(avgWind[i].windDirection));
     }
 
-    // Заполняем таблицу действительного ветра: высота из БД — в заголовок строки
     ui->tableWidget_realWind->setRowCount(actualWind.size());
     for (int i = 0; i < actualWind.size(); i++) {
-        ui->tableWidget_realWind->setVerticalHeaderItem(
-            i, new QTableWidgetItem(QString::number(qRound(actualWind[i].height))));
-        ui->tableWidget_realWind->setItem(i, 0,
-            new QTableWidgetItem(QString::number(actualWind[i].windSpeed, 'f', 2)));
-        ui->tableWidget_realWind->setItem(i, 1,
-            new QTableWidgetItem(QString::number(actualWind[i].windDirection)));
+        fillRow(ui->tableWidget_realWind, i,
+                QString::number(qRound(actualWind[i].height)),
+                QString::number(actualWind[i].windSpeed, 'f', 2),
+                QString::number(actualWind[i].windDirection));
     }
 
-    // Заполняем таблицу измеренного ветра
-    // Высота приходит от АМС и хранится в БД - используем её для заголовков строк
+    // Высота измеренного ветра приходит от АМС и хранится в БД
     ui->tableWidget_izmWind_2->setRowCount(measuredWind.size());
     for (int i = 0; i < measuredWind.size(); i++) {
-        // Устанавливаем заголовок строки с высотой из БД
-        ui->tableWidget_izmWind_2->setVerticalHeaderItem(i,
-                                                         new QTableWidgetItem(QString::number(measuredWind[i].height, 'f', 0)));
-        // Колонка 0: Скорость ветра
-        ui->tableWidget_izmWind_2->setItem(i, 0,
-                                           new QTableWidgetItem(QString::number(measuredWind[i].windSpeed, 'f', 2)));
-        // Колонка 1: Направление ветра
-        ui->tableWidget_izmWind_2->setItem(i, 1,
-                                           new QTableWidgetItem(QString::number(measuredWind[i].windDirection)));
+        fillRow(ui->tableWidget_izmWind_2, i,
+                QString::number(measuredWind[i].height, 'f', 0),
+                QString::number(measuredWind[i].windSpeed, 'f', 2),
+                QString::number(measuredWind[i].windDirection));
     }
 
     // Строим графики (используют height из структур данных)
-    plotWindSpeed(ui->plot_midWindSpeed, avgWind, "Средний ветер", QColor(0, 120, 215));
-    plotWindDirection(ui->plot_midWindAzimut, avgWind, "Средний ветер", QColor(0, 120, 215));
+    // Цвет кодирует величину, а не вкладку (как в макете): скорость всегда
+    // зелёная, направление — янтарное. Какой это ветер, видно по вкладке.
+    plotWindSpeed(ui->plot_midWindSpeed, avgWind, "Средний ветер", archiveSpeedColor());
+    plotWindDirection(ui->plot_midWindAzimut, avgWind, "Средний ветер", archiveDirectionColor());
 
-    plotWindSpeed(ui->plot_realWindSpeed, actualWind, "Действительный ветер", QColor(76, 175, 80));
-    plotWindDirection(ui->plot_realWindAzimut, actualWind, "Действительный ветер", QColor(76, 175, 80));
+    plotWindSpeed(ui->plot_realWindSpeed, actualWind, "Действительный ветер", archiveSpeedColor());
+    plotWindDirection(ui->plot_realWindAzimut, actualWind, "Действительный ветер", archiveDirectionColor());
 
-    plotMeasuredWindSpeed(ui->plot_izmWindSpeed_2, measuredWind, "Измеренный ветер", QColor(255, 87, 34));
-    plotMeasuredWindDirection(ui->plot_izmWindAzimut_2, measuredWind, "Измеренный ветер", QColor(255, 87, 34));
+    plotMeasuredWindSpeed(ui->plot_izmWindSpeed_2, measuredWind, "Измеренный ветер", archiveSpeedColor());
+    plotMeasuredWindDirection(ui->plot_izmWindAzimut_2, measuredWind, "Измеренный ветер", archiveDirectionColor());
 }
 
 void MeasurementResults::updateAvailableRecordsLabel()
@@ -1151,13 +1445,16 @@ void MeasurementResults::updateAvailableRecordsLabel()
         recordCount = availableMeasurements[date].size();
     }
 
+    // Цвет задаётся не setStyleSheet() на самой метке (это стёрло бы остальные
+    // правила для неё), а динамическим свойством, на которое есть селектор в
+    // applyArchiveStyle().
     if (recordCount > 0) {
-        ui->lblAvailableRecords->setText(QString("Доступно записей за %1: %2").arg(date.toString("dd.MM.yyyy"))
-                                             .arg(recordCount));
-        ui->lblAvailableRecords->setStyleSheet("color: green; font-style: italic;");
+        ui->lblAvailableRecords->setText(
+            QString("Доступно записей: %1 · нажмите на дату для выбора").arg(recordCount));
+        setWidgetState(ui->lblAvailableRecords, "ok");
     } else {
         ui->lblAvailableRecords->setText("Нет данных за выбранную дату");
-        ui->lblAvailableRecords->setStyleSheet("color: red; font-style: italic;");
+        setWidgetState(ui->lblAvailableRecords, "empty");
     }
 }
 
@@ -1169,22 +1466,16 @@ void MeasurementResults::updateCoordinatesFromMainWindow(double latitude, double
         return;
     }
 
-    QLineEdit *latEdit = ui->editLatitude;
-    QLineEdit *lonEdit = ui->editLongitude;
+    m_currentLatitude  = latitude;
+    m_currentLongitude = longitude;
 
-    if (latEdit){
-        latEdit->setText(QString::number(latitude, 'f', 6));
-        qDebug() << "MeasurementResults: Широта обновлена: " << latitude;
-    } else {
-        qDebug() << "MeasurementResults: editLatitude не найден";
-    }
+    ui->valLatitude->setText(CoordHelper::toDisplayDMS(qAbs(latitude))
+                             + (latitude >= 0 ? " N" : " S"));
+    ui->valLongitude->setText(CoordHelper::toDisplayDMS(qAbs(longitude))
+                              + (longitude >= 0 ? " E" : " W"));
+    m_stationCoordsValid = true;
 
-    if (lonEdit) {
-        lonEdit->setText(QString::number(longitude, 'f', 6));
-        qDebug() << "MeasurementResults: Долгота обновлена: " << longitude;
-    } else {
-        qDebug() << "MeasurementResults: editLongitude не найден";
-    }
+    qDebug() << "MeasurementResults: Координаты обновлены с карты:" << latitude << longitude;
 }
 
 void MeasurementResults::setMapCoordinatesMode(bool enabled)
@@ -1202,12 +1493,10 @@ void MeasurementResults::setMapCoordinatesMode(bool enabled)
         ui->btnPrevDate->setEnabled(false);
         ui->btnNextDate->setEnabled(false);
         ui->btnSelectDate->setEnabled(false);
-        ui->timeSlider->setEnabled(false);
     } else {
         ui->btnPrevDate->setEnabled(true);
         ui->btnNextDate->setEnabled(true);
         ui->btnSelectDate->setEnabled(true);
-        ui->timeSlider->setEnabled(true);
     }
 }
 
@@ -1352,8 +1641,6 @@ void MeasurementResults::loadAvailableMeasurements()
 
 void MeasurementResults::updateDateTimeDisplay()
 {
-    QString dateTimeStr = currentDateTime.toString("dd.MM.yyyy hh:mm");
-    ui->lblCurrentDateTime->setText(dateTimeStr);
     ui->btnSelectDate->setText(currentDateTime.toString("dd.MM.yyyy hh:mm"));
 
     loadMeasurementData(currentDateTime);
@@ -1361,22 +1648,8 @@ void MeasurementResults::updateDateTimeDisplay()
 
 void MeasurementResults::updateSliderRange()
 {
-    if (ui->timeSlider){
-        ui->timeSlider->setVisible(false);
-    }
-    if (ui->lblTimeSliderLabel){
-        ui->lblTimeSliderLabel->setVisible(false);
-    }
-    if (ui->lblTimeStart){
-        ui->lblTimeStart->setVisible(false);
-    }
-    if (ui->lblTimeMiddle){
-        ui->lblTimeMiddle->setVisible(false);
-    }
-    if (ui->lblTimeEnd){
-        ui->lblTimeEnd->setVisible(false);
-    }
-
+    // Слайдер времени заменён списком доступных времён в попапе выбора даты
+    // (ArchiveDatePopup) — здесь осталось только обновить подпись под датой.
     updateAvailableRecordsLabel();
 }
 
@@ -1439,8 +1712,6 @@ void MeasurementResults::loadMeasurementData(const QDateTime &dateTime)
 
     if (record.recordId > 0) {
         m_currentSondingTime = record.measurementTime;
-        ui->lblDataStatus->setText(QString("Данные загружены (ID: %1)").arg(record.recordId));
-        ui->lblDataStatus->setStyleSheet("color: green; font-weight: bold;");
 
         QVector<WindProfileData>  avgWind      = loadAvgWindProfile(record.recordId);
         QVector<WindProfileData>  actualWind   = loadActualWindProfile(record.recordId);
@@ -1463,19 +1734,21 @@ void MeasurementResults::loadMeasurementData(const QDateTime &dateTime)
         if (record.hasActualWind)   available << "Действительный ветер";
         if (record.hasMeasuredWind) available << "Измеренный ветер";
         info += available.isEmpty() ? "Нет данных профилей" : available.join(", ");
-        ui->lblDataStatus->setText(info);
+        ui->lblDataStatus->setText(QString("Запись №%1 · %2 · %3")
+                                       .arg(record.recordId)
+                                       .arg(record.measurementTime.toString("dd.MM.yyyy hh:mm"))
+                                       .arg(info));
+        setWidgetState(ui->lblDataStatus, "ok");
 
     } else {
         ui->lblDataStatus->setText("Нет данных для выбранного времени");
-        ui->lblDataStatus->setStyleSheet("color: red; font-weight: bold;");
+        setWidgetState(ui->lblDataStatus, "empty");
 
         ui->tableWidget_AverageWind->clearContents();
         ui->tableWidget_realWind->clearContents();
         ui->tableWidget_izmWind_2->clearContents();
         ui->tableWidget_parm1b65->clearContents();
-        ui->editLatitude->clear();
-        ui->editLongitude->clear();
-        ui->editAltitude->clear();
+        clearStationCoordinates();
 
         // Сбрасываем данные Метео-11
         m_meteo11Updated     = Meteo11Data();
@@ -1573,32 +1846,25 @@ void MeasurementResults::onSelectDateClicked()
 
 void MeasurementResults::setupPlots()
 {
-    auto setupPlot = [](QwtPlot *plot, const QString &xTitle, const QString &yTitle,
-                        double xMin, double xMax, double xStep) {
+    // Подписи осей не задаются: название графика вынесено в зелёную шапку
+    // карточки, как в макете, а слева/снизу остаются только цифры шкал.
+    auto setupPlot = [](QwtPlot *plot, double xMin, double xMax, double xStep) {
         if (!plot) return;
-
-        plot->setAxisTitle(QwtPlot::yLeft, yTitle);
-        plot->setAxisTitle(QwtPlot::xBottom, xTitle);
+        styleArchivePlot(plot);
         plot->setAxisScale(QwtPlot::yLeft, 0.0, 4000.0);
         plot->setAxisScale(QwtPlot::xBottom, xMin, xMax, xStep);
-
-        QwtPlotGrid *grid = new QwtPlotGrid();
-        grid->setMajorPen(QPen(Qt::black, 0, Qt::DotLine));
-        grid->enableXMin(true);
-        grid->enableYMin(true);
-        grid->setMinorPen(QPen(Qt::lightGray, 0, Qt::DotLine));
-        grid->attach(plot);
+        makeArchiveGrid()->attach(plot);
     };
 
     // Настройка графиков скорости
-    setupPlot(ui->plot_midWindSpeed, "Скорость", "Высота", 0, 50, 10);
-    setupPlot(ui->plot_realWindSpeed, "Скорость", "Высота", 0, 50, 10);
-    setupPlot(ui->plot_izmWindSpeed_2, "Скорость", "Высота", 0, 50, 10);
+    setupPlot(ui->plot_midWindSpeed,   0, 50, 10);
+    setupPlot(ui->plot_realWindSpeed,  0, 50, 10);
+    setupPlot(ui->plot_izmWindSpeed_2, 0, 50, 10);
 
     // Настройка графиков направления
-    setupPlot(ui->plot_midWindAzimut, "Направление", "Высота", 0, 360, 60);
-    setupPlot(ui->plot_realWindAzimut, "Направление", "Высота", 0, 360, 60);
-    setupPlot(ui->plot_izmWindAzimut_2, "Направление", "Высота", 0, 360, 60);
+    setupPlot(ui->plot_midWindAzimut,   0, 360, 60);
+    setupPlot(ui->plot_realWindAzimut,  0, 360, 60);
+    setupPlot(ui->plot_izmWindAzimut_2, 0, 360, 60);
 }
 
 void MeasurementResults::setupZoom()
@@ -1657,11 +1923,7 @@ void MeasurementResults::plotWindSpeed(QwtPlot *plot, const QVector<WindProfileD
 
     QwtPlotCurve *curve = new QwtPlotCurve(title);
     curve->setSamples(speeds, heights);
-    curve->setPen(QPen(color, 2));
-    QwtSymbol *symbol = new QwtSymbol(QwtSymbol::Ellipse,
-                                      QBrush(color), QPen(color, 1), QSize(5, 5));
-    curve->setSymbol(symbol);
-    curve->setStyle(QwtPlotCurve::Lines);
+    styleArchiveCurve(curve, color);
     curve->attach(plot);
 
     // Динамические оси по данным
@@ -1697,14 +1959,7 @@ void MeasurementResults::plotWindDirection(QwtPlot *plot, const QVector<WindProf
     QwtPlotCurve *curve = new QwtPlotCurve(title);
     // X-ось: направление, Y-ось: высота
     curve->setSamples(directions, heights);
-    curve->setPen(QPen(color, 2));
-
-    QwtSymbol *symbol = new QwtSymbol(QwtSymbol::Ellipse,
-                                      QBrush(color),
-                                      QPen(color, 1),
-                                      QSize(5, 5));
-    curve->setSymbol(symbol);
-    curve->setStyle(QwtPlotCurve::Lines);
+    styleArchiveCurve(curve, color);
     curve->attach(plot);
 
     plot->replot();
@@ -1728,11 +1983,7 @@ void MeasurementResults::plotMeasuredWindSpeed(QwtPlot *plot, const QVector<Meas
 
     QwtPlotCurve *curve = new QwtPlotCurve(title);
     curve->setSamples(speeds, heights);
-    curve->setPen(QPen(color, 2));
-    QwtSymbol *symbol = new QwtSymbol(QwtSymbol::Ellipse,
-                                      QBrush(color), QPen(color, 1), QSize(5, 5));
-    curve->setSymbol(symbol);
-    curve->setStyle(QwtPlotCurve::Lines);
+    styleArchiveCurve(curve, color);
     curve->attach(plot);
 
     double xMax = (maxSpeed < 0.01) ? 1.0 : maxSpeed * 1.15;
@@ -1762,14 +2013,7 @@ void MeasurementResults::plotMeasuredWindDirection(QwtPlot *plot, const QVector<
     QwtPlotCurve *curve = new QwtPlotCurve(title);
     // X-ось: направление, Y-ось: высота
     curve->setSamples(directions, heights);
-    curve->setPen(QPen(color, 2));
-
-    QwtSymbol *symbol = new QwtSymbol(QwtSymbol::Ellipse,
-                                      QBrush(color),
-                                      QPen(color, 1),
-                                      QSize(5, 5));
-    curve->setSymbol(symbol);
-    curve->setStyle(QwtPlotCurve::Lines);
+    styleArchiveCurve(curve, color);
 
     curve->attach(plot);
     plot->replot();
@@ -2335,18 +2579,11 @@ void MeasurementResults::updateMeteo11Display()
     if (d->isValid) {
         QString text, style;
 
-        // Бейдж-пилюля годности бюллетеня — стиль всегда задаём целиком (радиус/
-        // отступы/шрифт включены), т.к. setStyleSheet() на конкретном виджете
-        // полностью заменяет унаследованный из applyArchiveStyle() стиль.
-        const QString kBadgeOk =
-            "border:none; border-radius:999px; padding:4px 14px; font-weight:700; font-size:11px;"
-            "background-color:#E4F1EC; color:#0B5A41;";
-        const QString kBadgeWarn =
-            "border:none; border-radius:999px; padding:4px 14px; font-weight:700; font-size:11px;"
-            "background-color:#FFF4DC; color:#8A6100;";
-        const QString kBadgeError =
-            "border:none; border-radius:999px; padding:4px 14px; font-weight:700; font-size:11px;"
-            "background-color:#FBE4E4; color:#B3261E;";
+        // В style хранится не строка QSS, а имя состояния для селектора
+        // QLineEdit#lineEdit_bulleten[state="..."] из applyArchiveStyle():
+        // так пилюля не теряет общие правила (радиус, отступы, шрифт).
+        const QString kBadgeOk   = "ok";
+        const QString kBadgeWarn = "warn";
 
         if (currentButtelinType == FromMeteoStat && stationAgeH >= 0.0) {
             // "От МС" — показываем давность и годность входящего бюллетеня
@@ -2384,13 +2621,9 @@ void MeasurementResults::updateMeteo11Display()
             style = kBadgeOk;
         }
 
-        ui->lineEdit_bulleten->setText(text);
-        ui->lineEdit_bulleten->setStyleSheet(style);
+        setBulletinBadge(text, style);
     } else {
-        ui->lineEdit_bulleten->setText("НЕТ ДАННЫХ");
-        ui->lineEdit_bulleten->setStyleSheet(
-            "border:none; border-radius:999px; padding:4px 14px; font-weight:700; font-size:11px;"
-            "background-color:#FBE4E4; color:#B3261E;");
+        setBulletinBadge("НЕТ ДАННЫХ", "bad");
     }
 
     // Время составления бюллетеня — янтарный фон когда устарел
@@ -2399,68 +2632,51 @@ void MeasurementResults::updateMeteo11Display()
             ? d->bulletinTime.toString("dd.MM.yyyy hh:mm")
             : "—"
         );
-    if (((currentButtelinType == FromMeteoStat && stationStale) ||
-         (currentButtelinType == FromGrib && gribStale)) && d->isValid) {
-        ui->lineEdit_bulletenTime->setStyleSheet(
-            "border:none; border-radius:6px; padding:2px 8px; background-color: #fff3e0; "
-            "color: #e65100; font-weight: bold;");
-    } else {
-        ui->lineEdit_bulletenTime->setStyleSheet("");
-    }
+    setWidgetState(ui->lineEdit_bulletenTime,
+                   (((currentButtelinType == FromMeteoStat && stationStale) ||
+                     (currentButtelinType == FromGrib && gribStale)) && d->isValid)
+                       ? "stale" : "");
 
     // Кнопки: имитируем «нажатое» состояние через стиль
+    // Выбранная пилюля отмечается свойством [pressed] — правила для обоих
+    // состояний живут в applyArchiveStyle(). Раньше здесь подставлялась
+    // полная строка стиля, из-за чего для этих кнопок терялись общие правила
+    // (наведение, заблокированное состояние).
     auto setPressed = [](QPushButton *btn, bool pressed) {
         if (!btn) return;
-        btn->setStyleSheet(pressed
-                               ? "QPushButton { background-color: #0F6B4F; color: white; font-weight: 600; "
-                                 "border: 1px solid #0F6B4F; border-radius: 8px; padding: 8px 13px; }"
-                               : "QPushButton { background-color: #FFFFFF; color: #6E7876; font-weight: 600; "
-                                 "border: 1px solid #DDE1E3; border-radius: 8px; padding: 8px 13px; }");
+        btn->setProperty("pressed", pressed);
+        setWidgetState(btn, btn->property("state").toString()); // перерисовка
+        btn->style()->unpolish(btn);
+        btn->style()->polish(btn);
     };
     setPressed(ui->pushButton_updated,       currentButtelinType == Updated);
     setPressed(ui->pushButton_approximate,   currentButtelinType == Approximate);
     setPressed(ui->pushButton_fromMeteoStat, currentButtelinType == FromMeteoStat);
     setPressed(ui->pushButton_fromGrib,      currentButtelinType == FromGrib);
 
-    auto setFmtPressed = [](QPushButton *btn, bool pressed) {
-        if (!btn) return;
-        btn->setStyleSheet(pressed
-                               ? "QPushButton { background-color: #0F6B4F; color: white; font-weight: 600; "
-                                 "border: 1px solid #0F6B4F; border-radius: 8px; padding: 8px 13px; }"
-                               : "QPushButton { background-color: #FFFFFF; color: #6E7876; font-weight: 600; "
-                                 "border: 1px solid #DDE1E3; border-radius: 8px; padding: 8px 13px; }");
-    };
-    setFmtPressed(ui->pushButton_string, currentOutputFormat == String);
-    setFmtPressed(ui->pushButton_table,  currentOutputFormat == Table);
+    setPressed(ui->pushButton_string, currentOutputFormat == String);
+    setPressed(ui->pushButton_table,  currentOutputFormat == Table);
 
     // Кнопка «От МС» — янтарный/оранжевый и тултип когда бюллетень устарел
     if (stationStale && m_meteo11FromStation.isValid) {
-        const bool sel = (currentButtelinType == FromMeteoStat);
-        ui->pushButton_fromMeteoStat->setStyleSheet(sel
-            ? "QPushButton { background-color: #e65100; color: white; font-weight: 600; "
-              "border: 1px solid #e65100; border-radius: 8px; padding: 8px 13px; }"
-            : "QPushButton { background-color: #fff8e1; color: #e65100; font-weight: 600; "
-              "border: 1px solid #e65100; border-radius: 8px; padding: 8px 13px; }");
+        setWidgetState(ui->pushButton_fromMeteoStat, "stale");
         ui->pushButton_fromMeteoStat->setToolTip(
             QString("Бюллетень МС устарел на %1 ч (>12 ч) — не используется в уточнённом")
                 .arg(stationAgeH, 0, 'f', 1));
     } else {
+        setWidgetState(ui->pushButton_fromMeteoStat, "");
         ui->pushButton_fromMeteoStat->setToolTip("");
     }
 
     // Кнопка «Из GRIB» — тот же янтарный индикатор, когда посчитанный
     // бюллетень старше 12 ч относительно текущей отображаемой записи.
     if (gribStale && m_meteo11FromGrib.isValid) {
-        const bool sel = (currentButtelinType == FromGrib);
-        ui->pushButton_fromGrib->setStyleSheet(sel
-            ? "QPushButton { background-color: #e65100; color: white; font-weight: 600; "
-              "border: 1px solid #e65100; border-radius: 8px; padding: 8px 13px; }"
-            : "QPushButton { background-color: #fff8e1; color: #e65100; font-weight: 600; "
-              "border: 1px solid #e65100; border-radius: 8px; padding: 8px 13px; }");
+        setWidgetState(ui->pushButton_fromGrib, "stale");
         ui->pushButton_fromGrib->setToolTip(
             QString("Бюллетень «Из GRIB» устарел на %1 ч (>12 ч) — пересчитайте для текущей записи")
                 .arg(gribAgeH, 0, 'f', 1));
     } else {
+        setWidgetState(ui->pushButton_fromGrib, "");
         ui->pushButton_fromGrib->setToolTip("");
     }
 
@@ -2479,6 +2695,7 @@ void MeasurementResults::updateMeteo11Display()
                   "<p style=\"color:gray;\">— нет данных —</p></body></html>";
         }
         ui->textEdit_meteo11->setHtml(msg);
+        fitMeteo11TextHeight();
 
         QTableWidget *table = ui->tableWidget_meteo11Formalize;
         if (table) {
@@ -2583,6 +2800,7 @@ void MeasurementResults::fillMeteo11StringView(const Meteo11Data &d)
     html += "</body></html>";
 
     ui->textEdit_meteo11->setHtml(html);
+    fitMeteo11TextHeight();
 }
 
 /**
@@ -2658,7 +2876,9 @@ void MeasurementResults::fillMeteo11TableView(const Meteo11Data &d)
         }
     }
 
-    table->resizeColumnsToContents();
+    // Ширины колонок задаёт setupArchiveTables() (режим Stretch — таблица
+            // занимает всю ширину панели, как в макете); подгонка по содержимому
+            // сбрасывала бы этот режим обратно на ручные ширины.
 }
 
 /**
@@ -2669,6 +2889,7 @@ void MeasurementResults::clearMeteo11Display()
     ui->textEdit_meteo11->setHtml(
         "<html><body style=\"font-family:'Tahoma'; font-size:14pt;\">"
         "<p>— нет данных —</p></body></html>");
+    fitMeteo11TextHeight();
 
     QTableWidget *table = ui->tableWidget_meteo11Formalize;
     if (table) {
@@ -2684,11 +2905,8 @@ void MeasurementResults::clearMeteo11Display()
     ui->lineEdit_ht->clear();
     ui->lineEdit_hw->clear();
     ui->lineEdit_numStation->clear();
-    ui->lineEdit_bulleten->setText("НЕТ ДАННЫХ");
-    ui->lineEdit_bulleten->setStyleSheet(
-        "border:none; border-radius:999px; padding:4px 14px; font-weight:700; font-size:11px;"
-        "background-color:#EEF0EF; color:#6E7876;");
-    ui->lineEdit_bulletenTime->setStyleSheet("");
+    setBulletinBadge("НЕТ ДАННЫХ", "none");
+    setWidgetState(ui->lineEdit_bulletenTime, "");
     ui->lineEdit_bulletenTime->clear();
 }
 
@@ -2713,79 +2931,34 @@ void MeasurementResults::setupWindShearTab()
     qDebug() << "setupWindShearTab: UI элементы найдены";
 
     // ===== НАСТРОЙКА ГРАФИКА СКОРОСТИ =====
-    ui->plot_windShearSpeed->setTitle(QString::fromUtf8("Скорость сдвига ветра"));
-    ui->plot_windShearSpeed->setAxisTitle(QwtPlot::xBottom, QString::fromUtf8("Скорость, м/с/30м"));
-    ui->plot_windShearSpeed->setAxisTitle(QwtPlot::yLeft, QString::fromUtf8("Высота, м"));
-    ui->plot_windShearSpeed->setCanvasBackground(Qt::white);
+    // Заголовок и легенда убраны: название графика теперь в зелёной шапке
+    // карточки (label_shearSpeed), а кривая на графике одна — легенда только
+    // отнимала бы место и рисовалась системным стилем.
+    styleArchivePlot(ui->plot_windShearSpeed);
 
-    // Сетка для графика скорости
-    m_windShearGrid = new QwtPlotGrid();
-    m_windShearGrid->setMajorPen(QPen(Qt::gray, 0, Qt::DotLine));
-    m_windShearGrid->setMinorPen(QPen(Qt::lightGray, 0, Qt::DotLine));
+    m_windShearGrid = makeArchiveGrid();
     m_windShearGrid->attach(ui->plot_windShearSpeed);
 
-    // Кривая для скорости
     m_windShearCurve = new QwtPlotCurve(QString::fromUtf8("Сдвиг ветра"));
-    m_windShearCurve->setPen(QPen(QColor(0, 0, 255), 2));  // Синяя линия
-    m_windShearCurve->setRenderHint(QwtPlotItem::RenderAntialiased, true);
-
-    // Символы на точках
-    QwtSymbol *symbolSpeed = new QwtSymbol(QwtSymbol::Ellipse);
-    symbolSpeed->setSize(8, 8);
-    symbolSpeed->setPen(QPen(QColor(0, 0, 255)));
-    symbolSpeed->setBrush(QBrush(QColor(0, 0, 255)));
-    m_windShearCurve->setSymbol(symbolSpeed);
-
+    styleArchiveCurve(m_windShearCurve, archiveSpeedColor());
     m_windShearCurve->attach(ui->plot_windShearSpeed);
-
-    // Легенда для графика скорости
-    QwtLegend *legendSpeed = new QwtLegend();
-    ui->plot_windShearSpeed->insertLegend(legendSpeed, QwtPlot::BottomLegend);
 
     qDebug() << "setupWindShearTab: график скорости настроен";
 
     // ===== НАСТРОЙКА ГРАФИКА НАПРАВЛЕНИЯ =====
-    ui->plot_windShearDirection->setTitle(QString::fromUtf8("Изменение направления ветра"));
-    ui->plot_windShearDirection->setAxisTitle(QwtPlot::xBottom, QString::fromUtf8("Направление, °"));
-    ui->plot_windShearDirection->setAxisTitle(QwtPlot::yLeft, QString::fromUtf8("Высота, м"));
-    ui->plot_windShearDirection->setCanvasBackground(Qt::white);
+    styleArchivePlot(ui->plot_windShearDirection);
 
-    // Сетка для графика направления
-    QwtPlotGrid *gridDirection = new QwtPlotGrid();
-    gridDirection->setMajorPen(QPen(Qt::gray, 0, Qt::DotLine));
-    gridDirection->setMinorPen(QPen(Qt::lightGray, 0, Qt::DotLine));
-    gridDirection->attach(ui->plot_windShearDirection);
+    makeArchiveGrid()->attach(ui->plot_windShearDirection);
 
-    // Кривая для направления
     QwtPlotCurve *curveDirection = new QwtPlotCurve(QString::fromUtf8("Изменение направления"));
-    curveDirection->setPen(QPen(QColor(255, 0, 0), 2));  // Красная линия
-    curveDirection->setRenderHint(QwtPlotItem::RenderAntialiased, true);
-
-    // Символы на точках
-    QwtSymbol *symbolDirection = new QwtSymbol(QwtSymbol::Ellipse);
-    symbolDirection->setSize(8, 8);
-    symbolDirection->setPen(QPen(QColor(255, 0, 0)));
-    symbolDirection->setBrush(QBrush(QColor(255, 0, 0)));
-    curveDirection->setSymbol(symbolDirection);
-
+    styleArchiveCurve(curveDirection, archiveDirectionColor());
     curveDirection->attach(ui->plot_windShearDirection);
-
-    // Легенда для графика направления
-    QwtLegend *legendDirection = new QwtLegend();
-    ui->plot_windShearDirection->insertLegend(legendDirection, QwtPlot::BottomLegend);
 
     qDebug() << "setupWindShearTab: график направления настроен";
 
     // ===== НАСТРОЙКА ТАБЛИЦЫ =====
-    ui->table_windShear->horizontalHeader()->setStretchLastSection(true);
-    ui->table_windShear->verticalHeader()->setVisible(false);
-    ui->table_windShear->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    ui->table_windShear->setSelectionMode(QAbstractItemView::SingleSelection);
-    ui->table_windShear->setSelectionBehavior(QAbstractItemView::SelectRows);
-
-    ui->table_windShear->setColumnWidth(0, 90);   // Высота
-    ui->table_windShear->setColumnWidth(1, 140);  // Скорость
-    ui->table_windShear->setColumnWidth(2, 180);  // Изменение направления
+    // Остальные свойства таблицы (растяжение колонок, чередование строк,
+    // скрытый вертикальный заголовок) задаёт setupArchiveTables().
 
     qDebug() << "setupWindShearTab: завершено успешно";
 }
@@ -2895,14 +3068,14 @@ void MeasurementResults::updateWindShearTable(const QVector<WindShearData> &shea
         QTableWidgetItem *heightItem = new QTableWidgetItem(
             QString::number(static_cast<int>(shear.height))
             );
-        heightItem->setTextAlignment(Qt::AlignCenter);
+        heightItem->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
         ui->table_windShear->setItem(i, 0, heightItem);
 
         // Колонка 1: Скорость сдвига с цветовой индикацией
         QTableWidgetItem *speedItem = new QTableWidgetItem(
             QString::number(shear.shearPer30m, 'f', 2)
             );
-        speedItem->setTextAlignment(Qt::AlignCenter);
+        speedItem->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 
         // Цвет фона по критичности
         QColor bgColor = WindShearCalculator::getSeverityColor(shear.severityLevel);
@@ -2914,14 +3087,14 @@ void MeasurementResults::updateWindShearTable(const QVector<WindShearData> &shea
         QTableWidgetItem *directionItem = new QTableWidgetItem(
             QString::number(shear.shearDirection, 'f', 1)
             );
-        directionItem->setTextAlignment(Qt::AlignCenter);
+        directionItem->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
         ui->table_windShear->setItem(i, 2, directionItem);
 
         // Колонка 3: Текстовое описание уровня
         QTableWidgetItem *levelItem = new QTableWidgetItem(
             WindShearCalculator::getSeverityText(shear.severityLevel)
             );
-        levelItem->setTextAlignment(Qt::AlignCenter);
+        levelItem->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
         levelItem->setBackground(QBrush(bgColor));
 
         ui->table_windShear->setItem(i, 3, levelItem);
@@ -2983,8 +3156,7 @@ MeasurementSnapshot MeasurementResults::buildSnapshot() const
     // ── Координаты ───────────────────────────────────────────────────────────
     // Используем кешированные значения из loadStationCoordinates()
     // (без вызова CoordHelper::fromDisplayDMS — см. ШАГ 3)
-    snap.coordinatesValid = !ui->editLatitude->text().trimmed().isEmpty()
-                            && !ui->editLongitude->text().trimmed().isEmpty();
+    snap.coordinatesValid = m_stationCoordsValid;
     if (snap.coordinatesValid) {
         snap.latitude  = m_currentLatitude;
         snap.longitude = m_currentLongitude;
