@@ -10,7 +10,8 @@ InspectionPage::InspectionPage(AMSHandler *amsHandler, QWidget *parent)
 {
     ui->setupUi(this);
     setAttribute(Qt::WA_StyledBackground, true);
-    ui->lblStatus->setVisible(false);
+
+    m_toast = new NotificationToast(this);
 
     connect(ui->btnBackFromInspection, &QPushButton::clicked,
             this, &InspectionPage::backRequested);
@@ -40,16 +41,16 @@ InspectionPage::~InspectionPage()
 void InspectionPage::onOpenAntenna()
 {
     if (!m_amsHandler || !m_amsHandler->isConnected()) {
-        showStatus("АМС не подключён", true);
+        showStatus("АМС не подключён", NotificationToast::Error);
         return;
     }
 
     qDebug() << "InspectionPage: Команда — открыть антенну (0xAD, cmd=0x00)";
     setControlsEnabled(false);
-    showStatus("Отправка команды открытия антенны…", false);
+    showStatus("Отправка команды открытия антенны…", NotificationToast::Info);
 
     if (!m_amsHandler->openAntenna()) {
-        showStatus("Ошибка отправки команды", true);
+        showStatus("Ошибка отправки команды", NotificationToast::Error);
         setControlsEnabled(true);
     }
 }
@@ -57,16 +58,16 @@ void InspectionPage::onOpenAntenna()
 void InspectionPage::onCloseAntenna()
 {
     if (!m_amsHandler || !m_amsHandler->isConnected()) {
-        showStatus("АМС не подключён", true);
+        showStatus("АМС не подключён", NotificationToast::Error);
         return;
     }
 
     qDebug() << "InspectionPage: Команда — закрыть антенну (0xAD, cmd=0x01)";
     setControlsEnabled(false);
-    showStatus("Отправка команды закрытия антенны…", false);
+    showStatus("Отправка команды закрытия антенны…", NotificationToast::Info);
 
     if (!m_amsHandler->closeAntenna()) {
-        showStatus("Ошибка отправки команды", true);
+        showStatus("Ошибка отправки команды", NotificationToast::Error);
         setControlsEnabled(true);
     }
 }
@@ -75,20 +76,20 @@ void InspectionPage::onAntennaStatus(quint8 status)
 {
     switch (status) {
     case ANTENNA_IN_PROGRESS:
-        showStatus("Выполняется… ожидание ответа привода", false);
+        showStatus("Выполняется… ожидание ответа привода", NotificationToast::Info);
         setControlsEnabled(false);
         break;
     case ANTENNA_SUCCESS:
         setControlsEnabled(true);
-        showStatus("Операция выполнена успешно", false);
+        showStatus("Операция выполнена успешно", NotificationToast::Success);
         break;
     case ANTENNA_FAULT:
         setControlsEnabled(true);
-        showStatus("Аварийная остановка антенны!", true);
+        showStatus("Аварийная остановка антенны!", NotificationToast::Error);
         break;
     default:
         setControlsEnabled(true);
-        showStatus(QString("Неизвестный статус: 0x%1").arg(status, 2, 16, QChar('0')), true);
+        showStatus(QString("Неизвестный статус: 0x%1").arg(status, 2, 16, QChar('0')), NotificationToast::Error);
         break;
     }
 }
@@ -99,16 +100,9 @@ void InspectionPage::setControlsEnabled(bool enabled)
     ui->btnAntennaClose->setEnabled(enabled);
 }
 
-void InspectionPage::showStatus(const QString &text, bool error)
+void InspectionPage::showStatus(const QString &text, NotificationToast::Kind kind)
 {
-    ui->lblStatus->setText(text);
-    ui->lblStatus->setStyleSheet(
-        error
-        ? "font-size: 11pt; font-weight: 600; color: #B71C1C; background-color: #FFEBEE; "
-          "border: 1px solid #FFCDD2; padding: 12px 16px; border-radius: 12px;"
-        : "font-size: 11pt; font-weight: 600; color: #8D5B00; background-color: #FFF8E1; "
-          "border: 1px solid #FFE0B2; padding: 12px 16px; border-radius: 12px;");
-    ui->lblStatus->setVisible(true);
+    m_toast->showMessage(text, kind, kind == NotificationToast::Success ? 3000 : 0);
 }
 
 void InspectionPage::onAmsConnected()
@@ -121,7 +115,7 @@ void InspectionPage::onAmsDisconnected()
 {
     updateAmsBanner();
     setControlsEnabled(false);
-    showStatus("АМС не подключён", true);
+    showStatus("АМС не подключён", NotificationToast::Error);
 }
 
 void InspectionPage::updateAmsBanner()
