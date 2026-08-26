@@ -12,6 +12,8 @@ LandingCalculation::LandingCalculation(QWidget *parent) :
     ui->setupUi(this);
     setAttribute(Qt::WA_StyledBackground, true);
 
+    m_toast = new NotificationToast(this);
+
     // Равномерно растягиваем колонки таблиц по всей ширине карточки
     // (вместо растяжения только последней колонки, которое оставляло
     // большой пустой промежуток перед ней).
@@ -94,6 +96,11 @@ LandingCalculation::~LandingCalculation()
     delete ui;
 }
 
+void LandingCalculation::showStatus(const QString &text, NotificationToast::Kind kind)
+{
+    m_toast->showMessage(text, kind, kind == NotificationToast::Success ? 3000 : 0);
+}
+
 QString LandingCalculation::hashPassword(const QString &password)
 {
     // Вычисляем SHA-256 хеш пароля
@@ -171,10 +178,7 @@ void LandingCalculation::onPasswordSubmit()
         ui->editPassword->clear();
     } else {
         // Неверный пароль
-        QMessageBox::warning(this,
-                           "Ошибка",
-                           "Неверный пароль!\n\nПопробуйте еще раз.",
-                           QMessageBox::Ok);
+        showStatus("Неверный пароль! Попробуйте ещё раз.", NotificationToast::Error);
         ui->editPassword->clear();
         ui->editPassword->setFocus();
     }
@@ -239,7 +243,7 @@ void LandingCalculation::onTableDelete()
     int currentRow = ui->tableEditParams->currentRow();
 
     if (currentRow < 0){
-        QMessageBox::warning(this, "Внимание", "Выберите строку для удаления.");
+        showStatus("Выберите строку для удаления.", NotificationToast::Error);
         return;
     }
     QTableWidgetItem *nameItem = ui->tableEditParams->item(currentRow, 0);
@@ -260,7 +264,7 @@ void LandingCalculation::onTableUp()
     int currentRow = ui->tableEditParams->currentRow();
 
     if (currentRow <= 0){
-        QMessageBox::warning(this, "Внимание", "Невозможно переместить строку вверх.");
+        showStatus("Невозможно переместить строку вверх.", NotificationToast::Error);
         return;
     }
 
@@ -273,7 +277,7 @@ void LandingCalculation::onTableDown()
     int currentRow = ui->tableEditParams->currentRow();
 
     if (currentRow < 0 || currentRow >= ui->tableEditParams->rowCount() - 1){
-        QMessageBox::warning(this, "Внимание", "Невозможно переместить строку вниз.");
+        showStatus("Невозможно переместить строку вниз.", NotificationToast::Error);
         return;
     }
 
@@ -300,7 +304,7 @@ void LandingCalculation::onTableApply()
     if (reply == QMessageBox::Yes){
         // Логика сохранения данных в БД или файл
 
-        QMessageBox::information(this, "Успешно", "Параметры успешно применены");
+        showStatus("Параметры успешно применены", NotificationToast::Success);
     }
 }
 
@@ -310,7 +314,7 @@ void LandingCalculation::onTableEdit()
     int currentCol = ui->tableEditParams->currentColumn();
 
     if (currentRow < 0 || currentCol < 0) {
-        QMessageBox::warning(this, "Внимание", "Выберите ячейку для редактирования");
+        showStatus("Выберите ячейку для редактирования", NotificationToast::Error);
         return;
     }
 
