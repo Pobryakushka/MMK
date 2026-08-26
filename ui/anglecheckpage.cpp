@@ -12,8 +12,9 @@ AngleCheckPage::AngleCheckPage(AMSHandler *amsHandler, QWidget *parent)
     ui->setupUi(this);
     setAttribute(Qt::WA_StyledBackground, true);
 
+    m_toast = new NotificationToast(this);
+
     ui->editTargetAngle->setValidator(new QDoubleValidator(0.0, 330.0, 1, this));
-    ui->lblStatus->setVisible(false);
     ui->btnStop->setEnabled(false);
 
     connect(ui->btnBackFromAngleCheck, &QPushButton::clicked,
@@ -44,14 +45,14 @@ AngleCheckPage::~AngleCheckPage()
 void AngleCheckPage::onStart()
 {
     if (!m_amsHandler || !m_amsHandler->isConnected()) {
-        showStatus("АМС не подключён", true);
+        showStatus("АМС не подключён", NotificationToast::Error);
         return;
     }
 
     bool ok = false;
     float angle = ui->editTargetAngle->text().replace(',', '.').toFloat(&ok);
     if (!ok || angle < 0.0f || angle > 330.0f) {
-        showStatus("Введите корректный угол (0–330°)", true);
+        showStatus("Введите корректный угол (0–330°)", NotificationToast::Error);
         return;
     }
 
@@ -60,10 +61,10 @@ void AngleCheckPage::onStart()
     m_rotating = true;
     ui->btnStart->setEnabled(false);
     ui->btnStop->setEnabled(true);
-    showStatus(QString("Поворот антенны на %1°…").arg(angle), false);
+    showStatus(QString("Поворот антенны на %1°…").arg(angle), NotificationToast::Info);
 
     if (!m_amsHandler->rotateAntenna(angle)) {
-        showStatus("Ошибка отправки команды поворота", true);
+        showStatus("Ошибка отправки команды поворота", NotificationToast::Error);
         m_rotating = false;
         ui->btnStart->setEnabled(true);
         ui->btnStop->setEnabled(false);
@@ -73,16 +74,16 @@ void AngleCheckPage::onStart()
 void AngleCheckPage::onStop()
 {
     if (!m_amsHandler || !m_amsHandler->isConnected()) {
-        showStatus("АМС не подключён", true);
+        showStatus("АМС не подключён", NotificationToast::Error);
         return;
     }
 
     qDebug() << "AngleCheckPage: Остановка вращения антенны (0xAF, cmd=stop)";
 
     if (!m_amsHandler->stopAntennaRotation()) {
-        showStatus("Ошибка отправки команды остановки", true);
+        showStatus("Ошибка отправки команды остановки", NotificationToast::Error);
     } else {
-        showStatus("Команда остановки отправлена", false);
+        showStatus("Команда остановки отправлена", NotificationToast::Info);
     }
 
     m_rotating = false;
@@ -98,25 +99,25 @@ void AngleCheckPage::onRotateStatus(quint8 status, float angle)
 
     switch (status) {
     case ROTATE_RUNNING:
-        showStatus(QString("Вращение… текущий угол: %1°").arg(angle, 0, 'f', 1), false);
+        showStatus(QString("Вращение… текущий угол: %1°").arg(angle, 0, 'f', 1), NotificationToast::Info);
         m_rotating = true;
         ui->btnStart->setEnabled(false);
         ui->btnStop->setEnabled(true);
         break;
     case ROTATE_IDLE_OK:
-        showStatus("Завершено", false);
+        showStatus("Завершено", NotificationToast::Success);
         m_rotating = false;
         ui->btnStart->setEnabled(true);
         ui->btnStop->setEnabled(false);
         break;
     case ROTATE_FAULT:
-        showStatus("Аварийная остановка привода вращения!", true);
+        showStatus("Аварийная остановка привода вращения!", NotificationToast::Error);
         m_rotating = false;
         ui->btnStart->setEnabled(true);
         ui->btnStop->setEnabled(false);
         break;
     default:
-        showStatus(QString("Неизвестный статус: 0x%1").arg(status, 2, 16, QChar('0')), true);
+        showStatus(QString("Неизвестный статус: 0x%1").arg(status, 2, 16, QChar('0')), NotificationToast::Error);
         m_rotating = false;
         ui->btnStart->setEnabled(true);
         ui->btnStop->setEnabled(false);
@@ -131,16 +132,9 @@ void AngleCheckPage::setControlsEnabled(bool enabled)
     ui->btnStop->setEnabled(enabled && m_rotating);
 }
 
-void AngleCheckPage::showStatus(const QString &text, bool error)
+void AngleCheckPage::showStatus(const QString &text, NotificationToast::Kind kind)
 {
-    ui->lblStatus->setText(text);
-    ui->lblStatus->setStyleSheet(
-        error
-        ? "font-size: 11pt; font-weight: 600; color: #B71C1C; background-color: #FFEBEE; "
-          "border: 1px solid #FFCDD2; padding: 12px 16px; border-radius: 12px;"
-        : "font-size: 11pt; font-weight: 600; color: #2E7D32; background-color: #E8F5E9; "
-          "border: 1px solid #A5D6A7; padding: 12px 16px; border-radius: 12px;");
-    ui->lblStatus->setVisible(true);
+    m_toast->showMessage(text, kind, kind == NotificationToast::Success ? 3000 : 0);
 }
 
 void AngleCheckPage::onAmsConnected()
@@ -156,9 +150,9 @@ void AngleCheckPage::onAmsDisconnected()
 
     if (m_rotating) {
         m_rotating = false;
-        showStatus("АМС отключён во время выполнения операции", true);
+        showStatus("АМС отключён во время выполнения операции", NotificationToast::Error);
     } else {
-        showStatus("АМС не подключён", true);
+        showStatus("АМС не подключён", NotificationToast::Error);
     }
 }
 

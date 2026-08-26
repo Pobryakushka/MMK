@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include "sensors/amshandler.h"
+#include "ui/notificationtoast.h"
 
 class QLabel;
 
@@ -38,9 +39,10 @@ private:
     Ui::AngleCheckPage *ui;
     AMSHandler *m_amsHandler;
     bool m_rotating = false;
+    NotificationToast *m_toast;
 
     void setControlsEnabled(bool enabled);
-    void showStatus(const QString &text, bool error = false);
+    void showStatus(const QString &text, NotificationToast::Kind kind = NotificationToast::Info);
     void updateAmsBanner();
 };
 
