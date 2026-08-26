@@ -7,6 +7,7 @@
 #include "ui/ExportDialog.h"
 #include "ui/ArchiveDatePopup.h"
 #include "ui/ArchiveExportView.h"
+#include "ui/FlowLayout.h"
 #include <qwt_plot_renderer.h>
 #include <qwt_plot_layout.h>
 #include <qwt_scale_widget.h>
@@ -35,6 +36,7 @@
 #include <QTabBar>
 #include <QStyle>
 #include <QHeaderView>
+#include <QResizeEvent>
 #include <limits>
 #include <algorithm>  // Для std::sort
 #include <cmath>
@@ -74,6 +76,12 @@ MeasurementResults::MeasurementResults(QWidget *parent)
 
     applyArchiveStyle();
     setupCustomTabBar();
+
+    // Ряды кнопок Метео-11 в узком окне тоже переносятся по строкам
+    replaceWithFlowLayout(ui->horizontalLayout_bulletenTypeBtns, 6);
+    replaceWithFlowLayout(ui->verticalLayout_bulletenFormat, 6);
+    if (ui->verticalLayout_bulletenType)
+        ui->verticalLayout_bulletenType->setContentsMargins(0, 0, 0, 0);
 
     // Кнопки-переключатели Метео-11 оформлены как «пилюли» из макета —
     // помечаем их свойством, на которое есть правила в applyArchiveStyle().
@@ -170,6 +178,7 @@ MeasurementResults::MeasurementResults(QWidget *parent)
     setupWindShearTab();
     setupArchiveTables();
     setupMeteo11TableLayout();
+    applyResponsiveLayout(width());
 
     loadAvailableMeasurements();
 
@@ -237,13 +246,194 @@ void MeasurementResults::setupMeteo11TableLayout()
         g->setColumnStretch(1, 0);
         g->setRowStretch(g->rowCount(), 1);   // прижать поля к верху
     }
-    if (QGridLayout *g = ui->gridLayout_4) {
+    if (QGridLayout *g = ui->gridLayout_4)
         g->setContentsMargins(0, 0, 0, 0);
-        g->setColumnStretch(0, 3);
-        g->setColumnStretch(2, 2);
-    }
     if (QTableWidget *t = ui->tableWidget_meteo11Formalize)
-        t->setMinimumWidth(320);
+        t->setMinimumWidth(280);
+}
+
+// Табличный вид Метео-11: расшифрованные поля и таблица ПП/ТТДДСС стоят рядом
+// в широком окне и друг под другом в узком. Бок о бок на планшете каждой
+// колонке достаётся около 270 точек — подписи полей обрезаются, а значения
+// сжимаются до одного символа.
+void MeasurementResults::setMeteo11TableStacked(bool stacked)
+{
+    QGridLayout  *outer  = ui->gridLayout_4;
+    QGridLayout  *params = ui->gridLayout_Meteo11Params;
+    QTableWidget *table  = ui->tableWidget_meteo11Formalize;
+    if (!outer || !params || !table) return;
+
+    outer->removeItem(params);
+    outer->removeWidget(table);
+
+    if (stacked) {
+        outer->addLayout(params, 0, 0);
+        outer->addWidget(table,  1, 0);
+        outer->setColumnStretch(0, 1);
+        outer->setColumnStretch(2, 0);
+        outer->setRowStretch(0, 0);
+        outer->setRowStretch(1, 1);
+    } else {
+        outer->addLayout(params, 0, 0);
+        outer->addWidget(table,  0, 2);
+        outer->setColumnStretch(0, 3);
+        outer->setColumnStretch(2, 2);
+        outer->setRowStretch(0, 1);
+        outer->setRowStretch(1, 0);
+    }
+    outer->invalidate();
+}
+
+// Меняет готовую QHBoxLayout из формы на FlowLayout с теми же виджетами.
+// Проще, чем переносить ряды кнопок в .ui: Qt Designer не умеет пользовательские
+// раскладки, а поведение нужно только одно — перенос по ширине.
+void MeasurementResults::replaceWithFlowLayout(QLayout *source, int spacing)
+{
+    if (!source) return;
+    QWidget *host = source->parentWidget();
+    if (!host) return;
+
+    const QMargins margins = source->contentsMargins();
+
+    QVector<QWidget *> widgets;
+    while (QLayoutItem *item = source->takeAt(0)) {
+        if (QWidget *w = item->widget())
+            widgets.append(w);
+        delete item;   // распорки из ряда кнопок больше не нужны
+    }
+
+    // Раскладку нельзя просто заменить у виджета, пока старая жива:
+    // QWidget::setLayout() ругается, если layout уже установлен.
+    QLayout *parentLayout = nullptr;
+    if (host->layout() != source) {
+        // вложенная раскладка — ищем её владельца, чтобы вставить новую на то же место
+        parentLayout = host->layout();
+    }
+
+    if (parentLayout) {
+        auto *flow = new FlowLayout(nullptr, 0, spacing, spacing);
+        flow->setContentsMargins(margins);
+        for (QWidget *w : qAsConst(widgets))
+            flow->addWidget(w);
+        if (auto *box = qobject_cast<QBoxLayout *>(parentLayout)) {
+            const int index = box->indexOf(source);
+            box->removeItem(source);
+            delete source;
+            box->insertLayout(qMax(0, index), flow);
+        } else {
+            delete flow;
+        }
+        return;
+    }
+
+    delete source;
+    auto *flow = new FlowLayout(host, 0, spacing, spacing);
+    flow->setContentsMargins(margins);
+    for (QWidget *w : qAsConst(widgets))
+        flow->addWidget(w);
+}
+
+// Планшетная (узкая) компоновка. На 1200x1920 при масштабе 150% окну достаётся
+// 800 логических точек по ширине: два графика рядом превращаются в две
+// нечитаемые полоски, а боковая панель съедает треть экрана. Ниже эти места
+// переключаются по фактической ширине окна, а не по признаку устройства —
+// так один и тот же код работает и в портретной, и в альбомной ориентации.
+void MeasurementResults::applyResponsiveLayout(int width)
+{
+    const bool narrow = (width < kNarrowWidthThreshold);
+    if (m_narrowLayout == narrow && m_responsiveApplied) return;
+    m_narrowLayout = narrow;
+    m_responsiveApplied = true;
+
+    // Боковая панель: в узком окне отдаём основной области больше места, но не
+    // настолько, чтобы в кнопку выбора даты перестала помещаться строка
+    // "22.08.2026 11:54" — вместе с уменьшенным шрифтом 250 точек хватает.
+    // Ширину панели задаём жёстко: одного максимума мало — при нехватке места
+    // раскладка сжимает её до минимума, и в кнопку выбора даты перестаёт
+    // помещаться строка вида "06.04.2026 15:10".
+    if (ui->titleWidget) {
+        const int railWidth = narrow ? 250 : 270;
+        ui->titleWidget->setMinimumWidth(railWidth);
+        ui->titleWidget->setMaximumWidth(railWidth);
+    }
+    setWidgetState(ui->btnSelectDate, narrow ? "narrow" : "");
+
+    // Тулбар Метео-11: в узком окне группы «тип бюллетеня» и «формат вывода»
+    // встают друг под друга — иначе группе типа достаётся половина ширины и
+    // её четыре кнопки вытягиваются в столбец по одной. Распорка между
+    // группами при этом схлопывается: в вертикальном ряду она превращается в
+    // пустой промежуток в десятки точек.
+    if (QHBoxLayout *toolbar = ui->horizontalLayout_meteo11_buttons) {
+        toolbar->setDirection(narrow ? QBoxLayout::TopToBottom
+                                     : QBoxLayout::LeftToRight);
+        for (int i = 0; i < toolbar->count(); ++i) {
+            if (QSpacerItem *sp = toolbar->itemAt(i)->spacerItem()) {
+                sp->changeSize(narrow ? 0 : 40, narrow ? 8 : 20,
+                               narrow ? QSizePolicy::Minimum : QSizePolicy::Expanding,
+                               QSizePolicy::Minimum);
+            }
+        }
+        toolbar->invalidate();
+    }
+
+    // Графики: рядом по горизонтали в широком окне, друг под другом в узком
+    const QList<QHBoxLayout *> chartRows = {
+        ui->chartsRow_avgWind, ui->chartsRow_realWind,
+        ui->chartsRow_measWind, ui->chartsRow_shear
+    };
+    for (QHBoxLayout *row : chartRows)
+        if (row)
+            row->setDirection(narrow ? QBoxLayout::TopToBottom : QBoxLayout::LeftToRight);
+
+    // Карточка графика в один столбец не должна расти на всю высоту вкладки,
+    // иначе таблица под ней уходит за нижний край.
+    const QList<QFrame *> cards = {
+        ui->cardFrame_avgWindSpeed, ui->cardFrame_avgWindDir,
+        ui->cardFrame_realWindSpeed, ui->cardFrame_realWindDir,
+        ui->cardFrame_measWindSpeed, ui->cardFrame_measWindDir,
+        ui->cardFrame_shearSpeed, ui->cardFrame_shearDir
+    };
+    for (QFrame *card : cards)
+        if (card)
+            card->setMaximumHeight(narrow ? 210 : 250);
+
+    setMeteo11TableStacked(narrow);
+
+    // «Наземные условия»: подпись параметра живёт в вертикальном заголовке, и
+    // его ширину QHeaderView берёт по самой длинной подписи. На планшете это
+    // съедало почти всю панель, и от колонки значения оставалась полоска у
+    // правого края — поэтому в узком окне ширина жёстко ограничивается, а
+    // шрифт подписи уменьшается, чтобы текст в неё помещался.
+    if (QTableWidget *t = ui->tableWidget_parm1b65) {
+        QHeaderView *vh = t->verticalHeader();
+        if (narrow) {
+            vh->setFixedWidth(340);
+        } else {
+            vh->setMaximumWidth(QWIDGETSIZE_MAX);
+            vh->setMinimumWidth(360);
+        }
+        setWidgetState(t, narrow ? "narrow" : "");
+    }
+
+    // В таблице сдвига ветра четыре колонки; на планшете полные заголовки в
+    // них не помещаются и обрезаются на середине слова.
+    if (QTableWidget *t = ui->table_windShear) {
+        const QStringList wide   = { "Высота, м", "Скорость, м/с/30м",
+                                     "Изменение направления, °", "Уровень" };
+        const QStringList compact = { "Высота, м", "Скор., м/с/30м",
+                                      "Δ напр., °", "Уровень" };
+        t->setHorizontalHeaderLabels(narrow ? compact : wide);
+    }
+
+    // Статусная строка над вкладками в узком окне переносится на две строки
+    if (ui->lblDataStatus)
+        ui->lblDataStatus->setWordWrap(narrow);
+}
+
+void MeasurementResults::resizeEvent(QResizeEvent *event)
+{
+    QDialog::resizeEvent(event);
+    applyResponsiveLayout(event->size().width());
 }
 
 void MeasurementResults::clearStationCoordinates()
@@ -325,6 +515,7 @@ void MeasurementResults::applyArchiveStyle()
         "  font-family: 'JetBrains Mono','DejaVu Sans Mono','Consolas',monospace;"
         "}"
         "QPushButton#btnSelectDate:hover { background: #D8ECE3; }"
+        "QPushButton#btnSelectDate[state=\"narrow\"] { font-size: 12px; padding: 0px 1px; }"
         "QLabel#lblAvailableRecords { color: #6E7876; font-size: 11px; font-style: italic; }"
         "QLabel#lblAvailableRecords[state=\"empty\"] { color: #B03A2E; }"
 
@@ -412,6 +603,9 @@ void MeasurementResults::applyArchiveStyle()
         "QTableWidget#tableWidget_parm1b65 QHeaderView::section {"
         "  background: transparent; color: #1B211F; font-weight: 400;"
         "  border: none; border-bottom: 1px solid #EEF0EF; padding: 7px 10px;"
+        "}"
+        "QTableWidget#tableWidget_parm1b65[state=\"narrow\"] QHeaderView::section {"
+        "  font-size: 11px; padding: 7px 6px;"
         "}"
 
         // ── поля ввода и выпадающие списки ───────────────────────────────
@@ -659,9 +853,12 @@ void MeasurementResults::setupCustomTabBar()
 
     m_customTabBar = new QWidget(this);
     m_customTabBar->setObjectName("customTabBar");
-    auto *layout = new QHBoxLayout(m_customTabBar);
+    // FlowLayout, а не QHBoxLayout: на планшете (1200x1920 при масштабе 150% —
+    // это 800 логических точек по ширине) шесть вкладок в одну строку не
+    // помещаются. Вместо сжатия до нечитаемых надписей они переносятся вниз,
+    // как flex-wrap у строки вкладок в макете.
+    auto *layout = new FlowLayout(m_customTabBar, 0, 2, 2);
     layout->setContentsMargins(16, 10, 16, 0);
-    layout->setSpacing(2);
 
     m_tabButtons.clear();
     for (int i = 0; i < tabs->count(); ++i) {
@@ -673,7 +870,6 @@ void MeasurementResults::setupCustomTabBar()
         layout->addWidget(btn);
         m_tabButtons.append(btn);
     }
-    layout->addStretch(1);
 
     connect(tabs, &QTabWidget::currentChanged, this, &MeasurementResults::updateCustomTabBarHighlight);
 

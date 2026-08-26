@@ -12,8 +12,8 @@
     </property>
     <property name="minimumSize">
       <size>
-        <width>1024</width>
-        <height>700</height>
+        <width>720</width>
+        <height>560</height>
       </size>
     </property>
     <property name="windowTitle">
@@ -56,7 +56,7 @@
               </property>
               <item>
                 <widget class="QFrame" name="titleWidget">
-                  <property name="minimumSize"><size><width>270</width><height>0</height></size></property>
+                  <property name="minimumSize"><size><width>230</width><height>0</height></size></property>
                   <property name="maximumSize"><size><width>270</width><height>16777215</height></size></property>
                   <layout class="QVBoxLayout" name="railLayout">
                     <property name="spacing"><number>0</number></property>

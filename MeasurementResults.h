@@ -32,6 +32,8 @@ class MeasurementResults;
 class ArchiveDatePopup;
 class ArchiveExportView;
 class QPushButton;
+class QLayout;
+class QResizeEvent;
 
 struct MeasurementRecord {
     int recordId;
@@ -294,6 +296,23 @@ private:
     void setBulletinBadge(const QString &text, const QString &state); // пилюля годности Метео-11
     void fitMeteo11TextHeight();       // высота блока бюллетеня по содержимому
     void setupMeteo11TableLayout();    // компактная сетка табличного вида Метео-11
+
+    // ─── Адаптивная (планшетная) компоновка ───────────────────────────────
+    // Целевой планшет: 1200x1920 при масштабе 150% — окну достаётся 800
+    // логических точек по ширине. Переключение идёт по фактической ширине
+    // окна, а не по устройству, поэтому одинаково работает в обеих
+    // ориентациях и на обычном мониторе.
+    static constexpr int kNarrowWidthThreshold = 1000;
+    bool m_narrowLayout = false;
+    bool m_responsiveApplied = false;
+    void applyResponsiveLayout(int width);
+    void setMeteo11TableStacked(bool stacked);
+    static void replaceWithFlowLayout(QLayout *source, int spacing);
+
+protected:
+    void resizeEvent(QResizeEvent *event) override;
+
+private:
     void setupAmsProbeCollapse();      // сворачиваемый блок доп. полей АМС/зонда
 
     // Оформление графиков Qwt под макет. QSS на QwtPlot почти не действует

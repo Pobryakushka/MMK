@@ -62,6 +62,7 @@ SOURCES += \
     ui/ExportDialog.cpp \
     ui/ArchiveDatePopup.cpp \
     ui/ArchiveExportView.cpp \
+    ui/FlowLayout.cpp \
     sensors/GroundMeteoParams.cpp \
     calculationAlgorithms/LandingCalculation.cpp \
     Map/FormMapView.cpp \
@@ -107,6 +108,7 @@ HEADERS += \
     ui/ExportDialog.h \
     ui/ArchiveDatePopup.h \
     ui/ArchiveExportView.h \
+    ui/FlowLayout.h \
     sensors/GroundMeteoParams.h \
     calculationAlgorithms/LandingCalculation.h \
     LandingCalculationState.h \

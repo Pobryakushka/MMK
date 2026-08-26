@@ -2515,7 +2515,10 @@ void MainWindow::onMeasurementResultsClicked()
     }
 
     dialog->adjustSize();
-    dialog->setMinimumSize(800, 600);
+    // Минимум ниже реального экрана планшета (1200x1920 при масштабе 150% —
+    // это 800x1280 логических точек): иначе окно не может сузиться до ширины
+    // экрана и правый край содержимого уезжает за границу.
+    dialog->setMinimumSize(720, 560);
     dialog->showMaximized();
 }
 
