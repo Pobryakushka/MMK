@@ -23,6 +23,7 @@
 #include "calculationAlgorithms/WindShearCalculator.h"
 #include <QTableWidget>
 #include "Meteo11Grib/GribMeteo11Pipeline.h"
+#include "ui/notificationtoast.h"
 
 namespace Ui {
 class MeasurementResults;
@@ -269,6 +270,9 @@ private:
     QVector<WindProfileData> m_currentAvgWind;
     QVector<WindProfileData> m_currentActualWind;
     QVector<MeasuredWindData> m_currentMeasuredWind;
+
+    NotificationToast *m_toast;
+    void showStatus(const QString &text, NotificationToast::Kind kind);
 };
 
 #endif // MEASUREMENTRESULTS_H

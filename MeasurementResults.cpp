@@ -16,7 +16,6 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QCalendarWidget>
-#include <QMessageBox>
 #include <QVBoxLayout>
 #include <QStackedWidget>
 #include <QDebug>
@@ -52,6 +51,8 @@ MeasurementResults::MeasurementResults(QWidget *parent)
 //    , m_dbConfigured(false)
 {
     ui->setupUi(this);
+
+    m_toast = new NotificationToast(this);
 
     // Скрываем нереализованные вкладки
     ui->tabWidget->removeTab(ui->tabWidget->indexOf(ui->tab_landingCalc));
@@ -125,6 +126,11 @@ MeasurementResults::MeasurementResults(QWidget *parent)
 
     updateDateTimeDisplay();
     updateSliderRange();
+}
+
+void MeasurementResults::showStatus(const QString &text, NotificationToast::Kind kind)
+{
+    m_toast->showMessage(text, kind, kind == NotificationToast::Success ? 3000 : 0);
 }
 
 MeasurementResults::~MeasurementResults()
@@ -2827,9 +2833,8 @@ void MeasurementResults::onExportClicked()
     MeasurementSnapshot snap = buildSnapshot();
 
     if (snap.recordId <= 0) {
-        QMessageBox::information(this, "Нет данных для экспорта",
-                                 "Выберите дату и время с доступными измерениями,\n"
-                                 "чтобы данные были загружены из архива.");
+        showStatus("Нет данных для экспорта: выберите дату и время с доступными измерениями, "
+                   "чтобы данные были загружены из архива.", NotificationToast::Error);
         return;
     }
 
@@ -2876,15 +2881,15 @@ void MeasurementResults::onExportClicked()
         // TXT / CSV / JSON
         QString content = MeasurementExporter::generate(snap, opts, errorMsg);
         if (!errorMsg.isEmpty()) {
-            QMessageBox::warning(this, "Ошибка экспорта", errorMsg);
+            showStatus("Ошибка экспорта: " + errorMsg, NotificationToast::Error);
             return;
         }
 
         QFile file(path);
         if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            QMessageBox::critical(this, "Ошибка записи",
-                                  QString("Не удалось открыть файл:\n%1\n\nОшибка: %2")
-                                      .arg(path, file.errorString()));
+            showStatus(QString("Не удалось открыть файл: %1. Ошибка: %2")
+                           .arg(path, file.errorString()),
+                       NotificationToast::Error);
             return;
         }
 
@@ -2904,23 +2909,16 @@ void MeasurementResults::onExportClicked()
     // 5. Результат
     if (!ok) {
         if (!errorMsg.isEmpty())
-            QMessageBox::critical(this, "Ошибка экспорта", errorMsg);
+            showStatus("Ошибка экспорта: " + errorMsg, NotificationToast::Error);
         return;
     }
 
-    QMessageBox msgBox(this);
-    msgBox.setWindowTitle("Экспорт выполнен");
-    msgBox.setIcon(QMessageBox::Information);
-    msgBox.setText(QString("Файл успешно сохранён:\n<b>%1</b>")
-                       .arg(QFileInfo(path).fileName()));
-    msgBox.setInformativeText(path);
-    msgBox.setStandardButtons(QMessageBox::Ok);
-    QPushButton *openBtn = msgBox.addButton("Открыть папку",
-                                            QMessageBox::ActionRole);
-    msgBox.exec();
-
-    if (msgBox.clickedButton() == openBtn)
-        QDesktopServices::openUrl(
-            QUrl::fromLocalFile(QFileInfo(path).absolutePath()));
-
+    m_toast->showMessageWithAction(
+        QString("Файл успешно сохранён: %1").arg(QFileInfo(path).fileName()),
+        NotificationToast::Success,
+        "Открыть папку",
+        [path]() {
+            QDesktopServices::openUrl(
+                QUrl::fromLocalFile(QFileInfo(path).absolutePath()));
+        });
 }
