@@ -1,4 +1,4 @@
-import QtQuick 2.0
+import QtQuick 2.15
 import QtLocation 5.9
 import QtPositioning 5.9
 import "."
@@ -122,6 +122,25 @@ Map {
 //                    showMainMenu(lastCoordinate);
 ////                }
 //            }
+    }
+
+    // Постановка точки тапом — для планшета (сенсорный экран). Обычная
+    // MouseArea с Qt.LeftButton здесь не подходит: она захватывает
+    // касание сразу на нажатии, из-за чего встроенный gesture-обработчик
+    // Map (панорамирование/зум пальцем) перестаёт получать последующие
+    // события и карту становится не подвинуть. TapHandler устроен иначе —
+    // берёт "пассивный" захват и сам себя отменяет, если палец сдвинулся
+    // дальше порога перетаскивания, поэтому панорамирование и зум
+    // продолжают работать как раньше, а короткий тап без сдвига ставит
+    // точку. Правая кнопка мыши (см. MouseArea выше) оставлена как есть —
+    // для работы с обычной мышью на десктопе.
+    TapHandler {
+        id: tapHandler
+        acceptedButtons: Qt.LeftButton
+        onTapped: {
+            var c = map.toCoordinate(tapHandler.point.position);
+            coord.coordinateFrom = c;
+        }
     }
 
 
