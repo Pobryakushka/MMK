@@ -1522,7 +1522,7 @@ void MainWindow::onAmsMeasurementFailed(const QString &reason)
     // ЗАМЕЧАНИЕ: это перепишет "ОШИБКА" обратно на "ГОТОВ"/"УСТАРЕЛИ"/"НЕТ ДАННЫХ"
     // — то есть индикация ошибки исчезнет с lblStatus. Сообщение об ошибке
     // оператор уже видел в тосте-уведомлении (showNotice выше в этом же методе,
-    // он остаётся на экране до закрытия), а в
+    // тост держится несколько секунд и снимается тапом), а в
     // statusBar остаётся "Ошибка измерения АМС: ..." на 10 секунд. Если такое
     // поведение нежелательно — можно эту строку НЕ добавлять, тогда "ОШИБКА"
     // на lblStatus останется до следующего события surfaceStateChanged.
@@ -3650,7 +3650,7 @@ void MainWindow::runPlowSelfTest()
 // пришедший на замену модальным QMessageBox.
 void MainWindow::showNotice(const QString &text, NotificationToast::Kind kind)
 {
-    m_notifyToast->showMessage(text, kind, kind == NotificationToast::Success ? 3000 : 0);
+    m_notifyToast->showMessage(text, kind);
 }
 
 // =====================================================

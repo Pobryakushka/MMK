@@ -446,7 +446,7 @@ void MeasurementResults::clearStationCoordinates()
 
 void MeasurementResults::showStatus(const QString &text, NotificationToast::Kind kind)
 {
-    m_toast->showMessage(text, kind, kind == NotificationToast::Success ? 3000 : 0);
+    m_toast->showMessage(text, kind);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

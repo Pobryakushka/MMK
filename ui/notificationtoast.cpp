@@ -7,6 +7,7 @@
 #include <QPropertyAnimation>
 #include <QTimer>
 #include <QEvent>
+#include <QMouseEvent>
 #include <QColor>
 
 NotificationToast::NotificationToast(QWidget *anchor)
@@ -15,6 +16,7 @@ NotificationToast::NotificationToast(QWidget *anchor)
 {
     setObjectName("notificationToast");
     setAttribute(Qt::WA_StyledBackground, true);
+    setCursor(Qt::PointingHandCursor); // вся карточка — область "закрыть"
     setStyleSheet(
         "QWidget#notificationToast {"
         "   background-color: #FFFFFF;"
@@ -35,9 +37,12 @@ NotificationToast::NotificationToast(QWidget *anchor)
     m_iconBadge = new QLabel(this);
     m_iconBadge->setFixedSize(24, 24);
     m_iconBadge->setAlignment(Qt::AlignCenter);
+    // Метки не перехватывают тап — он должен доходить до карточки целиком.
+    m_iconBadge->setAttribute(Qt::WA_TransparentForMouseEvents, true);
 
     m_textLabel = new QLabel(this);
     m_textLabel->setWordWrap(true);
+    m_textLabel->setAttribute(Qt::WA_TransparentForMouseEvents, true);
 
     m_actionBtn = new QPushButton(this);
     m_actionBtn->setCursor(Qt::PointingHandCursor);
@@ -52,24 +57,19 @@ NotificationToast::NotificationToast(QWidget *anchor)
         dismiss();
     });
 
-    m_closeBtn = new QPushButton("✕", this);
-    m_closeBtn->setFixedSize(24, 24);
-    m_closeBtn->setCursor(Qt::PointingHandCursor);
-    m_closeBtn->setFocusPolicy(Qt::NoFocus);
-    m_closeBtn->setStyleSheet(
-        "QPushButton { background: transparent; border: none; color: #9AA1A6; font-size: 9pt; font-weight: 700; }"
-        "QPushButton:pressed { color: #5B6167; }");
-    m_closeBtn->setVisible(false);
-    connect(m_closeBtn, &QPushButton::clicked, this, &NotificationToast::dismiss);
-
     layout->addWidget(m_iconBadge, 0, Qt::AlignTop);
     layout->addWidget(m_textLabel, 1);
     layout->addWidget(m_actionBtn, 0, Qt::AlignTop);
-    layout->addWidget(m_closeBtn, 0, Qt::AlignTop);
 
     m_anim = new QPropertyAnimation(this, "pos", this);
     m_anim->setDuration(300);
     m_anim->setEasingCurve(QEasingCurve::OutBack);
+    // finished() приходит только при естественном завершении: stop() его не
+    // шлёт, поэтому перезапуск анимации новым сообщением не спрячет тост.
+    connect(m_anim, &QPropertyAnimation::finished, this, [this]() {
+        if (m_dismissing)
+            finishDismiss();
+    });
 
     m_autoHideTimer = new QTimer(this);
     m_autoHideTimer->setSingleShot(true);
@@ -80,10 +80,26 @@ NotificationToast::NotificationToast(QWidget *anchor)
         m_anchor->installEventFilter(this);
 }
 
+int NotificationToast::defaultDurationFor(Kind kind, const QString &text)
+{
+    // Комфортная скорость чтения — примерно 17 символов в секунду; плюс
+    // время на то, чтобы заметить всплывшую карточку.
+    const int readMs = 1500 + text.length() * 60;
+
+    switch (kind) {
+    case Error:
+        // Ошибку нужно успеть прочитать и осмыслить — держим заметно дольше.
+        return qBound(6000, readMs, 15000);
+    case Success:
+    case Info:
+    default:
+        return qBound(3000, readMs, 8000);
+    }
+}
+
 void NotificationToast::applyKindStyle(Kind kind)
 {
     QString badgeBg, glyph, textColor;
-    bool showClose = false;
 
     switch (kind) {
     case Success:
@@ -95,7 +111,6 @@ void NotificationToast::applyKindStyle(Kind kind)
         badgeBg = "#C62828";
         glyph = "!";
         textColor = "#B71C1C";
-        showClose = true;
         break;
     case Info:
     default:
@@ -113,8 +128,6 @@ void NotificationToast::applyKindStyle(Kind kind)
     m_textLabel->setStyleSheet(QString(
         "color:%1; font-weight:600; font-size:10.5pt; background:transparent; border:none;")
         .arg(textColor));
-
-    m_closeBtn->setVisible(showClose);
 }
 
 void NotificationToast::reposition()
@@ -140,13 +153,17 @@ void NotificationToast::showMessage(const QString &text, Kind kind, int autoHide
 }
 
 void NotificationToast::showMessageWithAction(const QString &text, Kind kind,
-                                               const QString &actionLabel, std::function<void()> onAction)
+                                               const QString &actionLabel, std::function<void()> onAction,
+                                               int autoHideMs)
 {
     m_actionBtn->setText(actionLabel);
     m_actionBtn->setVisible(true);
     m_actionCallback = std::move(onAction);
-    showMessageInternal(text, kind, 0);
-    m_closeBtn->setVisible(true); // всегда можно закрыть, не только через действие
+    // Кнопку действия надо успеть нажать, поэтому по умолчанию такой тост
+    // живёт дольше обычного.
+    if (autoHideMs == AutoDuration)
+        autoHideMs = defaultDurationFor(kind, text) + 6000;
+    showMessageInternal(text, kind, autoHideMs);
 }
 
 void NotificationToast::showMessageInternal(const QString &text, Kind kind, int autoHideMs)
@@ -154,10 +171,15 @@ void NotificationToast::showMessageInternal(const QString &text, Kind kind, int 
     m_autoHideTimer->stop();
     m_anim->stop();
 
+    // Новое сообщение отменяет начатый уход: карточка остаётся на экране.
+    // Здесь важен именно isHidden() (собственное состояние тоста), а не
+    // isVisible(): страница-владелец может быть временно скрыта в QStackedWidget.
+    const bool wasVisible = !isHidden() && !m_dismissing;
+    m_dismissing = false;
+
     applyKindStyle(kind);
     m_textLabel->setText(text);
 
-    const bool wasVisible = isVisible();
     reposition();
     const QPoint target = pos();
 
@@ -166,11 +188,14 @@ void NotificationToast::showMessageInternal(const QString &text, Kind kind, int 
         const QPoint start(target.x(), target.y() - 24);
         move(start);
         show();
+        m_anim->setEasingCurve(QEasingCurve::OutBack);
         m_anim->setStartValue(start);
         m_anim->setEndValue(target);
         m_anim->start();
     }
 
+    if (autoHideMs == AutoDuration)
+        autoHideMs = defaultDurationFor(kind, text);
     if (autoHideMs > 0)
         m_autoHideTimer->start(autoHideMs);
 }
@@ -178,15 +203,37 @@ void NotificationToast::showMessageInternal(const QString &text, Kind kind, int 
 void NotificationToast::dismiss()
 {
     m_autoHideTimer->stop();
+
+    if (isHidden() || m_dismissing)
+        return;
+
+    // Уходим обратно вверх — так же, как появлялись.
     m_anim->stop();
+    m_dismissing = true;
+    m_anim->setEasingCurve(QEasingCurve::InCubic);
+    m_anim->setStartValue(pos());
+    m_anim->setEndValue(QPoint(x(), y() - 28));
+    m_anim->start();
+}
+
+void NotificationToast::finishDismiss()
+{
+    m_dismissing = false;
     hide();
     m_actionBtn->setVisible(false);
     m_actionCallback = nullptr;
 }
 
+void NotificationToast::mousePressEvent(QMouseEvent *event)
+{
+    // Тап в любом месте карточки убирает уведомление.
+    Q_UNUSED(event)
+    dismiss();
+}
+
 bool NotificationToast::eventFilter(QObject *watched, QEvent *event)
 {
-    if (watched == m_anchor && event->type() == QEvent::Resize && isVisible())
+    if (watched == m_anchor && event->type() == QEvent::Resize && !isHidden() && !m_dismissing)
         reposition();
     return QWidget::eventFilter(watched, event);
 }
