@@ -2941,9 +2941,22 @@ void MainWindow::connectSensorsFromConfig()
     // GNSS
     QString gnssPort = sensorSettingsDialog->getGnssComPort();
     if (!gnssPort.isEmpty() && gnssPort != "Нет доступных портов") {
-        if (m_gnssHandler->connectToGnss(gnssPort, sensorSettingsDialog->getGnssBaudRate())) {
+        // ВАЖНО: сначала фиксируем порт/скорость в полях класса. Иначе
+        // setChecked(true) ниже синхронно вызовет onGnssCheckboxToggled(),
+        // тот увидит пустой m_gnssComPort, снимет галку и через ветку
+        // disconnectFromGnss() закроет только что открытый порт — связь
+        // рвётся в том же стеке вызовов, до прихода первых данных.
+        m_gnssComPort  = gnssPort;
+        m_gnssBaudRate = sensorSettingsDialog->getGnssBaudRate();
+        if (m_gnssHandler->connectToGnss(m_gnssComPort, m_gnssBaudRate)) {
             m_gnssEnabled = true;
+            checkAndDisableConflictingSources("gnss");
+            // Галку выставляем без сигнала — обработчик toggled уже не нужен,
+            // подключение выполнено выше.
+            ui->checkboxGnss->blockSignals(true);
             ui->checkboxGnss->setChecked(true);
+            ui->checkboxGnss->blockSignals(false);
+            syncGnssPosCheckbox();
         } else { needAutoSearch << "gnss"; }
     } else { needAutoSearch << "gnss"; }
 
@@ -2992,9 +3005,17 @@ void MainWindow::onAutoConnectorDeviceDetected(AutoConnector::DeviceType type, c
     switch (type) {
     case AutoConnector::DEVICE_GNSS:
         if (!m_gnssHandler->isConnected()) {
-            if (m_gnssHandler->connectToGnss(port, baudRate)) {
+            // Порт/скорость — в поля класса до setChecked(true), иначе
+            // onGnssCheckboxToggled() увидит пустой m_gnssComPort и закроет
+            // только что открытый порт (см. connectSensorsFromConfig()).
+            m_gnssComPort  = port;
+            m_gnssBaudRate = baudRate;
+            if (m_gnssHandler->connectToGnss(m_gnssComPort, m_gnssBaudRate)) {
                 m_gnssEnabled = true;
+                checkAndDisableConflictingSources("gnss");
+                ui->checkboxGnss->blockSignals(true);
                 ui->checkboxGnss->setChecked(true);
+                ui->checkboxGnss->blockSignals(false);
                 syncGnssPosCheckbox();
             }
         }
