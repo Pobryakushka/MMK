@@ -394,8 +394,16 @@ void VirtualKeyboard::rebuildLayout()
     if (m_grid) {
         QLayoutItem *child;
         while ((child = m_grid->takeAt(0)) != nullptr) {
-            if (QWidget *w = child->widget())
+            if (QWidget *w = child->widget()) {
+                // Прячем сразу: deleteLater() выполнится только на следующей
+                // итерации цикла событий, а до этого момента виджет остаётся
+                // видимым на СТАРОМ месте/размере. При смене раскладок с
+                // сильно разными размерами (например, компактная цифровая →
+                // широкая буквенная) это давало "осколки" прежней раскладки
+                // поверх новой — клавиатура выглядела уменьшенной/сломанной.
+                w->hide();
                 w->deleteLater();   // deleteLater — мы можем быть внутри clicked() этой же кнопки
+            }
             delete child;
         }
         delete m_grid;

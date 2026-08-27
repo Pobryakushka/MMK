@@ -18,8 +18,21 @@ ProcessRunner::ProcessRunner(QObject *parent) : QObject(parent)
             });
 
     connect(&m_process, &QProcess::errorOccurred, this,
-            [this](QProcess::ProcessError) {
-                if (m_process.state() == QProcess::NotRunning)
+            [this](QProcess::ProcessError error) {
+                // failedToStart() должен означать ровно то, что говорит его имя:
+                // процесс не удалось запустить вообще (нет файла, нет прав и
+                // т.п.) — единственный случай, когда QProcess::finished()
+                // после этого не придёт вовсе, и сообщить о провале должны
+                // мы сами. Раньше здесь проверялось state()==NotRunning —
+                // ненадёжный признак: он не документирован Qt как гарантия
+                // именно для FailedToStart, и при обычном крэше уже
+                // запущенного процесса эмпирически (Qt 5.15.8/Linux) state()
+                // в момент errorOccurred(Crashed) всё ещё Running, так что
+                // на этой платформе сейчас дубля нет — но полагаться на
+                // недокументированное поведение (тем более что проект
+                // собирается и под Windows, где тайминг QProcess может
+                // отличаться) не стоит. Проверяем сам код ошибки явно.
+                if (error == QProcess::FailedToStart)
                     emit failedToStart(m_process.errorString());
             });
 }

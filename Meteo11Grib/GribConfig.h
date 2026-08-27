@@ -14,5 +14,5 @@ struct GribConfig {
     // так разные даты/точки не путают друг друга в общем каталоге.
     QString dataDir = "/home/otdel412/Projects/MMK/GRIB/SocketSpecial2G/Send/Files";
 
-    double pointWindowDeg = 5.0; // должно совпадать с POINT_WINDOW в gfs_download.sh
+    double pointWindowDeg = 2.0; // должно совпадать с POINT_WINDOW в grib.sh
 };

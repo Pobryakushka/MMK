@@ -1,4 +1,4 @@
-import QtQuick 2.0
+import QtQuick 2.15
 import QtLocation 5.9
 import QtPositioning 5.9
 import "."
@@ -112,6 +112,11 @@ Map {
         anchors.fill: parent
         acceptedButtons: /*Qt.LeftButton | */Qt.RightButton
         onPressed: {
+            // Ставим точку только когда включён режим выбора ("Указать точку").
+            // Иначе клик не трогает маркер — иначе он двигался бы, а координаты
+            // в форме не менялись, что путало оператора.
+            if (!coord.pickingEnabled)
+                return;
             var c = map.toCoordinate(Qt.point(mouseX, mouseY));
             coord.coordinateFrom = c;
         }
@@ -122,6 +127,30 @@ Map {
 //                    showMainMenu(lastCoordinate);
 ////                }
 //            }
+    }
+
+    // Постановка точки тапом — для планшета (сенсорный экран). Обычная
+    // MouseArea с Qt.LeftButton здесь не подходит: она захватывает
+    // касание сразу на нажатии, из-за чего встроенный gesture-обработчик
+    // Map (панорамирование/зум пальцем) перестаёт получать последующие
+    // события и карту становится не подвинуть. TapHandler устроен иначе —
+    // берёт "пассивный" захват и сам себя отменяет, если палец сдвинулся
+    // дальше порога перетаскивания, поэтому панорамирование и зум
+    // продолжают работать как раньше, а короткий тап без сдвига ставит
+    // точку. Правая кнопка мыши (см. MouseArea выше) оставлена как есть —
+    // для работы с обычной мышью на десктопе.
+    TapHandler {
+        id: tapHandler
+        acceptedButtons: Qt.LeftButton
+        onTapped: {
+            // См. комментарий в MouseArea выше: тап ставит точку только в
+            // активном режиме выбора, в остальное время — обычное
+            // панорамирование/зум карты.
+            if (!coord.pickingEnabled)
+                return;
+            var c = map.toCoordinate(tapHandler.point.position);
+            coord.coordinateFrom = c;
+        }
     }
 
 
@@ -179,6 +208,13 @@ Map {
     MapQuickItem {
         id: marker
         z: 2
+        // Пока точка не выбрана оператором (coord.hasSelection == false),
+        // coordinateFrom содержит захардкоженное значение по умолчанию
+        // (см. конструктор QmlCoordinateProxy) — показывать маркер там не
+        // нужно, это будет выглядеть как уже выбранная точка. Прячем через
+        // opacity (не visible), чтобы появление было плавным, а не резким.
+        opacity: coord.hasSelection ? 1 : 0
+        Behavior on opacity {NumberAnimation {duration: 200}}
         anchorPoint.x: markerImage.width/2 * markerImage.scale
         anchorPoint.y: markerImage.height * markerImage.scale
         coordinate: coord.coordinateFrom

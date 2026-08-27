@@ -1,4 +1,4 @@
-PATH_TO_REFERENCES = $$absolute_path($$PWD/../../references)
+PATH_TO_REFERENCES = ../../references
 
 QT       += core gui quick quickwidgets qml positioning location network serialport sql printsupport core-private
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
@@ -33,6 +33,7 @@ HEADERS *= $$PLOW_HEADERS \
     ui/anglecheckpage.h \
     ui/inspectionpage.h \
     ui/workregulationhubpage.h \
+    ui/notificationtoast.h \
 
 # ─── ClimatData — климатические данные по широте/долготе/месяцу ───
 CLIMAT_DIR = $$THIRDPARTY/climatData
@@ -45,6 +46,7 @@ SOURCES *= \
     ui/anglecheckpage.cpp \
     ui/inspectionpage.cpp \
     ui/workregulationhubpage.cpp \
+    ui/notificationtoast.cpp \
 
 HEADERS *= \
     $$CLIMAT_DIR/climatdata.h \
@@ -58,6 +60,9 @@ SOURCES += \
     LocalTileServer.cpp \
     calculationAlgorithms/AlgorithmsCalc.cpp \
     ui/ExportDialog.cpp \
+    ui/ArchiveDatePopup.cpp \
+    ui/ArchiveExportView.cpp \
+    ui/FlowLayout.cpp \
     sensors/GroundMeteoParams.cpp \
     calculationAlgorithms/LandingCalculation.cpp \
     Map/FormMapView.cpp \
@@ -101,6 +106,9 @@ HEADERS += \
     calculationAlgorithms/AlgorithmsCalc.h \
     CoordHelper.h \
     ui/ExportDialog.h \
+    ui/ArchiveDatePopup.h \
+    ui/ArchiveExportView.h \
+    ui/FlowLayout.h \
     sensors/GroundMeteoParams.h \
     calculationAlgorithms/LandingCalculation.h \
     LandingCalculationState.h \

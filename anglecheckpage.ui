@@ -350,29 +350,6 @@ QPushButton:disabled { background-color: #A9C9BE; border-color: #A9C9BE; color: 
       </widget>
      </item>
 
-     <item alignment="Qt::AlignHCenter|Qt::AlignTop">
-      <widget class="QLabel" name="lblStatus">
-       <property name="maximumSize">
-        <size>
-         <width>640</width>
-         <height>16777215</height>
-        </size>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">font-size: 11pt; font-weight: 600; color: #2E7D32; background-color: #E8F5E9; border: 1px solid #A5D6A7; padding: 12px 16px; border-radius: 12px;</string>
-       </property>
-       <property name="text">
-        <string/>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignCenter</set>
-       </property>
-       <property name="wordWrap">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-
      <item>
       <spacer name="stackBottomSpacer">
        <property name="orientation">

@@ -9,6 +9,9 @@
 #include <QLabel>
 #include <QPropertyAnimation>
 #include <QStyle>
+#include <QStyledItemDelegate>
+#include <QGuiApplication>
+#include <QClipboard>
 
 // Коды высот строк таблицы (19 стандартных уровней Метео-11)
 const QStringList Meteo11::kHeightCodes = {
@@ -23,6 +26,7 @@ Meteo11::Meteo11(QWidget *parent)
     , m_applied(false)
 {
     ui->setupUi(this);
+    setAttribute(Qt::WA_StyledBackground, true);
 
     // Настраиваем таблицу: 3 колонки — ПП, НН, СС
     ui->tableWidget_meteo11->setColumnCount(3);
@@ -45,6 +49,13 @@ Meteo11::Meteo11(QWidget *parent)
     connect(ui->btnMet11Parse,  &QPushButton::clicked, this, &Meteo11::onParseClicked);
     connect(ui->btnMet11Clear,  &QPushButton::clicked, this, &Meteo11::onClearClicked);
     connect(ui->btnMet11Back,   &QPushButton::clicked, this, [this]{ emit backRequested(); });
+
+    // На планшете нет физической клавиатуры с Ctrl+V — вставка из буфера
+    // нужна отдельной кнопкой рядом со строкой бюллетеня.
+    connect(ui->btnMet11Paste, &QPushButton::clicked, this, [this] {
+        ui->lineEdit_rawBulletin->setText(QGuiApplication::clipboard()->text().trimmed());
+        setFieldInvalid(ui->lineEdit_rawBulletin, ui->lblRawBulletinHint, false);
+    });
 
     // ── Экранная клавиатура: для каждого поля — своя раскладка/ограничения ──
     setupVirtualKeyboard();
@@ -137,6 +148,33 @@ void Meteo11::updateStatusPill()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Автозаполнение "//" в строках после последней реально введённой —
+// зонд не долетел до этих высот, как и в архивных бюллетенях.
+// ─────────────────────────────────────────────────────────────────────────────
+void Meteo11::fillMissingTrailingLayers()
+{
+    auto *table = ui->tableWidget_meteo11;
+
+    int lastFilled = -1;
+    for (int r = 0; r < table->rowCount(); ++r) {
+        QTableWidgetItem *itNN = table->item(r, 1);
+        QTableWidgetItem *itSS = table->item(r, 2);
+        const bool hasNN = itNN && !itNN->text().trimmed().isEmpty();
+        const bool hasSS = itSS && !itSS->text().trimmed().isEmpty();
+        if (hasNN || hasSS)
+            lastFilled = r;
+    }
+
+    for (int r = lastFilled + 1; r < table->rowCount(); ++r) {
+        auto *pp = new QTableWidgetItem("//");
+        pp->setTextAlignment(Qt::AlignCenter);
+        table->setItem(r, 0, pp);
+        table->setItem(r, 1, new QTableWidgetItem("//"));
+        table->setItem(r, 2, new QTableWidgetItem("//"));
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Кнопка «Применить»
 // ─────────────────────────────────────────────────────────────────────────────
 void Meteo11::onApplyClicked()
@@ -205,6 +243,10 @@ void Meteo11::onApplyClicked()
         }
     }
     json["raw_string"]           = ui->lineEdit_rawBulletin->text().trimmed();
+
+    // Строки после последней реально введённой заполняем "//" — зонд
+    // не достиг этих высот (та же логика, что и в архивных бюллетенях).
+    fillMissingTrailingLayers();
 
     // Считываем слои из таблицы (колонки: 0=ПП, 1=НН, 2=СС)
     // Код высоты берётся по позиции строки из kHeightCodes
@@ -342,6 +384,10 @@ void Meteo11::onParseClicked()
     if (idx < parts.size() && parts[idx].length() == 4) {
         ui->lineEdit_Met11AchievedSensHeight->setText(parts[idx]);
     }
+
+    // Высоты, до которых зонд не долетел (нет данных в строке), сразу
+    // помечаем "//" в таблице — наглядно показывает достигнутый предел.
+    fillMissingTrailingLayers();
 
     ui->lblStatus->setText("Строка разобрана — проверьте поля и нажмите «Применить»");
     ui->lblStatus->setStyleSheet("color: #E65100; font-weight: bold;");

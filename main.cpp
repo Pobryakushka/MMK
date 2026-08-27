@@ -1,6 +1,7 @@
 #include "ui/mainwindow.h"
 #include "calculationAlgorithms/WindShearCalculator.h"
 #include <QApplication>
+#include <QStyleFactory>
 #include "calculationAlgorithms/windprofilecalculator.h"
 #include <iostream>
 
@@ -58,6 +59,18 @@ int main(int argc, char *argv[])
     QApplication::setHighDpiScaleFactorRoundingPolicy(
         Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
     QApplication a(argc, argv);
+
+    // Явно фиксируем стиль Fusion — без этого Qt5 берёт стиль из платформенной
+    // темы окружения (см. QT_QPA_PLATFORMTHEME), а на Astra Linux/Fly это
+    // оказался "cleanlooks" (нативные объёмные кнопки в духе старых GTK-тем)
+    // вместо плоского Fusion, под который написаны все QSS в .ui/.cpp.
+    // Практически важно то, что cleanlooks игнорирует значительную часть
+    // указаний стилшита (фон/рамку/скругление кнопок, вкладок, шапок таблиц)
+    // и дорисовывает поверх свой объёмный chrome — интерфейс выглядит "чужим"
+    // независимо от того, что написано в QSS. Fusion же ничего не рисует там,
+    // где QSS задал оформление, поэтому вид программы перестаёт зависеть от
+    // темы конкретного рабочего окружения.
+    a.setStyle(QStyleFactory::create("Fusion"));
 
     // ВАЖНО: QApplication подхватывает системную локаль (setlocale(LC_ALL, "")),
     // что на русской локали меняет десятичный разделитель на запятую и ломает

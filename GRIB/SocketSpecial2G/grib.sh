@@ -15,7 +15,7 @@ VARS=""
 LEVS=""
 REGION=""
 POINT=""
-POINT_WINDOW=5   # градусов в каждую сторону от точки клиента
+POINT_WINDOW=2   # градусов в каждую сторону от точки клиента (Kriging заменён на билинейную интерполяцию — нужна только ячейка сетки 0.25° вокруг точки, окно оставлено с запасом)
 POINT_VARS="HGT:TMP:UGRD:VGRD:PRMSL:RH"   # соответствует h/gh, t, u, v, p/prmsl, r в Mushroom
 # Стандартные изобарические уровни (мбар), покрывающие с запасом диапазон
 # высот 0-8000 м по стандартной атмосфере (8000 м ~= 356 гПа), плюс
@@ -169,8 +169,18 @@ trap on_int INT TERM
 log "Дата       : $CURRENT_DATE"
 log "Цикл       : $RUN"
 log "Источник   : $SOURCE"
-log "Режим      : $([ $PARTIAL -eq 1 ] && echo "частичный (vars=$VARS levs=$LEVS)" || echo "полный файл")"
-log "Регион     : $([ -n "$REGION" ] && echo "$REGION (leftlon:rightlon:toplat:bottomlat)" || echo "весь земной шар")"
+if [ -n "$POINT" ]; then
+    MODE_LOG="точка (vars=$POINT_VARS levs=$POINT_LEVS)"
+    REGION_LOG="окно ±${POINT_WINDOW}° вокруг точки, см. строку «Точка» ниже"
+elif [ $PARTIAL -eq 1 ]; then
+    MODE_LOG="частичный (vars=$VARS levs=$LEVS)"
+    REGION_LOG="$([ -n "$REGION" ] && echo "$REGION (leftlon:rightlon:toplat:bottomlat)" || echo "весь земной шар")"
+else
+    MODE_LOG="полный файл"
+    REGION_LOG="весь земной шар"
+fi
+log "Режим      : $MODE_LOG"
+log "Регион     : $REGION_LOG"
 log "Точка      : $([ -n "$POINT" ] && echo "$POINT, окно ±${POINT_WINDOW}° (leftlon=$LEFTLON rightlon=$RIGHTLON toplat=$TOPLAT bottomlat=$BOTTOMLAT), vars=$POINT_VARS, levs=$POINT_LEVS" || echo "не задана")"
 log "Диапазон   : f$(printf "%03d" "$START") - f$(printf "%03d" "$END")"
 
@@ -204,6 +214,16 @@ if [ $PARTIAL -eq 1 ] && [ -z "$REGION" ]; then
     LEVS_RE=$(build_regex "$LEVS")
 fi
 
+# Счётчик реально полученных файлов (скачанных сейчас или уже лежавших
+# на диске с прошлого запуска). Скрипт исторически не выставлял ненулевой
+# exit code при неудачах curl/пустых файлах внутри цикла — он просто
+# логировал ошибку и переходил к следующему часу, поэтому вызывающая
+# сторона (GfsDownloadRunner в MMK, который проверяет только exit code)
+# видела "успех", даже если ни один файл не был скачан. Ниже по коду
+# считаем успехи и в конце скрипта завершаемся с ошибкой, если не
+# получили вообще ничего.
+OK_COUNT=0
+
 for ((HOUR=START; HOUR<=END; HOUR++))
 do
     FH=$(printf "%03d" "$HOUR")
@@ -220,6 +240,7 @@ do
 
     if [ -f "$DESTFILE" ]; then
         log "f${FH} уже существует."
+        OK_COUNT=$((OK_COUNT + 1))
         continue
     fi
 
@@ -246,6 +267,7 @@ do
             if [ "$SIZE" -gt 0 ]; then
                 mv "$TMPFILE" "$DESTFILE"
                 log "f${FH} успешно скачан (регион)."
+                OK_COUNT=$((OK_COUNT + 1))
             else
                 log "Получен пустой файл (нет совпадений vars/levs/region?)."
                 rm -f "$TMPFILE"
@@ -282,6 +304,7 @@ do
             if [ "$SIZE" -gt 0 ]; then
                 mv "$TMPFILE" "$DESTFILE"
                 log "f${FH} успешно скачан (точка $POINT)."
+                OK_COUNT=$((OK_COUNT + 1))
             else
                 log "Получен пустой файл (нет данных для этой точки/даты?)."
                 rm -f "$TMPFILE"
@@ -344,6 +367,7 @@ do
         then
             mv "$TMPFILE" "$DESTFILE"
             log "f${FH} успешно скачан (частично)."
+            OK_COUNT=$((OK_COUNT + 1))
         else
             RC=$?
             log "f${FH} ошибка частичного скачивания."
@@ -363,6 +387,7 @@ do
             if [ "$SIZE" -gt 1000000 ]; then
                 mv "$TMPFILE" "$DESTFILE"
                 log "f${FH} успешно скачан."
+                OK_COUNT=$((OK_COUNT + 1))
             else
                 log "Получен слишком маленький файл."
                 rm -f "$TMPFILE"
@@ -380,3 +405,11 @@ do
 
     CURRENT_TMPFILE=""
 done
+
+if [ "$OK_COUNT" -eq 0 ]; then
+    log "Ни один файл не получен (0 из $((END - START + 1))) — завершаем с ошибкой."
+    exit 1
+fi
+
+log "Готово: получено файлов $OK_COUNT из $((END - START + 1))."
+exit 0

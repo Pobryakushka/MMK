@@ -23,10 +23,17 @@
 #include "calculationAlgorithms/WindShearCalculator.h"
 #include <QTableWidget>
 #include "Meteo11Grib/GribMeteo11Pipeline.h"
+#include "ui/notificationtoast.h"
 
 namespace Ui {
 class MeasurementResults;
 }
+
+class ArchiveDatePopup;
+class ArchiveExportView;
+class QPushButton;
+class QLayout;
+class QResizeEvent;
 
 struct MeasurementRecord {
     int recordId;
@@ -68,6 +75,9 @@ private slots:
     void onTableFormatClicked();
 
     void onExportClicked();
+    void onExportBackRequested();
+    void onExportSubmitted(const MeasurementSnapshot &snap, const ExportOptions &opts);
+    void onDatePopupDateTimeSelected(const QDateTime &dt);
 
 public slots:
     void updateCoordinatesFromMainWindow(double latitude, double longitude);
@@ -269,6 +279,67 @@ private:
     QVector<WindProfileData> m_currentAvgWind;
     QVector<WindProfileData> m_currentActualWind;
     QVector<MeasuredWindData> m_currentMeasuredWind;
+
+    NotificationToast *m_toast;
+    void showStatus(const QString &text, NotificationToast::Kind kind);
+
+    // ============ НОВЫЙ ВИЗУАЛЬНЫЙ СЛОЙ (боковая панель / попап даты / встроенный экспорт) ============
+    ArchiveDatePopup  *m_datePopup;
+    ArchiveExportView *m_exportView;
+    bool m_amsProbeFieldsVisible;
+    QList<QWidget *> m_amsProbeWidgets; // доп. поля АМС/зонда на странице "приближённый" — скрыты по умолчанию
+
+    void applyArchiveStyle();          // общий QSS-стиль архива под макет
+    static void setWidgetState(QWidget *w, const QString &state); // состояние через свойство [state]
+    void clearStationCoordinates();    // сброс строк координат в прочерки
+    void setupArchiveTables();         // общий вид таблиц архива под макет
+    void setBulletinBadge(const QString &text, const QString &state); // пилюля годности Метео-11
+    void fitMeteo11TextHeight();       // высота блока бюллетеня по содержимому
+    void setupMeteo11TableLayout();    // компактная сетка табличного вида Метео-11
+
+    // ─── Адаптивная (планшетная) компоновка ───────────────────────────────
+    // Целевой планшет: 1200x1920 при масштабе 150% — окну достаётся 800
+    // логических точек по ширине. Переключение идёт по фактической ширине
+    // окна, а не по устройству, поэтому одинаково работает в обеих
+    // ориентациях и на обычном мониторе.
+    static constexpr int kNarrowWidthThreshold = 1000;
+    bool m_narrowLayout = false;
+    bool m_responsiveApplied = false;
+    void applyResponsiveLayout(int width);
+    void setMeteo11TableStacked(bool stacked);
+    static void replaceWithFlowLayout(QLayout *source, int spacing);
+
+protected:
+    void resizeEvent(QResizeEvent *event) override;
+
+private:
+    void setupAmsProbeCollapse();      // сворачиваемый блок доп. полей АМС/зонда
+
+    // Оформление графиков Qwt под макет. QSS на QwtPlot почти не действует
+    // (Qwt рисует холст, оси и кривые сам), поэтому цвета/шрифты/сетка
+    // задаются через его собственный API.
+    static void styleArchivePlot(QwtPlot *plot);
+    static QwtPlotGrid *makeArchiveGrid();
+    static void styleArchiveCurve(QwtPlotCurve *curve, const QColor &color);
+
+    // Цвета кривых по макету: скорость — зелёная, направление — янтарное.
+    static QColor archiveSpeedColor()     { return QColor("#0F6B4F"); }
+    static QColor archiveDirectionColor() { return QColor("#F9A825"); }
+
+    // Координаты станции показываются плоскими строками "подпись/значение"
+    // (QLabel), а не полями ввода — в архиве они всегда только для чтения.
+    // Флаг заменяет прежнюю проверку "поле координат не пустое".
+    bool m_stationCoordsValid = false;
+
+    // Нативная QTabBar рисуется системным QStyle и не даёт гарантированно
+    // повторить плоские скруглённые вкладки макета ни на одной платформе —
+    // поэтому сама QTabBar скрывается (tabBar()->hide()), а вместо неё
+    // строится полностью самодельная строка кнопок, переключающая страницы
+    // того же QTabWidget через setCurrentIndex().
+    QWidget *m_customTabBar;
+    QList<QPushButton *> m_tabButtons;
+    void setupCustomTabBar();
+    void updateCustomTabBarHighlight(int currentIndex);
 };
 
 #endif // MEASUREMENTRESULTS_H

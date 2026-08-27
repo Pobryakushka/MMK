@@ -33,6 +33,7 @@
 #include "LocalTileServer.h"
 #include "calculationAlgorithms/windprofilecalculator.h"
 #include "sensors/GroundMeteoParams.h"   // для типа GroundMeteoParams::SurfaceState в слоте
+#include "ui/notificationtoast.h"
 
 
 // Forward declaration
@@ -273,6 +274,11 @@ private:
     QTimer *m_toastHideTimer = nullptr;
     QPushButton *m_toastCloseBtn = nullptr; // маленькая красная кнопка остановки поиска
 
+    // Единый плавающий тост для разовых уведомлений об ошибках/успехе,
+    // заменяющий старые модальные QMessageBox (см. ui/notificationtoast.h).
+    NotificationToast *m_notifyToast = nullptr;
+    void showNotice(const QString &text, NotificationToast::Kind kind);
+
     // Окно подтверждения (оверлей поверх всего окна) — ОБЩЕЕ для остановки
     // поиска датчиков и для отключения датчика из шторки. Что именно
     // подтверждается — определяется текстом и колбэком, передаваемыми в
@@ -438,6 +444,17 @@ private:
     bool m_hasGnssPosition = false;
     bool m_hasBinsOrientation = false;
 
+    // Разовая подсказка "как выбрать точку на карте" — показывается один
+    // раз за сеанс работы программы, при первом заходе на страницу "Карта",
+    // пока точка ещё ни разу не выбрана (см. onOpenMapPage()).
+    bool m_mapCoordHintShown = false;
+
+    // Источник последних координат, показанных в lblMapCoordDisplay —
+    // "С карты" или "GNSS" (см. updateMapCoordDisplay()). На карте два
+    // разных, никак иначе не подписанных маркера (красный пин "с карты" и
+    // синяя точка GNSS) — эта подпись поясняет, какой из них сейчас "живой".
+    QString m_lastCoordSourceLabel;
+
     // "Сырая" проверка — валидны ли ЧИСЛА в полях ПРЯМО СЕЙЧАС, независимо
     // от того, как они туда попали. Используется только для решения о
     // подсветке при выходе из ручного режима (см. ниже) — НЕ для готовности.
@@ -520,6 +537,11 @@ private:
     void setCoordField(QLineEdit *edit, double dec_deg);
     double getCoordField(QLineEdit *edit, bool &ok) const;
     void onCoordTextEdited(QLineEdit *edit);
+
+    // Плавающая подсказка над картой (lblMapCoordDisplay) — текущие выбранные
+    // координаты (последний тап по карте или GNSS-фиксация), чтобы было видно,
+    // какую точку выбираешь маркером, не переключаясь на страницу "Положение".
+    void updateMapCoordDisplay(const QString &sourceLabel);
 
     // АМС методы
     void setupAmsHandler();

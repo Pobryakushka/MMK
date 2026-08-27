@@ -6,6 +6,7 @@ WorkRegulationHubPage::WorkRegulationHubPage(QWidget *parent)
     , ui(new Ui::WorkRegulationHubPage)
 {
     ui->setupUi(this);
+    setAttribute(Qt::WA_StyledBackground, true);
 
     connect(ui->btnBackFromWorkRegulationHub, &QPushButton::clicked,
             this, &WorkRegulationHubPage::backRequested);

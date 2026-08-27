@@ -132,6 +132,7 @@ SourceData::SourceData(QWidget *parent)
     , m_meteo11Dialog(nullptr)
 {
     ui->setupUi(this);
+    setAttribute(Qt::WA_StyledBackground, true);
 
     ui->rowMeteo11->setTitle(QString::fromUtf8("Бюллетень «Метео-11»"));
     ui->rowMeteo11->setDescription(QString::fromUtf8("Ввод/просмотр закодированного бюллетеня"));

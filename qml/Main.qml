@@ -1,5 +1,6 @@
 import QtQuick 2.0
 import QtLocation 5.9
+import QtPositioning 5.9
 //import QtLocation 5.12
 import "."
 
@@ -166,11 +167,18 @@ Item {
 
     function updateGnssMarker(lat, lon, enabled) {
         if (enabled) {
+            // Карта создаётся лениво в createMapComponent(); до этого момента
+            // добавлять маркер некуда.
+            if (!map)
+                return
             // Создаем или обновляем маркер GNSS
             if (!gnssMarker) {
                 gnssMarker = markerComponent.createObject(map, {
                     coordinate: QtPositioning.coordinate(lat, lon)
                                                           })
+                // Без addMapItem() MapQuickItem не попадает на слой карты и
+                // не отображается (см. createStationsMarkers в MapComponent.qml).
+                map.addMapItem(gnssMarker)
             } else {
                 gnssMarker.coordinate = QtPositioning.coordinate(lat, lon)
             }

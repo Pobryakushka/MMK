@@ -8,6 +8,7 @@
 #include <QDir>
 #include <QStandardPaths>
 #include <QTableWidgetItem>
+#include "ui/notificationtoast.h"
 
 namespace Ui {
 class LandingCalculation;
@@ -63,6 +64,9 @@ private:
 
     void setupEditTable();
     void swapTableRows(int row1, int row2);
+
+    NotificationToast *m_toast;
+    void showStatus(const QString &text, NotificationToast::Kind kind);
 };
 
 #endif // LANDINGCALCULATION_H

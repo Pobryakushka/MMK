@@ -19,7 +19,6 @@
 #include <QQuickItem>
 #include <QQmlEngine>
 #include <QQmlContext>
-#include <QMessageBox>
 #include <QtPositioning/QGeoCoordinate>
 #include <QPushButton>
 #include <QCheckBox>
@@ -86,6 +85,8 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
 
     setupToastUI();
+
+    m_notifyToast = new NotificationToast(this);
 
     configureAmsDatabase();
 
@@ -508,6 +509,17 @@ void MainWindow::onOpenPositionPage()
 void MainWindow::onOpenMapPage()
 {
     ui->stackedWidget->setCurrentWidget(ui->page_map);
+
+    // Разовая подсказка про выбор точки — только пока точку ни разу не
+    // выбирали (m_hasGnssPosition отражает это для обоих источников,
+    // см. updateMapCoordDisplay()) и только один раз за сеанс работы, чтобы
+    // не надоедать при каждом заходе на страницу.
+    if (!m_mapCoordHintShown && !m_hasGnssPosition) {
+        m_mapCoordHintShown = true;
+        showNotice("Чтобы выбрать точку на карте: нажмите \"Указать точку\", "
+                   "затем тапните нужное место на карте.",
+                   NotificationToast::Info);
+    }
 }
 
 void MainWindow::onOpenMeasurePage()
@@ -759,12 +771,21 @@ void MainWindow::updateMapCoordinatesButtonStyle()
     if (ui->btnMapCoordinatesPos)
         ui->btnMapCoordinatesPos->setChecked(m_mapCoordinatesEnabled);
 
+    // Пока режим выбора не активен, карта не должна двигать маркер по тапу
+    // (координаты в форме всё равно не обновятся — см. лямбду на
+    // coordinateFromChanged в конструкторе, — а «прыгающий» маркер сбивал
+    // оператора с толку).
+    qcp.setPickingEnabled(m_mapCoordinatesEnabled);
+
     if (m_mapCoordinatesEnabled) {
+        ui->btnMapCoordinates->setText("Тапните карту");
         ui->btnMapCoordinates->setStyleSheet(
             "QPushButton {"
             "   background-color: #0F6B4F;"
             "   border: 2px solid #0B5A41;"
             "   border-radius: 12px;"
+            "   padding: 4px 14px 4px 10px;"
+            "   font-size: 9pt; font-weight: 600; color: #FFFFFF;"
             "}"
             "QPushButton:hover { background-color: #0B5A41; }"
             );
@@ -778,11 +799,14 @@ void MainWindow::updateMapCoordinatesButtonStyle()
                 );
         }
     } else {
+        ui->btnMapCoordinates->setText("Указать точку");
         ui->btnMapCoordinates->setStyleSheet(
             "QPushButton {"
             "   background-color: rgba(255,255,255,235);"
             "   border: none;"
             "   border-radius: 12px;"
+            "   padding: 4px 14px 4px 10px;"
+            "   font-size: 9pt; font-weight: 600; color: #1C1F22;"
             "}"
             "QPushButton:hover { background-color: #f0f0f0; }"
             );
@@ -824,9 +848,12 @@ void MainWindow::onGnssCheckboxToggled(bool checked)
 {
     if (checked) {
         if (m_gnssComPort.isEmpty()) {
-            qDebug() << "MainWindow: COM-порт не настроен, открываем настройки...";
+            qDebug() << "MainWindow: COM-порт не настроен, подключение через индикатор GNSS...";
             ui->checkboxGnss->setChecked(false);
             syncGnssPosCheckbox();
+            showNotice("GNSS не подключён. Нажмите на индикатор GNSS в панели статуса, "
+                       "чтобы найти и подключить приёмник.",
+                       NotificationToast::Error);
             return;
         }
 
@@ -865,7 +892,7 @@ void MainWindow::connectToGnss()
         qDebug() << "MainWindow: Ошибка подключения к GNSS";
         m_gnssEnabled = false;
         ui->checkboxGnss->setChecked(false);
-        QMessageBox::warning(this, "Ошибка", "Не удалось подключиться к GNSS приемнику");
+        showNotice("Не удалось подключиться к GNSS приемнику", NotificationToast::Error);
     }
 
     updateFieldsEditability();
@@ -927,6 +954,7 @@ void MainWindow::onGnssDataReceived(const GNSSData &data)
 
     // Реальные данные получены с датчика.
     m_hasGnssPosition = true;
+    updateMapCoordDisplay("GNSS");
 
     // Свежие данные с датчика перекрыли то, что могло быть введено
     // вручную ранее — жёлтая подсветка ГНСС больше не актуальна.
@@ -1105,7 +1133,7 @@ void MainWindow::configureAmsDatabase()
     int dbPort = 5432;
     QString dbName = "MMK";
     QString dbUser = "postgres";
-    QString dbPassword = "otdel412";
+    QString dbPassword = "123";
 
     qDebug() << "MainWindow: Настройка БД:" << dbName << "на" << dbHost;
 
@@ -1121,8 +1149,7 @@ void MainWindow::configureAmsDatabase()
         qInfo() << "MainWindow: Успешное подключение к БД";
     } else {
         qCritical() << "MainWindow: Ошибка подключения к БД";
-        QMessageBox::warning(this, "Ошибка БД",
-                             "Не удалось подключиться к базе данных. \nПроверьте параметры подключения.");
+        showNotice("Не удалось подключиться к базе данных. Проверьте параметры подключения.", NotificationToast::Error);
     }
 
     if (m_amsHandler){
@@ -1154,8 +1181,7 @@ void MainWindow::onAmsConnectFromSettings()
     } else {
         qDebug() << "MainWindow: Ошибка подключения к АМС";
         sensorSettingsDialog->setAmsConnectionStatus("Ошибка подключения", false);
-        QMessageBox::warning(this, "Ошибка",
-                             "Не удалось подключиться к АМС. Проверьте порт и настройки.");
+        showNotice("Не удалось подключиться к АМС. Проверьте порт и настройки.", NotificationToast::Error);
     }
 }
 
@@ -1405,8 +1431,7 @@ void MainWindow::onAmsDatabaseError(const QString &error)
 {
     qCritical() << "MainWindow: Ошибка БД АМС:" << error;
     statusBar()->showMessage("Ошибка БД АМС: " + error, 10000);
-    QMessageBox::critical(this, "Ошибка базы данных АМС",
-                          "Не удалось записать данные в базу данных:\n" + error);
+    showNotice("Не удалось записать данные АМС в базу данных: " + error, NotificationToast::Error);
 }
 
 void MainWindow::onFunctionalControlClicked()
@@ -1475,10 +1500,10 @@ void MainWindow::onAmsMeasurementCompleted(int recordId)
         qDebug() << "MainWindow: бюллетень Метео-11 не введён — пропускаем сохранение";
     }
 
-    QMessageBox::information(this, "Успех",
-                             QString("Измерение завершено успешно!\n\nID записи в БД: %1\n\n"
-                                     "Результаты сохранеRны и доступны в разделе 'Результаты измерений'.")
-                                 .arg(recordId));
+    showNotice(QString("Измерение завершено успешно! ID записи в БД: %1. "
+                        "Результаты доступны в разделе «Результаты измерений».")
+                   .arg(recordId),
+               NotificationToast::Success);
 
     // Обновляем UI
     ui->lblStatus->setText("ГОТОВ");
@@ -1507,11 +1532,10 @@ void MainWindow::onAmsMeasurementFailed(const QString &reason)
 {
     qWarning() << "MainWindow: Измерение не удалось:" << reason;
 
-    QMessageBox::critical(this, "Ошибка измерения",
-                          QString("Измерение не было завершено:\n\n%1\n\n"
-                                  "Данные о неисправностях сохранены.\n"
-                                  "Откройте 'Функциональный контроль' для просмотра")
-                              .arg(reason));
+    showNotice(QString("Измерение не было завершено: %1. Данные о неисправностях сохранены — "
+                        "откройте «Функциональный контроль» для просмотра.")
+                   .arg(reason),
+               NotificationToast::Error);
 
     // Обновляем UI
     ui->lblStatus->setText("ОШИБКА");
@@ -1524,7 +1548,8 @@ void MainWindow::onAmsMeasurementFailed(const QString &reason)
     // которая сама решит, включать ли btnStart — с учётом связи с АМС.
     // ЗАМЕЧАНИЕ: это перепишет "ОШИБКА" обратно на "ГОТОВ"/"УСТАРЕЛИ"/"НЕТ ДАННЫХ"
     // — то есть индикация ошибки исчезнет с lblStatus. Сообщение об ошибке
-    // оператор уже видел в QMessageBox::critical (выше в этом же методе), а в
+    // оператор уже видел в тосте-уведомлении (showNotice выше в этом же методе,
+    // тост держится несколько секунд и снимается тапом), а в
     // statusBar остаётся "Ошибка измерения АМС: ..." на 10 секунд. Если такое
     // поведение нежелательно — можно эту строку НЕ добавлять, тогда "ОШИБКА"
     // на lblStatus останется до следующего события surfaceStateChanged.
@@ -1595,8 +1620,7 @@ void MainWindow::onAmsNeedIntermediateData(int progress)
             QString("Промежуточные данные отправлены (прогресс %1%)").arg(progress), 3000);
     } else {
         qWarning() << "MainWindow: Не удалось отправить промежуточные данные";
-        QMessageBox::warning(this, "Ошибка",
-                             "Не удалось отправить промежуточные данные в АМС.");
+        showNotice("Не удалось отправить промежуточные данные в АМС.", NotificationToast::Error);
     }
 }
 
@@ -1667,7 +1691,7 @@ void MainWindow::onBinsConnectFromSettings()
     } else {
         qDebug() << "MainWindow: Ошибка подключения к БИНС";
         sensorSettingsDialog->setBinsConnectionStatus("Ошибка подключения", false);
-        QMessageBox::warning(this, "Ошибка", "Не удалось подключиться к БИНС. Проверьте порт или настройки.");
+        showNotice("Не удалось подключиться к БИНС. Проверьте порт или настройки.", NotificationToast::Error);
     }
 }
 
@@ -1789,6 +1813,11 @@ void MainWindow::updateCoordinatesFromMap(double latitude, double longitude)
     // Координаты выбраны на карте — это реальные данные положения (высота
     // от карты не приходит, но широта/долгота — основа "положения").
     m_hasGnssPosition = true;
+    updateMapCoordDisplay("С карты");
+    // Маркер на карте (MapComponent.qml) скрыт, пока оператор не выбрал
+    // точку хотя бы раз — иначе он бы показывал захардкоженные координаты
+    // по умолчанию из QmlCoordinateProxy как будто уже выбранную точку.
+    qcp.setHasSelection(true);
     updateOverallReadiness();
 
     // Передаем сигнал другим окнам
@@ -1897,7 +1926,14 @@ void MainWindow::repositionMapFloatingControls()
     const int gap = 8;
     const int canvasWidth = ui->mapCanvas->width();
 
-    // Строка 1: маркер (выбор координат с карты) + GNSS справа от него
+    // Строка 1 слева: текущие выбранные координаты — подсказка при выборе
+    // точки маркером (см. updateMapCoordDisplay()).
+    if (ui->lblMapCoordDisplay) {
+        ui->lblMapCoordDisplay->adjustSize();
+        ui->lblMapCoordDisplay->move(margin, margin);
+    }
+
+    // Строка 1 справа: маркер (выбор координат с карты) + GNSS справа от него
     const int markerSize = ui->btnMapCoordinates->width();
     const int gnssWidth = ui->checkboxGnss->width();
     const int row1Height = ui->btnMapCoordinates->height();
@@ -1913,9 +1949,37 @@ void MainWindow::repositionMapFloatingControls()
     ui->comboBox_mapTypes->move(canvasWidth - comboWidth - margin, y2);
 
     // Поднимаем плавающие элементы над картой в порядке отрисовки
+    if (ui->lblMapCoordDisplay)
+        ui->lblMapCoordDisplay->raise();
     ui->btnMapCoordinates->raise();
     ui->checkboxGnss->raise();
     ui->comboBox_mapTypes->raise();
+}
+
+// Обновляет текст плавающей подсказки над картой (lblMapCoordDisplay) в
+// соответствии с текущими editLatitude/editLongitude — они уже хранят
+// последнее выбранное значение в отображаемом DMS-формате (см. setCoordField,
+// вызывается и из onGnssDataReceived, и из updateCoordinatesFromMap).
+// m_hasGnssPosition отличает "реальные данные когда-либо получены" от
+// демо-значений полей из Designer (см. комментарий у hasPositionData()).
+void MainWindow::updateMapCoordDisplay(const QString &sourceLabel)
+{
+    if (!ui->lblMapCoordDisplay) return;
+
+    m_lastCoordSourceLabel = sourceLabel;
+
+    if (!m_hasGnssPosition) {
+        ui->lblMapCoordDisplay->setText("Координаты не выбраны");
+    } else {
+        // Источник в подписи — иначе непонятно, какой из двух разных
+        // маркеров на карте (красный пин "с карты" / синяя точка GNSS)
+        // сейчас показывает актуальную точку.
+        ui->lblMapCoordDisplay->setText(
+            sourceLabel + QString(": Ш: %1   Д: %2")
+                .arg(ui->editLatitude->text(), ui->editLongitude->text()));
+    }
+
+    repositionMapFloatingControls();
 }
 
 void MainWindow::onConnectSensorsClicked()
@@ -1925,7 +1989,18 @@ void MainWindow::onConnectSensorsClicked()
     bool binsOk = m_binsHandler && m_binsHandler->isConnected();
     bool iwsOk  = m_iwsDeviceActive;
     if (gnssOk && amsOk && binsOk && iwsOk) {
-        QMessageBox::information(this, "Датчики", "Все датчики подключены.");
+        m_toastTitle->setText("Датчики подключены");
+        m_toastTitle->setStyleSheet("font-weight: bold; font-size: 10pt; color: #1C1F22; border: none; background: transparent;");
+        m_toastPercent->setStyleSheet("font-size: 10pt; font-weight: bold; color: #0F6B4F; border: none; background: transparent;");
+        m_toastProgress->setStyleSheet(
+            "QProgressBar { background-color: #EFF1F1; border: none; border-radius: 3px; }"
+            "QProgressBar::chunk { background-color: #0F6B4F; border-radius: 3px; }"
+            );
+        m_toastText->setText("Все датчики подключены.");
+        m_toastPercent->setText("100%");
+        m_toastProgress->setValue(100);
+        showToast();
+        m_toastHideTimer->start(4000);
         return;
     }
     if (m_autoConnector->isDetecting()) return;
@@ -2047,7 +2122,7 @@ void MainWindow::onConnectRequested()
 {
     if (sensorSettingsDialog->getIwsComPort().isEmpty() ||
         sensorSettingsDialog->getIwsComPort() == "Нет доступных портов") {
-        QMessageBox::warning(this, "Ошибка", "Нет доступных COM-портов");
+        showNotice("Нет доступных COM-портов", NotificationToast::Error);
         return;
     }
 
@@ -2059,9 +2134,8 @@ void MainWindow::onConnectRequested()
                         IWS_PROTOCOL,
                         sensorSettingsDialog->getIwsDeviceAddress(),
                         sensorSettingsDialog->getIwsPollInterval())) {
-        QMessageBox::critical(this, "Ошибка подключения",
-                              QString("Не удалось открыть порт: %1").arg(serialPort->errorString()));
-
+        showNotice(QString("Не удалось открыть порт: %1").arg(serialPort->errorString()),
+                   NotificationToast::Error);
     }
 }
 
@@ -2159,10 +2233,10 @@ void MainWindow::onIwsConnectTimeout()
         // Показываем предупреждение только если AutoConnector уже не работает
         // (чтобы не дублировать сообщение из onAutoConnectorFinished)
         if (!m_autoConnector->isDetecting()) {
-            QMessageBox::warning(this, "ИВС не отвечает",
-                "Не удалось подключить ИВС: устройство не отвечает.\n\n"
-                "Проверьте физическое подключение кабеля и нажмите\n"
-                "«Подключить датчики» для повторной попытки.");
+            showNotice("Не удалось подключить ИВС: устройство не отвечает. "
+                       "Проверьте физическое подключение кабеля и нажмите "
+                       "«Подключить датчики» для повторной попытки.",
+                       NotificationToast::Error);
         }
     }
 }
@@ -2508,7 +2582,10 @@ void MainWindow::onMeasurementResultsClicked()
     }
 
     dialog->adjustSize();
-    dialog->setMinimumSize(800, 600);
+    // Минимум ниже реального экрана планшета (1200x1920 при масштабе 150% —
+    // это 800x1280 логических точек): иначе окно не может сузиться до ширины
+    // экрана и правый край содержимого уезжает за границу.
+    dialog->setMinimumSize(720, 560);
     dialog->showMaximized();
 }
 
@@ -2610,8 +2687,7 @@ void MainWindow::onStartClicked()
     bool success = m_amsHandler->startMeasurementSequence(mode, avgTime, litera, coords, dateTime);
 
     if (!success) {
-        QMessageBox::warning(this, "Ошибка",
-                             "Не удалось запустить измерение АМС. Проверьте подключение.");
+        showNotice("Не удалось запустить измерение АМС. Проверьте подключение.", NotificationToast::Error);
 
         // Возвращаем статус в ГОТОВ
         ui->lblStatus->setText("ГОТОВ");
@@ -2664,8 +2740,7 @@ void MainWindow::onStopClicked()
             if (stopped) {
                 statusBar()->showMessage("Измерение АМС остановлено", 3000);
             } else {
-                QMessageBox::warning(this, "Предупреждение",
-                                     "Не удалось корректно остановить измерение АМС.");
+                showNotice("Не удалось корректно остановить измерение АМС.", NotificationToast::Error);
             }
 
             // Обновляем UI
@@ -2866,9 +2941,22 @@ void MainWindow::connectSensorsFromConfig()
     // GNSS
     QString gnssPort = sensorSettingsDialog->getGnssComPort();
     if (!gnssPort.isEmpty() && gnssPort != "Нет доступных портов") {
-        if (m_gnssHandler->connectToGnss(gnssPort, sensorSettingsDialog->getGnssBaudRate())) {
+        // ВАЖНО: сначала фиксируем порт/скорость в полях класса. Иначе
+        // setChecked(true) ниже синхронно вызовет onGnssCheckboxToggled(),
+        // тот увидит пустой m_gnssComPort, снимет галку и через ветку
+        // disconnectFromGnss() закроет только что открытый порт — связь
+        // рвётся в том же стеке вызовов, до прихода первых данных.
+        m_gnssComPort  = gnssPort;
+        m_gnssBaudRate = sensorSettingsDialog->getGnssBaudRate();
+        if (m_gnssHandler->connectToGnss(m_gnssComPort, m_gnssBaudRate)) {
             m_gnssEnabled = true;
+            checkAndDisableConflictingSources("gnss");
+            // Галку выставляем без сигнала — обработчик toggled уже не нужен,
+            // подключение выполнено выше.
+            ui->checkboxGnss->blockSignals(true);
             ui->checkboxGnss->setChecked(true);
+            ui->checkboxGnss->blockSignals(false);
+            syncGnssPosCheckbox();
         } else { needAutoSearch << "gnss"; }
     } else { needAutoSearch << "gnss"; }
 
@@ -2917,9 +3005,17 @@ void MainWindow::onAutoConnectorDeviceDetected(AutoConnector::DeviceType type, c
     switch (type) {
     case AutoConnector::DEVICE_GNSS:
         if (!m_gnssHandler->isConnected()) {
-            if (m_gnssHandler->connectToGnss(port, baudRate)) {
+            // Порт/скорость — в поля класса до setChecked(true), иначе
+            // onGnssCheckboxToggled() увидит пустой m_gnssComPort и закроет
+            // только что открытый порт (см. connectSensorsFromConfig()).
+            m_gnssComPort  = port;
+            m_gnssBaudRate = baudRate;
+            if (m_gnssHandler->connectToGnss(m_gnssComPort, m_gnssBaudRate)) {
                 m_gnssEnabled = true;
+                checkAndDisableConflictingSources("gnss");
+                ui->checkboxGnss->blockSignals(true);
                 ui->checkboxGnss->setChecked(true);
+                ui->checkboxGnss->blockSignals(false);
                 syncGnssPosCheckbox();
             }
         }
@@ -3041,11 +3137,6 @@ void MainWindow::finalizeAutoConnectorFinished()
             "QProgressBar::chunk { background-color: #C62828; border-radius: 3px }"
         );
         m_toastText->setText("Не подключены: " + failed.join(", "));
-
-        QMessageBox::warning(this, "Не удалось подключить датчики",
-            "Не удалось подключить: " + failed.join(", ") + ".\n\n"
-            "Проверьте физическое подключение кабелей и нажмите\n"
-            "«Подключить датчики» для повторной попытки.");
     } else {
         m_toastTitle->setText("Поиск успешно завершен");
         m_toastText->setText("Все датчики обнаружены и подключены!");
@@ -3640,6 +3731,14 @@ void MainWindow::runPlowSelfTest()
     qInfo() << "════════════════════════════════════════════════════════════";
     qInfo() << "  САМОТЕСТ ЗАВЕРШЁН (фейковые данные)";
     qInfo() << "════════════════════════════════════════════════════════════";
+}
+
+// Разовое уведомление об ошибке/успехе поверх главного окна — тот же
+// плавающий тост, что и на страницах ТО (AngleCheckPage/InspectionPage),
+// пришедший на замену модальным QMessageBox.
+void MainWindow::showNotice(const QString &text, NotificationToast::Kind kind)
+{
+    m_notifyToast->showMessage(text, kind);
 }
 
 // =====================================================

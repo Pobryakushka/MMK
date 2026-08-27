@@ -41,8 +41,12 @@ public:
              double surfaceSpeedMs, double surfaceDirectionDeg);
 
     // Выбор ближайшего (не позже заданного момента) цикла GFS: 00/06/12/18.
-    // Публичный static — пригодится и для UI (показать пользователю,
-    // какой цикл будет запрошен, до нажатия кнопки).
+    // dt может быть в любом timeSpec (переводится в UTC внутри — циклы GFS
+    // всегда в UTC, а sondingTime в остальной программе хранится в
+    // локальном времени машины, см. QDateTime::currentDateTime() в
+    // amshandler.cpp). Публичный static — пригодится и для UI (показать
+    // пользователю, какой цикл будет запрошен, до нажатия кнопки).
+    // Не учитывает задержку публикации на NOMADS — см. selectGfsCycle().
     static QString nearestGfsRunCycle(const QDateTime &dt);
 
 signals:
@@ -63,6 +67,14 @@ private:
 
     void onDownloadFinished(bool success, int exitCode);
     void onMushroomFinished(bool success, const QVector<MushroomMessage> &messages);
+
+    // Ближайший (не позже sondingTime, в UTC) цикл GFS, отступая на
+    // предыдущий цикл, если самый свежий ещё не мог быть опубликован на
+    // NOMADS (задержка публикации ~4 ч после времени цикла, см. .cpp).
+    // В отличие от nearestGfsRunCycle() возвращает сразу и дату, и цикл,
+    // так как при откате назад или при переводе в UTC у полуночи может
+    // измениться и календарная дата, а не только час.
+    static void selectGfsCycle(const QDateTime &sondingTime, QString &outDate, QString &outCycle);
 
     // Каталог, куда grib.sh реально кладёт скачанный файл для текущего
     // запроса (m_date/m_runCycle/m_lat/m_lon) — см. FILES_DIR в

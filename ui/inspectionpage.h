@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include "sensors/amshandler.h"
+#include "ui/notificationtoast.h"
 
 namespace Ui {
 class InspectionPage;
@@ -34,9 +35,10 @@ private slots:
 private:
     Ui::InspectionPage *ui;
     AMSHandler *m_amsHandler;
+    NotificationToast *m_toast;
 
     void setControlsEnabled(bool enabled);
-    void showStatus(const QString &text, bool error = false);
+    void showStatus(const QString &text, NotificationToast::Kind kind = NotificationToast::Info);
     void updateAmsBanner();
 };
 

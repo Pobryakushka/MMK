@@ -25,6 +25,9 @@
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">background-color: #EFF1F1;</string>
+  </property>
   <property name="sizeGripEnabled">
    <bool>false</bool>
   </property>
