@@ -112,6 +112,11 @@ Map {
         anchors.fill: parent
         acceptedButtons: /*Qt.LeftButton | */Qt.RightButton
         onPressed: {
+            // Ставим точку только когда включён режим выбора ("Указать точку").
+            // Иначе клик не трогает маркер — иначе он двигался бы, а координаты
+            // в форме не менялись, что путало оператора.
+            if (!coord.pickingEnabled)
+                return;
             var c = map.toCoordinate(Qt.point(mouseX, mouseY));
             coord.coordinateFrom = c;
         }
@@ -138,6 +143,11 @@ Map {
         id: tapHandler
         acceptedButtons: Qt.LeftButton
         onTapped: {
+            // См. комментарий в MouseArea выше: тап ставит точку только в
+            // активном режиме выбора, в остальное время — обычное
+            // панорамирование/зум карты.
+            if (!coord.pickingEnabled)
+                return;
             var c = map.toCoordinate(tapHandler.point.position);
             coord.coordinateFrom = c;
         }

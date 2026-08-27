@@ -771,6 +771,12 @@ void MainWindow::updateMapCoordinatesButtonStyle()
     if (ui->btnMapCoordinatesPos)
         ui->btnMapCoordinatesPos->setChecked(m_mapCoordinatesEnabled);
 
+    // Пока режим выбора не активен, карта не должна двигать маркер по тапу
+    // (координаты в форме всё равно не обновятся — см. лямбду на
+    // coordinateFromChanged в конструкторе, — а «прыгающий» маркер сбивал
+    // оператора с толку).
+    qcp.setPickingEnabled(m_mapCoordinatesEnabled);
+
     if (m_mapCoordinatesEnabled) {
         ui->btnMapCoordinates->setText("Тапните карту");
         ui->btnMapCoordinates->setStyleSheet(

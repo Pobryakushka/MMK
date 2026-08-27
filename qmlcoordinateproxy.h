@@ -17,6 +17,13 @@ class QmlCoordinateProxy : public QObject
     // маркер на карте (MapComponent.qml) должен оставаться скрытым, чтобы
     // не выглядеть как уже выбранная точка.
     Q_PROPERTY(bool hasSelection READ hasSelection WRITE setHasSelection NOTIFY hasSelectionChanged)
+    // true, пока на странице "Карта" включён режим выбора точки (кнопка
+    // "Указать точку"/"Тапните карту", см. MainWindow::m_mapCoordinatesEnabled).
+    // Карта (MapComponent.qml) ставит/двигает маркер и меняет coordinateFrom
+    // только когда это true — иначе тап по карте лишь панорамирует её, а не
+    // переносит точку "втихую" (координаты в форме всё равно не обновлялись бы,
+    // т.к. в C++ обработчик coordinateFromChanged тоже проверяет этот режим).
+    Q_PROPERTY(bool pickingEnabled READ pickingEnabled WRITE setPickingEnabled NOTIFY pickingEnabledChanged)
     Q_PROPERTY(bool coldZonesVisible READ coldZonesVisible WRITE setColdZonesVisible NOTIFY coldZonesVisibleChanged)
     Q_PROPERTY(bool warmZonesVisible READ warmZonesVisible WRITE setWarmZonesVisible NOTIFY warmZonesVisibleChanged)
     Q_PROPERTY(bool fitView READ fitView WRITE setFitView NOTIFY fitViewChanged)
@@ -38,6 +45,7 @@ class QmlCoordinateProxy : public QObject
     bool m_warmZonesVisible;
     bool m_fitView;
     bool m_hasSelection = false;
+    bool m_pickingEnabled = false;
 
     QString m_searchText;
     QStringList m_searchResult;
@@ -95,6 +103,11 @@ public:
     bool hasSelection() const
     {
         return m_hasSelection;
+    }
+
+    bool pickingEnabled() const
+    {
+        return m_pickingEnabled;
     }
 
     QStringList mapTypes() const
@@ -185,6 +198,15 @@ public slots:
         emit hasSelectionChanged(m_hasSelection);
     }
 
+    void setPickingEnabled(bool pickingEnabled)
+    {
+        if (m_pickingEnabled == pickingEnabled)
+            return;
+
+        m_pickingEnabled = pickingEnabled;
+        emit pickingEnabledChanged(m_pickingEnabled);
+    }
+
     void setMapTypes(const QStringList &types)
     {
         if (m_mapTypes != types){
@@ -215,6 +237,7 @@ signals:
     void coordinateFromChanged(const QGeoCoordinate &coordinateFrom);
     void coordinateToChanged(const QGeoCoordinate &coordinateTo);
     void hasSelectionChanged(bool hasSelection);
+    void pickingEnabledChanged(bool pickingEnabled);
     void mapTypesChanged(const QStringList &types);
     void currentMapTypeChanged(uint index);
     void visibleBoundsChanged();
