@@ -509,6 +509,17 @@ void MainWindow::onOpenPositionPage()
 void MainWindow::onOpenMapPage()
 {
     ui->stackedWidget->setCurrentWidget(ui->page_map);
+
+    // Разовая подсказка про выбор точки — только пока точку ни разу не
+    // выбирали (m_hasGnssPosition отражает это для обоих источников,
+    // см. updateMapCoordDisplay()) и только один раз за сеанс работы, чтобы
+    // не надоедать при каждом заходе на страницу.
+    if (!m_mapCoordHintShown && !m_hasGnssPosition) {
+        m_mapCoordHintShown = true;
+        showNotice("Чтобы выбрать точку на карте: нажмите \"Указать точку\", "
+                   "затем тапните нужное место на карте.",
+                   NotificationToast::Info);
+    }
 }
 
 void MainWindow::onOpenMeasurePage()
@@ -761,11 +772,14 @@ void MainWindow::updateMapCoordinatesButtonStyle()
         ui->btnMapCoordinatesPos->setChecked(m_mapCoordinatesEnabled);
 
     if (m_mapCoordinatesEnabled) {
+        ui->btnMapCoordinates->setText("Тапните карту");
         ui->btnMapCoordinates->setStyleSheet(
             "QPushButton {"
             "   background-color: #0F6B4F;"
             "   border: 2px solid #0B5A41;"
             "   border-radius: 12px;"
+            "   padding: 4px 14px 4px 10px;"
+            "   font-size: 9pt; font-weight: 600; color: #FFFFFF;"
             "}"
             "QPushButton:hover { background-color: #0B5A41; }"
             );
@@ -779,11 +793,14 @@ void MainWindow::updateMapCoordinatesButtonStyle()
                 );
         }
     } else {
+        ui->btnMapCoordinates->setText("Указать точку");
         ui->btnMapCoordinates->setStyleSheet(
             "QPushButton {"
             "   background-color: rgba(255,255,255,235);"
             "   border: none;"
             "   border-radius: 12px;"
+            "   padding: 4px 14px 4px 10px;"
+            "   font-size: 9pt; font-weight: 600; color: #1C1F22;"
             "}"
             "QPushButton:hover { background-color: #f0f0f0; }"
             );
@@ -931,7 +948,7 @@ void MainWindow::onGnssDataReceived(const GNSSData &data)
 
     // Реальные данные получены с датчика.
     m_hasGnssPosition = true;
-    updateMapCoordDisplay();
+    updateMapCoordDisplay("GNSS");
 
     // Свежие данные с датчика перекрыли то, что могло быть введено
     // вручную ранее — жёлтая подсветка ГНСС больше не актуальна.
@@ -1790,7 +1807,7 @@ void MainWindow::updateCoordinatesFromMap(double latitude, double longitude)
     // Координаты выбраны на карте — это реальные данные положения (высота
     // от карты не приходит, но широта/долгота — основа "положения").
     m_hasGnssPosition = true;
-    updateMapCoordDisplay();
+    updateMapCoordDisplay("С карты");
     // Маркер на карте (MapComponent.qml) скрыт, пока оператор не выбрал
     // точку хотя бы раз — иначе он бы показывал захардкоженные координаты
     // по умолчанию из QmlCoordinateProxy как будто уже выбранную точку.
@@ -1939,15 +1956,21 @@ void MainWindow::repositionMapFloatingControls()
 // вызывается и из onGnssDataReceived, и из updateCoordinatesFromMap).
 // m_hasGnssPosition отличает "реальные данные когда-либо получены" от
 // демо-значений полей из Designer (см. комментарий у hasPositionData()).
-void MainWindow::updateMapCoordDisplay()
+void MainWindow::updateMapCoordDisplay(const QString &sourceLabel)
 {
     if (!ui->lblMapCoordDisplay) return;
+
+    m_lastCoordSourceLabel = sourceLabel;
 
     if (!m_hasGnssPosition) {
         ui->lblMapCoordDisplay->setText("Координаты не выбраны");
     } else {
+        // Источник в подписи — иначе непонятно, какой из двух разных
+        // маркеров на карте (красный пин "с карты" / синяя точка GNSS)
+        // сейчас показывает актуальную точку.
         ui->lblMapCoordDisplay->setText(
-            QString("Ш: %1   Д: %2").arg(ui->editLatitude->text(), ui->editLongitude->text()));
+            sourceLabel + QString(": Ш: %1   Д: %2")
+                .arg(ui->editLatitude->text(), ui->editLongitude->text()));
     }
 
     repositionMapFloatingControls();
