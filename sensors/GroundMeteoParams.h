@@ -8,6 +8,7 @@
 #include <QTimer>
 #include <QTableWidget>
 #include <QStyledItemDelegate>
+#include <QPersistentModelIndex>
 
 class QLabel;
 class QPainter;
@@ -36,11 +37,18 @@ public:
     void destroyEditor(QWidget *editor, const QModelIndex &index) const override;
     void paint(QPainter *painter, const QStyleOptionViewItem &option,
                const QModelIndex &index) const override;
+    void updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option,
+                               const QModelIndex &index) const override;
 
 private:
     QTableWidget *m_table;   // нужен, чтобы восстановить ширину колонки "Параметр"
                               // после закрытия редактора (защита от VirtualKeyboard,
                               // который может временно менять геометрию таблицы).
+
+    // Индекс ячейки, для которой сейчас открыт редактор — paint() по нему
+    // пропускает отрисовку текста самого item'а (см. paint()): иначе поверх
+    // редактора на миг/по краю просвечивает прежнее значение ячейки.
+    mutable QPersistentModelIndex m_editingIndex;
 };
 
 class GroundMeteoParams : public QWidget {

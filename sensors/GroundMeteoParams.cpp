@@ -74,6 +74,9 @@ QWidget* GroundParamValueDelegate::createEditor(QWidget *parent, const QStyleOpt
         VirtualKeyboard::attach(editor, VirtualKeyboard::Mode::Numeric, c);
     }
 
+    // Запоминаем, какая ячейка сейчас редактируется — см. paint().
+    m_editingIndex = index;
+
     return editor;
 }
 
@@ -89,13 +92,41 @@ void GroundParamValueDelegate::destroyEditor(QWidget *editor, const QModelIndex 
 {
     if (auto *le = qobject_cast<QLineEdit*>(editor))
         VirtualKeyboard::detach(le);
+    if (m_editingIndex == index)
+        m_editingIndex = QPersistentModelIndex();
     QStyledItemDelegate::destroyEditor(editor, index);
+    // Ячейка снова "закрыта" — её собственный текст опять должен рисоваться
+    // обычным порядком (см. paint()). Таблица маленькая (5 строк) — просто
+    // просим перерисовать весь viewport целиком, не вычисляя rect ячейки.
+    if (m_table)
+        m_table->viewport()->update();
+}
+
+void GroundParamValueDelegate::updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option,
+                                                     const QModelIndex &index) const
+{
+    QStyledItemDelegate::updateEditorGeometry(editor, option, index);
+
+    // Принудительно перерисовываем область ячейки сразу после того, как
+    // редактор занял её геометрию. Без этого при повторном редактировании
+    // уже введённого значения на миг остаётся видна прежняя (закрытая)
+    // отрисовка ячейки узкой полоской из-под нового редактора — старое
+    // значение "просвечивает" слева до следующего перерисовывания.
+    if (m_table)
+        m_table->viewport()->update(option.rect);
 }
 
 void GroundParamValueDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option,
                                       const QModelIndex &index) const
 {
-    QStyledItemDelegate::paint(painter, option, index);
+    // Пока для этой ячейки открыт редактор, он и так полностью лежит поверх
+    // и рисует актуальный текст сам — если вдобавок отрисовать здесь ещё и
+    // ПРЕЖНИЙ текст самого item'а (обычно Qt не должен, но на некоторых
+    // платформах/стилях всё же успевает), у краёв редактора остаётся видна
+    // узкая полоска старого значения из-под нового. Поэтому во время
+    // редактирования текст item'а просто не рисуем.
+    if (index != m_editingIndex)
+        QStyledItemDelegate::paint(painter, option, index);
 
     if (index.data(GroundMeteoParams::kInvalidRole).toBool()) {
         painter->save();
@@ -144,6 +175,14 @@ GroundMeteoParams::GroundMeteoParams(QWidget *parent)
             table->setItem(row, 1, item);
         }
         item->setFlags(item->flags() | Qt::ItemIsEditable);
+
+        // Выравнивание по правому краю — как у редактора (см.
+        // GroundParamValueDelegate::createEditor). Без этого сохранённое
+        // значение в закрытой ячейке рисуется слева, а во время повторного
+        // редактирования — справа (выравнивание редактора), и на некоторых
+        // платформах старое значение на миг остаётся видно слева под новым
+        // редактором, пока тот не перерисуется поверх.
+        item->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
     }
 
     // Колонка "Параметр" — фиксированная ширина (не должна "плавать" при
