@@ -527,6 +527,11 @@ private:
     double getCoordField(QLineEdit *edit, bool &ok) const;
     void onCoordTextEdited(QLineEdit *edit);
 
+    // Плавающая подсказка над картой (lblMapCoordDisplay) — текущие выбранные
+    // координаты (последний тап по карте или GNSS-фиксация), чтобы было видно,
+    // какую точку выбираешь маркером, не переключаясь на страницу "Положение".
+    void updateMapCoordDisplay();
+
     // АМС методы
     void setupAmsHandler();
     void configureAmsDatabase();

@@ -928,6 +928,7 @@ void MainWindow::onGnssDataReceived(const GNSSData &data)
 
     // Реальные данные получены с датчика.
     m_hasGnssPosition = true;
+    updateMapCoordDisplay();
 
     // Свежие данные с датчика перекрыли то, что могло быть введено
     // вручную ранее — жёлтая подсветка ГНСС больше не актуальна.
@@ -1786,6 +1787,7 @@ void MainWindow::updateCoordinatesFromMap(double latitude, double longitude)
     // Координаты выбраны на карте — это реальные данные положения (высота
     // от карты не приходит, но широта/долгота — основа "положения").
     m_hasGnssPosition = true;
+    updateMapCoordDisplay();
     updateOverallReadiness();
 
     // Передаем сигнал другим окнам
@@ -1894,7 +1896,14 @@ void MainWindow::repositionMapFloatingControls()
     const int gap = 8;
     const int canvasWidth = ui->mapCanvas->width();
 
-    // Строка 1: маркер (выбор координат с карты) + GNSS справа от него
+    // Строка 1 слева: текущие выбранные координаты — подсказка при выборе
+    // точки маркером (см. updateMapCoordDisplay()).
+    if (ui->lblMapCoordDisplay) {
+        ui->lblMapCoordDisplay->adjustSize();
+        ui->lblMapCoordDisplay->move(margin, margin);
+    }
+
+    // Строка 1 справа: маркер (выбор координат с карты) + GNSS справа от него
     const int markerSize = ui->btnMapCoordinates->width();
     const int gnssWidth = ui->checkboxGnss->width();
     const int row1Height = ui->btnMapCoordinates->height();
@@ -1910,9 +1919,31 @@ void MainWindow::repositionMapFloatingControls()
     ui->comboBox_mapTypes->move(canvasWidth - comboWidth - margin, y2);
 
     // Поднимаем плавающие элементы над картой в порядке отрисовки
+    if (ui->lblMapCoordDisplay)
+        ui->lblMapCoordDisplay->raise();
     ui->btnMapCoordinates->raise();
     ui->checkboxGnss->raise();
     ui->comboBox_mapTypes->raise();
+}
+
+// Обновляет текст плавающей подсказки над картой (lblMapCoordDisplay) в
+// соответствии с текущими editLatitude/editLongitude — они уже хранят
+// последнее выбранное значение в отображаемом DMS-формате (см. setCoordField,
+// вызывается и из onGnssDataReceived, и из updateCoordinatesFromMap).
+// m_hasGnssPosition отличает "реальные данные когда-либо получены" от
+// демо-значений полей из Designer (см. комментарий у hasPositionData()).
+void MainWindow::updateMapCoordDisplay()
+{
+    if (!ui->lblMapCoordDisplay) return;
+
+    if (!m_hasGnssPosition) {
+        ui->lblMapCoordDisplay->setText("Координаты не выбраны");
+    } else {
+        ui->lblMapCoordDisplay->setText(
+            QString("Ш: %1   Д: %2").arg(ui->editLatitude->text(), ui->editLongitude->text()));
+    }
+
+    repositionMapFloatingControls();
 }
 
 void MainWindow::onConnectSensorsClicked()
