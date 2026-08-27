@@ -825,9 +825,12 @@ void MainWindow::onGnssCheckboxToggled(bool checked)
 {
     if (checked) {
         if (m_gnssComPort.isEmpty()) {
-            qDebug() << "MainWindow: COM-порт не настроен, открываем настройки...";
+            qDebug() << "MainWindow: COM-порт не настроен, подключение через индикатор GNSS...";
             ui->checkboxGnss->setChecked(false);
             syncGnssPosCheckbox();
+            showNotice("GNSS не подключён. Нажмите на индикатор GNSS в панели статуса, "
+                       "чтобы найти и подключить приёмник.",
+                       NotificationToast::Error);
             return;
         }
 
