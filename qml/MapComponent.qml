@@ -179,6 +179,13 @@ Map {
     MapQuickItem {
         id: marker
         z: 2
+        // Пока точка не выбрана оператором (coord.hasSelection == false),
+        // coordinateFrom содержит захардкоженное значение по умолчанию
+        // (см. конструктор QmlCoordinateProxy) — показывать маркер там не
+        // нужно, это будет выглядеть как уже выбранная точка. Прячем через
+        // opacity (не visible), чтобы появление было плавным, а не резким.
+        opacity: coord.hasSelection ? 1 : 0
+        Behavior on opacity {NumberAnimation {duration: 200}}
         anchorPoint.x: markerImage.width/2 * markerImage.scale
         anchorPoint.y: markerImage.height * markerImage.scale
         coordinate: coord.coordinateFrom

@@ -11,6 +11,12 @@ class QmlCoordinateProxy : public QObject
 
     Q_PROPERTY(QGeoCoordinate coordinateFrom READ coordinateFrom WRITE setCoordinateFrom NOTIFY coordinateFromChanged)
     Q_PROPERTY(QGeoCoordinate coordinateTo READ coordinateTo WRITE setCoordinateTo NOTIFY coordinateToChanged)
+    // true, как только оператор реально выбрал точку на карте (см.
+    // MainWindow::updateCoordinatesFromMap) — до этого coordinateFrom
+    // содержит захардкоженное значение по умолчанию (см. конструктор), и
+    // маркер на карте (MapComponent.qml) должен оставаться скрытым, чтобы
+    // не выглядеть как уже выбранная точка.
+    Q_PROPERTY(bool hasSelection READ hasSelection WRITE setHasSelection NOTIFY hasSelectionChanged)
     Q_PROPERTY(bool coldZonesVisible READ coldZonesVisible WRITE setColdZonesVisible NOTIFY coldZonesVisibleChanged)
     Q_PROPERTY(bool warmZonesVisible READ warmZonesVisible WRITE setWarmZonesVisible NOTIFY warmZonesVisibleChanged)
     Q_PROPERTY(bool fitView READ fitView WRITE setFitView NOTIFY fitViewChanged)
@@ -31,6 +37,7 @@ class QmlCoordinateProxy : public QObject
     bool m_coldZonesVisible;
     bool m_warmZonesVisible;
     bool m_fitView;
+    bool m_hasSelection = false;
 
     QString m_searchText;
     QStringList m_searchResult;
@@ -83,6 +90,11 @@ public:
     QGeoCoordinate coordinateTo() const
     {
         return m_coordinateTo;
+    }
+
+    bool hasSelection() const
+    {
+        return m_hasSelection;
     }
 
     QStringList mapTypes() const
@@ -164,6 +176,15 @@ public slots:
         emit coordinateToChanged(m_coordinateTo);
     }
 
+    void setHasSelection(bool hasSelection)
+    {
+        if (m_hasSelection == hasSelection)
+            return;
+
+        m_hasSelection = hasSelection;
+        emit hasSelectionChanged(m_hasSelection);
+    }
+
     void setMapTypes(const QStringList &types)
     {
         if (m_mapTypes != types){
@@ -193,6 +214,7 @@ signals:
     void searchResultChanged(const QStringList &searchResult);
     void coordinateFromChanged(const QGeoCoordinate &coordinateFrom);
     void coordinateToChanged(const QGeoCoordinate &coordinateTo);
+    void hasSelectionChanged(bool hasSelection);
     void mapTypesChanged(const QStringList &types);
     void currentMapTypeChanged(uint index);
     void visibleBoundsChanged();

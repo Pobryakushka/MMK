@@ -1791,6 +1791,10 @@ void MainWindow::updateCoordinatesFromMap(double latitude, double longitude)
     // от карты не приходит, но широта/долгота — основа "положения").
     m_hasGnssPosition = true;
     updateMapCoordDisplay();
+    // Маркер на карте (MapComponent.qml) скрыт, пока оператор не выбрал
+    // точку хотя бы раз — иначе он бы показывал захардкоженные координаты
+    // по умолчанию из QmlCoordinateProxy как будто уже выбранную точку.
+    qcp.setHasSelection(true);
     updateOverallReadiness();
 
     // Передаем сигнал другим окнам
