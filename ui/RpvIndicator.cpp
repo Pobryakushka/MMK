@@ -2,6 +2,11 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QtMath>
+#include <cmath>
+
+// Внутренняя граница кольца крупных рисок (доля радиуса). Подписи градусов
+// размещаются строго внутри неё — см. paintEvent().
+static constexpr double kTickInnerMajor = 0.90;
 
 RpvIndicator::RpvIndicator(QWidget *parent)
     : QWidget(parent)
@@ -45,11 +50,14 @@ void RpvIndicator::paintEvent(QPaintEvent *)
     p.drawEllipse(dialRect);
 
     // ── Риски: каждые 10°, крупные каждые 30° ───────────────────────────
+    // kTickInnerMajor — внутренняя граница кольца рисок. От неё же считается
+    // радиус подписей ниже, поэтому значение вынесено в константу: подписи и
+    // риски не должны пересекаться ни при каком размере виджета.
     for (int deg = 0; deg < 360; deg += 10) {
         const bool   major = (deg % 30 == 0);
         const double a     = qDegreesToRadians(deg - 90.0); // 0° вверх
         const double rOut  = rad;
-        const double rIn   = major ? rad * 0.83 : rad * 0.90;
+        const double rIn   = major ? rad * kTickInnerMajor : rad * 0.945;
         p.setPen(QPen(major ? QColor(0x9A, 0xA0, 0xA3) : QColor(0xC7, 0xCB, 0xCC),
                       major ? 1.6 : 1.0));
         p.drawLine(QLineF(cx + rIn  * qCos(a), cy + rIn  * qSin(a),
@@ -58,28 +66,59 @@ void RpvIndicator::paintEvent(QPaintEvent *)
 
     // ── Подписи градусов каждые 30°, крупнее на 0/90/180/270 ────────────
     {
-        // Радиус подписей — внутри крупных рисок (те идут от rad*0.83 к rad),
-        // но как можно ближе к ним: чем больше радиус, тем длиннее дуга между
-        // соседними подписями и тем меньше они мешают друг другу.
-        const double rLabel = rad * 0.74;
+        // ПИКСЕЛЬНЫЙ размер, а не пунктовый. side — размер виджета в
+        // логических пикселях, и раньше доля от него подставлялась в
+        // setPointSizeF: пункты Qt переводит в пиксели ещё раз, через DPI
+        // экрана. На планшете (масштаб 150%) подписи из-за этого росли
+        // дважды, а сам циферблат — один раз. В пикселях текст масштабируется
+        // ровно как риски и стрелка.
+        QFont fMinor = p.font();
+        fMinor.setPixelSize(qMax(8, qRound(side * 0.052)));
+        fMinor.setBold(false);
+        QFont fMajor = p.font();
+        fMajor.setPixelSize(qMax(9, qRound(side * 0.068)));
+        fMajor.setBold(true);
+        const QFontMetricsF fmMinor(fMinor), fmMajor(fMajor);
+
+        // Радиус подписей считается ОТ ФАКТИЧЕСКОГО размера текста, а не
+        // фиксированной долей радиуса. Раньше подписи стояли на rad*0.74 и
+        // при любом размере виджета задевали кольцо рисок.
+        //
+        // Насколько подпись выступает наружу по радиусу, зависит от того, под
+        // каким углом она стоит: у верхней/нижней это половина высоты, у
+        // боковых — половина ширины, у диагональных — промежуточное значение.
+        // Берём это точно (опорная функция прямоугольника), а не по половине
+        // диагонали: иначе оценка завышена и подписи уезжают к центру, где
+        // начинают наползать уже друг на друга.
+        auto radialExtent = [](const QSizeF &sz, double a) {
+            return 0.5 * (sz.width() * qFabs(qCos(a)) + sz.height() * qFabs(qSin(a)));
+        };
+
+        double outward = 0.0, wCardinal = 0.0, wMinor = 0.0;
         for (int deg = 0; deg < 360; deg += 30) {
-            const bool   cardinal = (deg % 90 == 0);
-            QFont f = p.font();
-            // ПИКСЕЛЬНЫЙ размер, а не пунктовый. side — размер виджета в
-            // логических пикселях, и раньше доля от него подставлялась в
-            // setPointSizeF: пункты Qt переводит в пиксели ещё раз, через DPI
-            // экрана. На планшете (масштаб 150%) подписи из-за этого росли
-            // дважды, а сам циферблат — один раз, и числа наползали друг на
-            // друга. В пикселях текст масштабируется ровно как риски и стрелка.
-            f.setPixelSize(qMax(8, qRound(side * (cardinal ? 0.075 : 0.062))));
-            f.setBold(cardinal);
-            p.setFont(f);
+            const bool cardinal = (deg % 90 == 0);
+            const QSizeF sz = (cardinal ? fmMajor : fmMinor).size(0, QString::number(deg));
+            outward = qMax(outward, radialExtent(sz, qDegreesToRadians(deg - 90.0)));
+            (cardinal ? wCardinal : wMinor) = qMax(cardinal ? wCardinal : wMinor, sz.width());
+        }
+        const double gap    = rad * 0.05;
+        const double rLabel = qMax(rad * 0.35, rad * kTickInnerMajor - gap - outward);
+
+        // Страховка: если двенадцати подписям всё же не хватает места по дуге
+        // (очень маленький виджет, крупный системный шрифт), показываем только
+        // основные направления 0/90/180/270 — читаемая шкала вместо каши.
+        const double arcPerLabel = 2.0 * M_PI * rLabel / 12.0;
+        const double needed     = (wCardinal + wMinor) / 2.0 + rad * 0.04;
+        const int    labelStep  = (arcPerLabel >= needed) ? 30 : 90;
+
+        for (int deg = 0; deg < 360; deg += labelStep) {
+            const bool cardinal = (deg % 90 == 0);
+            p.setFont(cardinal ? fMajor : fMinor);
             p.setPen(cardinal ? QColor(0x5B, 0x62, 0x66) : QColor(0x8A, 0x90, 0x94));
 
             const double a = qDegreesToRadians(deg - 90.0);
             const QString txt = QString::number(deg);
-            QFontMetricsF fm(f);
-            const QSizeF sz = fm.size(0, txt);
+            const QSizeF sz = (cardinal ? fmMajor : fmMinor).size(0, txt);
             p.drawText(QRectF(cx + rLabel * qCos(a) - sz.width() / 2,
                               cy + rLabel * qSin(a) - sz.height() / 2,
                               sz.width(), sz.height()),
@@ -98,8 +137,10 @@ void RpvIndicator::paintEvent(QPaintEvent *)
     const double tailY  = cy - tailR * qSin(needleAngle);
 
     const double perpA  = needleAngle + M_PI / 2.0;
-    const double hw     = rad * 0.075; // полуширина наконечника
-    const double hbLen  = rad * 0.16;  // длина основания треугольника
+    // Наконечник узкий и вытянутый: широкий и короткий перекрывал подписи
+    // на циферблате и читался как пятно, а не как стрелка.
+    const double hw     = rad * 0.052; // полуширина наконечника
+    const double hbLen  = rad * 0.24;  // длина основания треугольника
 
     QPainterPath arrow;
     arrow.moveTo(tipX, tipY);
@@ -116,7 +157,10 @@ void RpvIndicator::paintEvent(QPaintEvent *)
     p.setBrush(needleColor);
     p.drawPath(arrow);
 
-    p.setPen(QPen(needleColor, 2.0));
+    // Толщина хвоста — долей радиуса: при фиксированных 2 px на крупном
+    // циферблате широкий наконечник и волосяной хвост выглядели как две
+    // разные фигуры.
+    p.setPen(QPen(needleColor, qMax(2.0, rad * 0.028)));
     p.drawLine(QLineF(tailX, tailY,
                       tipX - hbLen * qCos(needleAngle),
                       tipY - hbLen * qSin(needleAngle)));
