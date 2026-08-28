@@ -105,7 +105,12 @@ MainWindow::MainWindow(QWidget *parent)
     // окну: остальные страницы (плитки главного экрана, карта, измерение)
     // сохраняют прежний вид. Роли виджетов помечаем свойствами ДО вызова
     // темы — QSS-селекторы [card]/[toggle]/… должны сработать сразу.
-    ui->btnBackFromPosition->setProperty("nav", true);
+    // Кнопки «Назад» — через общий помощник: одинаковые место, размер и
+    // подсветка на всех экранах, включая ещё не переведённые «Карту» и
+    // «Пуск измерений».
+    setupArchiveBackButton(ui->btnBackFromPosition);
+    setupArchiveBackButton(ui->btnBackFromMap);
+    setupArchiveBackButton(ui->btnBackFromMeasure);
     ui->btnManualInput->setProperty("primary", true);
     ui->gnssPositionCard->setProperty("card", true);
     ui->binsOrientationCard->setProperty("card", true);
