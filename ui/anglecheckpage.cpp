@@ -16,7 +16,7 @@ AngleCheckPage::AngleCheckPage(AMSHandler *amsHandler, QWidget *parent)
     // Вид экрана в стиле «Архива измерений» (фон, поля, кнопки,
     // группы). Роли кнопок помечаем ДО темы — селекторы [primary]/[nav]
     // должны сработать сразу при первой полировке стиля.
-    ui->btnBackFromAngleCheck->setProperty("nav", true);
+    setupArchiveBackButton(ui->btnBackFromAngleCheck);
     ui->btnStart->setProperty("primary", true);
     applyArchiveScreenTheme(this);
 

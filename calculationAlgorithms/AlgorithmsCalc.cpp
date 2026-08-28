@@ -12,7 +12,7 @@ AlgorithmsCalculation::AlgorithmsCalculation(QWidget *parent)
     // Вид экрана в стиле «Архива измерений» (фон, поля, кнопки,
     // группы). Роли кнопок помечаем ДО темы — селекторы [primary]/[nav]
     // должны сработать сразу при первой полировке стиля.
-    ui->btnAlgBack->setProperty("nav", true);
+    setupArchiveBackButton(ui->btnAlgBack);
     applyArchiveScreenTheme(this);
 
     connect(ui->btnAlgBack, &QPushButton::clicked, this, [this](){

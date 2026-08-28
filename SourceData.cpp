@@ -136,7 +136,7 @@ SourceData::SourceData(QWidget *parent)
 
     // Вид экрана в стиле «Архива измерений» (фон, кнопки, поля). Роль
     // кнопки помечаем ДО применения темы — селектор [nav] сработает сразу.
-    ui->btnSourceDataBack->setProperty("nav", true);
+    setupArchiveBackButton(ui->btnSourceDataBack);
     applyArchiveScreenTheme(this);
 
     ui->rowMeteo11->setTitle(QString::fromUtf8("Бюллетень «Метео-11»"));

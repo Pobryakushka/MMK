@@ -32,7 +32,7 @@ Meteo11::Meteo11(QWidget *parent)
     // Вид экрана в стиле «Архива измерений». Роли кнопок помечаем свойствами
     // ДО применения темы, чтобы селекторы [primary]/[nav] сразу сработали.
     ui->btnMet11Apply->setProperty("primary", true);
-    ui->btnMet11Back->setProperty("nav", true);
+    setupArchiveBackButton(ui->btnMet11Back);
     applyArchiveScreenTheme(this);
 
     // Настраиваем таблицу: 3 колонки — ПП, НН, СС

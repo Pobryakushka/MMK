@@ -16,8 +16,8 @@ LandingCalculation::LandingCalculation(QWidget *parent) :
     // Вид экрана в стиле «Архива измерений» (фон, поля, кнопки,
     // группы). Роли кнопок помечаем ДО темы — селекторы [primary]/[nav]
     // должны сработать сразу при первой полировке стиля.
-    ui->btnLandingBack->setProperty("nav", true);
-    ui->btnEditClose->setProperty("nav", true);
+    setupArchiveBackButton(ui->btnLandingBack);
+    setupArchiveBackButton(ui->btnEditClose);
     ui->btnCalculate->setProperty("primary", true);
     ui->btnPasswordSubmit->setProperty("primary", true);
     ui->btnTableApply->setProperty("primary", true);

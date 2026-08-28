@@ -1374,7 +1374,7 @@ void GroundMeteoParams::applyVisualStyle()
     // Роли кнопок помечаем ДО темы — селекторы [primary]/[nav] сработают сразу.
     // Вид таблицы приходит отдельно, из стиля приложения ui/table-theme.qss.
     ui->btnGroundParamsApply->setProperty("primary", true);
-    ui->btnGroundParamsClose->setProperty("nav", true);
+    setupArchiveBackButton(ui->btnGroundParamsClose);
     applyArchiveScreenTheme(this);
 
     // Дописываем правила, специфичные только для этого экрана. Дописывать
