@@ -9,6 +9,7 @@
 #include "MeasurementResults.h"
 #include "sensors/GroundMeteoParams.h"
 #include "VirtualKeyboard.h"
+#include "ScreenTheme.h"
 #include "calculationAlgorithms/LandingCalculation.h"
 #include "sensors/amshandler.h"
 #include "databasemanager.h"
@@ -98,6 +99,28 @@ MainWindow::MainWindow(QWidget *parent)
     //    setupGnssSettingsButton();
 
     updateMapCoordinatesButtonStyle();
+
+    // ── Страница «Положение метеокомплекса» в стиле «Архива измерений» ──
+    // Тема применяется точечно к самой странице, а не ко всему главному
+    // окну: остальные страницы (плитки главного экрана, карта, измерение)
+    // сохраняют прежний вид. Роли виджетов помечаем свойствами ДО вызова
+    // темы — QSS-селекторы [card]/[toggle]/… должны сработать сразу.
+    ui->btnBackFromPosition->setProperty("nav", true);
+    ui->btnManualInput->setProperty("primary", true);
+    ui->gnssPositionCard->setProperty("card", true);
+    ui->binsOrientationCard->setProperty("card", true);
+    ui->lblGnssCardTitle->setProperty("cardTitle", true);
+    ui->lblBinsCardTitle->setProperty("cardTitle", true);
+    // Кнопка «Карта» и чекбокс «ГНСС-датчик» — переключатели источника
+    // координат: включённый заливается зелёным (см. [toggle] в теме).
+    ui->btnMapCoordinatesPos->setProperty("toggle", true);
+    ui->checkboxGnssPos->setProperty("toggle", true);
+    for (QLabel *cap : { ui->lblLatitudeLabel,  ui->lblLatitudeType,
+                         ui->lblLongitudeLabel, ui->lblLongitudeType,
+                         ui->lblAltitudeLabel,  ui->lblDirectionAngleLabel,
+                         ui->lblRollAngleLabel, ui->lblPitchAngleLabel })
+        cap->setProperty("caption", true);
+    applyArchiveScreenTheme(ui->page_position);
 
     // Навигация лаунчера (главный экран -> страницы -> назад)
     ui->stackedWidget->setCurrentWidget(ui->page_home);
@@ -768,6 +791,10 @@ void MainWindow::updateMapCoordinatesButtonStyle()
     ui->btnMapCoordinates->setIcon(markerIcon);
     ui->btnMapCoordinates->setIconSize(QSize(20, 20));
     ui->btnMapCoordinates->setChecked(m_mapCoordinatesEnabled);
+    // Чипу на странице "Положение" достаточно setChecked: его вид (белый /
+    // залитый зелёным) целиком описан ролью [toggle] в ui/screen-theme.qss,
+    // селектором :checked. Точечный setStyleSheet здесь раньше перебивал эту
+    // стилизацию — и оформление жило прямо в коде обработчика.
     if (ui->btnMapCoordinatesPos)
         ui->btnMapCoordinatesPos->setChecked(m_mapCoordinatesEnabled);
 
@@ -790,14 +817,6 @@ void MainWindow::updateMapCoordinatesButtonStyle()
             "QPushButton:hover { background-color: #0B5A41; }"
             );
         ui->btnMapCoordinates->setToolTip("Режим координат с карты активен — тапните точку на карте");
-        if (ui->btnMapCoordinatesPos) {
-            ui->btnMapCoordinatesPos->setStyleSheet(
-                "QPushButton {"
-                "   background-color: #0F6B4F; color: #FFFFFF; border: 1px solid #0F6B4F;"
-                "   border-radius: 8px; font-size: 9pt; font-weight: 700; padding: 6px 12px;"
-                "}"
-                );
-        }
     } else {
         ui->btnMapCoordinates->setText("Указать точку");
         ui->btnMapCoordinates->setStyleSheet(
@@ -811,14 +830,6 @@ void MainWindow::updateMapCoordinatesButtonStyle()
             "QPushButton:hover { background-color: #f0f0f0; }"
             );
         ui->btnMapCoordinates->setToolTip("Использовать координаты с карты (нажмите, затем тапните точку на карте)");
-        if (ui->btnMapCoordinatesPos) {
-            ui->btnMapCoordinatesPos->setStyleSheet(
-                "QPushButton {"
-                "   background-color: #FFFFFF; color: #1C1F22; border: 1px solid #DDE1E3;"
-                "   border-radius: 8px; font-size: 9pt; font-weight: 700; padding: 6px 12px;"
-                "}"
-                );
-        }
     }
 }
 
