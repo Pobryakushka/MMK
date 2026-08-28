@@ -1,6 +1,7 @@
 #include "GroundMeteoParams.h"
 #include "ui_GroundMeteoParams.h"
 #include "VirtualKeyboard.h"
+#include "ui/ScreenTheme.h"
 #include <QDebug>
 #include <QtMath>
 #include <algorithm>
@@ -11,7 +12,6 @@
 #include <QPropertyAnimation>
 #include <QHeaderView>
 #include <QPointer>
-#include <QScrollBar>
 
 GroundMeteoParams* GroundMeteoParams::s_instance = nullptr;
 
@@ -40,22 +40,18 @@ GroundParamValueDelegate::GroundParamValueDelegate(QTableWidget *table, QObject 
     : QStyledItemDelegate(parent)
     , m_table(table)
 {
-    // Защита от "сдвига" колонки "Параметр": какой бы код (VirtualKeyboard
-    // или сам делегат) ни поменял геометрию таблицы во время редактирования
-    // ячейки, после закрытия редактора мы всегда возвращаем колонку 0
-    // к фиксированной ширине.
-    connect(this, &QAbstractItemDelegate::closeEditor, this, [this]() {
-        if (!m_table) return;
-        m_table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
-        m_table->setColumnWidth(0, kGroundParamColumnWidth);
-    });
 }
 
 QWidget* GroundParamValueDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &option,
                                                  const QModelIndex &index) const
 {
     auto *editor = new QLineEdit(parent);
-    editor->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    // Выравнивание по левому краю: вводимый текст растёт вправо, внутрь ячейки,
+    // а не прижимается к правой границе таблицы (на узком экране планшета
+    // правое выравнивание выталкивало значение за границу). Выравнивание
+    // редактора и закрытой ячейки обязано совпадать — см. конструктор
+    // GroundMeteoParams, где то же выравнивание ставится самим item'ам.
+    editor->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     editor->setFont(option.font);
 
     editor->setAutoFillBackground(true);
@@ -176,32 +172,29 @@ GroundMeteoParams::GroundMeteoParams(QWidget *parent)
         }
         item->setFlags(item->flags() | Qt::ItemIsEditable);
 
-        // Выравнивание по правому краю — как у редактора (см.
-        // GroundParamValueDelegate::createEditor). Без этого сохранённое
-        // значение в закрытой ячейке рисуется слева, а во время повторного
-        // редактирования — справа (выравнивание редактора), и на некоторых
-        // платформах старое значение на миг остаётся видно слева под новым
-        // редактором, пока тот не перерисуется поверх.
-        item->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        // Выравнивание по левому краю — обязательно ТАКОЕ ЖЕ, как у редактора
+        // (см. GroundParamValueDelegate::createEditor). Если выравнивание
+        // ячейки и редактора расходятся, на некоторых платформах старое
+        // значение на миг остаётся видно из-под нового редактора, пока тот не
+        // перерисуется поверх. По правому краю не выравниваем: на узком экране
+        // планшета значение прижималось к правой границе таблицы и выходило
+        // за неё.
+        item->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     }
 
-    // Колонка "Параметр" — фиксированная ширина (не должна "плавать" при
-    // открытии/закрытии редактора ячейки или появлении экранной клавиатуры).
-    // Колонка "Значение" тянется на всё оставшееся место.
-    table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
-    table->setColumnWidth(0, kGroundParamColumnWidth);
-    table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
-
-    // Защита от "сдвига подписей влево": horizontalScrollBarPolicy=AlwaysOff
-    // прячет полосу прокрутки, но НЕ отключает саму прокрутку — Qt может
-    // молча сдвинуть viewport по горизонтали при открытии редактора ячейки
-    // (например, вызовом внутреннего scrollTo()), и вернуть обратно после
-    // некому, т.к. полоса скрыта. Поэтому любое такое смещение немедленно
-    // обнуляем сами.
-    connect(table->horizontalScrollBar(), &QScrollBar::valueChanged, table,
-            [table](int value) {
-                if (value != 0) table->horizontalScrollBar()->setValue(0);
-            });
+    // Ширину колонок раскладывает сам QHeaderView, без абсолютных пикселей:
+    //   "Параметр" — ResizeToContents: ровно под текст подписей;
+    //   "Значение" — Stretch: занимает всё оставшееся место.
+    // Так таблица одинаково корректно раскладывается и на широком экране
+    // ноутбука, и на узком экране планшета при любом системном масштабе.
+    // Оба режима пересчитываются от ширины viewport на каждом проходе
+    // раскладки и не хранят "пользовательской" ширины секции — поэтому
+    // "сдвинуть" колонку и оставить так делегат или экранная клавиатура
+    // не могут в принципе, и сумма ширин колонок всегда равна ширине
+    // viewport (горизонтальной прокрутке взяться неоткуда).
+    QHeaderView *hHeader = table->horizontalHeader();
+    hHeader->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    hHeader->setSectionResizeMode(1, QHeaderView::Stretch);
 
     // Валидированный редактор + автопривязка экранной клавиатуры для ячеек
     // столбца "Значение" (см. GroundParamValueDelegate выше).
@@ -1377,31 +1370,19 @@ void GroundMeteoParams::shakeWidget(QWidget *w)
 
 void GroundMeteoParams::applyVisualStyle()
 {
-    setStyleSheet(
-        "QWidget#GroundMeteoParams { background:#EFF1F1; }"
-        "QGroupBox { background:transparent; }"
-        "QLabel#lblGroundParams { color:#1C1F22; }"
-        "QTableWidget#tableWidget_GroundParams {"
-        "  background:#FFFFFF; border:1px solid #DDE1E3; border-radius:12px;"
-        "  gridline-color:#F0F1F2; font-size:11pt;"
-        "}"
-        "QTableWidget#tableWidget_GroundParams::item { padding:6px 10px; }"
-        "QHeaderView::section {"
-        "  background:#F5F6F6; color:#6B7278; border:none; border-bottom:1px solid #DDE1E3;"
-        "  padding:8px 10px; font-weight:600;"
-        "}"
-        "QPushButton#btnGroundParamsApply {"
-        "  background:#0F6B4F; color:#FFFFFF; border:none; border-radius:10px;"
-        "  padding:0 22px; font-weight:700;"
-        "}"
-        "QPushButton#btnGroundParamsApply:pressed { background:#0B5A41; }"
-        "QPushButton#btnGroundParamsClear, QPushButton#btnGroundParamsClose {"
-        "  background:#FFFFFF; color:#1C1F22; border:1px solid #DDE1E3; border-radius:10px;"
-        "  padding:0 20px; font-weight:700;"
-        "}"
-        "QPushButton#btnGroundParamsClear:pressed, QPushButton#btnGroundParamsClose:pressed {"
-        "  background:#F0F1F2;"
-        "}"
+    // Общий вид экрана («Архив измерений»): фон, поля, кнопки, группы.
+    // Роли кнопок помечаем ДО темы — селекторы [primary]/[nav] сработают сразу.
+    // Вид таблицы приходит отдельно, из стиля приложения ui/table-theme.qss.
+    ui->btnGroundParamsApply->setProperty("primary", true);
+    ui->btnGroundParamsClose->setProperty("nav", true);
+    applyArchiveScreenTheme(this);
+
+    // Дописываем правила, специфичные только для этого экрана. Дописывать
+    // МОЖНО: общая тема состоит из полноценных правил, и Qt разбирает
+    // объединённый стилшит целиком (ломает разбор только голое объявление
+    // в начале — см. ui/ScreenTheme.h).
+    setStyleSheet(styleSheet() +
+        "QLabel#lblGroundParams { color:#1B211F; }"
         "QLabel#lblStatusPill { border-radius:14px; padding:6px 18px; font-weight:700; font-size:9.5pt; }"
     );
 }

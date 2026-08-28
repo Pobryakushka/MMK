@@ -1,0 +1,276 @@
+/* ─────────────────────────────────────────────────────────────────────────
+ * Вид экрана в стиле «Архива измерений» — фон, группы-карточки, поля ввода,
+ * кнопки, выпадающие списки, чекбоксы, подсказки.
+ *
+ * Это ЧИСТО ОФОРМЛЕНИЕ, отдельным файлом, не смешанное с кодом функций.
+ * В отличие от ui/table-theme.qss (стиль уровня приложения, только таблицы),
+ * этот файл подключается ПОЭКРАННО: экран один раз вызывает
+ * applyArchiveScreenTheme(this) — см. ui/ScreenTheme.h.
+ *
+ * ВАЖНО: здесь только полноценные правила «селектор { ... }». Голых
+ * объявлений вида "background-color: ...;" в начале файла быть не должно:
+ * QSS, начинающийся с них, парсится как стиль одного виджета, и все
+ * последующие правила Qt молча отбрасывает.
+ *
+ * Палитра макета «archive v1 docked sidebar.html»:
+ *   green #0F6B4F · green-dark #0B5A41 · green-soft #E4F1EC
+ *   bg #EFF1F1 · card #FFFFFF · border #DDE1E3
+ *   text #1B211F · mute #6E7876 · amber #F9A825 · red #B3261E
+ *
+ * Роли виджетов помечаются динамическими свойствами, а не именами объектов
+ * (их выставляет код экрана перед вызовом applyArchiveScreenTheme):
+ *   [archiveScreen="true"] — сам экран (фон страницы);
+ *   [primary="true"]       — основное действие (зелёная заливка);
+ *   [nav="true"]           — навигация «‹ Назад» (плоская, зелёный текст).
+ * ───────────────────────────────────────────────────────────────────────── */
+
+/* ── страница ────────────────────────────────────────────────────────── */
+QWidget[archiveScreen="true"] {
+    background: #EFF1F1;
+}
+
+QWidget {
+    font-family: 'Inter','Segoe UI','DejaVu Sans',sans-serif;
+    color: #1B211F;
+}
+
+/* Подписи полей — обычным начертанием, как в макете: акцент несёт значение
+   в поле ввода, а не его подпись. */
+QLabel {
+    background: transparent;
+    font-size: 12px;
+    font-weight: 400;
+    color: #1B211F;
+}
+
+/* ── группы-карточки ─────────────────────────────────────────────────── */
+QGroupBox {
+    border: 1px solid #DDE1E3;
+    border-radius: 10px;
+    background: #FFFFFF;
+    margin-top: 12px;
+    padding: 10px 4px 6px 4px;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 12px;
+    padding: 0 6px;
+    color: #6E7876;
+    font-size: 11px;
+    font-weight: 600;
+    background: transparent;
+}
+
+/* ── поля ввода ──────────────────────────────────────────────────────── */
+/* Значения — моноширинным, как во всём архиве: коды бюллетеня и числа
+   так читаются столбиком и не «пляшут» по ширине. */
+QLineEdit {
+    border: 1px solid #DDE1E3;
+    border-radius: 6px;
+    padding: 4px 8px;
+    background: #FFFFFF;
+    color: #1B211F;
+    font-family: 'JetBrains Mono','DejaVu Sans Mono','Consolas',monospace;
+    font-size: 12px;
+    font-weight: 600;
+    selection-background-color: #E4F1EC;
+    selection-color: #0B5A41;
+}
+QTextEdit, QPlainTextEdit {
+    border: 1px solid #DDE1E3;
+    border-radius: 8px;
+    padding: 8px 10px;
+    background: #F7F8F8;
+    color: #1B211F;
+    font-family: 'JetBrains Mono','DejaVu Sans Mono','Consolas',monospace;
+    font-size: 13px;
+    selection-background-color: #E4F1EC;
+    selection-color: #0B5A41;
+}
+QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus {
+    border: 1px solid #0F6B4F;
+}
+QLineEdit:read-only {
+    background: #F7F8F8;
+}
+QLineEdit:disabled, QTextEdit:disabled, QPlainTextEdit:disabled {
+    background: #F1F3F2;
+    color: #9AA3A0;
+}
+/* Незаполненное обязательное поле — выставляется кодом:
+   edit->setProperty("invalid", true) + unpolish/polish. */
+QLineEdit[invalid="true"] {
+    border: 1px solid #B3261E;
+    background: #FBE4E4;
+}
+
+/* ── выпадающие списки ───────────────────────────────────────────────── */
+QComboBox {
+    border: 1px solid #DDE1E3;
+    border-radius: 6px;
+    padding: 4px 8px;
+    background: #FFFFFF;
+    font-size: 12px;
+}
+QComboBox:hover {
+    border-color: #0F6B4F;
+}
+QComboBox:disabled {
+    background: #F7F8F8;
+    color: #9AA3A0;
+}
+/* Стрелку subcontrol'а рисуем сами: как только ::drop-down оформлен через
+   QSS, Qt перестаёт рисовать штатную стрелку Fusion, и список выглядит как
+   обычное поле ввода — без единого признака, что он раскрывается. */
+QComboBox::drop-down {
+    border: none;
+    width: 22px;
+    subcontrol-origin: padding;
+    subcontrol-position: center right;
+}
+QComboBox::down-arrow {
+    image: url(:/icons/chevron_down.svg);
+    width: 12px;
+    height: 12px;
+}
+QComboBox QAbstractItemView {
+    border: 1px solid #DDE1E3;
+    border-radius: 6px;
+    background: #FFFFFF;
+    selection-background-color: #E4F1EC;
+    selection-color: #0B5A41;
+    outline: none;
+}
+
+/* ── вкладки ─────────────────────────────────────────────────────────── */
+/* По макету: неактивная вкладка — приглушённая на сером, активная — белая
+   с зелёной подписью и зелёной чертой снизу; полотно вкладки белое. */
+QTabWidget::pane {
+    border: none;
+    background: #FFFFFF;
+    top: -1px;
+}
+QTabBar {
+    background: transparent;
+    qproperty-drawBase: 0;
+}
+QTabBar::tab {
+    background: #E4E7E6;
+    color: #6E7876;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 9px 16px;
+    margin-right: 2px;
+    border: none;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+QTabBar::tab:hover {
+    color: #0B5A41;
+}
+QTabBar::tab:selected {
+    background: #FFFFFF;
+    color: #0B5A41;
+    border-bottom: 2px solid #0F6B4F;
+}
+
+/* ── кнопки ──────────────────────────────────────────────────────────── */
+/* Обычная кнопка макета: белая, тонкая рамка, приглушённая подпись;
+   зеленеет при наведении/нажатии. */
+QPushButton {
+    background: #FFFFFF;
+    border: 1px solid #DDE1E3;
+    border-radius: 8px;
+    padding: 8px 14px;
+    color: #6E7876;
+    font-size: 12px;
+    font-weight: 600;
+}
+QPushButton:hover {
+    border-color: #0F6B4F;
+    color: #0B5A41;
+}
+QPushButton:pressed {
+    background: #E4F1EC;
+    border-color: #0F6B4F;
+    color: #0B5A41;
+}
+QPushButton:disabled {
+    background: #F1F3F2;
+    border-color: #E6E9E8;
+    color: #B7BEBB;
+}
+
+QPushButton[primary="true"] {
+    background: #0F6B4F;
+    border: 1px solid #0F6B4F;
+    color: #FFFFFF;
+}
+QPushButton[primary="true"]:hover {
+    background: #0B5A41;
+    border-color: #0B5A41;
+    color: #FFFFFF;
+}
+QPushButton[primary="true"]:pressed {
+    background: #094B36;
+    border-color: #094B36;
+    color: #FFFFFF;
+}
+QPushButton[primary="true"]:disabled {
+    background: #A8C6BB;
+    border-color: #A8C6BB;
+    color: #EEF3F1;
+}
+
+QPushButton[nav="true"] {
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 8px;
+    color: #0F6B4F;
+    font-weight: 600;
+    text-align: left;
+}
+QPushButton[nav="true"]:hover {
+    background: #E4F1EC;
+    color: #0F6B4F;
+}
+QPushButton[nav="true"]:pressed {
+    background: #D8ECE3;
+    color: #0B5A41;
+}
+
+/* ── чекбоксы ────────────────────────────────────────────────────────── */
+QCheckBox {
+    spacing: 8px;
+    font-size: 12px;
+    background: transparent;
+}
+QCheckBox::indicator {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    border: 1px solid #C7CDCB;
+    background: #FFFFFF;
+}
+QCheckBox::indicator:hover {
+    border-color: #0F6B4F;
+}
+QCheckBox::indicator:checked {
+    background: #0F6B4F;
+    border-color: #0F6B4F;
+    image: url(:/icons/checkmark_white.svg);
+}
+QCheckBox::indicator:disabled {
+    background: #F1F3F2;
+    border-color: #E6E9E8;
+}
+
+/* ── подсказка ───────────────────────────────────────────────────────── */
+QToolTip {
+    background: #1B211F;
+    color: #FFFFFF;
+    border: none;
+    padding: 5px 8px;
+}

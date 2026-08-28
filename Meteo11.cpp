@@ -1,6 +1,7 @@
 #include "Meteo11.h"
 #include "ui_Meteo11.h"
 #include "VirtualKeyboard.h"
+#include "ui/ScreenTheme.h"
 #include <QMessageBox>
 #include <QJsonDocument>
 #include <QRegularExpression>
@@ -27,6 +28,12 @@ Meteo11::Meteo11(QWidget *parent)
 {
     ui->setupUi(this);
     setAttribute(Qt::WA_StyledBackground, true);
+
+    // Вид экрана в стиле «Архива измерений». Роли кнопок помечаем свойствами
+    // ДО применения темы, чтобы селекторы [primary]/[nav] сразу сработали.
+    ui->btnMet11Apply->setProperty("primary", true);
+    ui->btnMet11Back->setProperty("nav", true);
+    applyArchiveScreenTheme(this);
 
     // Настраиваем таблицу: 3 колонки — ПП, НН, СС
     ui->tableWidget_meteo11->setColumnCount(3);
@@ -134,16 +141,17 @@ Meteo11::~Meteo11()
 // ─────────────────────────────────────────────────────────────────────────────
 void Meteo11::updateStatusPill()
 {
+    // Цвета пилюли — из палитры «Архива измерений» (green-soft / red).
     if (m_applied) {
         ui->lblMet11StatusPill->setText(QString::fromUtf8("● БЮЛЛЕТЕНЬ ЗАГРУЖЕН"));
         ui->lblMet11StatusPill->setStyleSheet(
             "padding: 4px 14px; border-radius: 13px; font-weight: bold; font-size: 9pt; "
-            "background-color: #E8F5E9; color: #0F6B4F;");
+            "background-color: #E4F1EC; color: #0B5A41;");
     } else {
         ui->lblMet11StatusPill->setText(QString::fromUtf8("● БЮЛЛЕТЕНЬ НЕ ЗАГРУЖЕН"));
         ui->lblMet11StatusPill->setStyleSheet(
             "padding: 4px 14px; border-radius: 13px; font-weight: bold; font-size: 9pt; "
-            "background-color: #FFEBEE; color: #C62828;");
+            "background-color: #FBE4E4; color: #B3261E;");
     }
 }
 

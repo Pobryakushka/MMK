@@ -19,19 +19,6 @@
   <property name="windowTitle">
    <string>Метео-11 — ввод бюллетеня от метеостанции</string>
   </property>
-  <property name="styleSheet">
-   <string notr="true">background-color: #EFF1F1;
-QLineEdit {
-  background-color: #FFFFFF;
-  border: 1.5px solid #C7CCCF;
-  border-radius: 4px;
-  padding: 0 6px;
-  color: #1C1F22;
-}
-QLineEdit:focus { border-color: #0F6B4F; }
-QLineEdit:disabled { background-color: #F2F3F3; color: #9AA0A3; }
-QLineEdit[invalid="true"] { border-color: #C62828; background-color: #FFF5F5; }</string>
-  </property>
   <layout class="QVBoxLayout" name="met11MainVLayout">
    <property name="spacing">
     <number>0</number>
@@ -69,10 +56,6 @@ QLineEdit[invalid="true"] { border-color: #C62828; background-color: #FFF5F5; }<
          <width>96</width>
          <height>48</height>
         </size>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">QPushButton { font-size: 16pt; font-weight: bold; border: none; background: transparent; color: #0F6B4F; }
-QPushButton:pressed { color: #0B5A42; }</string>
        </property>
        <property name="text">
         <string>‹ Назад</string>
@@ -142,9 +125,6 @@ QPushButton:pressed { color: #0B5A42; }</string>
      </property>
      <item>
       <widget class="QGroupBox" name="grpRawString">
-       <property name="styleSheet">
-        <string notr="true">QGroupBox { border: 1px solid #DDE1E3; border-radius: 8px; margin-top: 10px; background-color: #FFFFFF; } QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 4px; color: #6B7278; }</string>
-       </property>
        <property name="title">
         <string>Строка бюллетеня (вставьте целиком)</string>
        </property>
@@ -230,9 +210,6 @@ QPushButton:pressed { color: #0B5A42; }</string>
             <height>34</height>
            </size>
           </property>
-          <property name="styleSheet">
-           <string notr="true">font-size: 10pt;</string>
-          </property>
           <property name="toolTip">
            <string>Разобрать введённую строку и автоматически заполнить поля ниже</string>
           </property>
@@ -262,9 +239,6 @@ QPushButton:pressed { color: #0B5A42; }</string>
            <width>480</width>
            <height>16777215</height>
           </size>
-         </property>
-         <property name="styleSheet">
-          <string notr="true">QGroupBox { border: 1px solid #DDE1E3; border-radius: 8px; margin-top: 10px; background-color: #FFFFFF; } QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 4px; color: #6B7278; }</string>
          </property>
          <property name="title">
           <string>Параметры бюллетеня</string>
@@ -599,9 +573,6 @@ QPushButton:pressed { color: #0B5A42; }</string>
        </item>
        <item>
         <widget class="QGroupBox" name="grpLayers">
-         <property name="styleSheet">
-          <string notr="true">QGroupBox { border: 1px solid #DDE1E3; border-radius: 8px; margin-top: 10px; background-color: #FFFFFF; } QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 4px; color: #6B7278; }</string>
-         </property>
          <property name="title">
           <string>Слои ветра</string>
          </property>
@@ -637,9 +608,6 @@ QPushButton:pressed { color: #0B5A42; }</string>
             </property>
             <property name="verticalScrollBarPolicy">
              <enum>Qt::ScrollBarAsNeeded</enum>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">QTableWidget { border: 1px solid #DDE1E3; }</string>
             </property>
             <attribute name="horizontalHeaderDefaultSectionSize">
              <number>90</number>
@@ -809,9 +777,6 @@ QPushButton:pressed { color: #0B5A42; }</string>
            <height>42</height>
           </size>
          </property>
-         <property name="styleSheet">
-          <string notr="true">font-size: 11pt;</string>
-         </property>
          <property name="text">
           <string>Очистить</string>
          </property>
@@ -824,9 +789,6 @@ QPushButton:pressed { color: #0B5A42; }</string>
            <width>200</width>
            <height>42</height>
           </size>
-         </property>
-         <property name="styleSheet">
-          <string notr="true">QPushButton { background-color: #0F6B4F; color: white; font-size: 11pt; font-weight: bold; border-radius: 4px; padding: 4px 12px; } QPushButton:hover { background-color: #128058; } QPushButton:pressed { background-color: #0B5A42; }</string>
          </property>
          <property name="text">
           <string>Применить</string>

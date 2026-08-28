@@ -11,5 +11,8 @@
         <file>icons/clock_manual_time.svg</file>
         <file>icons/clock_manual_time_pressed.svg</file>
         <file>icons/checkmark_white.svg</file>
+        <file>icons/chevron_down.svg</file>
+        <file>ui/table-theme.qss</file>
+        <file>ui/screen-theme.qss</file>
     </qresource>
 </RCC>

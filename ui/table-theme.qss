@@ -1,0 +1,108 @@
+/* ─────────────────────────────────────────────────────────────────────────
+ * Единый вид таблиц всего приложения — палитра и типографика «Архива
+ * измерений» (макет "archive v1 docked sidebar.html").
+ *
+ * Это ЧИСТО ОФОРМЛЕНИЕ. Файл подключается один раз как стиль уровня
+ * приложения (см. main.cpp) и не связан с кодом функций: правится отдельно,
+ * без перекомпиляции логики. Поведение таблиц (редактируемость, режим
+ * выделения, ширины колонок, видимость заголовков) задаётся в коде каждого
+ * экрана и здесь НЕ трогается.
+ *
+ * Палитра макета:
+ *   green #0F6B4F · green-dark #0B5A41 · green-soft #E4F1EC
+ *   card #FFFFFF · border #DDE1E3 · grid #EEF0EF
+ *   text #1B211F · mute #6E7876
+ *
+ * Правила уровня приложения — базовые: если у конкретного виджета задан свой
+ * setStyleSheet() с совпадающим правилом, оно перекрывает это (так,
+ * например, «Архив измерений» продолжает выглядеть ровно как раньше — его
+ * собственный QSS дублирует эти же правила).
+ * ───────────────────────────────────────────────────────────────────────── */
+
+QTableWidget, QTableView {
+    border: 1px solid #DDE1E3;
+    border-radius: 8px;
+    gridline-color: #EEF0EF;
+    background: #FFFFFF;
+    alternate-background-color: #F7F8F8;
+    font-size: 12px;
+    selection-background-color: #E4F1EC;
+    selection-color: #0B5A41;
+}
+
+QTableWidget::item, QTableView::item {
+    padding: 5px 8px;
+    border: none;
+}
+
+QTableWidget::item:selected, QTableView::item:selected {
+    background: #E4F1EC;
+    color: #0B5A41;
+}
+
+QHeaderView {
+    background: transparent;
+    border: none;
+}
+
+QHeaderView::section {
+    background: #E4F1EC;
+    color: #0B5A41;
+    font-weight: 600;
+    font-size: 12px;
+    border: none;
+    border-bottom: 1px solid #DDE1E3;
+    border-right: 1px solid #EEF0EF;
+    padding: 7px 8px;
+}
+
+QHeaderView::section:last {
+    border-right: none;
+}
+
+QTableCornerButton::section {
+    background: #E4F1EC;
+    border: none;
+    border-bottom: 1px solid #DDE1E3;
+}
+
+/* Полосы прокрутки — только внутри таблиц, чтобы через них не проступал
+ * объёмный вид Fusion рядом с плоскими таблицами. Другие области прокрутки
+ * приложения не затрагиваются. */
+QTableWidget QScrollBar:vertical, QTableView QScrollBar:vertical {
+    background: transparent;
+    width: 11px;
+    margin: 0px;
+}
+QTableWidget QScrollBar::handle:vertical, QTableView QScrollBar::handle:vertical {
+    background: #C7CDCB;
+    border-radius: 5px;
+    min-height: 30px;
+}
+QTableWidget QScrollBar::handle:vertical:hover, QTableView QScrollBar::handle:vertical:hover {
+    background: #A9B2AF;
+}
+QTableWidget QScrollBar:horizontal, QTableView QScrollBar:horizontal {
+    background: transparent;
+    height: 11px;
+    margin: 0px;
+}
+QTableWidget QScrollBar::handle:horizontal, QTableView QScrollBar::handle:horizontal {
+    background: #C7CDCB;
+    border-radius: 5px;
+    min-width: 30px;
+}
+QTableWidget QScrollBar::handle:horizontal:hover, QTableView QScrollBar::handle:horizontal:hover {
+    background: #A9B2AF;
+}
+QTableWidget QScrollBar::add-line, QTableView QScrollBar::add-line,
+QTableWidget QScrollBar::sub-line, QTableView QScrollBar::sub-line {
+    width: 0px;
+    height: 0px;
+    border: none;
+    background: none;
+}
+QTableWidget QScrollBar::add-page, QTableView QScrollBar::add-page,
+QTableWidget QScrollBar::sub-page, QTableView QScrollBar::sub-page {
+    background: none;
+}

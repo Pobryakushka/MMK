@@ -1,5 +1,6 @@
 #include "LandingCalculation.h"
 #include "ui_LandingCalculation.h"
+#include "../ui/ScreenTheme.h"
 #include <QTextStream>
 #include <QHeaderView>
 
@@ -11,6 +12,16 @@ LandingCalculation::LandingCalculation(QWidget *parent) :
 {
     ui->setupUi(this);
     setAttribute(Qt::WA_StyledBackground, true);
+
+    // Вид экрана в стиле «Архива измерений» (фон, поля, кнопки,
+    // группы). Роли кнопок помечаем ДО темы — селекторы [primary]/[nav]
+    // должны сработать сразу при первой полировке стиля.
+    ui->btnLandingBack->setProperty("nav", true);
+    ui->btnEditClose->setProperty("nav", true);
+    ui->btnCalculate->setProperty("primary", true);
+    ui->btnPasswordSubmit->setProperty("primary", true);
+    ui->btnTableApply->setProperty("primary", true);
+    applyArchiveScreenTheme(this);
 
     m_toast = new NotificationToast(this);
 

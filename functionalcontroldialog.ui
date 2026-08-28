@@ -5,9 +5,6 @@
   <property name="geometry">
    <rect><x>0</x><y>0</y><width>1024</width><height>720</height></rect>
   </property>
-  <property name="styleSheet">
-   <string notr="true">background-color: #EFF1F1;</string>
-  </property>
 
   <layout class="QVBoxLayout" name="mainLayout">
    <property name="leftMargin"><number>0</number></property>
@@ -28,10 +25,6 @@
       <widget class="QPushButton" name="btnBackFromFuncControl">
        <property name="minimumSize"><size><width>96</width><height>48</height></size></property>
        <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
-       <property name="styleSheet">
-        <string notr="true">QPushButton { font-size: 16pt; font-weight: bold; border: none; background: transparent; color: #0F6B4F; padding: 10px 14px; border-radius: 10px; }
-QPushButton:pressed { color: #0B5A42; background: #0F6B4F14; }</string>
-       </property>
        <property name="text"><string>&#8249; Назад</string></property>
       </widget>
      </item>

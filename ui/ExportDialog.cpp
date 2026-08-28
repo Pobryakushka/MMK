@@ -1,6 +1,7 @@
 #include "ExportDialog.h"
 #include "qpushbutton.h"
 #include "ui_ExportDialog.h"
+#include "../ui/ScreenTheme.h"
 
 ExportDialog::ExportDialog(const MeasurementSnapshot &snap, QWidget *parent)
     : QDialog(parent)
@@ -8,6 +9,11 @@ ExportDialog::ExportDialog(const MeasurementSnapshot &snap, QWidget *parent)
     , m_snap(snap)
 {
     ui->setupUi(this);
+
+    // Вид экрана в стиле «Архива измерений» (фон, поля, кнопки,
+    // группы). Роли кнопок помечаем ДО темы — селекторы [primary]/[nav]
+    // должны сработать сразу при первой полировке стиля.
+    applyArchiveScreenTheme(this);
 
     populateRecordInfo();
     disableEmptySections();

@@ -10,9 +10,6 @@
     <height>640</height>
    </rect>
   </property>
-  <property name="styleSheet">
-   <string notr="true">background-color: #EFF1F1;</string>
-  </property>
   <layout class="QVBoxLayout" name="pageLayout">
    <property name="spacing">
     <number>0</number>
@@ -54,10 +51,6 @@
          <width>96</width>
          <height>48</height>
         </size>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">QPushButton { font-size: 16pt; font-weight: bold; border: none; background: transparent; color: #0F6B4F; }
-QPushButton:pressed { color: #0B5A42; }</string>
        </property>
        <property name="text">
         <string>‹ Назад</string>

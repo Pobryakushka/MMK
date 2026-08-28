@@ -1,5 +1,6 @@
 #include "sensorsettings.h"
 #include "ui_sensorsettings.h"
+#include "../ui/ScreenTheme.h"
 #include <QDebug>
 #include <QFile>
 #include <QDir>
@@ -12,6 +13,16 @@ SensorSettings::SensorSettings(QWidget *parent)
     , m_autoConnector(new AutoConnector(this))
 {
     ui->setupUi(this);
+
+    // Вид экрана в стиле «Архива измерений» (фон, поля, кнопки,
+    // группы). Роли кнопок помечаем ДО темы — селекторы [primary]/[nav]
+    // должны сработать сразу при первой полировке стиля.
+    ui->btnConnect->setProperty("primary", true);
+    ui->btnConnectGnss->setProperty("primary", true);
+    ui->btnConnectAms->setProperty("primary", true);
+    ui->btnConnectBins->setProperty("primary", true);
+    ui->btnClose->setProperty("primary", true);
+    applyArchiveScreenTheme(this);
 
     populateComPorts();
     populateGnssPorts();

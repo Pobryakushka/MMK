@@ -20,8 +20,8 @@ void RpvIndicator::setAngle(double degrees)
 // предпочтительный, и минимальный размер заметно больше, чем у прежнего
 // компактного индикатора. Реальный размер всё равно диктуется layout'ом
 // (см. minimumSize/maximumSize тайла в mainwindow.ui).
-QSize RpvIndicator::sizeHint()        const { return {210, 210}; }
-QSize RpvIndicator::minimumSizeHint() const { return {140, 140}; }
+QSize RpvIndicator::sizeHint()        const { return {260, 260}; }
+QSize RpvIndicator::minimumSizeHint() const { return {180, 180}; }
 
 void RpvIndicator::paintEvent(QPaintEvent *)
 {
@@ -58,11 +58,20 @@ void RpvIndicator::paintEvent(QPaintEvent *)
 
     // ── Подписи градусов каждые 30°, крупнее на 0/90/180/270 ────────────
     {
-        const double rLabel = rad * 0.70;
+        // Радиус подписей — внутри крупных рисок (те идут от rad*0.83 к rad),
+        // но как можно ближе к ним: чем больше радиус, тем длиннее дуга между
+        // соседними подписями и тем меньше они мешают друг другу.
+        const double rLabel = rad * 0.74;
         for (int deg = 0; deg < 360; deg += 30) {
             const bool   cardinal = (deg % 90 == 0);
             QFont f = p.font();
-            f.setPointSizeF(qMax(6.5, side * (cardinal ? 0.052 : 0.040)));
+            // ПИКСЕЛЬНЫЙ размер, а не пунктовый. side — размер виджета в
+            // логических пикселях, и раньше доля от него подставлялась в
+            // setPointSizeF: пункты Qt переводит в пиксели ещё раз, через DPI
+            // экрана. На планшете (масштаб 150%) подписи из-за этого росли
+            // дважды, а сам циферблат — один раз, и числа наползали друг на
+            // друга. В пикселях текст масштабируется ровно как риски и стрелка.
+            f.setPixelSize(qMax(8, qRound(side * (cardinal ? 0.075 : 0.062))));
             f.setBold(cardinal);
             p.setFont(f);
             p.setPen(cardinal ? QColor(0x5B, 0x62, 0x66) : QColor(0x8A, 0x90, 0x94));
@@ -120,7 +129,8 @@ void RpvIndicator::paintEvent(QPaintEvent *)
     // ── Цифровое значение угла под циферблатом ───────────────────────────
     {
         QFont f = p.font();
-        f.setPointSizeF(qMax(9.0, side * 0.10));
+        // Тоже в пикселях — по той же причине, что и подписи градусов выше.
+        f.setPixelSize(qMax(12, qRound(side * 0.115)));
         f.setBold(true);
         p.setFont(f);
         p.setPen(QColor(0x1C, 0x1F, 0x22));

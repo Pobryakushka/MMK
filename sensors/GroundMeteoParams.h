@@ -13,11 +13,6 @@
 class QLabel;
 class QPainter;
 
-// Ширина колонки "Параметр" (px) — фиксируется явно и переустанавливается
-// после каждого закрытия редактора ячейки, чтобы VirtualKeyboard/делегат
-// не могли случайно "сдвинуть" подписи параметров влево и оставить так.
-static constexpr int kGroundParamColumnWidth = 450;
-
 namespace Ui {
 class GroundMeteoParams;
 }
@@ -41,9 +36,8 @@ public:
                                const QModelIndex &index) const override;
 
 private:
-    QTableWidget *m_table;   // нужен, чтобы восстановить ширину колонки "Параметр"
-                              // после закрытия редактора (защита от VirtualKeyboard,
-                              // который может временно менять геометрию таблицы).
+    QTableWidget *m_table;   // нужен для точечной перерисовки viewport при
+                              // открытии/закрытии редактора ячейки (см. paint()).
 
     // Индекс ячейки, для которой сейчас открыт редактор — paint() по нему
     // пропускает отрисовку текста самого item'а (см. paint()): иначе поверх
