@@ -1,6 +1,7 @@
 #include "GroundMeteoParams.h"
 #include "ui_GroundMeteoParams.h"
 #include "VirtualKeyboard.h"
+#include "ui/ScreenTheme.h"
 #include <QDebug>
 #include <QtMath>
 #include <algorithm>
@@ -1369,31 +1370,19 @@ void GroundMeteoParams::shakeWidget(QWidget *w)
 
 void GroundMeteoParams::applyVisualStyle()
 {
-    setStyleSheet(
-        "QWidget#GroundMeteoParams { background:#EFF1F1; }"
-        "QGroupBox { background:transparent; }"
-        "QLabel#lblGroundParams { color:#1C1F22; }"
-        "QTableWidget#tableWidget_GroundParams {"
-        "  background:#FFFFFF; border:1px solid #DDE1E3; border-radius:12px;"
-        "  gridline-color:#F0F1F2; font-size:11pt;"
-        "}"
-        "QTableWidget#tableWidget_GroundParams::item { padding:6px 10px; }"
-        "QHeaderView::section {"
-        "  background:#F5F6F6; color:#6B7278; border:none; border-bottom:1px solid #DDE1E3;"
-        "  padding:8px 10px; font-weight:600;"
-        "}"
-        "QPushButton#btnGroundParamsApply {"
-        "  background:#0F6B4F; color:#FFFFFF; border:none; border-radius:10px;"
-        "  padding:0 22px; font-weight:700;"
-        "}"
-        "QPushButton#btnGroundParamsApply:pressed { background:#0B5A41; }"
-        "QPushButton#btnGroundParamsClear, QPushButton#btnGroundParamsClose {"
-        "  background:#FFFFFF; color:#1C1F22; border:1px solid #DDE1E3; border-radius:10px;"
-        "  padding:0 20px; font-weight:700;"
-        "}"
-        "QPushButton#btnGroundParamsClear:pressed, QPushButton#btnGroundParamsClose:pressed {"
-        "  background:#F0F1F2;"
-        "}"
+    // Общий вид экрана («Архив измерений»): фон, поля, кнопки, группы.
+    // Роли кнопок помечаем ДО темы — селекторы [primary]/[nav] сработают сразу.
+    // Вид таблицы приходит отдельно, из стиля приложения ui/table-theme.qss.
+    ui->btnGroundParamsApply->setProperty("primary", true);
+    ui->btnGroundParamsClose->setProperty("nav", true);
+    applyArchiveScreenTheme(this);
+
+    // Дописываем правила, специфичные только для этого экрана. Дописывать
+    // МОЖНО: общая тема состоит из полноценных правил, и Qt разбирает
+    // объединённый стилшит целиком (ломает разбор только голое объявление
+    // в начале — см. ui/ScreenTheme.h).
+    setStyleSheet(styleSheet() +
+        "QLabel#lblGroundParams { color:#1B211F; }"
         "QLabel#lblStatusPill { border-radius:14px; padding:6px 18px; font-weight:700; font-size:9.5pt; }"
     );
 }

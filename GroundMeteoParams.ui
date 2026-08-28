@@ -19,9 +19,6 @@
   <property name="windowTitle">
    <string>Meteo-11</string>
   </property>
-  <property name="styleSheet">
-   <string notr="true">background-color: #EFF1F1;</string>
-  </property>
   <layout class="QVBoxLayout" name="gmpMainVLayout">
    <property name="spacing">
     <number>0</number>
@@ -47,10 +44,6 @@
          <width>96</width>
          <height>48</height>
         </size>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">QPushButton { font-size: 16pt; font-weight: bold; border: none; background: transparent; color: #0F6B4F; }
-QPushButton:pressed { color: #0B5A42; }</string>
        </property>
        <property name="text">
         <string>‹ Назад</string>
@@ -291,9 +284,6 @@ QPushButton:pressed { color: #0B5A42; }</string>
            <height>48</height>
           </size>
          </property>
-         <property name="styleSheet">
-          <string notr="true">QPushButton { background-color: #FFFFFF; color: #444B50; font-size: 11pt; font-weight: bold; border: 1px solid #C7CCCF; border-radius: 4px; padding: 4px 12px; } QPushButton:hover { background-color: #F4F5F6; } QPushButton:pressed { background-color: #E9EAEB; }</string>
-         </property>
          <property name="text">
           <string>Очистить</string>
          </property>
@@ -312,9 +302,6 @@ QPushButton:pressed { color: #0B5A42; }</string>
            <width>200</width>
            <height>48</height>
           </size>
-         </property>
-         <property name="styleSheet">
-          <string notr="true">QPushButton { background-color: #0F6B4F; color: white; font-size: 11pt; font-weight: bold; border: 1px solid #0F6B4F; border-radius: 4px; padding: 4px 12px; } QPushButton:hover { background-color: #128058; } QPushButton:pressed { background-color: #0B5A42; }</string>
          </property>
          <property name="text">
           <string>Применить</string>

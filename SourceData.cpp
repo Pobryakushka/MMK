@@ -2,6 +2,7 @@
 #include "ui_SourceData.h"
 #include "Meteo11.h"
 #include "sensors/GroundMeteoParams.h"
+#include "ui/ScreenTheme.h"
 #include <QShowEvent>
 #include <QPaintEvent>
 #include <QPainter>
@@ -132,7 +133,11 @@ SourceData::SourceData(QWidget *parent)
     , m_meteo11Dialog(nullptr)
 {
     ui->setupUi(this);
-    setAttribute(Qt::WA_StyledBackground, true);
+
+    // Вид экрана в стиле «Архива измерений» (фон, кнопки, поля). Роль
+    // кнопки помечаем ДО применения темы — селектор [nav] сработает сразу.
+    ui->btnSourceDataBack->setProperty("nav", true);
+    applyArchiveScreenTheme(this);
 
     ui->rowMeteo11->setTitle(QString::fromUtf8("Бюллетень «Метео-11»"));
     ui->rowMeteo11->setDescription(QString::fromUtf8("Ввод/просмотр закодированного бюллетеня"));
@@ -190,20 +195,20 @@ void SourceData::showEvent(QShowEvent *event)
 void SourceData::updateBadges()
 {
     if (hasMeteo11Bulletin())
-        ui->rowMeteo11->setBadge(QString::fromUtf8("Загружен"), QColor("#0F6B4F"), QColor("#E8F5E9"));
+        ui->rowMeteo11->setBadge(QString::fromUtf8("Загружен"), QColor("#0B5A41"), QColor("#E4F1EC"));
     else
-        ui->rowMeteo11->setBadge(QString::fromUtf8("Не загружен"), QColor("#C62828"), QColor("#FFEBEE"));
+        ui->rowMeteo11->setBadge(QString::fromUtf8("Не загружен"), QColor("#B3261E"), QColor("#FBE4E4"));
 
     if (groundMeteoParams) {
         switch (groundMeteoParams->surfaceState()) {
         case GroundMeteoParams::NoData:
-            ui->rowGroundParams->setBadge(QString::fromUtf8("Нет данных"), QColor("#C62828"), QColor("#FFEBEE"));
+            ui->rowGroundParams->setBadge(QString::fromUtf8("Нет данных"), QColor("#B3261E"), QColor("#FBE4E4"));
             break;
         case GroundMeteoParams::Stale:
-            ui->rowGroundParams->setBadge(QString::fromUtf8("Устарели"), QColor("#E65100"), QColor("#FFF3E0"));
+            ui->rowGroundParams->setBadge(QString::fromUtf8("Устарели"), QColor("#8A6100"), QColor("#FFF4DC"));
             break;
         case GroundMeteoParams::Fresh:
-            ui->rowGroundParams->setBadge(QString::fromUtf8("Актуальны"), QColor("#0F6B4F"), QColor("#E8F5E9"));
+            ui->rowGroundParams->setBadge(QString::fromUtf8("Актуальны"), QColor("#0B5A41"), QColor("#E4F1EC"));
             break;
         }
     }
