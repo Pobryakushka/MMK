@@ -223,23 +223,9 @@ QPushButton[primary="true"]:disabled {
     color: #EEF3F1;
 }
 
-QPushButton[nav="true"] {
-    background: transparent;
-    border: none;
-    border-radius: 8px;
-    padding: 6px 8px;
-    color: #0F6B4F;
-    font-weight: 600;
-    text-align: left;
-}
-QPushButton[nav="true"]:hover {
-    background: #E4F1EC;
-    color: #0F6B4F;
-}
-QPushButton[nav="true"]:pressed {
-    background: #D8ECE3;
-    color: #0B5A41;
-}
+/* Вид кнопки «‹ Назад» ([nav]) сюда намеренно не входит: он лежит в
+   отдельном ui/back-button.qss и ставится на саму кнопку — иначе на
+   экранах без общей темы кнопка выглядела бы иначе. */
 
 /* ── карточки, подписи, переключатели ────────────────────────────────── */
 /* Карточка-панель макета (.chart-card): белый блок с тонкой рамкой.

@@ -47,6 +47,28 @@ inline QLayout *archiveLayoutOf(QWidget *w)
     return nullptr;
 }
 
+// Суммирует поля всех раскладок, объемлющих target (сама target не в счёт).
+// Нужна, чтобы кнопка «Назад» вставала в одну и ту же точку страницы, сколько
+// бы вложенных контейнеров со своими полями над ней ни было.
+inline bool archiveMarginsAbove(QLayout *from, QLayout *target, int &left, int &top)
+{
+    if (!from)
+        return false;
+    if (from == target)
+        return true;
+    for (int i = 0; i < from->count(); ++i) {
+        if (QLayout *child = from->itemAt(i)->layout()) {
+            if (archiveMarginsAbove(child, target, left, top)) {
+                const QMargins m = from->contentsMargins();
+                left += m.left();
+                top  += m.top();
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 inline void setupArchiveBackButton(QPushButton *back)
 {
     if (!back)
@@ -56,11 +78,34 @@ inline void setupArchiveBackButton(QPushButton *back)
     back->setMinimumSize(kBackWidth, kBackHeight);
     back->setMaximumHeight(kBackHeight);
 
+    // Вид кнопки ставим НА САМУ КНОПКУ, а не полагаемся на тему экрана: тогда
+    // она выглядит одинаково и там, где общая тема уже подключена, и на
+    // экранах, которые ещё живут со своим оформлением («Карта», «Пуск
+    // измерений»). Оформление при этом по-прежнему лежит в .qss, не в коде.
+    QFile qss(QStringLiteral(":/ui/back-button.qss"));
+    if (qss.open(QIODevice::ReadOnly | QIODevice::Text))
+        back->setStyleSheet(QString::fromUtf8(qss.readAll()));
+    else
+        qWarning("setupArchiveBackButton: не загружен ui/back-button.qss");
+
     // Выравниваем только левый и верхний отступы шапки — правый и нижний у
     // экранов осмысленно разные (там лежат заголовок, пилюли состояния и т.п.).
-    if (QLayout *lay = archiveLayoutOf(back)) {
-        const QMargins m = lay->contentsMargins();
-        lay->setContentsMargins(kBackPadX, kBackPadY, m.right(), m.bottom());
+    //
+    // Строка-заголовок нередко лежит не в корне страницы, а внутри контейнеров
+    // со своими полями (на страницах главного окна это 0, 8 и 16 px). Если
+    // просто выставить шапке 16/12, кнопка окажется на сумме этих полей и
+    // снова разъедется. Поэтому вычитаем поля всех объемлющих раскладок —
+    // тогда кнопка стоит в одной и той же точке страницы, а сама точка
+    // по-прежнему задана здесь одним значением.
+    QLayout *own = archiveLayoutOf(back);
+    QLayout *root = back->parentWidget() ? back->parentWidget()->layout() : nullptr;
+    if (own && root) {
+        int extraL = 0, extraT = 0;
+        archiveMarginsAbove(root, own, extraL, extraT);
+        const QMargins m = own->contentsMargins();
+        own->setContentsMargins(qMax(0, kBackPadX - extraL),
+                                qMax(0, kBackPadY - extraT),
+                                m.right(), m.bottom());
     }
 }
 
