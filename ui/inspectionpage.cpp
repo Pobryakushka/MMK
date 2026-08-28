@@ -15,7 +15,7 @@ InspectionPage::InspectionPage(AMSHandler *amsHandler, QWidget *parent)
     // Вид экрана в стиле «Архива измерений» (фон, поля, кнопки,
     // группы). Роли кнопок помечаем ДО темы — селекторы [primary]/[nav]
     // должны сработать сразу при первой полировке стиля.
-    ui->btnBackFromInspection->setProperty("nav", true);
+    setupArchiveBackButton(ui->btnBackFromInspection);
     ui->btnAntennaOpen->setProperty("primary", true);
     applyArchiveScreenTheme(this);
 

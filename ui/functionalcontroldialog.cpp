@@ -79,7 +79,7 @@ FunctionalControlDialog::FunctionalControlDialog(QWidget *parent)
     // Вид экрана в стиле «Архива измерений» (фон, поля, кнопки,
     // группы). Роли кнопок помечаем ДО темы — селекторы [primary]/[nav]
     // должны сработать сразу при первой полировке стиля.
-    ui->btnBackFromFuncControl->setProperty("nav", true);
+    setupArchiveBackButton(ui->btnBackFromFuncControl);
     applyArchiveScreenTheme(this);
 
     connect(ui->btnBackFromFuncControl, &QPushButton::clicked,

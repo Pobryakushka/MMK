@@ -241,6 +241,57 @@ QPushButton[nav="true"]:pressed {
     color: #0B5A41;
 }
 
+/* ── карточки, подписи, переключатели ────────────────────────────────── */
+/* Карточка-панель макета (.chart-card): белый блок с тонкой рамкой.
+   Помечается свойством, а не именем объекта: frame->setProperty("card", true). */
+QFrame[card="true"] {
+    background: #FFFFFF;
+    border: 1px solid #DDE1E3;
+    border-radius: 10px;
+}
+
+/* Заголовок карточки и мелкая подпись-пояснение над/рядом со значением. */
+QLabel[cardTitle="true"] {
+    color: #1B211F;
+    font-size: 13px;
+    font-weight: 700;
+    background: transparent;
+    border: none;
+}
+QLabel[caption="true"] {
+    color: #6E7876;
+    font-size: 11px;
+    background: transparent;
+    border: none;
+}
+
+/* Переключатель-чип (.m11-type-btn макета): выключен — белый с приглушённой
+   подписью, включён — залит зелёным. Работает и для checkable-кнопки, и для
+   чекбокса, оформленного как чип (у чекбокса штатный квадратик прячем —
+   роль индикатора играет заливка всего чипа). */
+QPushButton[toggle="true"], QCheckBox[toggle="true"] {
+    background: #FFFFFF;
+    color: #6E7876;
+    border: 1px solid #DDE1E3;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 6px 12px;
+}
+QPushButton[toggle="true"]:hover, QCheckBox[toggle="true"]:hover {
+    border-color: #0F6B4F;
+    color: #0B5A41;
+}
+QCheckBox[toggle="true"]::indicator {
+    width: 0px;
+    height: 0px;
+}
+QPushButton[toggle="true"]:checked, QCheckBox[toggle="true"]:checked {
+    background: #0F6B4F;
+    border-color: #0F6B4F;
+    color: #FFFFFF;
+}
+
 /* ── чекбоксы ────────────────────────────────────────────────────────── */
 QCheckBox {
     spacing: 8px;

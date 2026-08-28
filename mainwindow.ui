@@ -1222,95 +1222,6 @@ QPushButton:pressed {
        </layout>
       </widget>
       <widget class="QWidget" name="page_position">
-       <property name="styleSheet">
-        <string notr="true">QWidget#page_position { background-color: #EFF1F1; }
-QFrame#gnssPositionCard, QFrame#binsOrientationCard {
-    background-color: #FFFFFF;
-    border: 1px solid #DDE1E3;
-    border-radius: 14px;
-}
-QLabel#lblGnssCardTitle, QLabel#lblBinsCardTitle {
-    font-size: 11pt;
-    font-weight: bold;
-    color: #1C1F22;
-    background: transparent;
-    border: none;
-}
-QLabel.fieldLabel {
-    color: #6B7278;
-    font-size: 9pt;
-    background: transparent;
-    border: none;
-}
-QLineEdit#editLatitude, QLineEdit#editLongitude, QLineEdit#editAltitude,
-QLineEdit#editDirectionAngle, QLineEdit#editRollAngle, QLineEdit#editPitchAngle {
-    background-color: #F5F6F6;
-    border: 1px solid #DDE1E3;
-    border-radius: 8px;
-    padding: 8px 10px;
-    font-size: 11pt;
-    font-weight: 600;
-    color: #1C1F22;
-}
-QLineEdit#editLatitude:disabled, QLineEdit#editLongitude:disabled, QLineEdit#editAltitude:disabled,
-QLineEdit#editDirectionAngle:disabled, QLineEdit#editRollAngle:disabled, QLineEdit#editPitchAngle:disabled {
-    color: #9AA0A3;
-}
-QLabel#lblLatitudeType, QLabel#lblLongitudeType {
-    color: #6B7278;
-    font-size: 9pt;
-    background: transparent;
-    border: none;
-}
-QPushButton#btnMapCoordinatesPos {
-    background-color: #FFFFFF;
-    color: #1C1F22;
-    border: 1px solid #DDE1E3;
-    border-radius: 8px;
-    font-size: 9pt;
-    font-weight: 700;
-    padding: 6px 12px;
-}
-QPushButton#btnMapCoordinatesPos:checked {
-    background-color: #0F6B4F;
-    color: #FFFFFF;
-    border: 1px solid #0F6B4F;
-}
-QCheckBox#checkboxGnssPos {
-    background-color: #FFFFFF;
-    color: #1C1F22;
-    border: 1px solid #DDE1E3;
-    border-radius: 8px;
-    font-size: 9pt;
-    font-weight: 700;
-    padding: 6px 12px;
-}
-QCheckBox#checkboxGnssPos::indicator { width: 0px; height: 0px; }
-QCheckBox#checkboxGnssPos:checked {
-    background-color: #0F6B4F;
-    color: #FFFFFF;
-    border: 1px solid #0F6B4F;
-}
-QPushButton#btnManualInput {
-    background-color: #0F6B4F;
-    color: #FFFFFF;
-    border: none;
-    border-radius: 10px;
-    font-size: 10pt;
-    font-weight: 700;
-    padding: 10px 22px;
-}
-QPushButton#btnManualInput:pressed { background-color: #0B5A41; }
-QLineEdit#editDateTime {
-    background-color: #F5F6F6;
-    border: 1px solid #DDE1E3;
-    border-radius: 8px;
-    padding: 6px 10px;
-    font-size: 10pt;
-    font-weight: 700;
-    color: #1C1F22;
-}</string>
-       </property>
        <layout class="QVBoxLayout" name="verticalLayout">
         <property name="spacing">
          <number>12</number>
@@ -1336,10 +1247,6 @@ QLineEdit#editDateTime {
               <width>96</width>
               <height>48</height>
              </size>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">QPushButton { font-size: 16pt; font-weight: bold; border: none; background: transparent; color: #0F6B4F; }
-QPushButton:pressed { color: #0B5A42; }</string>
             </property>
             <property name="text">
              <string>‹ Назад</string>
@@ -1407,17 +1314,6 @@ QPushButton:pressed { color: #0B5A42; }</string>
             </property>
             <property name="toolTip">
              <string>Синхронизировать с системным временем</string>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">QPushButton {
-    background-color: white;
-    border: 1px solid #DDE1E3;
-    border-radius: 8px;
-    font-size: 10pt;
-}
-QPushButton:hover {
-    background-color: #F0F0F0;
-}</string>
             </property>
             <property name="text">
              <string/>

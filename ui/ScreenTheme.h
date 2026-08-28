@@ -5,6 +5,64 @@
 #include <QFile>
 #include <QIODevice>
 #include <QDebug>
+#include <QPushButton>
+#include <QLayout>
+#include <QLayoutItem>
+#include <QList>
+#include <QMargins>
+
+// ─────────────────────────────────────────────────────────────────────────
+// Единое место кнопки «‹ Назад» на всех экранах.
+//
+// Раньше каждый экран задавал отступы шапки и размер кнопки сам, и значения
+// разошлись: 24/14, 12/10, 8/8, 6/0 и просто умолчание Qt (9/9), размер
+// 96x48 или 80x32. При переходе между экранами кнопка заметно прыгала.
+// Теперь позиция задана здесь одна на всё приложение; экран лишь вызывает
+// setupArchiveBackButton(ui->btnНазад) вместо ручной пометки свойства.
+// ─────────────────────────────────────────────────────────────────────────
+static constexpr int kBackPadX  = 16;   // отступ шапки слева
+static constexpr int kBackPadY  = 12;   // отступ шапки сверху
+static constexpr int kBackWidth = 104;  // минимальная ширина кнопки
+static constexpr int kBackHeight = 40;  // фиксированная высота кнопки
+
+// Раскладка, непосредственно содержащая виджет (кнопка может лежать во
+// вложенном layout'е шапки, а не в корневом layout'е родителя).
+inline QLayout *archiveLayoutOf(QWidget *w)
+{
+    QWidget *parent = w ? w->parentWidget() : nullptr;
+    if (!parent || !parent->layout())
+        return nullptr;
+
+    QList<QLayout *> queue{parent->layout()};
+    while (!queue.isEmpty()) {
+        QLayout *lay = queue.takeFirst();
+        for (int i = 0; i < lay->count(); ++i) {
+            QLayoutItem *item = lay->itemAt(i);
+            if (item->widget() == w)
+                return lay;
+            if (item->layout())
+                queue.append(item->layout());
+        }
+    }
+    return nullptr;
+}
+
+inline void setupArchiveBackButton(QPushButton *back)
+{
+    if (!back)
+        return;
+
+    back->setProperty("nav", true);
+    back->setMinimumSize(kBackWidth, kBackHeight);
+    back->setMaximumHeight(kBackHeight);
+
+    // Выравниваем только левый и верхний отступы шапки — правый и нижний у
+    // экранов осмысленно разные (там лежат заголовок, пилюли состояния и т.п.).
+    if (QLayout *lay = archiveLayoutOf(back)) {
+        const QMargins m = lay->contentsMargins();
+        lay->setContentsMargins(kBackPadX, kBackPadY, m.right(), m.bottom());
+    }
+}
 
 // ─────────────────────────────────────────────────────────────────────────
 // applyArchiveScreenTheme — приводит экран к виду «Архива измерений».
