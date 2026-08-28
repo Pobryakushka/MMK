@@ -43,6 +43,7 @@ class LandingCalculation;
 class WorkRegulationHubPage;
 class InspectionPage;
 class AngleCheckPage;
+class MeasurementResults;
 
 namespace Ui {
 class MainWindow;
@@ -205,6 +206,9 @@ private:
     WorkRegulationHubPage *m_workRegulationHubPage = nullptr;
     InspectionPage *m_inspectionPage = nullptr;
     AngleCheckPage *m_angleCheckPage = nullptr;
+    // Архив измерений — теперь постоянная встроенная страница стека (как
+    // остальные выше), а не QDialog, пересоздаваемый на каждый клик.
+    MeasurementResults *m_measurementResults = nullptr;
 
     QDateTime m_manualDateTime;
     bool m_useManualDateTime;

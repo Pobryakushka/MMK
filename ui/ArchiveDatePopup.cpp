@@ -9,6 +9,8 @@
 #include <QStyle>
 #include <QStyleFactory>
 #include <QVariant>
+#include <QScreen>
+#include <QGuiApplication>
 #include <algorithm>
 
 namespace {
@@ -26,25 +28,25 @@ ArchiveDatePopup::ArchiveDatePopup(QWidget *parent)
 {
     setWindowFlags(Qt::Popup);
     setAttribute(Qt::WA_DeleteOnClose, false);
-    setFixedWidth(400);   // как в макете (388 + запас на рамку)
+    setFixedWidth(340);   // уменьшено под планшет (было 400) — попап не должен занимать половину экрана в 800 логических точек шириной
     // Popup — отдельное top-level окно, стиль родителя на него не наследуется,
     // а QSS ниже рассчитан на Fusion (см. MeasurementResults::applyArchiveStyle).
     setStyle(QStyleFactory::create("Fusion"));
     setStyleSheet(
         "ArchiveDatePopup { background: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 14px; }"
         "QLabel { color: #1B211F; font-family: 'Inter','Segoe UI','DejaVu Sans',sans-serif; }"
-        "QLabel#dpHead { color: #0B5A41; font-size: 11px; font-weight: 700; }"
-        "QLabel#dpBigDate { font-size: 18px; font-weight: 700; font-family: 'JetBrains Mono','DejaVu Sans Mono','Consolas',monospace; }"
-        "QLabel#dpTimesLabel { color: #6E7876; font-size: 11px; font-style: italic; }"
-        "QLabel#dpCalMonth { font-size: 13px; font-weight: 700; }"
-        "QLabel[class=\"dow\"] { color: #6E7876; font-size: 10px; font-weight: 700; qproperty-alignment: AlignCenter; }"
+        "QLabel#dpHead { color: #0B5A41; font-size: 10px; font-weight: 700; }"
+        "QLabel#dpBigDate { font-size: 16px; font-weight: 700; font-family: 'JetBrains Mono','DejaVu Sans Mono','Consolas',monospace; }"
+        "QLabel#dpTimesLabel { color: #6E7876; font-size: 10px; font-style: italic; }"
+        "QLabel#dpCalMonth { font-size: 12px; font-weight: 700; }"
+        "QLabel[class=\"dow\"] { color: #6E7876; font-size: 9px; font-weight: 700; qproperty-alignment: AlignCenter; }"
         "QPushButton { font-family: 'Inter','Segoe UI','DejaVu Sans',sans-serif; }"
-        "QPushButton[class=\"navbtn\"] { background: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 6px; font-weight: 700; color: #0B5A41; }"
+        "QPushButton[class=\"navbtn\"] { background: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 6px; font-weight: 700; color: #0B5A41; padding: 0px; font-size: 13px; }"
         "QPushButton[class=\"navbtn\"]:hover { background: #E4F1EC; }"
-        "QPushButton[class=\"quick\"] { font-size: 11px; padding: 7px 12px; border-radius: 999px; border: 1px solid #DDE1E3; background: #F7F8F8; color: #6E7876; }"
+        "QPushButton[class=\"quick\"] { font-size: 10px; padding: 5px 9px; border-radius: 999px; border: 1px solid #DDE1E3; background: #F7F8F8; color: #6E7876; }"
         "QPushButton[class=\"quick\"]:hover { border-color: #0F6B4F; color: #0B5A41; }"
         "QPushButton#dpCalToggle[on=\"true\"] { background: #E4F1EC; border-color: #0F6B4F; color: #0B5A41; font-weight: 600; }"
-        "QPushButton[class=\"calday\"] { border-radius: 9px; border: 1px solid transparent; background: #F1F3F2; color: #C1C8C5; font-weight: 600; min-height: 36px; }"
+        "QPushButton[class=\"calday\"] { border-radius: 8px; border: 1px solid transparent; background: #F1F3F2; color: #C1C8C5; font-weight: 600; min-height: 30px; font-size: 11px; }"
         "QPushButton[class=\"calday\"][avail=\"true\"] { background: #FFFFFF; border-color: #DDE1E3; color: #1B211F; }"
         "QPushButton[class=\"calday\"][complete=\"full\"][avail=\"true\"] { background: #E4F1EC; border-color: #A9D3C3; }"
         "QPushButton[class=\"calday\"][complete=\"partial\"][avail=\"true\"] { background: #FFF8E8; border-color: #F0D28C; }"
@@ -54,37 +56,37 @@ ArchiveDatePopup::ArchiveDatePopup(QWidget *parent)
         // здесь перечислены все три свойства.
         "QPushButton[class=\"calday\"][avail=\"true\"][selected=\"true\"] { background: #0F6B4F; border-color: #0F6B4F; color: #FFFFFF; }"
         "QPushButton[class=\"calday\"][today=\"true\"] { border-color: #F9A825; border-width: 2px; }"
-        "QPushButton[class=\"timechip\"] { font-size: 12px; padding: 7px 10px 7px 8px; border-radius: 8px; border: 1px solid #DDE1E3; border-left: 4px solid #DDE1E3; background: #FFFFFF; color: #1B211F; font-family: 'JetBrains Mono','DejaVu Sans Mono','Consolas',monospace; }"
+        "QPushButton[class=\"timechip\"] { font-size: 11px; padding: 5px 8px 5px 7px; border-radius: 8px; border: 1px solid #DDE1E3; border-left: 4px solid #DDE1E3; background: #FFFFFF; color: #1B211F; font-family: 'JetBrains Mono','DejaVu Sans Mono','Consolas',monospace; }"
         "QPushButton[class=\"timechip\"]:hover { border-color: #0F6B4F; }"
         "QPushButton[class=\"timechip\"][complete=\"full\"] { border-left-color: #0F6B4F; background: #E4F1EC; }"
         "QPushButton[class=\"timechip\"][complete=\"partial\"] { border-left-color: #F9A825; background: #FFF8E8; }"
         "QPushButton[class=\"timechip\"][complete=\"empty\"] { border-left-color: #C1C8C5; color: #6E7876; }"
         "QPushButton[class=\"timechip\"][active=\"true\"] { background: #0F6B4F; border-color: #0F6B4F; border-left-color: #0B5A41; color: #FFFFFF; }"
-        "QPushButton#dpDoneBtn { background: #0F6B4F; border: none; border-radius: 8px; color: #FFFFFF; font-weight: 600; padding: 8px 18px; }"
+        "QPushButton#dpDoneBtn { background: #0F6B4F; border: none; border-radius: 8px; color: #FFFFFF; font-weight: 600; padding: 6px 14px; font-size: 11px; }"
         "QPushButton#dpDoneBtn:hover { background: #0B5A41; }"
-        "QLabel#dpLegend { color: #6E7876; font-size: 10px; }"
+        "QLabel#dpLegend { color: #6E7876; font-size: 9px; }"
         );
 
     auto *root = new QVBoxLayout(this);
-    root->setContentsMargins(16, 16, 16, 16);
-    root->setSpacing(10);
+    root->setContentsMargins(12, 12, 12, 12);
+    root->setSpacing(8);
 
     auto *head = new QLabel("ВЫБОР ДАТЫ И ВРЕМЕНИ", this);
     head->setObjectName("dpHead");
     root->addWidget(head);
 
     auto *nav = new QHBoxLayout();
-    nav->setSpacing(14);
+    nav->setSpacing(10);
     auto *prevBtn = new QPushButton("◄", this);
     prevBtn->setProperty("class", "navbtn");
-    prevBtn->setFixedSize(34, 34);   // как в макете — квадратная кнопка рядом с датой
+    prevBtn->setFixedSize(28, 28);   // уменьшено под планшет (было 34x34)
     connect(prevBtn, &QPushButton::clicked, this, [this] { stepDate(-1); });
     m_bigDate = new QLabel(this);
     m_bigDate->setObjectName("dpBigDate");
     m_bigDate->setAlignment(Qt::AlignCenter);
     auto *nextBtn = new QPushButton("►", this);
     nextBtn->setProperty("class", "navbtn");
-    nextBtn->setFixedSize(34, 34);
+    nextBtn->setFixedSize(28, 28);
     connect(nextBtn, &QPushButton::clicked, this, [this] { stepDate(1); });
     nav->addWidget(prevBtn);
     nav->addWidget(m_bigDate, 1);
@@ -117,14 +119,14 @@ ArchiveDatePopup::ArchiveDatePopup(QWidget *parent)
     calHead->setSpacing(10);
     auto *calPrev = new QPushButton("◄", m_calendarBox);
     calPrev->setProperty("class", "navbtn");
-    calPrev->setFixedSize(32, 32);
+    calPrev->setFixedSize(26, 26);
     connect(calPrev, &QPushButton::clicked, this, [this] { stepMonth(-1); });
     m_calMonthLabel = new QLabel(m_calendarBox);
     m_calMonthLabel->setObjectName("dpCalMonth");
     m_calMonthLabel->setAlignment(Qt::AlignCenter);
     auto *calNext = new QPushButton("►", m_calendarBox);
     calNext->setProperty("class", "navbtn");
-    calNext->setFixedSize(32, 32);
+    calNext->setFixedSize(26, 26);
     connect(calNext, &QPushButton::clicked, this, [this] { stepMonth(1); });
     calHead->addWidget(calPrev);
     calHead->addWidget(m_calMonthLabel, 1);
@@ -230,9 +232,11 @@ void ArchiveDatePopup::popupNear(QWidget *anchor)
     m_calToggleBtn->setProperty("on", false);
     refreshBigDate();
     rebuildTimeChips();
+    adjustSize();
 
     const QPoint pos = anchor->mapToGlobal(QPoint(0, anchor->height() + 4));
     move(pos);
+    repositionWithinScreen();
     show();
     raise();
 }
@@ -240,6 +244,24 @@ void ArchiveDatePopup::popupNear(QWidget *anchor)
 void ArchiveDatePopup::refreshBigDate()
 {
     m_bigDate->setText(m_currentDate.isValid() ? m_currentDate.toString("dd.MM.yyyy") : "—");
+}
+
+// Планшет портретный (1200x1920), а попап открывается под кнопкой выбора
+// даты, которая может оказаться в нижней части экрана — без этой проверки
+// разворачивающийся календарь легко уезжает за нижний (или боковой) край
+// экрана. Сдвигаем попап целиком внутрь видимой области, не трогая его
+// размер.
+void ArchiveDatePopup::repositionWithinScreen()
+{
+    QScreen *screen = QGuiApplication::primaryScreen();
+    if (!screen) return;
+    const QRect avail = screen->availableGeometry();
+    QRect geo(pos(), size());
+    if (geo.bottom() > avail.bottom()) geo.moveBottom(avail.bottom() - 8);
+    if (geo.right()  > avail.right())  geo.moveRight(avail.right() - 8);
+    if (geo.top()    < avail.top())    geo.moveTop(avail.top() + 8);
+    if (geo.left()   < avail.left())   geo.moveLeft(avail.left() + 8);
+    move(geo.topLeft());
 }
 
 void ArchiveDatePopup::rebuildTimeChips()
@@ -377,17 +399,15 @@ void ArchiveDatePopup::stepMonth(int delta)
 
 void ArchiveDatePopup::jumpToday()
 {
-    const QList<QDate> dates = sortedDates();
-    if (dates.isEmpty()) return;
-
     const QDate today = QDate::currentDate();
-    QDate best = dates.first();
-    qint64 bestDiff = qAbs(best.toJulianDay() - today.toJulianDay());
-    for (const QDate &d : dates) {
-        qint64 diff = qAbs(d.toJulianDay() - today.toJulianDay());
-        if (diff < bestDiff) { bestDiff = diff; best = d; }
+    if (!m_available.contains(today)) {
+        // Раньше здесь молча подставлялась ближайшая по времени дата — это
+        // выглядело как случайный выбор. Теперь просто сообщаем, что данных
+        // за сегодня нет, и ничего не меняем.
+        emit noDataForDate(today);
+        return;
     }
-    selectCalendarDate(best);
+    selectCalendarDate(today);
 }
 
 void ArchiveDatePopup::jumpLatest()
@@ -411,6 +431,12 @@ void ArchiveDatePopup::toggleCalendar()
     m_calMonthOffset = 0;
     if (m_calendarShown)
         rebuildCalendar();
+    // Попап — top-level окно, оно один раз укладывается по layout при первом
+    // show() и дальше не считает размер заново само, поэтому при скрытии
+    // календаря высота оставалась "растянутой" под него. adjustSize()
+    // пересчитывает её под текущий набор видимых виджетов.
+    adjustSize();
+    repositionWithinScreen();
 }
 
 void ArchiveDatePopup::selectCalendarDate(const QDate &d)

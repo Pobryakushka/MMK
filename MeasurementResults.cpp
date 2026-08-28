@@ -25,6 +25,7 @@
 #include <QFileInfo>
 #include <QCalendarWidget>
 #include <QVBoxLayout>
+#include <QHBoxLayout>
 #include <QStackedWidget>
 #include <QDebug>
 #include <QJsonDocument>
@@ -37,6 +38,8 @@
 #include <QStyle>
 #include <QHeaderView>
 #include <QResizeEvent>
+#include <QShowEvent>
+#include <QScrollArea>
 #include <limits>
 #include <algorithm>  // Для std::sort
 #include <cmath>
@@ -44,7 +47,7 @@
 #include <QTextDocument>       // Для std::pow (расчёт давления МСА в Метео-11)
 
 MeasurementResults::MeasurementResults(QWidget *parent)
-    : QDialog(parent)
+    : QWidget(parent)
     , ui(new Ui::MeasurementResults)
     , currentButtelinType(Updated)
     , currentOutputFormat(String)
@@ -107,8 +110,14 @@ MeasurementResults::MeasurementResults(QWidget *parent)
     m_datePopup = new ArchiveDatePopup(this);
     connect(m_datePopup, &ArchiveDatePopup::dateTimeSelected,
             this, &MeasurementResults::onDatePopupDateTimeSelected);
+    connect(m_datePopup, &ArchiveDatePopup::noDataForDate, this, [this](const QDate &date) {
+        showStatus(QString("Нет данных за %1").arg(date.toString("dd.MM.yyyy")), NotificationToast::Info);
+    });
 
-    connect(ui->btnBack, &QPushButton::clicked, this, &MeasurementResults::accept);
+    // Кнопка "Закрыть" в шапке — единственный способ покинуть архив теперь
+    // (кнопка "Назад" убрана как избыточная). accept()/reject() у QDialog
+    // больше нет — просто эмитим сигнал, MainWindow сам переключит стек.
+    connect(ui->btnClose, &QPushButton::clicked, this, &MeasurementResults::backRequested);
 
     setupAmsProbeCollapse();
 
@@ -376,17 +385,24 @@ void MeasurementResults::applyResponsiveLayout(int width)
         toolbar->invalidate();
     }
 
-    // Графики: рядом по горизонтали в широком окне, друг под другом в узком
+    // Графики: всегда рядом по горизонтали, в любой ширине окна. Данные —
+    // это профиль по высотам, значение (скорость/направление) вторично, а
+    // высота — по оси Y; поставленные друг под другом графики в узком окне
+    // раньше отдавали всю ширину под малоинформативную ось X и вдвое ужимали
+    // высоту, на которой как раз и нужно читать показания. Бок о бок каждому
+    // графику достаётся уже вертикаль вкладки почти целиком.
     const QList<QHBoxLayout *> chartRows = {
         ui->chartsRow_avgWind, ui->chartsRow_realWind,
         ui->chartsRow_measWind, ui->chartsRow_shear
     };
     for (QHBoxLayout *row : chartRows)
         if (row)
-            row->setDirection(narrow ? QBoxLayout::TopToBottom : QBoxLayout::LeftToRight);
+            row->setDirection(QBoxLayout::LeftToRight);
 
-    // Карточка графика в один столбец не должна расти на всю высоту вкладки,
-    // иначе таблица под ней уходит за нижний край.
+    // Планшет 1200x1920 — экран портретный, по высоте места много (в отличие
+    // от ширины), поэтому графикам отдаём заметно больше вертикали, чем
+    // раньше (было 210/250) — таблица снизу по-прежнему прокручивается сама
+    // при нехватке места, а графику короткая полоска высоты не нужна.
     const QList<QFrame *> cards = {
         ui->cardFrame_avgWindSpeed, ui->cardFrame_avgWindDir,
         ui->cardFrame_realWindSpeed, ui->cardFrame_realWindDir,
@@ -395,7 +411,7 @@ void MeasurementResults::applyResponsiveLayout(int width)
     };
     for (QFrame *card : cards)
         if (card)
-            card->setMaximumHeight(narrow ? 210 : 250);
+            card->setMaximumHeight(narrow ? 380 : 440);
 
     setMeteo11TableStacked(narrow);
 
@@ -432,8 +448,17 @@ void MeasurementResults::applyResponsiveLayout(int width)
 
 void MeasurementResults::resizeEvent(QResizeEvent *event)
 {
-    QDialog::resizeEvent(event);
+    QWidget::resizeEvent(event);
     applyResponsiveLayout(event->size().width());
+}
+
+void MeasurementResults::showEvent(QShowEvent *event)
+{
+    QWidget::showEvent(event);
+    // Страница теперь постоянный виджет в стеке MainWindow, а не диалог,
+    // пересоздаваемый заново на каждый клик — поэтому список измерений
+    // обновляем здесь, при каждом появлении страницы на экране.
+    loadAvailableMeasurements();
 }
 
 void MeasurementResults::clearStationCoordinates()
@@ -446,7 +471,14 @@ void MeasurementResults::clearStationCoordinates()
 
 void MeasurementResults::showStatus(const QString &text, NotificationToast::Kind kind)
 {
-    m_toast->showMessage(text, kind);
+    // Раньше Success сам скрывался через 3с, а Info/Error оставались на экране
+    // бессрочно (Error можно было закрыть крестиком, Info — вообще ничем,
+    // пока его не сменяло следующее уведомление). Теперь любое всплывающее
+    // уведомление в архиве само пропадает через несколько секунд; для Error
+    // время побольше, чтобы успеть прочитать текст ошибки, и крестик
+    // по-прежнему доступен, чтобы закрыть раньше.
+    const int autoHideMs = (kind == NotificationToast::Error) ? 6000 : 4000;
+    m_toast->showMessage(text, kind, autoHideMs);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -478,7 +510,7 @@ void MeasurementResults::applyArchiveStyle()
         // green #0F6B4F · green-dark #0B5A41 · green-soft #E4F1EC
         // bg #EFF1F1 · card #FFFFFF · border #DDE1E3
         // text #1B211F · mute #6E7876 · amber #F9A825
-        "QDialog#MeasurementResults, QWidget#archivePage, QStackedWidget#rootStack {"
+        "QWidget#MeasurementResults, QWidget#archivePage, QStackedWidget#rootStack {"
         "  background-color: #EFF1F1;"
         "}"
         "QWidget { font-family: 'Inter','Segoe UI','DejaVu Sans',sans-serif; color: #1B211F; }"
@@ -491,11 +523,6 @@ void MeasurementResults::applyArchiveStyle()
         "QFrame#sectionDateTime, QFrame#sectionParams, QFrame#railFoot {"
         "  border-top: 1px solid #DDE1E3;"
         "}"
-        "QPushButton#btnBack {"
-        "  background: transparent; border: none; border-radius: 8px;"
-        "  color: #0F6B4F; font-weight: 600; font-size: 13px; padding: 6px 8px; text-align: left;"
-        "}"
-        "QPushButton#btnBack:hover { background: #E4F1EC; }"
         "QLabel#lblTitle { color: #1B211F; font-size: 15px; font-weight: 700; }"
         "QLabel#lblSubtitle { color: #6E7876; font-size: 11px; }"
         "QLabel#capDateTime, QLabel#capParams {"
@@ -552,8 +579,8 @@ void MeasurementResults::applyArchiveStyle()
         // ── самодельная строка вкладок (нативная QTabBar скрыта) ──────────
         "QWidget#customTabBar { background: #EFF1F1; }"
         "QPushButton#archiveTabButton {"
-        "  background: #E4E7E6; color: #6E7876; font-weight: 600; font-size: 12px;"
-        "  padding: 9px 16px; border: none;"
+        "  background: #E4E7E6; color: #6E7876; font-weight: 600; font-size: 11px;"
+        "  padding: 7px 11px; border: none;"
         "  border-top-left-radius: 8px; border-top-right-radius: 8px;"
         "  border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;"
         "}"
@@ -853,12 +880,15 @@ void MeasurementResults::setupCustomTabBar()
 
     m_customTabBar = new QWidget(this);
     m_customTabBar->setObjectName("customTabBar");
-    // FlowLayout, а не QHBoxLayout: на планшете (1200x1920 при масштабе 150% —
-    // это 800 логических точек по ширине) шесть вкладок в одну строку не
-    // помещаются. Вместо сжатия до нечитаемых надписей они переносятся вниз,
-    // как flex-wrap у строки вкладок в макете.
-    auto *layout = new FlowLayout(m_customTabBar, 0, 2, 2);
-    layout->setContentsMargins(16, 10, 16, 0);
+    // Раньше здесь был FlowLayout, переносивший лишние вкладки на вторую
+    // строку — из-за этого высота строки вкладок "прыгала" (1 или 2 строки)
+    // и съедала место у контента под ней. Вкладки должны быть в один ряд
+    // всегда; если все шесть подряд не помещаются по ширине — строка вкладок
+    // скроллится по горизонтали (обёрнута в scrollArea_tabBar ниже), а не
+    // переносится вниз.
+    auto *layout = new QHBoxLayout(m_customTabBar);
+    layout->setSpacing(2);
+    layout->setContentsMargins(16, 8, 16, 0);
 
     m_tabButtons.clear();
     for (int i = 0; i < tabs->count(); ++i) {
@@ -866,19 +896,35 @@ void MeasurementResults::setupCustomTabBar()
         btn->setObjectName("archiveTabButton");
         btn->setProperty("active", i == tabs->currentIndex());
         btn->setCursor(Qt::PointingHandCursor);
+        btn->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
         connect(btn, &QPushButton::clicked, this, [tabs, i] { tabs->setCurrentIndex(i); });
         layout->addWidget(btn);
         m_tabButtons.append(btn);
     }
+    layout->addStretch(1);
 
     connect(tabs, &QTabWidget::currentChanged, this, &MeasurementResults::updateCustomTabBarHighlight);
+
+    // Строка вкладок — сама по себе узкая полоска фиксированной высоты
+    // внутри горизонтального scrollArea без рамки и без вертикальной
+    // прокрутки: обёртка нужна только на случай, если сумма ширин вкладок
+    // всё же превысит ширину экрана.
+    auto *tabBarScroll = new QScrollArea(this);
+    tabBarScroll->setObjectName("scrollArea_tabBar");
+    tabBarScroll->setWidget(m_customTabBar);
+    tabBarScroll->setWidgetResizable(false);
+    tabBarScroll->setFrameShape(QFrame::NoFrame);
+    tabBarScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    tabBarScroll->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    tabBarScroll->setFixedHeight(42);
+    tabBarScroll->setStyleSheet("QScrollArea#scrollArea_tabBar { background: #EFF1F1; border: none; }");
 
     // Вставляем строку кнопок между статусной строкой (row 0) и самим
     // QTabWidget (row 1) в gridLayout_2, сдвигая tabWidget на row 2.
     QGridLayout *grid = ui->gridLayout_2;
     if (grid) {
         grid->removeWidget(tabs);
-        grid->addWidget(m_customTabBar, 1, 0);
+        grid->addWidget(tabBarScroll, 1, 0);
         grid->addWidget(tabs, 2, 0);
     }
 }
@@ -1832,6 +1878,12 @@ void MeasurementResults::navigateToRecord(int recordId)
 void MeasurementResults::loadAvailableMeasurements()
 {
     loadMeasurementsFromDatabase();
+    // Архив открывается пустым — ничего не подставляем и не выбираем за
+    // пользователя (ни "сейчас", ни последнюю запись): пока дата и время не
+    // выбраны явно (стрелками, попапом выбора даты или кнопкой "Последняя
+    // запись" внутри него), таблицы и графики остаются пустыми, а статусная
+    // строка показывает приглашение выбрать дату — см. "else"-ветку в
+    // loadMeasurementData().
     updateDisplay();
 }
 
@@ -1907,6 +1959,13 @@ void MeasurementResults::loadMeasurementData(const QDateTime &dateTime)
              << "→ record_id=" << record.recordId;
 
     if (record.recordId > 0) {
+        // Стрелки "‹ ›" ищут currentDateTime среди реальных записей по точному
+        // совпадению времени — если оставить его равным переданному dateTime
+        // (который может быть округлён "к ближайшему часу"/не совпадать ни с
+        // одной записью), клик по стрелке никогда не найдёт "текущую" запись
+        // и ничего не произойдёт. Поэтому синхронизируем его с фактически
+        // найденной записью сразу же.
+        currentDateTime = record.measurementTime;
         m_currentSondingTime = record.measurementTime;
 
         QVector<WindProfileData>  avgWind      = loadAvgWindProfile(record.recordId);
