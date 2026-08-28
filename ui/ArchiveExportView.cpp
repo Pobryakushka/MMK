@@ -21,34 +21,34 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
         "QWidget#expHead { background: #FFFFFF; border-bottom: 1px solid #DDE1E3; }"
         "QWidget#expFoot { background: #FFFFFF; border-top: 1px solid #DDE1E3; }"
         "QLabel { color: #1B211F; font-family: 'Inter','Segoe UI','DejaVu Sans',sans-serif; }"
-        "QLabel#expTitle { font-size: 15px; font-weight: 700; }"
-        "QLabel#expRecInfo { color: #6E7876; font-size: 11px; }"
+        "QLabel#expTitle { font-size: 13px; font-weight: 700; }"
+        "QLabel#expRecInfo { color: #6E7876; font-size: 10px; }"
         "QLabel#expRecInfo b { color: #1B211F; }"
-        "QLabel[class=\"sectionTitle\"] { color: #6E7876; font-size: 11px; font-weight: 600; }"
-        "QPushButton#expBackBtn { background: none; border: none; color: #0F6B4F; font-weight: 600; font-size: 13px; text-align: left; }"
+        "QLabel[class=\"sectionTitle\"] { color: #6E7876; font-size: 10px; font-weight: 600; }"
+        "QPushButton#expBackBtn { background: none; border: none; color: #0F6B4F; font-weight: 600; font-size: 12px; text-align: left; padding: 0px; }"
         "QPushButton#expBackBtn:hover { text-decoration: underline; }"
-        "QPushButton[class=\"fmtCard\"] { border: 1.5px solid #DDE1E3; border-radius: 12px; background: #FFFFFF; padding: 10px; font-family: 'JetBrains Mono','DejaVu Sans Mono','Consolas',monospace; font-weight: 800; font-size: 15px; color: #6E7876; }"
+        "QPushButton[class=\"fmtCard\"] { border: 1.5px solid #DDE1E3; border-radius: 9px; background: #FFFFFF; padding: 5px; font-family: 'JetBrains Mono','DejaVu Sans Mono','Consolas',monospace; font-weight: 800; font-size: 12px; color: #6E7876; }"
         "QPushButton[class=\"fmtCard\"]:hover { border-color: #0F6B4F; }"
         "QPushButton[class=\"fmtCard\"][sel=\"true\"] { border-color: #0F6B4F; background: #E4F1EC; color: #0B5A41; }"
-        "QWidget#expOptionsPanel { background: #F7F8F8; border: 1px solid #DDE1E3; border-radius: 12px; }"
-        "QPushButton[class=\"segBtn\"] { border: none; background: #FFFFFF; padding: 7px 14px; font-size: 12px; font-weight: 600; color: #6E7876; }"
+        "QWidget#expOptionsPanel { background: #F7F8F8; border: 1px solid #DDE1E3; border-radius: 11px; }"
+        "QPushButton[class=\"segBtn\"] { border: none; background: #FFFFFF; padding: 5px 9px; font-size: 10px; font-weight: 600; color: #6E7876; }"
         "QPushButton[class=\"segBtn\"][sel=\"true\"] { background: #0F6B4F; color: #FFFFFF; }"
         "QWidget[class=\"segGroup\"] { border: 1px solid #DDE1E3; border-radius: 8px; }"
-        "QCheckBox { font-size: 12px; color: #1B211F; spacing: 8px; }"
+        "QCheckBox { font-size: 11px; color: #1B211F; spacing: 7px; }"
         "QCheckBox:disabled { color: #A9AFAD; }"
         "QWidget#expSecItem { border-bottom: 1px dashed #DDE1E3; }"
         "QLabel#expSecBadge {"
-        "  background: #E1E6E4; color: #6E7876; font-size: 10px;"
-        "  border-radius: 8px; padding: 2px 7px;"
+        "  background: #E1E6E4; color: #6E7876; font-size: 9px;"
+        "  border-radius: 8px; padding: 2px 6px;"
         "}"
         // Плоский индикатор чекбокса (без нативной галочки системного QStyle) —
         // залитый зелёный квадрат со скруглением вместо неё, как toggle в макете.
-        "QCheckBox::indicator { width: 16px; height: 16px; border: 1.5px solid #DDE1E3; border-radius: 4px; background: #FFFFFF; }"
+        "QCheckBox::indicator { width: 15px; height: 15px; border: 1.5px solid #DDE1E3; border-radius: 4px; background: #FFFFFF; }"
         "QCheckBox::indicator:hover { border-color: #0F6B4F; }"
         "QCheckBox::indicator:checked { background: #0F6B4F; border-color: #0F6B4F;"
         "  image: url(:/icons/checkmark_white.svg); }"
         "QCheckBox::indicator:disabled { background: #F1F3F2; border-color: #DDE1E3; }"
-        "QPushButton#expCancelBtn, QPushButton#expSaveBtn { border-radius: 6px; font-weight: 600; font-size: 13px; padding: 8px 20px; }"
+        "QPushButton#expCancelBtn, QPushButton#expSaveBtn { border-radius: 6px; font-weight: 600; font-size: 12px; padding: 7px 16px; }"
         "QPushButton#expCancelBtn { background: #FFFFFF; border: 1px solid #DDE1E3; color: #1B211F; }"
         "QPushButton#expCancelBtn:hover { background: #F3F5F4; }"
         "QPushButton#expSaveBtn { background: #0F6B4F; border: none; color: #FFFFFF; }"
@@ -63,8 +63,8 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
     auto *head = new QWidget(this);
     head->setObjectName("expHead");
     auto *headLayout = new QHBoxLayout(head);
-    headLayout->setContentsMargins(20, 14, 20, 14);
-    headLayout->setSpacing(14);
+    headLayout->setContentsMargins(16, 10, 16, 10);
+    headLayout->setSpacing(12);
 
     auto *backBtn = new QPushButton("‹ Назад к архиву", head);
     backBtn->setObjectName("expBackBtn");
@@ -73,6 +73,7 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
 
     auto *title = new QLabel("Экспорт результатов измерений", head);
     title->setObjectName("expTitle");
+    title->setAlignment(Qt::AlignCenter);
 
     m_recordInfo = new QLabel(head);
     m_recordInfo->setObjectName("expRecInfo");
@@ -81,22 +82,32 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
     headLayout->addWidget(backBtn);
     headLayout->addWidget(title, 1);
     headLayout->addWidget(m_recordInfo);
+    // По умолчанию QHBoxLayout прижимает элементы с фиксированной по высоте
+    // политикой размера (кнопка, подписи) к верху строки, а не по центру —
+    // из-за этого "‹ Назад к архиву" выглядела заметно выше середины шапки,
+    // особенно рядом с более крупным заголовком. Явно центрируем все три
+    // элемента по вертикали в границах шапки.
+    headLayout->setAlignment(backBtn, Qt::AlignVCenter);
+    headLayout->setAlignment(title, Qt::AlignVCenter);
+    headLayout->setAlignment(m_recordInfo, Qt::AlignVCenter);
     root->addWidget(head);
 
     // ── Тело ─────────────────────────────────────────────────────────────
     auto *body = new QWidget(this);
     auto *bodyLayout = new QVBoxLayout(body);
-    bodyLayout->setContentsMargins(20, 20, 20, 20);
-    bodyLayout->setSpacing(6);
-    bodyLayout->setAlignment(Qt::AlignTop);
+    bodyLayout->setContentsMargins(20, 16, 20, 16);
+    bodyLayout->setSpacing(5);
+    bodyLayout->setAlignment(Qt::AlignTop | Qt::AlignHCenter);
 
     auto *fmtTitle = new QLabel("Формат файла", body);
     fmtTitle->setProperty("class", "sectionTitle");
+    fmtTitle->setAlignment(Qt::AlignHCenter);
     bodyLayout->addWidget(fmtTitle);
+    bodyLayout->setAlignment(fmtTitle, Qt::AlignHCenter);
     bodyLayout->addSpacing(4);
 
     auto *fmtRow = new QHBoxLayout();
-    fmtRow->setSpacing(10);
+    fmtRow->setSpacing(8);
     struct { ExportOptions::Format fmt; const char *ext; const char *label; } kFormats[] = {
         { ExportOptions::TXT,  "TXT",  "Текст"   },
         { ExportOptions::CSV,  "CSV",  "Таблица" },
@@ -112,33 +123,39 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
     }
     // В макете карточки форматов ограничены по ширине (max-width: 760px),
     // иначе на широком экране они растягиваются в непропорциональные плашки.
+    // Раньше этот блок (как и панель параметров, и сетка разделов ниже)
+    // просто прижимался к левому краю страницы — теперь центрируем каждый
+    // такой блок по горизонтали через выравнивание элемента в bodyLayout.
     auto *fmtRowHolder = new QWidget(body);
-    fmtRowHolder->setMaximumWidth(760);
+    fmtRowHolder->setMaximumWidth(680);
     fmtRowHolder->setLayout(fmtRow);
     fmtRow->setContentsMargins(0, 0, 0, 0);
     bodyLayout->addWidget(fmtRowHolder);
-    bodyLayout->addSpacing(18);
+    bodyLayout->setAlignment(fmtRowHolder, Qt::AlignHCenter);
+    bodyLayout->addSpacing(14);
 
     auto *optTitle = new QLabel("Параметры формата", body);
     optTitle->setProperty("class", "sectionTitle");
+    optTitle->setAlignment(Qt::AlignHCenter);
     bodyLayout->addWidget(optTitle);
+    bodyLayout->setAlignment(optTitle, Qt::AlignHCenter);
     bodyLayout->addSpacing(4);
 
     auto *optionsPanel = new QWidget(body);
     optionsPanel->setObjectName("expOptionsPanel");
-    optionsPanel->setMaximumWidth(760);
+    optionsPanel->setMaximumWidth(680);
     auto *optionsLayout = new QVBoxLayout(optionsPanel);
-    optionsLayout->setContentsMargins(16, 14, 16, 14);
-    optionsLayout->setSpacing(10);
+    optionsLayout->setContentsMargins(14, 12, 14, 12);
+    optionsLayout->setSpacing(8);
 
     auto makeOptRow = [&](const QString &labelText, QWidget *control) -> QWidget* {
         auto *row = new QWidget(optionsPanel);
         auto *rowLayout = new QHBoxLayout(row);
         rowLayout->setContentsMargins(0, 0, 0, 0);
-        rowLayout->setSpacing(14);
+        rowLayout->setSpacing(12);
         auto *lbl = new QLabel(labelText, row);
-        lbl->setFixedWidth(150);
-        lbl->setStyleSheet("color: #6E7876; font-size: 12px;");
+        lbl->setFixedWidth(140);
+        lbl->setStyleSheet("color: #6E7876; font-size: 11px;");
         rowLayout->addWidget(lbl);
         rowLayout->addWidget(control, 1);
         optionsLayout->addWidget(row);
@@ -201,16 +218,19 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
     m_noOptionsRow = makeOptRow(QString(), noOptLabel);
 
     bodyLayout->addWidget(optionsPanel);
-    bodyLayout->addSpacing(18);
+    bodyLayout->setAlignment(optionsPanel, Qt::AlignHCenter);
+    bodyLayout->addSpacing(14);
 
     auto *secTitle = new QLabel("Разделы для экспорта", body);
     secTitle->setProperty("class", "sectionTitle");
+    secTitle->setAlignment(Qt::AlignHCenter);
     bodyLayout->addWidget(secTitle);
+    bodyLayout->setAlignment(secTitle, Qt::AlignHCenter);
     bodyLayout->addSpacing(4);
 
     auto *secGrid = new QGridLayout();
-    secGrid->setHorizontalSpacing(20);
-    secGrid->setVerticalSpacing(4);
+    secGrid->setHorizontalSpacing(16);
+    secGrid->setVerticalSpacing(2);
     m_secCoordinates    = new QCheckBox("Координаты станции", body);
     m_secSurfaceMeteo   = new QCheckBox("Наземные метеоусловия", body);
     m_secAvgWind        = new QCheckBox("Ветер (осреднённый)", body);
@@ -232,8 +252,8 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
         auto *row = new QWidget(body);
         row->setObjectName("expSecItem");
         auto *rowLayout = new QHBoxLayout(row);
-        rowLayout->setContentsMargins(2, 5, 2, 5);
-        rowLayout->setSpacing(8);
+        rowLayout->setContentsMargins(2, 3, 2, 3);
+        rowLayout->setSpacing(7);
         rowLayout->addWidget(secBoxes[i], 1);
         auto *badge = new QLabel("нет данных", row);
         badge->setObjectName("expSecBadge");
@@ -243,10 +263,11 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
         secGrid->addWidget(row, i / 2, i % 2);
     }
     auto *secGridHolder = new QWidget(body);
-    secGridHolder->setMaximumWidth(760);
+    secGridHolder->setMaximumWidth(680);
     secGridHolder->setLayout(secGrid);
     secGrid->setContentsMargins(0, 0, 0, 0);
     bodyLayout->addWidget(secGridHolder);
+    bodyLayout->setAlignment(secGridHolder, Qt::AlignHCenter);
     bodyLayout->addStretch(1);
 
     root->addWidget(body, 1);
@@ -255,8 +276,8 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
     auto *foot = new QWidget(this);
     foot->setObjectName("expFoot");
     auto *footLayout = new QHBoxLayout(foot);
-    footLayout->setContentsMargins(20, 14, 20, 14);
-    footLayout->setSpacing(10);
+    footLayout->setContentsMargins(16, 10, 16, 10);
+    footLayout->setSpacing(8);
     footLayout->addStretch(1);
     auto *cancelBtn = new QPushButton("Отмена", foot);
     cancelBtn->setObjectName("expCancelBtn");
@@ -282,7 +303,7 @@ QPushButton *ArchiveExportView::makeFormatCard(const QString &ext, const QString
     auto *card = new QPushButton(this);
     card->setProperty("class", "fmtCard");
     card->setCursor(Qt::PointingHandCursor);
-    card->setMinimumHeight(58);
+    card->setMinimumHeight(48);
     card->setText(ext + "\n" + label);
     return card;
 }

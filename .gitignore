@@ -6345,3 +6345,5 @@ GRIB/SocketSpecial2G/Send/Files/gfs.t12z.pgrb2.0p25.f000
 
 GRIB/SocketSpecial2G/gfs_download.log
 >>>>>>> origin/dev
+
+GRIB/SocketSpecial2G/gfs_download.lock

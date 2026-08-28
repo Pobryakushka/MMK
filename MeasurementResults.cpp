@@ -399,10 +399,10 @@ void MeasurementResults::applyResponsiveLayout(int width)
         if (row)
             row->setDirection(QBoxLayout::LeftToRight);
 
-    // Планшет 1200x1920 — экран портретный, по высоте места много (в отличие
-    // от ширины), поэтому графикам отдаём заметно больше вертикали, чем
-    // раньше (было 210/250) — таблица снизу по-прежнему прокручивается сама
-    // при нехватке места, а графику короткая полоска высоты не нужна.
+    // Немного сузили ещё раз по просьбе пользователя: графики и так уже
+    // всегда рядом по горизонтали (см. выше), но 380/440 всё же оставляли
+    // таблице по высотам маловато места на экране — снизили, чтобы таблица
+    // под графиками открывалась пошире, до появления собственной прокрутки.
     const QList<QFrame *> cards = {
         ui->cardFrame_avgWindSpeed, ui->cardFrame_avgWindDir,
         ui->cardFrame_realWindSpeed, ui->cardFrame_realWindDir,
@@ -411,7 +411,7 @@ void MeasurementResults::applyResponsiveLayout(int width)
     };
     for (QFrame *card : cards)
         if (card)
-            card->setMaximumHeight(narrow ? 380 : 440);
+            card->setMaximumHeight(narrow ? 320 : 360);
 
     setMeteo11TableStacked(narrow);
 
@@ -572,15 +572,15 @@ void MeasurementResults::applyArchiveStyle()
         // ── статусная строка над вкладками ────────────────────────────────
         "QLabel#lblDataStatus {"
         "  background: #FFFFFF; border-bottom: 1px solid #DDE1E3; color: #6E7876;"
-        "  font-weight: 600; font-size: 12px; padding: 9px 20px;"
+        "  font-weight: 600; font-size: 10px; padding: 6px 14px;"
         "}"
         "QLabel#lblDataStatus[state=\"empty\"] { color: #B03A2E; }"
 
         // ── самодельная строка вкладок (нативная QTabBar скрыта) ──────────
         "QWidget#customTabBar { background: #EFF1F1; }"
         "QPushButton#archiveTabButton {"
-        "  background: #E4E7E6; color: #6E7876; font-weight: 600; font-size: 11px;"
-        "  padding: 7px 11px; border: none;"
+        "  background: #E4E7E6; color: #6E7876; font-weight: 600; font-size: 10px;"
+        "  padding: 5px 9px; border: none;"
         "  border-top-left-radius: 8px; border-top-right-radius: 8px;"
         "  border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;"
         "}"
@@ -704,15 +704,15 @@ void MeasurementResults::applyArchiveStyle()
         "}"
         // Табличный вид Метео-11: компактные подписи и узкие поля значений —
         // без этого подписи наследуют крупный шрифт из .ui и строки расползаются.
-        "QWidget#page_meteo11_table QLabel { font-size: 12px; color: #6E7876; font-weight: 400; }"
+        "QWidget#page_meteo11_table QLabel { font-size: 10px; color: #6E7876; font-weight: 400; }"
         "QWidget#page_meteo11_table QLineEdit {"
         "  font-family: 'JetBrains Mono','DejaVu Sans Mono','Consolas',monospace;"
-        "  font-size: 12px; font-weight: 600; color: #1B211F; max-width: 130px;"
+        "  font-size: 11px; font-weight: 600; color: #1B211F; max-width: 130px; padding: 1px 4px;"
         "}"
-        "QWidget#page_meteo11_approximate QLabel { font-size: 12px; color: #6E7876; }"
+        "QWidget#page_meteo11_approximate QLabel { font-size: 10px; color: #6E7876; }"
         "QWidget#page_meteo11_approximate QLineEdit {"
         "  font-family: 'JetBrains Mono','DejaVu Sans Mono','Consolas',monospace;"
-        "  font-size: 12px; color: #1B211F;"
+        "  font-size: 11px; color: #1B211F; padding: 1px 4px;"
         "}"
         "QTextEdit#textEdit_meteo11, QTextEdit#textEdit_meteo11_updated {"
         "  background: #F7F8F8; border: 1px solid #DDE1E3; border-radius: 8px; padding: 12px 14px;"
@@ -916,7 +916,7 @@ void MeasurementResults::setupCustomTabBar()
     tabBarScroll->setFrameShape(QFrame::NoFrame);
     tabBarScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     tabBarScroll->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    tabBarScroll->setFixedHeight(42);
+    tabBarScroll->setFixedHeight(36);
     tabBarScroll->setStyleSheet("QScrollArea#scrollArea_tabBar { background: #EFF1F1; border: none; }");
 
     // Вставляем строку кнопок между статусной строкой (row 0) и самим
