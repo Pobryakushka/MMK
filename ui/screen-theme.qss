@@ -120,9 +120,19 @@ QComboBox:disabled {
     background: #F7F8F8;
     color: #9AA3A0;
 }
+/* Стрелку subcontrol'а рисуем сами: как только ::drop-down оформлен через
+   QSS, Qt перестаёт рисовать штатную стрелку Fusion, и список выглядит как
+   обычное поле ввода — без единого признака, что он раскрывается. */
 QComboBox::drop-down {
     border: none;
-    width: 18px;
+    width: 22px;
+    subcontrol-origin: padding;
+    subcontrol-position: center right;
+}
+QComboBox::down-arrow {
+    image: url(:/icons/chevron_down.svg);
+    width: 12px;
+    height: 12px;
 }
 QComboBox QAbstractItemView {
     border: 1px solid #DDE1E3;
@@ -131,6 +141,38 @@ QComboBox QAbstractItemView {
     selection-background-color: #E4F1EC;
     selection-color: #0B5A41;
     outline: none;
+}
+
+/* ── вкладки ─────────────────────────────────────────────────────────── */
+/* По макету: неактивная вкладка — приглушённая на сером, активная — белая
+   с зелёной подписью и зелёной чертой снизу; полотно вкладки белое. */
+QTabWidget::pane {
+    border: none;
+    background: #FFFFFF;
+    top: -1px;
+}
+QTabBar {
+    background: transparent;
+    qproperty-drawBase: 0;
+}
+QTabBar::tab {
+    background: #E4E7E6;
+    color: #6E7876;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 9px 16px;
+    margin-right: 2px;
+    border: none;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+QTabBar::tab:hover {
+    color: #0B5A41;
+}
+QTabBar::tab:selected {
+    background: #FFFFFF;
+    color: #0B5A41;
+    border-bottom: 2px solid #0F6B4F;
 }
 
 /* ── кнопки ──────────────────────────────────────────────────────────── */
