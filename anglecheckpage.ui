@@ -195,14 +195,14 @@
          <widget class="RpvIndicator" name="rpvAngleIndicator" native="true">
           <property name="minimumSize">
            <size>
-            <width>140</width>
-            <height>140</height>
+            <width>200</width>
+            <height>200</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
-            <width>180</width>
-            <height>180</height>
+            <width>280</width>
+            <height>280</height>
            </size>
           </property>
          </widget>
