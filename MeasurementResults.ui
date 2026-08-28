@@ -1,13 +1,13 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <ui version="4.0">
   <class>MeasurementResults</class>
-  <widget class="QDialog" name="MeasurementResults">
+  <widget class="QWidget" name="MeasurementResults">
     <property name="geometry">
       <rect>
         <x>0</x>
         <y>0</y>
-        <width>1757</width>
-        <height>1345</height>
+        <width>800</width>
+        <height>1280</height>
       </rect>
     </property>
     <property name="minimumSize">
@@ -72,13 +72,6 @@
                           <property name="topMargin"><number>12</number></property>
                           <property name="rightMargin"><number>16</number></property>
                           <property name="bottomMargin"><number>12</number></property>
-                          <item>
-                            <widget class="QPushButton" name="btnBack">
-                              <property name="text"><string>‹ Назад</string></property>
-                              <property name="sizePolicy"><sizepolicy hsizetype="Maximum" vsizetype="Fixed"><horstretch>0</horstretch><verstretch>0</verstretch></sizepolicy></property>
-                              <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
-                            </widget>
-                          </item>
                           <item>
                             <widget class="QLabel" name="lblTitle">
                               <property name="text"><string>Архив измерений</string></property>
@@ -145,6 +138,18 @@
                     </item>
                     <item>
                       <widget class="QFrame" name="sectionParams">
+                        <layout class="QVBoxLayout" name="outerSectionParamsLayout">
+                          <property name="spacing"><number>0</number></property>
+                          <property name="leftMargin"><number>0</number></property>
+                          <property name="topMargin"><number>0</number></property>
+                          <property name="rightMargin"><number>0</number></property>
+                          <property name="bottomMargin"><number>0</number></property>
+                          <item>
+                            <widget class="QScrollArea" name="scrollArea_sectionParams">
+                              <property name="widgetResizable"><bool>true</bool></property>
+                              <property name="frameShape"><enum>QFrame::NoFrame</enum></property>
+                              <widget class="QWidget" name="scrollAreaWidgetContents_sectionParams">
+                                <property name="geometry"><rect><x>0</x><y>0</y><width>260</width><height>200</height></rect></property>
                         <layout class="QVBoxLayout" name="sectionParamsLayout">
                           <property name="spacing"><number>0</number></property>
                           <property name="leftMargin"><number>16</number></property>
@@ -270,6 +275,10 @@
                                   </widget>
                                 </item>
                               </layout>
+                            </widget>
+                          </item>
+                        </layout>
+                              </widget>
                             </widget>
                           </item>
                         </layout>
@@ -591,11 +600,23 @@ li.checked::marker { content: "\2612"; }
                                   </layout>
                                 </widget>
                                 <widget class="QWidget" name="page_meteo11_table">
+                                  <layout class="QVBoxLayout" name="outerLayout_meteo11_table">
+                                    <property name="spacing"><number>0</number></property>
+                                    <property name="leftMargin"><number>0</number></property>
+                                    <property name="topMargin"><number>0</number></property>
+                                    <property name="rightMargin"><number>0</number></property>
+                                    <property name="bottomMargin"><number>0</number></property>
+                                    <item>
+                                      <widget class="QScrollArea" name="scrollArea_meteo11_table">
+                                        <property name="widgetResizable"><bool>true</bool></property>
+                                        <property name="frameShape"><enum>QFrame::NoFrame</enum></property>
+                                        <widget class="QWidget" name="scrollAreaWidgetContents_meteo11_table">
+                                          <property name="geometry"><rect><x>0</x><y>0</y><width>760</width><height>900</height></rect></property>
                                   <layout class="QGridLayout" name="gridLayout_4">
                                     <item row="0" column="0" rowspan="2" colspan="2">
                                       <layout class="QGridLayout" name="gridLayout_Meteo11Params">
                                         <property name="verticalSpacing">
-                                          <number>30</number>
+                                          <number>6</number>
                                         </property>
                                         <item row="4" column="0">
                                           <widget class="QLabel" name="label_tempVirtDeviation">
@@ -822,6 +843,10 @@ li.checked::marker { content: "\2612"; }
                                       </widget>
                                     </item>
                                   </layout>
+                                        </widget>
+                                      </widget>
+                                    </item>
+                                  </layout>
                                 </widget>
                                 <widget class="QWidget" name="page_meteo11_approximate">
                                   <layout class="QGridLayout" name="gridLayout_approximate">
@@ -859,7 +884,7 @@ li.checked::marker { content: "\2612"; }
                                     <item row="1" column="1" colspan="2">
                                       <layout class="QGridLayout" name="gridLayout_ams_coords">
                                         <property name="verticalSpacing">
-                                          <number>30</number>
+                                          <number>6</number>
                                         </property>
                                         <item row="0" column="0">
                                           <widget class="QLabel" name="label_amsDegrees1">
@@ -1073,7 +1098,7 @@ li.checked::marker { content: "\2612"; }
                                     <item row="1" column="3">
                                       <layout class="QGridLayout" name="gridLayout_ams_info">
                                         <property name="verticalSpacing">
-                                          <number>30</number>
+                                          <number>6</number>
                                         </property>
                                         <item row="0" column="0">
                                           <widget class="QLabel" name="label_minutesFromProbe">
@@ -1205,7 +1230,7 @@ li.checked::marker { content: "\2612"; }
                                     <item row="2" column="0" colspan="2">
                                       <layout class="QGridLayout" name="gridLayout_probe_info">
                                         <property name="verticalSpacing">
-                                          <number>30</number>
+                                          <number>6</number>
                                         </property>
                                         <item row="0" column="0">
                                           <widget class="QLabel" name="label_lastProbeDate">
@@ -1290,7 +1315,7 @@ li.checked::marker { content: "\2612"; }
                                     <item row="1" column="0">
                                       <layout class="QGridLayout" name="gridLayout_probe_coords">
                                         <property name="verticalSpacing">
-                                          <number>30</number>
+                                          <number>6</number>
                                         </property>
                                         <item row="0" column="0">
                                           <widget class="QLabel" name="label_probeDegrees1">
@@ -1517,6 +1542,18 @@ li.checked::marker { content: "\2612"; }
                           <attribute name="title">
                             <string>Средн. ветер</string>
                           </attribute>
+                          <layout class="QVBoxLayout" name="outerLayout_avgWind">
+                            <property name="spacing"><number>0</number></property>
+                            <property name="leftMargin"><number>0</number></property>
+                            <property name="topMargin"><number>0</number></property>
+                            <property name="rightMargin"><number>0</number></property>
+                            <property name="bottomMargin"><number>0</number></property>
+                            <item>
+                              <widget class="QScrollArea" name="scrollArea_avgWind">
+                                <property name="widgetResizable"><bool>true</bool></property>
+                                <property name="frameShape"><enum>QFrame::NoFrame</enum></property>
+                                <widget class="QWidget" name="scrollAreaWidgetContents_avgWind">
+                                  <property name="geometry"><rect><x>0</x><y>0</y><width>760</width><height>900</height></rect></property>
                           <layout class="QVBoxLayout" name="vLayout_avgWind">
                             <property name="spacing">
                               <number>10</number>
@@ -1843,11 +1880,27 @@ li.checked::marker { content: "\2612"; }
                               </widget>
                             </item>
                           </layout>
+                                </widget>
+                              </widget>
+                            </item>
+                          </layout>
                         </widget>
                         <widget class="QWidget" name="tab_realWind">
                           <attribute name="title">
                             <string>Действ. ветер</string>
                           </attribute>
+                          <layout class="QVBoxLayout" name="outerLayout_realWind">
+                            <property name="spacing"><number>0</number></property>
+                            <property name="leftMargin"><number>0</number></property>
+                            <property name="topMargin"><number>0</number></property>
+                            <property name="rightMargin"><number>0</number></property>
+                            <property name="bottomMargin"><number>0</number></property>
+                            <item>
+                              <widget class="QScrollArea" name="scrollArea_realWind">
+                                <property name="widgetResizable"><bool>true</bool></property>
+                                <property name="frameShape"><enum>QFrame::NoFrame</enum></property>
+                                <widget class="QWidget" name="scrollAreaWidgetContents_realWind">
+                                  <property name="geometry"><rect><x>0</x><y>0</y><width>760</width><height>900</height></rect></property>
                           <layout class="QVBoxLayout" name="vLayout_realWind">
                             <property name="spacing">
                               <number>10</number>
@@ -2024,11 +2077,27 @@ li.checked::marker { content: "\2612"; }
                               </widget>
                             </item>
                           </layout>
+                                </widget>
+                              </widget>
+                            </item>
+                          </layout>
                         </widget>
                         <widget class="QWidget" name="tab_measuredWind">
                           <attribute name="title">
                             <string>Измер. ветер</string>
                           </attribute>
+                          <layout class="QVBoxLayout" name="outerLayout_measWind">
+                            <property name="spacing"><number>0</number></property>
+                            <property name="leftMargin"><number>0</number></property>
+                            <property name="topMargin"><number>0</number></property>
+                            <property name="rightMargin"><number>0</number></property>
+                            <property name="bottomMargin"><number>0</number></property>
+                            <item>
+                              <widget class="QScrollArea" name="scrollArea_measWind">
+                                <property name="widgetResizable"><bool>true</bool></property>
+                                <property name="frameShape"><enum>QFrame::NoFrame</enum></property>
+                                <widget class="QWidget" name="scrollAreaWidgetContents_measWind">
+                                  <property name="geometry"><rect><x>0</x><y>0</y><width>760</width><height>900</height></rect></property>
                           <layout class="QVBoxLayout" name="vLayout_measWind">
                             <property name="spacing">
                               <number>10</number>
@@ -2205,11 +2274,27 @@ li.checked::marker { content: "\2612"; }
                               </widget>
                             </item>
                           </layout>
+                                </widget>
+                              </widget>
+                            </item>
+                          </layout>
                         </widget>
                         <widget class="QWidget" name="tab_windSwig">
                           <attribute name="title">
                             <string>Сдвиг ветра</string>
                           </attribute>
+                          <layout class="QVBoxLayout" name="outerLayout_windShear">
+                            <property name="spacing"><number>0</number></property>
+                            <property name="leftMargin"><number>0</number></property>
+                            <property name="topMargin"><number>0</number></property>
+                            <property name="rightMargin"><number>0</number></property>
+                            <property name="bottomMargin"><number>0</number></property>
+                            <item>
+                              <widget class="QScrollArea" name="scrollArea_windShear">
+                                <property name="widgetResizable"><bool>true</bool></property>
+                                <property name="frameShape"><enum>QFrame::NoFrame</enum></property>
+                                <widget class="QWidget" name="scrollAreaWidgetContents_windShear">
+                                  <property name="geometry"><rect><x>0</x><y>0</y><width>760</width><height>900</height></rect></property>
                           <layout class="QVBoxLayout" name="vLayout_windShear">
                             <property name="spacing">
                               <number>10</number>
@@ -2372,6 +2457,10 @@ li.checked::marker { content: "\2612"; }
                               </widget>
                             </item>
                           </layout>
+                                </widget>
+                              </widget>
+                            </item>
+                          </layout>
                         </widget>
                         <widget class="QWidget" name="tab_groundMetParams">
                           <attribute name="title">
@@ -2466,22 +2555,5 @@ li.checked::marker { content: "\2612"; }
     </customwidget>
   </customwidgets>
   <resources/>
-  <connections>
-    <connection>
-      <sender>btnClose</sender>
-      <signal>clicked()</signal>
-      <receiver>MeasurementResults</receiver>
-      <slot>accept()</slot>
-      <hints>
-        <hint type="sourcelabel">
-          <x>899</x>
-          <y>669</y>
-        </hint>
-        <hint type="destinationlabel">
-          <x>499</x>
-          <y>349</y>
-        </hint>
-      </hints>
-    </connection>
-  </connections>
+  <connections/>
 </ui>

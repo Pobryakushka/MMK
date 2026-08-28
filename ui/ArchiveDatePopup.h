@@ -48,6 +48,10 @@ public:
 
 signals:
     void dateTimeSelected(const QDateTime &dt);
+    // Нажата "Сегодня", а записей за сегодняшнюю дату нет — раньше в этом
+    // случае молча подставлялась ближайшая по времени дата, что выглядело
+    // как случайный выбор. Теперь тут только уведомление, выбор не меняется.
+    void noDataForDate(const QDate &date);
 
 private:
     QMap<QDate, QVector<ArchiveRecordInfo>> m_available;
@@ -71,6 +75,7 @@ private:
     void rebuildTimeChips();
     void rebuildCalendar();
     void refreshBigDate();
+    void repositionWithinScreen();
 
     void stepDate(int delta);
     void stepMonth(int delta);

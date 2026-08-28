@@ -1,0 +1,2978 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MeasurementResults</class>
+ <widget class="QWidget" name="MeasurementResults">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>1280</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>720</width>
+    <height>560</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>Просмотр результатов измерений</string>
+  </property>
+  <layout class="QVBoxLayout" name="outerLayout">
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item>
+    <widget class="QStackedWidget" name="rootStack">
+     <widget class="QWidget" name="archivePage">
+      <layout class="QHBoxLayout" name="verticalLayout">
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="QFrame" name="titleWidget">
+         <property name="minimumSize">
+          <size>
+           <width>230</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>270</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <layout class="QVBoxLayout" name="railLayout">
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QFrame" name="railHead">
+            <layout class="QVBoxLayout" name="railHeadLayout">
+             <property name="spacing">
+              <number>2</number>
+             </property>
+             <property name="leftMargin">
+              <number>16</number>
+             </property>
+             <property name="topMargin">
+              <number>12</number>
+             </property>
+             <property name="rightMargin">
+              <number>16</number>
+             </property>
+             <property name="bottomMargin">
+              <number>12</number>
+             </property>
+             <item>
+              <widget class="QLabel" name="lblTitle">
+               <property name="text">
+                <string>Архив измерений</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="lblSubtitle">
+               <property name="text">
+                <string>Просмотр результатов зондирования</string>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QFrame" name="sectionDateTime">
+            <layout class="QVBoxLayout" name="sectionDateTimeLayout">
+             <property name="spacing">
+              <number>8</number>
+             </property>
+             <property name="leftMargin">
+              <number>16</number>
+             </property>
+             <property name="topMargin">
+              <number>14</number>
+             </property>
+             <property name="rightMargin">
+              <number>16</number>
+             </property>
+             <property name="bottomMargin">
+              <number>14</number>
+             </property>
+             <item>
+              <widget class="QLabel" name="capDateTime">
+               <property name="text">
+                <string>ДАТА И ВРЕМЯ</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="dateNavigationLayout">
+               <property name="spacing">
+                <number>6</number>
+               </property>
+               <item>
+                <widget class="QPushButton" name="btnPrevDate">
+                 <property name="minimumSize">
+                  <size>
+                   <width>34</width>
+                   <height>34</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>34</width>
+                   <height>34</height>
+                  </size>
+                 </property>
+                 <property name="text">
+                  <string>◄</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="btnSelectDate">
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>34</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>16777215</width>
+                   <height>34</height>
+                  </size>
+                 </property>
+                 <property name="cursor">
+                  <cursorShape>PointingHandCursor</cursorShape>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="btnNextDate">
+                 <property name="minimumSize">
+                  <size>
+                   <width>34</width>
+                   <height>34</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>34</width>
+                   <height>34</height>
+                  </size>
+                 </property>
+                 <property name="text">
+                  <string>►</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <widget class="QLabel" name="lblAvailableRecords">
+               <property name="text">
+                <string>Доступно записей: 0</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QFrame" name="sectionParams">
+            <layout class="QVBoxLayout" name="outerSectionParamsLayout">
+             <property name="spacing">
+              <number>0</number>
+             </property>
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
+             <item>
+              <widget class="QScrollArea" name="scrollArea_sectionParams">
+               <property name="frameShape">
+                <enum>QFrame::NoFrame</enum>
+               </property>
+               <property name="widgetResizable">
+                <bool>true</bool>
+               </property>
+               <widget class="QWidget" name="scrollAreaWidgetContents_sectionParams">
+                <property name="geometry">
+                 <rect>
+                  <x>0</x>
+                  <y>0</y>
+                  <width>230</width>
+                  <height>528</height>
+                 </rect>
+                </property>
+                <layout class="QVBoxLayout" name="sectionParamsLayout">
+                 <property name="spacing">
+                  <number>0</number>
+                 </property>
+                 <property name="leftMargin">
+                  <number>16</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>14</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>16</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>10</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="capParams">
+                   <property name="text">
+                    <string>ПАРАМЕТРЫ СТАНЦИИ</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QFrame" name="rowLatitude">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>30</height>
+                    </size>
+                   </property>
+                   <layout class="QHBoxLayout" name="rowLatitudeLayout">
+                    <property name="spacing">
+                     <number>8</number>
+                    </property>
+                    <property name="leftMargin">
+                     <number>0</number>
+                    </property>
+                    <property name="topMargin">
+                     <number>0</number>
+                    </property>
+                    <property name="rightMargin">
+                     <number>0</number>
+                    </property>
+                    <property name="bottomMargin">
+                     <number>0</number>
+                    </property>
+                    <item>
+                     <widget class="QLabel" name="lblLatitude">
+                      <property name="text">
+                       <string>Широта</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <spacer name="rowLatitudeSpacer">
+                      <property name="orientation">
+                       <enum>Qt::Horizontal</enum>
+                      </property>
+                      <property name="sizeHint" stdset="0">
+                       <size>
+                        <width>10</width>
+                        <height>10</height>
+                       </size>
+                      </property>
+                     </spacer>
+                    </item>
+                    <item>
+                     <widget class="QLabel" name="valLatitude">
+                      <property name="text">
+                       <string>—</string>
+                      </property>
+                      <property name="alignment">
+                       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QFrame" name="rowLongitude">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>30</height>
+                    </size>
+                   </property>
+                   <layout class="QHBoxLayout" name="rowLongitudeLayout">
+                    <property name="spacing">
+                     <number>8</number>
+                    </property>
+                    <property name="leftMargin">
+                     <number>0</number>
+                    </property>
+                    <property name="topMargin">
+                     <number>0</number>
+                    </property>
+                    <property name="rightMargin">
+                     <number>0</number>
+                    </property>
+                    <property name="bottomMargin">
+                     <number>0</number>
+                    </property>
+                    <item>
+                     <widget class="QLabel" name="lblLongitude">
+                      <property name="text">
+                       <string>Долгота</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <spacer name="rowLongitudeSpacer">
+                      <property name="orientation">
+                       <enum>Qt::Horizontal</enum>
+                      </property>
+                      <property name="sizeHint" stdset="0">
+                       <size>
+                        <width>10</width>
+                        <height>10</height>
+                       </size>
+                      </property>
+                     </spacer>
+                    </item>
+                    <item>
+                     <widget class="QLabel" name="valLongitude">
+                      <property name="text">
+                       <string>—</string>
+                      </property>
+                      <property name="alignment">
+                       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QFrame" name="rowAltitude">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>30</height>
+                    </size>
+                   </property>
+                   <layout class="QHBoxLayout" name="rowAltitudeLayout">
+                    <property name="spacing">
+                     <number>8</number>
+                    </property>
+                    <property name="leftMargin">
+                     <number>0</number>
+                    </property>
+                    <property name="topMargin">
+                     <number>0</number>
+                    </property>
+                    <property name="rightMargin">
+                     <number>0</number>
+                    </property>
+                    <property name="bottomMargin">
+                     <number>0</number>
+                    </property>
+                    <item>
+                     <widget class="QLabel" name="lblAltitude">
+                      <property name="text">
+                       <string>Высота</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <spacer name="rowAltitudeSpacer">
+                      <property name="orientation">
+                       <enum>Qt::Horizontal</enum>
+                      </property>
+                      <property name="sizeHint" stdset="0">
+                       <size>
+                        <width>10</width>
+                        <height>10</height>
+                       </size>
+                      </property>
+                     </spacer>
+                    </item>
+                    <item>
+                     <widget class="QLabel" name="valAltitude">
+                      <property name="text">
+                       <string>—</string>
+                      </property>
+                      <property name="alignment">
+                       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QFrame" name="rowDirectionAngle">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>30</height>
+                    </size>
+                   </property>
+                   <layout class="QHBoxLayout" name="rowDirectionAngleLayout">
+                    <property name="spacing">
+                     <number>8</number>
+                    </property>
+                    <property name="leftMargin">
+                     <number>0</number>
+                    </property>
+                    <property name="topMargin">
+                     <number>0</number>
+                    </property>
+                    <property name="rightMargin">
+                     <number>0</number>
+                    </property>
+                    <property name="bottomMargin">
+                     <number>0</number>
+                    </property>
+                    <item>
+                     <widget class="QLabel" name="lblDirectionAngle">
+                      <property name="text">
+                       <string>Дирекц. угол</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <spacer name="rowDirectionAngleSpacer">
+                      <property name="orientation">
+                       <enum>Qt::Horizontal</enum>
+                      </property>
+                      <property name="sizeHint" stdset="0">
+                       <size>
+                        <width>10</width>
+                        <height>10</height>
+                       </size>
+                      </property>
+                     </spacer>
+                    </item>
+                    <item>
+                     <widget class="QLabel" name="valDirectionAngle">
+                      <property name="text">
+                       <string>0.0°</string>
+                      </property>
+                      <property name="alignment">
+                       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <spacer name="railSpacer">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>40</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QFrame" name="railFoot">
+            <layout class="QHBoxLayout" name="bottomButtonsLayout">
+             <property name="spacing">
+              <number>8</number>
+             </property>
+             <property name="leftMargin">
+              <number>16</number>
+             </property>
+             <property name="topMargin">
+              <number>14</number>
+             </property>
+             <property name="rightMargin">
+              <number>16</number>
+             </property>
+             <property name="bottomMargin">
+              <number>14</number>
+             </property>
+             <item>
+              <widget class="QPushButton" name="btnExport">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                 <horstretch>1</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>38</height>
+                </size>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+               <property name="text">
+                <string>Экспорт</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="btnClose">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                 <horstretch>1</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>38</height>
+                </size>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+               <property name="text">
+                <string>Закрыть</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QFrame" name="dataGroup">
+         <layout class="QGridLayout" name="gridLayout_2">
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <item row="1" column="0">
+           <widget class="QTabWidget" name="tabWidget">
+            <property name="currentIndex">
+             <number>4</number>
+            </property>
+            <widget class="QWidget" name="tab_Meteo11">
+             <attribute name="title">
+              <string>Метео-11</string>
+             </attribute>
+             <layout class="QVBoxLayout" name="verticalLayout_meteo11">
+              <property name="spacing">
+               <number>12</number>
+              </property>
+              <property name="leftMargin">
+               <number>16</number>
+              </property>
+              <property name="topMargin">
+               <number>14</number>
+              </property>
+              <property name="rightMargin">
+               <number>16</number>
+              </property>
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_meteo11_buttons">
+                <item>
+                 <widget class="QGroupBox" name="groupBox_bulletenType">
+                  <property name="title">
+                   <string/>
+                  </property>
+                  <layout class="QVBoxLayout" name="verticalLayout_bulletenType">
+                   <item>
+                    <layout class="QHBoxLayout" name="horizontalLayout_bulletenTypeBtns">
+                     <property name="spacing">
+                      <number>6</number>
+                     </property>
+                     <item>
+                      <widget class="QPushButton" name="pushButton_updated">
+                       <property name="text">
+                        <string>Уточненный</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QPushButton" name="pushButton_approximate">
+                       <property name="text">
+                        <string>Приближенный</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QPushButton" name="pushButton_fromMeteoStat">
+                       <property name="text">
+                        <string>Исходный (принятый)</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QPushButton" name="pushButton_fromGrib">
+                       <property name="text">
+                        <string>Из GRIB</string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                   <item>
+                    <widget class="QLabel" name="labelGribStatus">
+                     <property name="visible">
+                      <bool>false</bool>
+                     </property>
+                     <property name="text">
+                      <string/>
+                     </property>
+                     <property name="wordWrap">
+                      <bool>true</bool>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <item>
+                 <spacer name="horizontalSpacer_btn_mid">
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>40</width>
+                    <height>20</height>
+                   </size>
+                  </property>
+                 </spacer>
+                </item>
+                <item>
+                 <widget class="QGroupBox" name="groupBox_bulletenFormat">
+                  <property name="title">
+                   <string/>
+                  </property>
+                  <layout class="QHBoxLayout" name="verticalLayout_bulletenFormat">
+                   <property name="spacing">
+                    <number>6</number>
+                   </property>
+                   <item>
+                    <widget class="QPushButton" name="pushButton_string">
+                     <property name="text">
+                      <string>Строка</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QPushButton" name="pushButton_table">
+                     <property name="text">
+                      <string>Таблица</string>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_meteo11_controls">
+                <property name="spacing">
+                 <number>12</number>
+                </property>
+                <item>
+                 <widget class="QLabel" name="label_bulleten">
+                  <property name="maximumSize">
+                   <size>
+                    <width>200</width>
+                    <height>16777215</height>
+                   </size>
+                  </property>
+                  <property name="visible">
+                   <bool>false</bool>
+                  </property>
+                  <property name="text">
+                   <string>ГОДНЫЙ БЮЛЛЕТЕНЬ</string>
+                  </property>
+                  <property name="textFormat">
+                   <enum>Qt::AutoText</enum>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignCenter</set>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLineEdit" name="lineEdit_bulleten">
+                  <property name="minimumSize">
+                   <size>
+                    <width>160</width>
+                    <height>0</height>
+                   </size>
+                  </property>
+                  <property name="maximumSize">
+                   <size>
+                    <width>260</width>
+                    <height>16777215</height>
+                   </size>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignCenter</set>
+                  </property>
+                  <property name="readOnly">
+                   <bool>true</bool>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="label_bulletenTime">
+                  <property name="maximumSize">
+                   <size>
+                    <width>220</width>
+                    <height>16777215</height>
+                   </size>
+                  </property>
+                  <property name="visible">
+                   <bool>false</bool>
+                  </property>
+                  <property name="text">
+                   <string>ВРЕМЯ СОСТАВЛЕНИЯ</string>
+                  </property>
+                  <property name="textFormat">
+                   <enum>Qt::AutoText</enum>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignCenter</set>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLineEdit" name="lineEdit_bulletenTime">
+                  <property name="minimumSize">
+                   <size>
+                    <width>140</width>
+                    <height>0</height>
+                   </size>
+                  </property>
+                  <property name="maximumSize">
+                   <size>
+                    <width>200</width>
+                    <height>16777215</height>
+                   </size>
+                  </property>
+                  <property name="readOnly">
+                   <bool>true</bool>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <spacer name="horizontalSpacer_ctrl_right">
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>40</width>
+                    <height>20</height>
+                   </size>
+                  </property>
+                 </spacer>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <widget class="QStackedWidget" name="meteo11StackedWidget">
+                <property name="currentIndex">
+                 <number>1</number>
+                </property>
+                <widget class="QWidget" name="page_meteo11_string">
+                 <layout class="QGridLayout" name="gridLayout_meteo11_string">
+                  <property name="leftMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>0</number>
+                  </property>
+                  <item row="1" column="1">
+                   <widget class="QTextEdit" name="textEdit_meteo11">
+                    <property name="enabled">
+                     <bool>true</bool>
+                    </property>
+                    <property name="minimumSize">
+                     <size>
+                      <width>800</width>
+                      <height>0</height>
+                     </size>
+                    </property>
+                    <property name="readOnly">
+                     <bool>true</bool>
+                    </property>
+                    <property name="html">
+                     <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+hr { height: 1px; border-width: 0; }
+li.unchecked::marker { content: &quot;\2610&quot;; }
+li.checked::marker { content: &quot;\2612&quot;; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans Serif'; font-size:9pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Segoe UI','Tahoma';&quot;&gt;        &lt;/span&gt;&lt;/p&gt;
+&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Tahoma'; font-size:14pt;&quot;&gt;Метео 11000000-00000-0000-00000-0200-000000-0400-000000-&lt;/span&gt;&lt;span style=&quot; font-family:'Segoe UI','Tahoma';&quot;&gt;        &lt;/span&gt;&lt;/p&gt;
+&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Tahoma'; font-size:14pt;&quot;&gt;0800-000000-1200-000000-1600-000000-2000-000000-2400-000000-&lt;/span&gt;&lt;span style=&quot; font-family:'Segoe UI','Tahoma';&quot;&gt;        &lt;/span&gt;&lt;/p&gt;
+&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Tahoma'; font-size:14pt;&quot;&gt;3000-000000-4000-000000-5000-000000-6000-000000-8000-000000-&lt;/span&gt;&lt;span style=&quot; font-family:'Segoe UI','Tahoma';&quot;&gt;        &lt;/span&gt;&lt;/p&gt;
+&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Tahoma'; font-size:14pt;&quot;&gt;1000-000000-12-000000-14-000000-18-000000-22-000000-26-000000-&lt;/span&gt;&lt;span style=&quot; font-family:'Segoe UI','Tahoma';&quot;&gt;        &lt;/span&gt;&lt;/p&gt;
+&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Tahoma'; font-size:14pt;&quot;&gt;30-000000-0000&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+                <widget class="QWidget" name="page_meteo11_table">
+                 <layout class="QVBoxLayout" name="outerLayout_meteo11_table">
+                  <property name="spacing">
+                   <number>0</number>
+                  </property>
+                  <property name="leftMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>0</number>
+                  </property>
+                  <item>
+                   <widget class="QScrollArea" name="scrollArea_meteo11_table">
+                    <property name="frameShape">
+                     <enum>QFrame::NoFrame</enum>
+                    </property>
+                    <property name="widgetResizable">
+                     <bool>true</bool>
+                    </property>
+                    <widget class="QWidget" name="scrollAreaWidgetContents_meteo11_table">
+                     <property name="geometry">
+                      <rect>
+                       <x>0</x>
+                       <y>0</y>
+                       <width>534</width>
+                       <height>1130</height>
+                      </rect>
+                     </property>
+                     <layout class="QGridLayout" name="gridLayout_4">
+                      <item row="0" column="0" rowspan="2" colspan="2">
+                       <layout class="QGridLayout" name="gridLayout_Meteo11Params">
+                        <property name="verticalSpacing">
+                         <number>6</number>
+                        </property>
+                        <item row="4" column="0">
+                         <widget class="QLabel" name="label_tempVirtDeviation">
+                          <property name="text">
+                           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Отклонение наземной виртуальной температуры, °С (Т&lt;span style=&quot; vertical-align:sub;&quot;&gt;0&lt;/span&gt;Т&lt;span style=&quot; vertical-align:sub;&quot;&gt;0&lt;/span&gt;):&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="6" column="0">
+                         <widget class="QLabel" name="label_windHeightSensingReached">
+                          <property name="text">
+                           <string>Достигнутая высота ветрового зондирования, км:</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="5" column="1">
+                         <widget class="QLineEdit" name="lineEdit_ht">
+                          <property name="readOnly">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="4" column="1">
+                         <widget class="QLineEdit" name="lineEdit_t">
+                          <property name="readOnly">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="1" column="0">
+                         <widget class="QLabel" name="label_dateAndTime">
+                          <property name="text">
+                           <string>Дата и время (ДДЧЧММ):</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="1" column="1">
+                         <widget class="QLineEdit" name="lineEdit_dt">
+                          <property name="readOnly">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="2" column="0">
+                         <widget class="QLabel" name="label_stationHeight">
+                          <property name="text">
+                           <string>Высота метеостанции, м (BBBB):</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="6" column="1">
+                         <widget class="QLineEdit" name="lineEdit_hw">
+                          <property name="readOnly">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="3" column="1">
+                         <widget class="QLineEdit" name="lineEdit_p">
+                          <property name="readOnly">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="2" column="1">
+                         <widget class="QLineEdit" name="lineEdit_h">
+                          <property name="readOnly">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="3" column="0">
+                         <widget class="QLabel" name="label_presDeviation">
+                          <property name="text">
+                           <string>Отклонение наземного давления, мм рт.ст. (ДДД):</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="0" column="0">
+                         <widget class="QLabel" name="label_numStation">
+                          <property name="text">
+                           <string>Номер метеостанции (NNNNN):</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="0" column="1">
+                         <widget class="QLineEdit" name="lineEdit_numStation">
+                          <property name="text">
+                           <string/>
+                          </property>
+                          <property name="readOnly">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="5" column="0">
+                         <widget class="QLabel" name="label_tempSensingHReached">
+                          <property name="text">
+                           <string>Достигнутая высота температурного зондирования, км:</string>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                      <item row="0" column="2" rowspan="2">
+                       <widget class="QTableWidget" name="tableWidget_meteo11Formalize">
+                        <property name="editTriggers">
+                         <set>QAbstractItemView::NoEditTriggers</set>
+                        </property>
+                        <property name="rowCount">
+                         <number>19</number>
+                        </property>
+                        <attribute name="horizontalHeaderDefaultSectionSize">
+                         <number>86</number>
+                        </attribute>
+                        <attribute name="verticalHeaderDefaultSectionSize">
+                         <number>28</number>
+                        </attribute>
+                        <row>
+                         <property name="text">
+                          <string>200</string>
+                         </property>
+                        </row>
+                        <row>
+                         <property name="text">
+                          <string>400</string>
+                         </property>
+                        </row>
+                        <row>
+                         <property name="text">
+                          <string>800</string>
+                         </property>
+                        </row>
+                        <row>
+                         <property name="text">
+                          <string>1 200</string>
+                         </property>
+                        </row>
+                        <row>
+                         <property name="text">
+                          <string>1 600</string>
+                         </property>
+                        </row>
+                        <row>
+                         <property name="text">
+                          <string>2 000</string>
+                         </property>
+                        </row>
+                        <row>
+                         <property name="text">
+                          <string>2 400</string>
+                         </property>
+                        </row>
+                        <row>
+                         <property name="text">
+                          <string>3 000</string>
+                         </property>
+                        </row>
+                        <row>
+                         <property name="text">
+                          <string>4 000</string>
+                         </property>
+                        </row>
+                        <row>
+                         <property name="text">
+                          <string>5 000</string>
+                         </property>
+                        </row>
+                        <row>
+                         <property name="text">
+                          <string>6 000</string>
+                         </property>
+                        </row>
+                        <row>
+                         <property name="text">
+                          <string>8 000   </string>
+                         </property>
+                        </row>
+                        <row>
+                         <property name="text">
+                          <string>10 000</string>
+                         </property>
+                        </row>
+                        <row>
+                         <property name="text">
+                          <string>12 000</string>
+                         </property>
+                        </row>
+                        <row>
+                         <property name="text">
+                          <string>14 000</string>
+                         </property>
+                        </row>
+                        <row>
+                         <property name="text">
+                          <string>18 000</string>
+                         </property>
+                        </row>
+                        <row>
+                         <property name="text">
+                          <string>22 000</string>
+                         </property>
+                        </row>
+                        <row>
+                         <property name="text">
+                          <string>26 000</string>
+                         </property>
+                        </row>
+                        <row>
+                         <property name="text">
+                          <string>30 000</string>
+                         </property>
+                        </row>
+                        <column>
+                         <property name="text">
+                          <string>ПП</string>
+                         </property>
+                        </column>
+                        <column>
+                         <property name="text">
+                          <string>ТТДДСС</string>
+                         </property>
+                        </column>
+                       </widget>
+                      </item>
+                     </layout>
+                    </widget>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+                <widget class="QWidget" name="page_meteo11_approximate">
+                 <layout class="QGridLayout" name="gridLayout_approximate">
+                  <item row="2" column="2" colspan="2">
+                   <widget class="QTextEdit" name="textEdit_meteo11_updated">
+                    <property name="enabled">
+                     <bool>true</bool>
+                    </property>
+                    <property name="minimumSize">
+                     <size>
+                      <width>800</width>
+                      <height>0</height>
+                     </size>
+                    </property>
+                    <property name="readOnly">
+                     <bool>true</bool>
+                    </property>
+                    <property name="html">
+                     <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+hr { height: 1px; border-width: 0; }
+li.unchecked::marker { content: &quot;\2610&quot;; }
+li.checked::marker { content: &quot;\2612&quot;; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans Serif'; font-size:9pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Segoe UI','Tahoma';&quot;&gt;         &lt;/span&gt;&lt;/p&gt;
+&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Tahoma'; font-size:10pt;&quot;&gt;Метео 11000000-00000-0000-00000-0200-000000-0400-000000-&lt;/span&gt;&lt;span style=&quot; font-family:'Segoe UI','Tahoma';&quot;&gt;         &lt;/span&gt;&lt;/p&gt;
+&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Tahoma'; font-size:10pt;&quot;&gt;0800-000000-1200-000000-1600-000000-2000-000000-2400-000000-&lt;/span&gt;&lt;span style=&quot; font-family:'Segoe UI','Tahoma';&quot;&gt;         &lt;/span&gt;&lt;/p&gt;
+&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Tahoma'; font-size:10pt;&quot;&gt;3000-000000-4000-000000-5000-000000-6000-000000-8000-000000-&lt;/span&gt;&lt;span style=&quot; font-family:'Segoe UI','Tahoma';&quot;&gt;         &lt;/span&gt;&lt;/p&gt;
+&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Tahoma'; font-size:10pt;&quot;&gt;1000-000000-12-000000-14-000000-18-000000-22-000000-26-000000-&lt;/span&gt;&lt;span style=&quot; font-family:'Segoe UI','Tahoma';&quot;&gt;         &lt;/span&gt;&lt;/p&gt;
+&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Tahoma'; font-size:10pt;&quot;&gt;30-000000-0000&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="1" colspan="2">
+                   <layout class="QGridLayout" name="gridLayout_ams_coords">
+                    <property name="verticalSpacing">
+                     <number>6</number>
+                    </property>
+                    <item row="0" column="0">
+                     <widget class="QLabel" name="label_amsDegrees1">
+                      <property name="font">
+                       <font>
+                        <pointsize>10</pointsize>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Градусы</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="1">
+                     <widget class="QLineEdit" name="lineEdit_AMSDegrees1">
+                      <property name="readOnly">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="1" column="0">
+                     <widget class="QLabel" name="label_amsMinutes1">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <pointsize>10</pointsize>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Минуты</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="1" column="1">
+                     <widget class="QLineEdit" name="lineEdit_AMSMinutes1">
+                      <property name="readOnly">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="2" column="0">
+                     <widget class="QLabel" name="label_amsSeconds1">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <pointsize>10</pointsize>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Секунды</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="2" column="1">
+                     <widget class="QLineEdit" name="lineEdit_AMSSeconds1">
+                      <property name="readOnly">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="3" column="0">
+                     <widget class="QLabel" name="label_amsLongitude">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <pointsize>10</pointsize>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Долгота (0 - восточная, 1 - западная)</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="3" column="1">
+                     <widget class="QLineEdit" name="lineEdit_AMSLongtitude">
+                      <property name="readOnly">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="4" column="0">
+                     <widget class="QLabel" name="label_amsDegrees2">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <pointsize>10</pointsize>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Градусы</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="4" column="1">
+                     <widget class="QLineEdit" name="lineEdit_AMSDegrees2">
+                      <property name="readOnly">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="5" column="0">
+                     <widget class="QLabel" name="label_amsMinutes2">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <pointsize>10</pointsize>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Минуты</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="5" column="1">
+                     <widget class="QLineEdit" name="lineEdit_AMSMinutes2">
+                      <property name="readOnly">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="6" column="0">
+                     <widget class="QLabel" name="label_amsSeconds2">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <pointsize>10</pointsize>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Секунды</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="6" column="1">
+                     <widget class="QLineEdit" name="lineEdit_AMSSeconds2">
+                      <property name="readOnly">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="7" column="0">
+                     <widget class="QLabel" name="label_amsLatitude">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <pointsize>10</pointsize>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Широта (0 - северная, 1 - южная)</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="7" column="1">
+                     <widget class="QLineEdit" name="lineEdit_AMSLatitude">
+                      <property name="readOnly">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                  <item row="0" column="1" colspan="2">
+                   <widget class="QLabel" name="label_ams_title">
+                    <property name="font">
+                     <font>
+                      <pointsize>10</pointsize>
+                      <bold>true</bold>
+                     </font>
+                    </property>
+                    <property name="text">
+                     <string>Текущее положение АМС:</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="3">
+                   <layout class="QGridLayout" name="gridLayout_ams_info">
+                    <property name="verticalSpacing">
+                     <number>6</number>
+                    </property>
+                    <item row="0" column="0">
+                     <widget class="QLabel" name="label_minutesFromProbe">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <pointsize>10</pointsize>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Количество минут с момента последнего зондирования</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="1">
+                     <widget class="QLineEdit" name="lineEdit_AMSMinutesFromProbe">
+                      <property name="readOnly">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="1" column="0">
+                     <widget class="QLabel" name="label_probeDistance">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <pointsize>10</pointsize>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Расстояние до места зондирования</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="1" column="1">
+                     <widget class="QLineEdit" name="lineEdit_ProbeDistance">
+                      <property name="readOnly">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="2" column="0">
+                     <widget class="QLabel" name="label_bulletinType">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <pointsize>10</pointsize>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Вид метеобюллетеня</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="2" column="1">
+                     <widget class="QLineEdit" name="lineEdit_AMSTypeBl">
+                      <property name="readOnly">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="3" column="0">
+                     <widget class="QLabel" name="label_bulletinDate">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <pointsize>10</pointsize>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Дата и время UTC составления бюллетеня</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="3" column="1">
+                     <widget class="QLineEdit" name="lineEdit_AMSDateBl">
+                      <property name="readOnly">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="4" column="0">
+                     <widget class="QLabel" name="label_amsBias">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <pointsize>10</pointsize>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Смещение относительно UTC</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="4" column="1">
+                     <widget class="QLineEdit" name="lineEdit_AMSBias">
+                      <property name="readOnly">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                  <item row="2" column="0" colspan="2">
+                   <layout class="QGridLayout" name="gridLayout_probe_info">
+                    <property name="verticalSpacing">
+                     <number>6</number>
+                    </property>
+                    <item row="0" column="0">
+                     <widget class="QLabel" name="label_lastProbeDate">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <family>Tahoma</family>
+                        <pointsize>10</pointsize>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Дата и время UTC последнего зондирования</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="1">
+                     <widget class="QLineEdit" name="lineEdit_DateLastUTC">
+                      <property name="readOnly">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="1" column="0">
+                     <widget class="QLabel" name="label_biasUTC">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <family>Tahoma</family>
+                        <pointsize>10</pointsize>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Смещение относительно UTC</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="1" column="1">
+                     <widget class="QLineEdit" name="lineEdit_BiasUTC">
+                      <property name="readOnly">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="2" column="0">
+                     <widget class="QLabel" name="label_avgTime">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <family>Tahoma</family>
+                        <pointsize>10</pointsize>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Время усреднения профиля ветра</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="2" column="1">
+                     <widget class="QLineEdit" name="lineEdit_avgTime">
+                      <property name="readOnly">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                  <item row="1" column="0">
+                   <layout class="QGridLayout" name="gridLayout_probe_coords">
+                    <property name="verticalSpacing">
+                     <number>6</number>
+                    </property>
+                    <item row="0" column="0">
+                     <widget class="QLabel" name="label_probeDegrees1">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <pointsize>10</pointsize>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Градусы</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="1">
+                     <widget class="QLineEdit" name="lineEdit_probeDegrees1">
+                      <property name="readOnly">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="1" column="0">
+                     <widget class="QLabel" name="label_probeMinutes1">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <pointsize>10</pointsize>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Минуты</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="1" column="1">
+                     <widget class="QLineEdit" name="lineEdit_probeMinutes1">
+                      <property name="readOnly">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="2" column="0">
+                     <widget class="QLabel" name="label_probeSeconds1">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <pointsize>10</pointsize>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Секунды</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="2" column="1">
+                     <widget class="QLineEdit" name="lineEdit_probeSeconds1">
+                      <property name="readOnly">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="3" column="0">
+                     <widget class="QLabel" name="label_probeLongitude">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <pointsize>10</pointsize>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Долгота (0 - восточная, 1 - западная)</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="3" column="1">
+                     <widget class="QLineEdit" name="lineEdit_probeLongtitude">
+                      <property name="readOnly">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="4" column="0">
+                     <widget class="QLabel" name="label_probeDegrees2">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <pointsize>10</pointsize>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Градусы</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="4" column="1">
+                     <widget class="QLineEdit" name="lineEdit_probeDegrees2">
+                      <property name="readOnly">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="5" column="0">
+                     <widget class="QLabel" name="label_probeMinutes2">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <pointsize>10</pointsize>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Минуты</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="5" column="1">
+                     <widget class="QLineEdit" name="lineEdit_probeMinutes2">
+                      <property name="readOnly">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="6" column="0">
+                     <widget class="QLabel" name="label_probeSeconds2">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <pointsize>10</pointsize>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Секунды</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="6" column="1">
+                     <widget class="QLineEdit" name="lineEdit_probeSeconds2">
+                      <property name="readOnly">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="7" column="0">
+                     <widget class="QLabel" name="label_probeLatitude">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <pointsize>10</pointsize>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Широта (0 - северная, 1 - южная)</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="7" column="1">
+                     <widget class="QLineEdit" name="lineEdit_probeLatitude">
+                      <property name="readOnly">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="label_probe_title">
+                    <property name="font">
+                     <font>
+                      <pointsize>10</pointsize>
+                      <bold>true</bold>
+                     </font>
+                    </property>
+                    <property name="text">
+                     <string>Координаты места зондирования:</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="tab_avgWind">
+             <attribute name="title">
+              <string>Средн. ветер</string>
+             </attribute>
+             <layout class="QVBoxLayout" name="outerLayout_avgWind">
+              <property name="spacing">
+               <number>0</number>
+              </property>
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QScrollArea" name="scrollArea_avgWind">
+                <property name="frameShape">
+                 <enum>QFrame::NoFrame</enum>
+                </property>
+                <property name="widgetResizable">
+                 <bool>true</bool>
+                </property>
+                <widget class="QWidget" name="scrollAreaWidgetContents_avgWind">
+                 <property name="geometry">
+                  <rect>
+                   <x>0</x>
+                   <y>0</y>
+                   <width>566</width>
+                   <height>1242</height>
+                  </rect>
+                 </property>
+                 <layout class="QVBoxLayout" name="vLayout_avgWind">
+                  <property name="spacing">
+                   <number>10</number>
+                  </property>
+                  <property name="leftMargin">
+                   <number>10</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>10</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>10</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>10</number>
+                  </property>
+                  <item>
+                   <layout class="QHBoxLayout" name="chartsRow_avgWind">
+                    <property name="spacing">
+                     <number>10</number>
+                    </property>
+                    <item>
+                     <widget class="QFrame" name="cardFrame_avgWindSpeed">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>190</height>
+                       </size>
+                      </property>
+                      <property name="maximumSize">
+                       <size>
+                        <width>16777215</width>
+                        <height>250</height>
+                       </size>
+                      </property>
+                      <property name="frameShape">
+                       <enum>QFrame::NoFrame</enum>
+                      </property>
+                      <layout class="QVBoxLayout" name="vLayout_card_avgWindSpeed">
+                       <property name="spacing">
+                        <number>0</number>
+                       </property>
+                       <property name="leftMargin">
+                        <number>1</number>
+                       </property>
+                       <property name="topMargin">
+                        <number>0</number>
+                       </property>
+                       <property name="rightMargin">
+                        <number>1</number>
+                       </property>
+                       <property name="bottomMargin">
+                        <number>8</number>
+                       </property>
+                       <item>
+                        <widget class="QLabel" name="label_avgWindSpeed">
+                         <property name="text">
+                          <string>Скорость ветра</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QwtPlot" name="plot_midWindSpeed">
+                         <property name="sizePolicy">
+                          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                           <horstretch>2</horstretch>
+                           <verstretch>0</verstretch>
+                          </sizepolicy>
+                         </property>
+                         <property name="frameShape">
+                          <enum>QFrame::StyledPanel</enum>
+                         </property>
+                         <property name="frameShadow">
+                          <enum>QFrame::Raised</enum>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QFrame" name="cardFrame_avgWindDir">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>190</height>
+                       </size>
+                      </property>
+                      <property name="maximumSize">
+                       <size>
+                        <width>16777215</width>
+                        <height>250</height>
+                       </size>
+                      </property>
+                      <property name="frameShape">
+                       <enum>QFrame::NoFrame</enum>
+                      </property>
+                      <layout class="QVBoxLayout" name="vLayout_card_avgWindDir">
+                       <property name="spacing">
+                        <number>0</number>
+                       </property>
+                       <property name="leftMargin">
+                        <number>1</number>
+                       </property>
+                       <property name="topMargin">
+                        <number>0</number>
+                       </property>
+                       <property name="rightMargin">
+                        <number>1</number>
+                       </property>
+                       <property name="bottomMargin">
+                        <number>8</number>
+                       </property>
+                       <item>
+                        <widget class="QLabel" name="label_avgWindDirection">
+                         <property name="text">
+                          <string>Направление ветра</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QwtPlot" name="plot_midWindAzimut">
+                         <property name="sizePolicy">
+                          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                           <horstretch>2</horstretch>
+                           <verstretch>0</verstretch>
+                          </sizepolicy>
+                         </property>
+                         <property name="frameShape">
+                          <enum>QFrame::StyledPanel</enum>
+                         </property>
+                         <property name="frameShadow">
+                          <enum>QFrame::Raised</enum>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                  <item>
+                   <widget class="QTableWidget" name="tableWidget_AverageWind">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                      <horstretch>1</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="minimumSize">
+                     <size>
+                      <width>200</width>
+                      <height>0</height>
+                     </size>
+                    </property>
+                    <property name="editTriggers">
+                     <set>QAbstractItemView::NoEditTriggers</set>
+                    </property>
+                    <row>
+                     <property name="text">
+                      <string>0-50</string>
+                     </property>
+                    </row>
+                    <row>
+                     <property name="text">
+                      <string>0-100</string>
+                     </property>
+                    </row>
+                    <row>
+                     <property name="text">
+                      <string>0-200</string>
+                     </property>
+                    </row>
+                    <row>
+                     <property name="text">
+                      <string>0-400</string>
+                     </property>
+                    </row>
+                    <row>
+                     <property name="text">
+                      <string>0-600</string>
+                     </property>
+                    </row>
+                    <row>
+                     <property name="text">
+                      <string>0-800</string>
+                     </property>
+                    </row>
+                    <row>
+                     <property name="text">
+                      <string>0-1200</string>
+                     </property>
+                    </row>
+                    <row>
+                     <property name="text">
+                      <string>0-1600</string>
+                     </property>
+                    </row>
+                    <row>
+                     <property name="text">
+                      <string>0-2000</string>
+                     </property>
+                    </row>
+                    <row>
+                     <property name="text">
+                      <string>0-2400</string>
+                     </property>
+                    </row>
+                    <row>
+                     <property name="text">
+                      <string>0-2600</string>
+                     </property>
+                    </row>
+                    <row>
+                     <property name="text">
+                      <string>0-3000</string>
+                     </property>
+                    </row>
+                    <row>
+                     <property name="text">
+                      <string>0-4000</string>
+                     </property>
+                    </row>
+                    <row>
+                     <property name="text">
+                      <string>0-5000</string>
+                     </property>
+                    </row>
+                    <row>
+                     <property name="text">
+                      <string>0-6000</string>
+                     </property>
+                    </row>
+                    <row>
+                     <property name="text">
+                      <string>0-8000</string>
+                     </property>
+                    </row>
+                    <column>
+                     <property name="text">
+                      <string>Высота, м</string>
+                     </property>
+                    </column>
+                    <column>
+                     <property name="text">
+                      <string>Скорость, м/с</string>
+                     </property>
+                    </column>
+                    <column>
+                     <property name="text">
+                      <string>Направление, °</string>
+                     </property>
+                    </column>
+                    <item row="3" column="0">
+                     <property name="text">
+                      <string/>
+                     </property>
+                    </item>
+                    <item row="3" column="1">
+                     <property name="text">
+                      <string/>
+                     </property>
+                    </item>
+                    <item row="5" column="0">
+                     <property name="text">
+                      <string/>
+                     </property>
+                    </item>
+                    <item row="5" column="1">
+                     <property name="text">
+                      <string/>
+                     </property>
+                    </item>
+                    <item row="6" column="0">
+                     <property name="text">
+                      <string/>
+                     </property>
+                    </item>
+                    <item row="6" column="1">
+                     <property name="text">
+                      <string/>
+                     </property>
+                    </item>
+                    <item row="7" column="0">
+                     <property name="text">
+                      <string/>
+                     </property>
+                    </item>
+                    <item row="7" column="1">
+                     <property name="text">
+                      <string/>
+                     </property>
+                    </item>
+                    <item row="8" column="0">
+                     <property name="text">
+                      <string/>
+                     </property>
+                    </item>
+                    <item row="8" column="1">
+                     <property name="text">
+                      <string/>
+                     </property>
+                    </item>
+                    <item row="9" column="0">
+                     <property name="text">
+                      <string/>
+                     </property>
+                    </item>
+                    <item row="9" column="1">
+                     <property name="text">
+                      <string/>
+                     </property>
+                    </item>
+                    <item row="11" column="0">
+                     <property name="text">
+                      <string/>
+                     </property>
+                    </item>
+                    <item row="11" column="1">
+                     <property name="text">
+                      <string/>
+                     </property>
+                    </item>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="tab_realWind">
+             <attribute name="title">
+              <string>Действ. ветер</string>
+             </attribute>
+             <layout class="QVBoxLayout" name="outerLayout_realWind">
+              <property name="spacing">
+               <number>0</number>
+              </property>
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QScrollArea" name="scrollArea_realWind">
+                <property name="frameShape">
+                 <enum>QFrame::NoFrame</enum>
+                </property>
+                <property name="widgetResizable">
+                 <bool>true</bool>
+                </property>
+                <widget class="QWidget" name="scrollAreaWidgetContents_realWind">
+                 <property name="geometry">
+                  <rect>
+                   <x>0</x>
+                   <y>0</y>
+                   <width>566</width>
+                   <height>1242</height>
+                  </rect>
+                 </property>
+                 <layout class="QVBoxLayout" name="vLayout_realWind">
+                  <property name="spacing">
+                   <number>10</number>
+                  </property>
+                  <property name="leftMargin">
+                   <number>10</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>10</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>10</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>10</number>
+                  </property>
+                  <item>
+                   <layout class="QHBoxLayout" name="chartsRow_realWind">
+                    <property name="spacing">
+                     <number>10</number>
+                    </property>
+                    <item>
+                     <widget class="QFrame" name="cardFrame_realWindSpeed">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>190</height>
+                       </size>
+                      </property>
+                      <property name="maximumSize">
+                       <size>
+                        <width>16777215</width>
+                        <height>250</height>
+                       </size>
+                      </property>
+                      <property name="frameShape">
+                       <enum>QFrame::NoFrame</enum>
+                      </property>
+                      <layout class="QVBoxLayout" name="vLayout_card_realWindSpeed">
+                       <property name="spacing">
+                        <number>0</number>
+                       </property>
+                       <property name="leftMargin">
+                        <number>1</number>
+                       </property>
+                       <property name="topMargin">
+                        <number>0</number>
+                       </property>
+                       <property name="rightMargin">
+                        <number>1</number>
+                       </property>
+                       <property name="bottomMargin">
+                        <number>8</number>
+                       </property>
+                       <item>
+                        <widget class="QLabel" name="label_realWindSpeed">
+                         <property name="text">
+                          <string>Скорость ветра</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QwtPlot" name="plot_realWindSpeed">
+                         <property name="sizePolicy">
+                          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                           <horstretch>2</horstretch>
+                           <verstretch>0</verstretch>
+                          </sizepolicy>
+                         </property>
+                         <property name="frameShape">
+                          <enum>QFrame::StyledPanel</enum>
+                         </property>
+                         <property name="frameShadow">
+                          <enum>QFrame::Raised</enum>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QFrame" name="cardFrame_realWindDir">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>190</height>
+                       </size>
+                      </property>
+                      <property name="maximumSize">
+                       <size>
+                        <width>16777215</width>
+                        <height>250</height>
+                       </size>
+                      </property>
+                      <property name="frameShape">
+                       <enum>QFrame::NoFrame</enum>
+                      </property>
+                      <layout class="QVBoxLayout" name="vLayout_card_realWindDir">
+                       <property name="spacing">
+                        <number>0</number>
+                       </property>
+                       <property name="leftMargin">
+                        <number>1</number>
+                       </property>
+                       <property name="topMargin">
+                        <number>0</number>
+                       </property>
+                       <property name="rightMargin">
+                        <number>1</number>
+                       </property>
+                       <property name="bottomMargin">
+                        <number>8</number>
+                       </property>
+                       <item>
+                        <widget class="QLabel" name="label_realWindDirection">
+                         <property name="text">
+                          <string>Направление ветра</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QwtPlot" name="plot_realWindAzimut">
+                         <property name="sizePolicy">
+                          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                           <horstretch>2</horstretch>
+                           <verstretch>0</verstretch>
+                          </sizepolicy>
+                         </property>
+                         <property name="frameShape">
+                          <enum>QFrame::StyledPanel</enum>
+                         </property>
+                         <property name="frameShadow">
+                          <enum>QFrame::Raised</enum>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                  <item>
+                   <widget class="QTableWidget" name="tableWidget_realWind">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                      <horstretch>1</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="minimumSize">
+                     <size>
+                      <width>200</width>
+                      <height>0</height>
+                     </size>
+                    </property>
+                    <property name="editTriggers">
+                     <set>QAbstractItemView::NoEditTriggers</set>
+                    </property>
+                    <column>
+                     <property name="text">
+                      <string>Высота, м</string>
+                     </property>
+                    </column>
+                    <column>
+                     <property name="text">
+                      <string>Скорость, м/с</string>
+                     </property>
+                    </column>
+                    <column>
+                     <property name="text">
+                      <string>Направление, °</string>
+                     </property>
+                    </column>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="tab_measuredWind">
+             <attribute name="title">
+              <string>Измер. ветер</string>
+             </attribute>
+             <layout class="QVBoxLayout" name="outerLayout_measWind">
+              <property name="spacing">
+               <number>0</number>
+              </property>
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QScrollArea" name="scrollArea_measWind">
+                <property name="frameShape">
+                 <enum>QFrame::NoFrame</enum>
+                </property>
+                <property name="widgetResizable">
+                 <bool>true</bool>
+                </property>
+                <widget class="QWidget" name="scrollAreaWidgetContents_measWind">
+                 <property name="geometry">
+                  <rect>
+                   <x>0</x>
+                   <y>0</y>
+                   <width>566</width>
+                   <height>1242</height>
+                  </rect>
+                 </property>
+                 <layout class="QVBoxLayout" name="vLayout_measWind">
+                  <property name="spacing">
+                   <number>10</number>
+                  </property>
+                  <property name="leftMargin">
+                   <number>10</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>10</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>10</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>10</number>
+                  </property>
+                  <item>
+                   <layout class="QHBoxLayout" name="chartsRow_measWind">
+                    <property name="spacing">
+                     <number>10</number>
+                    </property>
+                    <item>
+                     <widget class="QFrame" name="cardFrame_measWindSpeed">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>190</height>
+                       </size>
+                      </property>
+                      <property name="maximumSize">
+                       <size>
+                        <width>16777215</width>
+                        <height>250</height>
+                       </size>
+                      </property>
+                      <property name="frameShape">
+                       <enum>QFrame::NoFrame</enum>
+                      </property>
+                      <layout class="QVBoxLayout" name="vLayout_card_measWindSpeed">
+                       <property name="spacing">
+                        <number>0</number>
+                       </property>
+                       <property name="leftMargin">
+                        <number>1</number>
+                       </property>
+                       <property name="topMargin">
+                        <number>0</number>
+                       </property>
+                       <property name="rightMargin">
+                        <number>1</number>
+                       </property>
+                       <property name="bottomMargin">
+                        <number>8</number>
+                       </property>
+                       <item>
+                        <widget class="QLabel" name="label_measuredWindSpeed">
+                         <property name="text">
+                          <string>Скорость ветра</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QwtPlot" name="plot_izmWindSpeed_2">
+                         <property name="sizePolicy">
+                          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                           <horstretch>2</horstretch>
+                           <verstretch>0</verstretch>
+                          </sizepolicy>
+                         </property>
+                         <property name="frameShape">
+                          <enum>QFrame::StyledPanel</enum>
+                         </property>
+                         <property name="frameShadow">
+                          <enum>QFrame::Raised</enum>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QFrame" name="cardFrame_measWindDir">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>190</height>
+                       </size>
+                      </property>
+                      <property name="maximumSize">
+                       <size>
+                        <width>16777215</width>
+                        <height>250</height>
+                       </size>
+                      </property>
+                      <property name="frameShape">
+                       <enum>QFrame::NoFrame</enum>
+                      </property>
+                      <layout class="QVBoxLayout" name="vLayout_card_measWindDir">
+                       <property name="spacing">
+                        <number>0</number>
+                       </property>
+                       <property name="leftMargin">
+                        <number>1</number>
+                       </property>
+                       <property name="topMargin">
+                        <number>0</number>
+                       </property>
+                       <property name="rightMargin">
+                        <number>1</number>
+                       </property>
+                       <property name="bottomMargin">
+                        <number>8</number>
+                       </property>
+                       <item>
+                        <widget class="QLabel" name="label_measuredWindDirection">
+                         <property name="text">
+                          <string>Направление ветра</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QwtPlot" name="plot_izmWindAzimut_2">
+                         <property name="sizePolicy">
+                          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                           <horstretch>2</horstretch>
+                           <verstretch>0</verstretch>
+                          </sizepolicy>
+                         </property>
+                         <property name="frameShape">
+                          <enum>QFrame::StyledPanel</enum>
+                         </property>
+                         <property name="frameShadow">
+                          <enum>QFrame::Raised</enum>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                  <item>
+                   <widget class="QTableWidget" name="tableWidget_izmWind_2">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                      <horstretch>1</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="minimumSize">
+                     <size>
+                      <width>200</width>
+                      <height>0</height>
+                     </size>
+                    </property>
+                    <property name="editTriggers">
+                     <set>QAbstractItemView::NoEditTriggers</set>
+                    </property>
+                    <column>
+                     <property name="text">
+                      <string>Высота, м</string>
+                     </property>
+                    </column>
+                    <column>
+                     <property name="text">
+                      <string>Скорость, м/с</string>
+                     </property>
+                    </column>
+                    <column>
+                     <property name="text">
+                      <string>Направление, °</string>
+                     </property>
+                    </column>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="tab_windSwig">
+             <attribute name="title">
+              <string>Сдвиг ветра</string>
+             </attribute>
+             <layout class="QVBoxLayout" name="outerLayout_windShear">
+              <property name="spacing">
+               <number>0</number>
+              </property>
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QScrollArea" name="scrollArea_windShear">
+                <property name="frameShape">
+                 <enum>QFrame::NoFrame</enum>
+                </property>
+                <property name="widgetResizable">
+                 <bool>true</bool>
+                </property>
+                <widget class="QWidget" name="scrollAreaWidgetContents_windShear">
+                 <property name="geometry">
+                  <rect>
+                   <x>0</x>
+                   <y>0</y>
+                   <width>566</width>
+                   <height>1242</height>
+                  </rect>
+                 </property>
+                 <layout class="QVBoxLayout" name="vLayout_windShear">
+                  <property name="spacing">
+                   <number>10</number>
+                  </property>
+                  <property name="leftMargin">
+                   <number>10</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>10</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>10</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>10</number>
+                  </property>
+                  <item>
+                   <layout class="QHBoxLayout" name="chartsRow_shear">
+                    <property name="spacing">
+                     <number>10</number>
+                    </property>
+                    <item>
+                     <widget class="QFrame" name="cardFrame_shearSpeed">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>190</height>
+                       </size>
+                      </property>
+                      <property name="maximumSize">
+                       <size>
+                        <width>16777215</width>
+                        <height>250</height>
+                       </size>
+                      </property>
+                      <property name="frameShape">
+                       <enum>QFrame::NoFrame</enum>
+                      </property>
+                      <layout class="QVBoxLayout" name="vLayout_card_shearSpeed">
+                       <property name="spacing">
+                        <number>0</number>
+                       </property>
+                       <property name="leftMargin">
+                        <number>1</number>
+                       </property>
+                       <property name="topMargin">
+                        <number>0</number>
+                       </property>
+                       <property name="rightMargin">
+                        <number>1</number>
+                       </property>
+                       <property name="bottomMargin">
+                        <number>8</number>
+                       </property>
+                       <item>
+                        <widget class="QLabel" name="label_shearSpeed">
+                         <property name="text">
+                          <string>Сдвиг скорости, м/с/30 м</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QwtPlot" name="plot_windShearSpeed">
+                         <property name="sizePolicy">
+                          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                           <horstretch>2</horstretch>
+                           <verstretch>0</verstretch>
+                          </sizepolicy>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QFrame" name="cardFrame_shearDir">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>190</height>
+                       </size>
+                      </property>
+                      <property name="maximumSize">
+                       <size>
+                        <width>16777215</width>
+                        <height>250</height>
+                       </size>
+                      </property>
+                      <property name="frameShape">
+                       <enum>QFrame::NoFrame</enum>
+                      </property>
+                      <layout class="QVBoxLayout" name="vLayout_card_shearDir">
+                       <property name="spacing">
+                        <number>0</number>
+                       </property>
+                       <property name="leftMargin">
+                        <number>1</number>
+                       </property>
+                       <property name="topMargin">
+                        <number>0</number>
+                       </property>
+                       <property name="rightMargin">
+                        <number>1</number>
+                       </property>
+                       <property name="bottomMargin">
+                        <number>8</number>
+                       </property>
+                       <item>
+                        <widget class="QLabel" name="label_shearDirection">
+                         <property name="text">
+                          <string>Сдвиг направления, °</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QwtPlot" name="plot_windShearDirection">
+                         <property name="sizePolicy">
+                          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                           <horstretch>2</horstretch>
+                           <verstretch>0</verstretch>
+                          </sizepolicy>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                  <item>
+                   <widget class="QTableWidget" name="table_windShear">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                      <horstretch>3</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="alternatingRowColors">
+                     <bool>true</bool>
+                    </property>
+                    <property name="columnCount">
+                     <number>4</number>
+                    </property>
+                    <column>
+                     <property name="text">
+                      <string>Высота, м</string>
+                     </property>
+                    </column>
+                    <column>
+                     <property name="text">
+                      <string>Скорость, м/с/30м</string>
+                     </property>
+                    </column>
+                    <column>
+                     <property name="text">
+                      <string>Изменение направления, °</string>
+                     </property>
+                    </column>
+                    <column>
+                     <property name="text">
+                      <string>Уровень</string>
+                     </property>
+                    </column>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="tab_groundMetParams">
+             <attribute name="title">
+              <string>Наземн. усл.</string>
+             </attribute>
+             <layout class="QGridLayout" name="gridLayout_12">
+              <property name="leftMargin">
+               <number>16</number>
+              </property>
+              <property name="topMargin">
+               <number>14</number>
+              </property>
+              <property name="rightMargin">
+               <number>16</number>
+              </property>
+              <property name="bottomMargin">
+               <number>16</number>
+              </property>
+              <item row="1" column="1">
+               <widget class="QTableWidget" name="tableWidget_parm1b65">
+                <property name="minimumSize">
+                 <size>
+                  <width>300</width>
+                  <height>120</height>
+                 </size>
+                </property>
+                <property name="editTriggers">
+                 <set>QAbstractItemView::NoEditTriggers</set>
+                </property>
+                <attribute name="horizontalHeaderDefaultSectionSize">
+                 <number>200</number>
+                </attribute>
+                <attribute name="horizontalHeaderStretchLastSection">
+                 <bool>true</bool>
+                </attribute>
+                <attribute name="verticalHeaderDefaultSectionSize">
+                 <number>35</number>
+                </attribute>
+                <row>
+                 <property name="text">
+                  <string>Наземное атмосферное давление   Р, мм рт.ст.</string>
+                 </property>
+                </row>
+                <row>
+                 <property name="text">
+                  <string>Наземная температура воздуха T, C°</string>
+                 </property>
+                </row>
+                <row>
+                 <property name="text">
+                  <string>Наземная относительная влажность воздуха  r, %</string>
+                 </property>
+                </row>
+                <row>
+                 <property name="text">
+                  <string>Наземное направление ветра  А, град</string>
+                 </property>
+                </row>
+                <row>
+                 <property name="text">
+                  <string>Наземная скорость ветра  V, м/с</string>
+                 </property>
+                </row>
+                <column>
+                 <property name="text">
+                  <string>Значение </string>
+                 </property>
+                </column>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QLabel" name="lblDataStatus">
+            <property name="text">
+             <string>Выберите дату и время для просмотра данных</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QwtPlot</class>
+   <extends>QFrame</extends>
+   <header>qwt_plot.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

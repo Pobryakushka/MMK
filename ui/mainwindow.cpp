@@ -388,6 +388,32 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_angleCheckPage, &AngleCheckPage::backRequested,
             this, [this]() { ui->stackedWidget->setCurrentWidget(m_workRegulationHubPage); });
 
+    // ── Архив измерений: та же схема встраивания, что и у остальных страниц
+    // выше — постоянный экземпляр в общем стеке вместо всплывающего QDialog,
+    // который раньше пересоздавался (new MeasurementResults(this)) на каждый
+    // клик по кнопке архива и открывался поверх главного окна showMaximized().
+    m_measurementResults = new MeasurementResults(this);
+    ui->stackedWidget->addWidget(m_measurementResults);
+    connect(m_measurementResults, &MeasurementResults::backRequested,
+            this, &MainWindow::onBackToHome);
+    // Те же две связи с координатами карты, что раньше настраивались заново
+    // при каждом создании диалога в onMeasurementResultsClicked() — теперь
+    // экземпляр один и живёт всё время работы программы, поэтому подписка
+    // делается один раз здесь.
+    connect(this, &MainWindow::coordinatesUpdatedFromMap,
+            m_measurementResults, &MeasurementResults::updateCoordinatesFromMainWindow);
+    connect(this, &MainWindow::mapCoordinatesModeChanged,
+            m_measurementResults, &MeasurementResults::setMapCoordinatesMode,
+            Qt::DirectConnection);
+    // Верхняя панель статуса датчиков в архиве не нужна (это отдельный полный
+    // экран истории, а не рабочий экран измерения) и просто отнимает у него
+    // высоту, которой на планшете и так не хватает. Прячем её, пока активна
+    // страница архива, и возвращаем на всех остальных страницах.
+    connect(ui->stackedWidget, &QStackedWidget::currentChanged, this, [this](int) {
+        if (ui->topStatusBar)
+            ui->topStatusBar->setVisible(ui->stackedWidget->currentWidget() != m_measurementResults);
+    });
+
     // ── Подписка на состояние приземных данных + встраивание страницы ──────
     // GroundMeteoParams является единой точкой правды о готовности приземных
     // данных. MainWindow отображает: lblStatus + доступность btnStart, и
@@ -558,6 +584,17 @@ void MainWindow::onOpenMeasurePage()
 void MainWindow::onBackToHome()
 {
     ui->stackedWidget->setCurrentWidget(ui->page_home);
+}
+
+void MainWindow::openMeasurementResults(int recordId)
+{
+    // -1 = просто открыть архив на последней доступной записи (обычное
+    // поведение кнопки "Архив измерений" на главном экране, повторяет
+    // onMeasurementResultsClicked()); recordId > 0 = сразу перейти к
+    // конкретной записи (например, сразу после завершения измерения).
+    onMeasurementResultsClicked();
+    if (recordId > 0 && m_measurementResults)
+        m_measurementResults->navigateToRecord(recordId);
 }
 
 // =================================================
@@ -1149,7 +1186,7 @@ void MainWindow::configureAmsDatabase()
     int dbPort = 5432;
     QString dbName = "MMK";
     QString dbUser = "postgres";
-    QString dbPassword = "123";
+    QString dbPassword = "otdel412";
 
     qDebug() << "MainWindow: Настройка БД:" << dbName << "на" << dbHost;
 
@@ -2572,37 +2609,26 @@ void MainWindow::onCalculationsClicked()
 
 void MainWindow::onMeasurementResultsClicked()
 {
-    MeasurementResults *dialog = new MeasurementResults(this);
-    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    // Раньше здесь создавался новый MeasurementResults(this) на каждый клик
+    // (QDialog, setAttribute(WA_DeleteOnClose), showMaximized()). Теперь это
+    // постоянная страница общего стека (создана и подключена один раз в
+    // конструкторе, см. m_measurementResults) — здесь только освежаем
+    // координаты и переключаем стек на неё.
+    if (!m_measurementResults)
+        return;
 
-    //    if (!DatabaseManager::instance()->isConnected()){
-    //        DatabaseManager::instance()->connect();
-    //    }
-
-    connect(this, &MainWindow::coordinatesUpdatedFromMap,
-            dialog, &MeasurementResults::updateCoordinatesFromMainWindow);
-
-    connect(this, &MainWindow::mapCoordinatesModeChanged,
-            dialog, &MeasurementResults::setMapCoordinatesMode,
-            Qt::DirectConnection);
-
-    dialog->setMapCoordinatesMode(m_mapCoordinatesEnabled || m_gnssEnabled);
+    m_measurementResults->setMapCoordinatesMode(m_mapCoordinatesEnabled || m_gnssEnabled);
 
     if ((m_mapCoordinatesEnabled || m_gnssEnabled) && ui->editLatitude && ui->editLongitude) {
         bool ok1, ok2;
         double lat = getCoordField(ui->editLatitude, ok1);
         double lon = getCoordField(ui->editLongitude, ok2);
         if (ok1 && ok2) {
-            dialog->updateCoordinatesFromMainWindow(lat, lon);
+            m_measurementResults->updateCoordinatesFromMainWindow(lat, lon);
         }
     }
 
-    dialog->adjustSize();
-    // Минимум ниже реального экрана планшета (1200x1920 при масштабе 150% —
-    // это 800x1280 логических точек): иначе окно не может сузиться до ширины
-    // экрана и правый край содержимого уезжает за границу.
-    dialog->setMinimumSize(720, 560);
-    dialog->showMaximized();
+    ui->stackedWidget->setCurrentWidget(m_measurementResults);
 }
 
 void MainWindow::onStartClicked()

@@ -1,12 +1,11 @@
 #ifndef MEASUREMENTRESULTS_H
 #define MEASUREMENTRESULTS_H
 
-#include <QDialog>
+#include <QWidget>
 #include <QDateTime>
 #include <QMap>
 #include <QSet>
 #include <QListWidget>
-#include <QDialogButtonBox>
 #include <QSqlDatabase>
 #include <QSqlQuery>
 #include <QSqlError>
@@ -34,6 +33,7 @@ class ArchiveExportView;
 class QPushButton;
 class QLayout;
 class QResizeEvent;
+class QShowEvent;
 
 struct MeasurementRecord {
     int recordId;
@@ -47,7 +47,10 @@ struct MeasurementRecord {
         hasActualWind(false), hasMeasuredWind(false) {}
 };
 
-class MeasurementResults : public QDialog
+// Встроенная страница общего стека MainWindow (как SourceData/GroundMeteoParams/
+// регламентные работы) — раньше была отдельным QDialog, открывавшимся поверх
+// главного окна отдельным всплывающим окном.
+class MeasurementResults : public QWidget
 {
     Q_OBJECT
 
@@ -57,6 +60,11 @@ public:
 
     //    void setDatabase(const QString &host, int port, const QString &dbName,
     //                    const QString &user, const QString &password);
+
+signals:
+    // Пользователь нажал "Закрыть" — MainWindow переключает stackedWidget
+    // обратно на главный экран (как у остальных встроенных страниц).
+    void backRequested();
 
 private slots:
     void onPrevDateClicked();
@@ -311,6 +319,11 @@ private:
 
 protected:
     void resizeEvent(QResizeEvent *event) override;
+    // Страница теперь постоянно живёт в стеке и не пересоздаётся при каждом
+    // открытии — при каждом появлении на экране подтягиваем свежий список
+    // измерений из БД (аналог того, что раньше происходило один раз в
+    // конструкторе диалога, создававшегося заново на каждый клик).
+    void showEvent(QShowEvent *event) override;
 
 private:
     void setupAmsProbeCollapse();      // сворачиваемый блок доп. полей АМС/зонда
