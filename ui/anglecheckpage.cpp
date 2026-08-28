@@ -1,5 +1,6 @@
 #include "anglecheckpage.h"
 #include "ui_anglecheckpage.h"
+#include "../ui/ScreenTheme.h"
 
 #include <QDoubleValidator>
 #include <QDebug>
@@ -11,6 +12,13 @@ AngleCheckPage::AngleCheckPage(AMSHandler *amsHandler, QWidget *parent)
 {
     ui->setupUi(this);
     setAttribute(Qt::WA_StyledBackground, true);
+
+    // Вид экрана в стиле «Архива измерений» (фон, поля, кнопки,
+    // группы). Роли кнопок помечаем ДО темы — селекторы [primary]/[nav]
+    // должны сработать сразу при первой полировке стиля.
+    ui->btnBackFromAngleCheck->setProperty("nav", true);
+    ui->btnStart->setProperty("primary", true);
+    applyArchiveScreenTheme(this);
 
     m_toast = new NotificationToast(this);
 
