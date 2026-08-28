@@ -227,6 +227,27 @@
             </property>
            </spacer>
           </item>
+          <!-- Зеркало для «°» справа: уравновешивает строку, чтобы по центру
+               оказалось само поле ввода, а не группа «поле + °».
+               Ширина 32 = ширина «°» (24) + отступ строки (8): QBoxLayout не
+               ставит отступ рядом с распоркой, поэтому слева от поля его нет,
+               а справа, между полем и «°», есть — зеркало добирает разницу. -->
+          <item>
+           <spacer name="angleRowDegMirror">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeType">
+             <enum>QSizePolicy::Fixed</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>32</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
           <item>
            <widget class="QLineEdit" name="editTargetAngle">
             <property name="minimumSize">
@@ -254,6 +275,18 @@
           </item>
           <item>
            <widget class="QLabel" name="lblAngleDeg">
+            <property name="minimumSize">
+             <size>
+              <width>24</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>24</width>
+              <height>16777215</height>
+             </size>
+            </property>
             <property name="styleSheet">
              <string notr="true">font-size: 15pt; color: #5B6167; background: transparent; border: none;</string>
             </property>
