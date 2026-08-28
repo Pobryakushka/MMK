@@ -7,6 +7,9 @@
 // Внутренняя граница кольца крупных рисок (доля радиуса). Подписи градусов
 // размещаются строго внутри неё — см. paintEvent().
 static constexpr double kTickInnerMajor = 0.90;
+// Нижняя граница подбора размера подписи (px). Ниже неё шрифт не
+// уменьшаем — лучше едва заметное касание, чем нечитаемые цифры.
+static constexpr int kMinLabelPx = 7;
 
 RpvIndicator::RpvIndicator(QWidget *parent)
     : QWidget(parent)
@@ -66,52 +69,62 @@ void RpvIndicator::paintEvent(QPaintEvent *)
 
     // ── Подписи градусов каждые 30°, крупнее на 0/90/180/270 ────────────
     {
-        // ПИКСЕЛЬНЫЙ размер, а не пунктовый. side — размер виджета в
-        // логических пикселях, и раньше доля от него подставлялась в
-        // setPointSizeF: пункты Qt переводит в пиксели ещё раз, через DPI
-        // экрана. На планшете (масштаб 150%) подписи из-за этого росли
-        // дважды, а сам циферблат — один раз. В пикселях текст масштабируется
-        // ровно как риски и стрелка.
-        QFont fMinor = p.font();
-        fMinor.setPixelSize(qMax(8, qRound(side * 0.052)));
-        fMinor.setBold(false);
-        QFont fMajor = p.font();
-        fMajor.setPixelSize(qMax(9, qRound(side * 0.068)));
-        fMajor.setBold(true);
-        const QFontMetricsF fmMinor(fMinor), fmMajor(fMajor);
-
-        // Радиус подписей считается ОТ ФАКТИЧЕСКОГО размера текста, а не
-        // фиксированной долей радиуса. Раньше подписи стояли на rad*0.74 и
-        // при любом размере виджета задевали кольцо рисок.
-        //
         // Насколько подпись выступает наружу по радиусу, зависит от того, под
         // каким углом она стоит: у верхней/нижней это половина высоты, у
         // боковых — половина ширины, у диагональных — промежуточное значение.
-        // Берём это точно (опорная функция прямоугольника), а не по половине
-        // диагонали: иначе оценка завышена и подписи уезжают к центру, где
+        // Считаем точно (опорная функция прямоугольника), а не по половине
+        // диагонали: завышенная оценка уводит подписи к центру, где они
         // начинают наползать уже друг на друга.
         auto radialExtent = [](const QSizeF &sz, double a) {
             return 0.5 * (sz.width() * qFabs(qCos(a)) + sz.height() * qFabs(qSin(a)));
         };
 
-        double outward = 0.0, wCardinal = 0.0, wMinor = 0.0;
-        for (int deg = 0; deg < 360; deg += 30) {
-            const bool cardinal = (deg % 90 == 0);
-            const QSizeF sz = (cardinal ? fmMajor : fmMinor).size(0, QString::number(deg));
-            outward = qMax(outward, radialExtent(sz, qDegreesToRadians(deg - 90.0)));
-            (cardinal ? wCardinal : wMinor) = qMax(cardinal ? wCardinal : wMinor, sz.width());
+        // ПИКСЕЛЬНЫЙ размер шрифта, а не пунктовый: пункты Qt переводит в
+        // пиксели ещё раз, через DPI экрана, и на планшете (масштаб 150%)
+        // подписи росли дважды, а сам циферблат — один раз.
+        //
+        // Размер ПОДБИРАЕТСЯ так, чтобы по дуге поместились ВСЕ двенадцать
+        // подписей. Раньше вместо подбора был запасной вариант «показать
+        // только 0/90/180/270»: при более широком системном шрифте (DejaVu
+        // Sans на Astra) он срабатывал уже на обычном размере тайла, и шкала
+        // молча теряла восемь подписей. Подписи каждые 30° несут смысл —
+        // уменьшаем шрифт, но показываем их все.
+        const double gap = rad * 0.05;
+        QFont fMinor = p.font();
+        QFont fMajor = p.font();
+        double rLabel = rad * 0.35;
+        int minorPx = qMax(kMinLabelPx, qRound(side * 0.052));
+        int majorPx = qMax(kMinLabelPx + 1, qRound(side * 0.068));
+
+        for (;;) {
+            fMinor.setPixelSize(minorPx); fMinor.setBold(false);
+            fMajor.setPixelSize(majorPx); fMajor.setBold(true);
+            const QFontMetricsF fmMinor(fMinor), fmMajor(fMajor);
+
+            double outward = 0.0, wCardinal = 0.0, wMinor = 0.0;
+            for (int deg = 0; deg < 360; deg += 30) {
+                const bool cardinal = (deg % 90 == 0);
+                const QSizeF sz = (cardinal ? fmMajor : fmMinor).size(0, QString::number(deg));
+                outward = qMax(outward, radialExtent(sz, qDegreesToRadians(deg - 90.0)));
+                if (cardinal) wCardinal = qMax(wCardinal, sz.width());
+                else          wMinor    = qMax(wMinor,    sz.width());
+            }
+
+            rLabel = qMax(rad * 0.35, rad * kTickInnerMajor - gap - outward);
+
+            // Соседние подписи — всегда «основная + промежуточная», поэтому
+            // нужен полусумма их ширин, а не удвоенная максимальная.
+            const double arcPerLabel = 2.0 * M_PI * rLabel / 12.0;
+            const double needed      = (wCardinal + wMinor) / 2.0 + rad * 0.04;
+            if (arcPerLabel >= needed || minorPx <= kMinLabelPx)
+                break;
+
+            --minorPx;
+            majorPx = qMax(minorPx + 1, majorPx - 1);
         }
-        const double gap    = rad * 0.05;
-        const double rLabel = qMax(rad * 0.35, rad * kTickInnerMajor - gap - outward);
 
-        // Страховка: если двенадцати подписям всё же не хватает места по дуге
-        // (очень маленький виджет, крупный системный шрифт), показываем только
-        // основные направления 0/90/180/270 — читаемая шкала вместо каши.
-        const double arcPerLabel = 2.0 * M_PI * rLabel / 12.0;
-        const double needed     = (wCardinal + wMinor) / 2.0 + rad * 0.04;
-        const int    labelStep  = (arcPerLabel >= needed) ? 30 : 90;
-
-        for (int deg = 0; deg < 360; deg += labelStep) {
+        const QFontMetricsF fmMinor(fMinor), fmMajor(fMajor);
+        for (int deg = 0; deg < 360; deg += 30) {
             const bool cardinal = (deg % 90 == 0);
             p.setFont(cardinal ? fMajor : fMinor);
             p.setPen(cardinal ? QColor(0x5B, 0x62, 0x66) : QColor(0x8A, 0x90, 0x94));
