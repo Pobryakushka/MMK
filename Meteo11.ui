@@ -638,9 +638,6 @@ QPushButton:pressed { color: #0B5A42; }</string>
             <property name="verticalScrollBarPolicy">
              <enum>Qt::ScrollBarAsNeeded</enum>
             </property>
-            <property name="styleSheet">
-             <string notr="true">QTableWidget { border: 1px solid #DDE1E3; }</string>
-            </property>
             <attribute name="horizontalHeaderDefaultSectionSize">
              <number>90</number>
             </attribute>

@@ -128,9 +128,6 @@ QPushButton:pressed { color: #0B5A42; }</string>
        <property name="horizontalScrollBarPolicy">
         <enum>Qt::ScrollBarAlwaysOff</enum>
        </property>
-       <property name="styleSheet">
-        <string notr="true">QTableWidget { border: 1px solid #DDE1E3; border-radius: 8px; }</string>
-       </property>
        <property name="layoutDirection">
         <enum>Qt::LeftToRight</enum>
        </property>

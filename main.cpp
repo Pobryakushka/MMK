@@ -2,6 +2,7 @@
 #include "calculationAlgorithms/WindShearCalculator.h"
 #include <QApplication>
 #include <QStyleFactory>
+#include <QFile>
 #include "calculationAlgorithms/windprofilecalculator.h"
 #include <iostream>
 
@@ -71,6 +72,17 @@ int main(int argc, char *argv[])
     // где QSS задал оформление, поэтому вид программы перестаёт зависеть от
     // темы конкретного рабочего окружения.
     a.setStyle(QStyleFactory::create("Fusion"));
+
+    // Единый вид таблиц во всём приложении (палитра/рамки/шрифты «Архива
+    // измерений»). Это чистое оформление — отдельный файл ui/table-theme.qss,
+    // не смешанный с кодом функций; подключается один раз как стиль уровня
+    // приложения поверх Fusion. Стили конкретных экранов (setStyleSheet на
+    // виджетах) при совпадении правил перекрывают этот базовый.
+    QFile tableThemeFile(QStringLiteral(":/ui/table-theme.qss"));
+    if (tableThemeFile.open(QIODevice::ReadOnly | QIODevice::Text))
+        a.setStyleSheet(QString::fromUtf8(tableThemeFile.readAll()));
+    else
+        qWarning("Не удалось загрузить ui/table-theme.qss — таблицы будут в стиле Fusion");
 
     // ВАЖНО: QApplication подхватывает системную локаль (setlocale(LC_ALL, "")),
     // что на русской локали меняет десятичный разделитель на запятую и ломает

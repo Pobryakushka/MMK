@@ -583,6 +583,11 @@ void MeasurementResults::applyArchiveStyle()
         "}"
 
         // ── таблицы ──────────────────────────────────────────────────────
+        // Эти же правила вынесены в общий стиль приложения
+        // ui/table-theme.qss и действуют на все таблицы программы. Здесь
+        // они продублированы намеренно: как стиль конкретного виджета они
+        // перекрывают общий и гарантируют, что «Архив измерений»
+        // выглядит ровно так же, даже если общий стиль позже поправят.
         "QTableWidget, QTableView {"
         "  border: 1px solid #DDE1E3; border-radius: 8px; gridline-color: #EEF0EF;"
         "  background: #FFFFFF; alternate-background-color: #F7F8F8; font-size: 12px;"
