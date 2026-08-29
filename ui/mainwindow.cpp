@@ -916,9 +916,6 @@ void MainWindow::onMapCoordinatesToggled()
     if (m_mapCoordinatesEnabled) {
         checkAndDisableConflictingSources("map");
         updateCoordinateSource("Карта");
-        // Режим выбора точки включён — сворачиваем столбец инструментов,
-        // чтобы он не перекрывал место, куда оператор собирается нажать.
-        setMapControlsExpanded(false);
     } else {
         updateCoordinateSource("Нет");
     }
