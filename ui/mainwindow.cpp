@@ -578,7 +578,7 @@ void MainWindow::onOpenMapPage()
         m_mapCoordHintShown = true;
         showNotice("Инструменты карты — под кнопкой ☰ справа сверху. "
                    "Чтобы выбрать точку: ☰ → \"Указать точку\", затем "
-                   "тапните нужное место на карте.",
+                   "нажмите нужное место на карте.",
                    NotificationToast::Info);
     }
 }
@@ -880,7 +880,7 @@ void MainWindow::updateMapCoordinatesButtonStyle()
     qcp.setPickingEnabled(m_mapCoordinatesEnabled);
 
     if (m_mapCoordinatesEnabled) {
-        ui->btnMapCoordinates->setText("Тапните карту");
+        ui->btnMapCoordinates->setText("Нажмите на карту");
         ui->btnMapCoordinates->setStyleSheet(
             "QPushButton {"
             "   background-color: #0F6B4F;"
@@ -891,7 +891,7 @@ void MainWindow::updateMapCoordinatesButtonStyle()
             "}"
             "QPushButton:hover { background-color: #0B5A41; }"
             );
-        ui->btnMapCoordinates->setToolTip("Режим координат с карты активен — тапните точку на карте");
+        ui->btnMapCoordinates->setToolTip("Режим выбора точки включён — нажмите нужное место на карте");
     } else {
         ui->btnMapCoordinates->setText("Указать точку");
         ui->btnMapCoordinates->setStyleSheet(
@@ -904,7 +904,7 @@ void MainWindow::updateMapCoordinatesButtonStyle()
             "}"
             "QPushButton:hover { background-color: #f0f0f0; }"
             );
-        ui->btnMapCoordinates->setToolTip("Использовать координаты с карты (нажмите, затем тапните точку на карте)");
+        ui->btnMapCoordinates->setToolTip("Использовать координаты с карты (нажмите, затем укажите место на карте)");
     }
 }
 
@@ -917,7 +917,7 @@ void MainWindow::onMapCoordinatesToggled()
         checkAndDisableConflictingSources("map");
         updateCoordinateSource("Карта");
         // Режим выбора точки включён — сворачиваем столбец инструментов,
-        // чтобы он не перекрывал место, куда оператор собирается тапнуть.
+        // чтобы он не перекрывал место, куда оператор собирается нажать.
         setMapControlsExpanded(false);
     } else {
         updateCoordinateSource("Нет");
