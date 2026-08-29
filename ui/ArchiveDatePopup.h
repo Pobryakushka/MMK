@@ -10,6 +10,7 @@
 class QLabel;
 class QPushButton;
 class QGridLayout;
+class FlowLayout;
 
 // Данные об одной записи архива, нужные попапу только для того, чтобы
 // показать, полный ли это набор данных (есть все три профиля ветра) —
@@ -68,7 +69,7 @@ private:
     QLabel      *m_timesLabel;
     QLabel      *m_legend;
     QWidget     *m_timesBox;
-    QGridLayout *m_timesGrid;
+    FlowLayout  *m_timesGrid;
 
     QList<QDate> sortedDates() const;
 

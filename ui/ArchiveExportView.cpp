@@ -6,6 +6,7 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGridLayout>
+#include <QScrollArea>
 #include <QStyle>
 #include <QVariant>
 
@@ -21,20 +22,20 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
         "QWidget#expHead { background: #FFFFFF; border-bottom: 1px solid #DDE1E3; }"
         "QWidget#expFoot { background: #FFFFFF; border-top: 1px solid #DDE1E3; }"
         "QLabel { color: #1B211F; font-family: 'Inter','Segoe UI','DejaVu Sans',sans-serif; }"
-        "QLabel#expTitle { font-size: 13px; font-weight: 700; }"
-        "QLabel#expRecInfo { color: #6E7876; font-size: 10px; }"
+        "QLabel#expTitle { font-size: 14px; font-weight: 700; }"
+        "QLabel#expRecInfo { color: #6E7876; font-size: 11px; }"
         "QLabel#expRecInfo b { color: #1B211F; }"
-        "QLabel[class=\"sectionTitle\"] { color: #6E7876; font-size: 10px; font-weight: 600; }"
-        "QPushButton#expBackBtn { background: none; border: none; color: #0F6B4F; font-weight: 600; font-size: 12px; text-align: left; padding: 0px; }"
-        "QPushButton#expBackBtn:hover { text-decoration: underline; }"
-        "QPushButton[class=\"fmtCard\"] { border: 1.5px solid #DDE1E3; border-radius: 9px; background: #FFFFFF; padding: 5px; font-family: 'JetBrains Mono','DejaVu Sans Mono','Consolas',monospace; font-weight: 800; font-size: 12px; color: #6E7876; }"
+        "QLabel[class=\"sectionTitle\"] { color: #6E7876; font-size: 11px; font-weight: 600; }"
+        "QPushButton#expBackBtn { background: none; border: none; border-radius: 6px; color: #0F6B4F; font-weight: 600; font-size: 13px; text-align: left; padding: 4px 8px; }"
+        "QPushButton#expBackBtn:hover { background: #E4F1EC; }"
+        "QPushButton[class=\"fmtCard\"] { border: 1.5px solid #DDE1E3; outline: none; border-radius: 9px; background: #FFFFFF; padding: 6px; font-family: 'JetBrains Mono','DejaVu Sans Mono','Consolas',monospace; font-weight: 800; font-size: 13px; color: #6E7876; }"
         "QPushButton[class=\"fmtCard\"]:hover { border-color: #0F6B4F; }"
         "QPushButton[class=\"fmtCard\"][sel=\"true\"] { border-color: #0F6B4F; background: #E4F1EC; color: #0B5A41; }"
         "QWidget#expOptionsPanel { background: #F7F8F8; border: 1px solid #DDE1E3; border-radius: 11px; }"
-        "QPushButton[class=\"segBtn\"] { border: none; background: #FFFFFF; padding: 5px 9px; font-size: 10px; font-weight: 600; color: #6E7876; }"
+        "QPushButton[class=\"segBtn\"] { border: none; outline: none; background: #FFFFFF; padding: 6px 10px; font-size: 11px; font-weight: 600; color: #6E7876; }"
         "QPushButton[class=\"segBtn\"][sel=\"true\"] { background: #0F6B4F; color: #FFFFFF; }"
         "QWidget[class=\"segGroup\"] { border: 1px solid #DDE1E3; border-radius: 8px; }"
-        "QCheckBox { font-size: 11px; color: #1B211F; spacing: 7px; }"
+        "QCheckBox { font-size: 12px; color: #1B211F; spacing: 7px; }"
         "QCheckBox:disabled { color: #A9AFAD; }"
         "QWidget#expSecItem { border-bottom: 1px dashed #DDE1E3; }"
         "QLabel#expSecBadge {"
@@ -48,7 +49,7 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
         "QCheckBox::indicator:checked { background: #0F6B4F; border-color: #0F6B4F;"
         "  image: url(:/icons/checkmark_white.svg); }"
         "QCheckBox::indicator:disabled { background: #F1F3F2; border-color: #DDE1E3; }"
-        "QPushButton#expCancelBtn, QPushButton#expSaveBtn { border-radius: 6px; font-weight: 600; font-size: 12px; padding: 7px 16px; }"
+        "QPushButton#expCancelBtn, QPushButton#expSaveBtn { border-radius: 6px; font-weight: 600; font-size: 13px; padding: 8px 18px; }"
         "QPushButton#expCancelBtn { background: #FFFFFF; border: 1px solid #DDE1E3; color: #1B211F; }"
         "QPushButton#expCancelBtn:hover { background: #F3F5F4; }"
         "QPushButton#expSaveBtn { background: #0F6B4F; border: none; color: #FFFFFF; }"
@@ -62,11 +63,12 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
     // ── Шапка ────────────────────────────────────────────────────────────
     auto *head = new QWidget(this);
     head->setObjectName("expHead");
+    head->setAttribute(Qt::WA_StyledBackground, true);
     auto *headLayout = new QHBoxLayout(head);
     headLayout->setContentsMargins(16, 10, 16, 10);
     headLayout->setSpacing(12);
 
-    auto *backBtn = new QPushButton("‹ Назад к архиву", head);
+    auto *backBtn = new QPushButton("‹ Назад", head);
     backBtn->setObjectName("expBackBtn");
     backBtn->setCursor(Qt::PointingHandCursor);
     connect(backBtn, &QPushButton::clicked, this, &ArchiveExportView::backRequested);
@@ -90,10 +92,26 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
     headLayout->setAlignment(backBtn, Qt::AlignVCenter);
     headLayout->setAlignment(title, Qt::AlignVCenter);
     headLayout->setAlignment(m_recordInfo, Qt::AlignVCenter);
+    // Явно фиксируем шапку по высоте — она не должна расти вместе с
+    // содержимым и обязана оставаться на месте при любых обстоятельствах.
+    head->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     root->addWidget(head);
 
     // ── Тело ─────────────────────────────────────────────────────────────
-    auto *body = new QWidget(this);
+    // Раньше body добавлялось в root напрямую (со stretch-фактором) — если
+    // содержимое (формат + параметры + разделы) в сумме не помещалось по
+    // высоте, слой не мог сжаться и футер с кнопками "Отмена"/"Сохранить"
+    // просто выталкивался за пределы видимой области окна, как раньше было
+    // с таблицами на других вкладках архива. Оборачиваем body в QScrollArea:
+    // шапка и футер с кнопками остаются на месте всегда, а само тело
+    // прокручивается при нехватке места.
+    auto *bodyScroll = new QScrollArea(this);
+    bodyScroll->setWidgetResizable(true);
+    bodyScroll->setFrameShape(QFrame::NoFrame);
+    bodyScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    bodyScroll->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+    auto *body = new QWidget(bodyScroll);
     auto *bodyLayout = new QVBoxLayout(body);
     bodyLayout->setContentsMargins(20, 16, 20, 16);
     bodyLayout->setSpacing(5);
@@ -119,7 +137,14 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
         QPushButton *card = makeFormatCard(kf.ext, kf.label);
         m_fmtButtons[kf.fmt] = card;
         connect(card, &QPushButton::clicked, this, [this, fmt = kf.fmt] { selectFormat(fmt); });
-        fmtRow->addWidget(card, 1);
+        // Раньше все 5 карточек шли со stretch=1 в QHBoxLayout — при равном
+        // stretch-факторе, но разной длине текста ("Таблица" длиннее "Excel"),
+        // каждая карточка сначала получает свой sizeHint по ширине, и только
+        // ОСТАВШЕЕСЯ место делится поровну, поэтому в сумме ширины выходили
+        // разными. Явно фиксированная ширина — гарантированно одинаковый
+        // размер независимо от текста.
+        card->setFixedWidth(118);
+        fmtRow->addWidget(card);
     }
     // В макете карточки форматов ограничены по ширине (max-width: 760px),
     // иначе на широком экране они растягиваются в непропорциональные плашки.
@@ -127,12 +152,11 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
     // просто прижимался к левому краю страницы — теперь центрируем каждый
     // такой блок по горизонтали через выравнивание элемента в bodyLayout.
     auto *fmtRowHolder = new QWidget(body);
-    fmtRowHolder->setMaximumWidth(680);
     fmtRowHolder->setLayout(fmtRow);
     fmtRow->setContentsMargins(0, 0, 0, 0);
     bodyLayout->addWidget(fmtRowHolder);
     bodyLayout->setAlignment(fmtRowHolder, Qt::AlignHCenter);
-    bodyLayout->addSpacing(14);
+    bodyLayout->addSpacing(10);
 
     auto *optTitle = new QLabel("Параметры формата", body);
     optTitle->setProperty("class", "sectionTitle");
@@ -143,10 +167,11 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
 
     auto *optionsPanel = new QWidget(body);
     optionsPanel->setObjectName("expOptionsPanel");
+    optionsPanel->setAttribute(Qt::WA_StyledBackground, true);
     optionsPanel->setMaximumWidth(680);
     auto *optionsLayout = new QVBoxLayout(optionsPanel);
-    optionsLayout->setContentsMargins(14, 12, 14, 12);
-    optionsLayout->setSpacing(8);
+    optionsLayout->setContentsMargins(12, 10, 12, 10);
+    optionsLayout->setSpacing(6);
 
     auto makeOptRow = [&](const QString &labelText, QWidget *control) -> QWidget* {
         auto *row = new QWidget(optionsPanel);
@@ -155,7 +180,7 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
         rowLayout->setSpacing(12);
         auto *lbl = new QLabel(labelText, row);
         lbl->setFixedWidth(140);
-        lbl->setStyleSheet("color: #6E7876; font-size: 11px;");
+        lbl->setStyleSheet("color: #6E7876; font-size: 12px;");
         rowLayout->addWidget(lbl);
         rowLayout->addWidget(control, 1);
         optionsLayout->addWidget(row);
@@ -165,6 +190,7 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
     // CSV separator
     auto *csvSegGroup = new QWidget(optionsPanel);
     csvSegGroup->setProperty("class", "segGroup");
+    csvSegGroup->setAttribute(Qt::WA_StyledBackground, true);
     auto *csvSegLayout = new QHBoxLayout(csvSegGroup);
     csvSegLayout->setContentsMargins(0, 0, 0, 0);
     csvSegLayout->setSpacing(0);
@@ -180,6 +206,7 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
     // PDF page size
     auto *pdfSizeGroup = new QWidget(optionsPanel);
     pdfSizeGroup->setProperty("class", "segGroup");
+    pdfSizeGroup->setAttribute(Qt::WA_StyledBackground, true);
     auto *pdfSizeLayout = new QHBoxLayout(pdfSizeGroup);
     pdfSizeLayout->setContentsMargins(0, 0, 0, 0);
     pdfSizeLayout->setSpacing(0);
@@ -195,6 +222,7 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
     // PDF orientation
     auto *pdfOrientGroup = new QWidget(optionsPanel);
     pdfOrientGroup->setProperty("class", "segGroup");
+    pdfOrientGroup->setAttribute(Qt::WA_StyledBackground, true);
     auto *pdfOrientLayout = new QHBoxLayout(pdfOrientGroup);
     pdfOrientLayout->setContentsMargins(0, 0, 0, 0);
     pdfOrientLayout->setSpacing(0);
@@ -212,14 +240,19 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
     m_pdfChartsCheck->setChecked(true);
     m_pdfChartsRow = makeOptRow("Графики в PDF", m_pdfChartsCheck);
 
-    // No options placeholder
+    // Плейсхолдер "нет доп. параметров" — не обычная строка "подпись: поле"
+    // (у него нет подписи слева), поэтому не через makeOptRow (там всегда
+    // резервируется фиксированная колонка под подпись, и текст съезжал
+    // ближе к левому краю панели, а не по центру).
     auto *noOptLabel = new QLabel("Дополнительных параметров для этого формата нет", optionsPanel);
     noOptLabel->setStyleSheet("color: #6E7876; font-style: italic; font-size: 12px;");
-    m_noOptionsRow = makeOptRow(QString(), noOptLabel);
+    noOptLabel->setAlignment(Qt::AlignCenter);
+    m_noOptionsRow = noOptLabel;
+    optionsLayout->addWidget(m_noOptionsRow);
 
     bodyLayout->addWidget(optionsPanel);
     bodyLayout->setAlignment(optionsPanel, Qt::AlignHCenter);
-    bodyLayout->addSpacing(14);
+    bodyLayout->addSpacing(10);
 
     auto *secTitle = new QLabel("Разделы для экспорта", body);
     secTitle->setProperty("class", "sectionTitle");
@@ -251,6 +284,7 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
         // бейдж "нет данных" справа (sec-item из макета).
         auto *row = new QWidget(body);
         row->setObjectName("expSecItem");
+        row->setAttribute(Qt::WA_StyledBackground, true);
         auto *rowLayout = new QHBoxLayout(row);
         rowLayout->setContentsMargins(2, 3, 2, 3);
         rowLayout->setSpacing(7);
@@ -270,11 +304,13 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
     bodyLayout->setAlignment(secGridHolder, Qt::AlignHCenter);
     bodyLayout->addStretch(1);
 
-    root->addWidget(body, 1);
+    bodyScroll->setWidget(body);
+    root->addWidget(bodyScroll, 1);
 
     // ── Футер ────────────────────────────────────────────────────────────
     auto *foot = new QWidget(this);
     foot->setObjectName("expFoot");
+    foot->setAttribute(Qt::WA_StyledBackground, true);
     auto *footLayout = new QHBoxLayout(foot);
     footLayout->setContentsMargins(16, 10, 16, 10);
     footLayout->setSpacing(8);
@@ -289,6 +325,9 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
     });
     footLayout->addWidget(cancelBtn);
     footLayout->addWidget(saveBtn);
+    // Та же страховка, что и у шапки — футер с кнопками не должен расти,
+    // ему нужна только высота собственного содержимого.
+    foot->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     root->addWidget(foot);
 
     selectFormat(ExportOptions::TXT);
@@ -303,7 +342,13 @@ QPushButton *ArchiveExportView::makeFormatCard(const QString &ext, const QString
     auto *card = new QPushButton(this);
     card->setProperty("class", "fmtCard");
     card->setCursor(Qt::PointingHandCursor);
-    card->setMinimumHeight(48);
+    // Без этого нажатая кнопка сохраняет клавиатурный фокус, а Qt по
+    // умолчанию рисует поверх неё пунктирную рамку фокуса — на карточках
+    // формата это не так заметно, но на сегментированных кнопках рядом
+    // (CSV-разделитель, размер/ориентация PDF) она выглядела как лишняя
+    // горизонтальная линия сверху/снизу ровно на стыке кнопок.
+    card->setFocusPolicy(Qt::NoFocus);
+    card->setMinimumHeight(52);
     card->setText(ext + "\n" + label);
     return card;
 }
@@ -313,6 +358,7 @@ QPushButton *ArchiveExportView::makeSegButton(const QString &text)
     auto *btn = new QPushButton(text, this);
     btn->setProperty("class", "segBtn");
     btn->setCursor(Qt::PointingHandCursor);
+    btn->setFocusPolicy(Qt::NoFocus);
     return btn;
 }
 

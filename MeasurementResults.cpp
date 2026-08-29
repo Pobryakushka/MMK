@@ -413,6 +413,24 @@ void MeasurementResults::applyResponsiveLayout(int width)
         if (card)
             card->setMaximumHeight(narrow ? 320 : 360);
 
+    // Таблица под графиками (и таблица Метео-11) теперь внутри своей
+    // QScrollArea и раньше ничем не ограничивалась по высоте — росла вместе
+    // со всеми строками, поэтому при прокрутке страницы не было видно, где
+    // заканчивается сама таблица (просто обрез по краю внешней прокрутки).
+    // Даём таблице собственный потолок высоты — тогда виден её нижний край
+    // (рамка), а лишние строки листаются её родной прокруткой.
+    const QList<QTableWidget *> archiveTables = {
+        ui->tableWidget_AverageWind, ui->tableWidget_realWind,
+        ui->tableWidget_izmWind_2, ui->table_windShear,
+        ui->tableWidget_meteo11Formalize
+    };
+    for (QTableWidget *table : archiveTables)
+        if (table)
+            // Ещё немного ниже потолок (было 420/480) — таблица всё равно
+            // задевала нижний край видимой области; так остаётся заметный
+            // запас снизу, а лишние строки листаются собственной прокруткой.
+            table->setMaximumHeight(narrow ? 300 : 340);
+
     setMeteo11TableStacked(narrow);
 
     // «Наземные условия»: подпись параметра живёт в вертикальном заголовке, и
@@ -774,6 +792,11 @@ void MeasurementResults::setupArchiveTables()
         t->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
         t->horizontalHeader()->setHighlightSections(false);
         t->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+        // Явный маленький минимум секции — без этого Stretch всё равно не
+        // даёт колонке сжаться меньше рассчитанного по шрифту заголовка
+        // минимума, и на узкой странице (особенно у таблицы Метео-11 внутри
+        // своей QScrollArea) таблица могла вылезать вправо за видимую область.
+        t->horizontalHeader()->setMinimumSectionSize(28);
         t->verticalHeader()->setDefaultSectionSize(32);
         t->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     }
@@ -1736,15 +1759,14 @@ void MeasurementResults::setMapCoordinatesMode(bool enabled)
     // Поля координат всегда только для чтения — независимо от режима карты
     // (данные берутся из архива БД, не от пользователя)
 
-    if (enabled) {
-        ui->btnPrevDate->setEnabled(false);
-        ui->btnNextDate->setEnabled(false);
-        ui->btnSelectDate->setEnabled(false);
-    } else {
-        ui->btnPrevDate->setEnabled(true);
-        ui->btnNextDate->setEnabled(true);
-        ui->btnSelectDate->setEnabled(true);
-    }
+    // Раньше здесь ещё и отключалась вся навигация по датам (стрелки и кнопка
+    // выбора даты/времени), пока активен режим координат с карты/GNSS. Из-за
+    // этого при входе в архив, когда карта/GNSS уже включены (обычная
+    // ситуация на станции), кнопка выбора даты оказывалась неактивной с
+    // первого раза — а сам архив как раз и нужен для просмотра ИСТОРИИ
+    // записей, так что блокировать переход по датам тут не должно было.
+    // Режим координат с карты влияет только на поля координат, не на
+    // просмотр архива.
 }
 
 void MeasurementResults::switchMeteo11Display()
