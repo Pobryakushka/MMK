@@ -1832,18 +1832,21 @@ QPushButton:pressed {
            </property>
           </widget>
           <widget class="QPushButton" name="btnMapCoordinates">
+           <property name="visible">
+            <bool>false</bool>
+           </property>
            <property name="geometry">
             <rect>
              <x>928</x>
              <y>14</y>
              <width>176</width>
-             <height>40</height>
+             <height>36</height>
             </rect>
            </property>
            <property name="minimumSize">
             <size>
              <width>0</width>
-             <height>40</height>
+             <height>0</height>
             </size>
            </property>
            <property name="toolTip">
@@ -1854,7 +1857,7 @@ QPushButton:pressed {
     background-color: rgba(255,255,255,235);
     border: none;
     border-radius: 12px;
-    padding: 4px 14px 4px 10px;
+    padding: 2px 12px;
     font-size: 9pt;
     font-weight: 600;
     color: #1C1F22;
@@ -1876,24 +1879,27 @@ QPushButton:checked {
            </property>
           </widget>
           <widget class="QCheckBox" name="checkboxGnss">
+           <property name="visible">
+            <bool>false</bool>
+           </property>
            <property name="geometry">
             <rect>
              <x>1112</x>
              <y>14</y>
              <width>104</width>
-             <height>40</height>
+             <height>36</height>
             </rect>
            </property>
            <property name="minimumSize">
             <size>
              <width>0</width>
-             <height>40</height>
+             <height>0</height>
             </size>
            </property>
            <property name="styleSheet">
             <string notr="true">QCheckBox {
     background-color: rgba(255,255,255,235);
-    padding: 4px 12px;
+    padding: 2px 12px;
     border: none;
     border-radius: 12px;
     font-size: 9pt;
@@ -1909,18 +1915,21 @@ QCheckBox:checked {
            </property>
           </widget>
           <widget class="QComboBox" name="comboBox_mapTypes">
+           <property name="visible">
+            <bool>false</bool>
+           </property>
            <property name="geometry">
             <rect>
              <x>1076</x>
              <y>62</y>
              <width>154</width>
-             <height>40</height>
+             <height>36</height>
             </rect>
            </property>
            <property name="minimumSize">
             <size>
              <width>0</width>
-             <height>36</height>
+             <height>0</height>
             </size>
            </property>
            <property name="styleSheet">
@@ -1928,7 +1937,7 @@ QCheckBox:checked {
     background-color: rgba(255,255,255,235);
     border: none;
     border-radius: 12px;
-    padding: 4px 12px;
+    padding: 2px 12px;
     font-size: 9pt;
     font-weight: 600;
 }
@@ -1972,6 +1981,41 @@ QComboBox::drop-down { border: none; width: 20px; }</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+          <widget class="QPushButton" name="btnMapControlsToggle">
+           <property name="geometry">
+            <rect>
+             <x>1180</x>
+             <y>14</y>
+             <width>36</width>
+             <height>36</height>
+            </rect>
+           </property>
+           <property name="toolTip">
+            <string>Инструменты карты: выбор точки, ГНСС, тип карты</string>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QPushButton {
+    background-color: rgba(255,255,255,235);
+    border: none;
+    border-radius: 12px;
+    font-size: 14pt;
+    color: #1C1F22;
+}
+QPushButton:hover {
+    background-color: #f0f0f0;
+}
+QPushButton:checked {
+    background-color: #0F6B4F;
+    color: #FFFFFF;
+}</string>
+           </property>
+           <property name="text">
+            <string>☰</string>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
            </property>
           </widget>
          </widget>

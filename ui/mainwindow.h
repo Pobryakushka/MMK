@@ -201,6 +201,11 @@ private:
     // комментарий в onAutoConnectorFinished()). Флаг не даёт зациклить отсрочку
     // и сбрасывается в начале каждого нового автопоиска.
     bool m_autoConnectorFinishRetried = false;
+    // Плавающий блок инструментов над картой (выбор точки, ГНСС, тип карты)
+    // по умолчанию свёрнут в одну кнопку-«гамбургер» — на планшете крупные
+    // кнопки забирали слишком много видимой карты. См.
+    // setMapControlsExpanded()/repositionMapFloatingControls().
+    bool m_mapControlsExpanded = false;
     QTimer *timer;
     QTimer *pollTimer;
     QSerialPort *serialPort;
@@ -585,6 +590,8 @@ private:
     void resizeEvent(QResizeEvent *event);
     bool eventFilter(QObject *watched, QEvent *event) override;
     void repositionMapFloatingControls();
+    // Разворачивает/сворачивает блок инструментов над картой.
+    void setMapControlsExpanded(bool expanded);
     QList<quint16> getRequestParameters();
 
     // Методы обновления статуса датчиков на панели

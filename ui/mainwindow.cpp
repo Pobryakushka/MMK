@@ -564,14 +564,19 @@ void MainWindow::onOpenMapPage()
 {
     ui->stackedWidget->setCurrentWidget(ui->page_map);
 
+    // Инструменты карты всегда открываются свёрнутыми — чтобы карта была
+    // видна максимально.
+    setMapControlsExpanded(false);
+
     // Разовая подсказка про выбор точки — только пока точку ни разу не
     // выбирали (m_hasGnssPosition отражает это для обоих источников,
     // см. updateMapCoordDisplay()) и только один раз за сеанс работы, чтобы
     // не надоедать при каждом заходе на страницу.
     if (!m_mapCoordHintShown && !m_hasGnssPosition) {
         m_mapCoordHintShown = true;
-        showNotice("Чтобы выбрать точку на карте: нажмите \"Указать точку\", "
-                   "затем тапните нужное место на карте.",
+        showNotice("Инструменты карты — под кнопкой ☰ справа сверху. "
+                   "Чтобы выбрать точку: ☰ → \"Указать точку\", затем "
+                   "тапните нужное место на карте.",
                    NotificationToast::Info);
     }
 }
@@ -696,6 +701,10 @@ void MainWindow::setupMapCoordinatesButton()
     // принимает параметров, просто флипает m_mapCoordinatesEnabled и красит
     // оба виджета через updateMapCoordinatesButtonStyle()).
     connect(ui->btnMapCoordinatesPos, &QPushButton::clicked, this, &MainWindow::onMapCoordinatesToggled);
+
+    // «Гамбургер» над картой разворачивает/сворачивает столбец инструментов.
+    connect(ui->btnMapControlsToggle, &QPushButton::toggled,
+            this, &MainWindow::setMapControlsExpanded);
 }
 
 void MainWindow::setupGnssCheckbox()
@@ -883,6 +892,9 @@ void MainWindow::onMapCoordinatesToggled()
     if (m_mapCoordinatesEnabled) {
         checkAndDisableConflictingSources("map");
         updateCoordinateSource("Карта");
+        // Режим выбора точки включён — сворачиваем столбец инструментов,
+        // чтобы он не перекрывал место, куда оператор собирается тапнуть.
+        setMapControlsExpanded(false);
     } else {
         updateCoordinateSource("Нет");
     }
@@ -1984,48 +1996,73 @@ void MainWindow::repositionMapFloatingControls()
 
     const int margin = 16;
     const int gap = 8;
+    const int ctlH = 36;         // компактная высота — на планшете экономим карту
+    const int toggleSize = 36;
+    const int panelW = 208;      // ширина развёрнутого столбца инструментов
     const int canvasWidth = ui->mapCanvas->width();
+    const bool expanded = m_mapControlsExpanded;
 
-    // Строка 1 слева: текущие выбранные координаты — подсказка при выборе
+    // Слева сверху: текущие выбранные координаты — подсказка при выборе
     // точки маркером (см. updateMapCoordDisplay()).
     if (ui->lblMapCoordDisplay) {
         ui->lblMapCoordDisplay->adjustSize();
         ui->lblMapCoordDisplay->move(margin, margin);
     }
 
-    // Строка 1 справа: маркер (выбор координат с карты) + GNSS справа от него
-    const int markerSize = ui->btnMapCoordinates->width();
-    const int gnssWidth = ui->checkboxGnss->width();
-    const int row1Height = ui->btnMapCoordinates->height();
-
-    const int gnssX = canvasWidth - gnssWidth - margin;
-    const int markerX = gnssX - gap - markerSize;
-    ui->checkboxGnss->move(gnssX, margin);
-    ui->btnMapCoordinates->move(markerX, margin);
-
-    // Строка 2 справа: выбор типа карты — во всю ширину строки 1 (от левого
-    // края «Указать точку» до правого края «GNSS»), чтобы блок управления
-    // выглядел симметрично, а не «уже» кнопок над ним.
-    const int y2 = margin + row1Height + gap;
-    const int comboSpan = (gnssX + gnssWidth) - markerX;
-    ui->comboBox_mapTypes->resize(comboSpan, row1Height);
-    ui->comboBox_mapTypes->move(markerX, y2);
-
-    // Строка 2 слева: телеметрия ГНСС — под подсказкой с координатами,
-    // выровнена по её левому краю (см. updateMapGnssInfo()).
-    if (ui->lblMapGnssInfo) {
-        ui->lblMapGnssInfo->adjustSize();
-        ui->lblMapGnssInfo->move(margin, y2);
+    // Справа сверху: одна кнопка-«гамбургер». Постоянные крупные кнопки на
+    // планшете забирали слишком много видимой карты, поэтому инструменты
+    // (выбор точки, ГНСС, тип карты) скрыты за ней и раскрываются столбцом
+    // только по нажатию — см. setMapControlsExpanded().
+    const int toggleX = canvasWidth - toggleSize - margin;
+    if (ui->btnMapControlsToggle) {
+        ui->btnMapControlsToggle->setGeometry(toggleX, margin, toggleSize, toggleSize);
+        ui->btnMapControlsToggle->raise();
     }
 
-    // Поднимаем плавающие элементы над картой в порядке отрисовки
+    // Развёрнутый столбец: правый край выровнен по «гамбургеру».
+    const int panelX = canvasWidth - panelW - margin;
+    int y = margin + toggleSize + gap;
+
+    ui->btnMapCoordinates->setVisible(expanded);
+    ui->checkboxGnss->setVisible(expanded);
+    ui->comboBox_mapTypes->setVisible(expanded);
+
+    if (expanded) {
+        ui->btnMapCoordinates->setGeometry(panelX, y, panelW, ctlH);
+        y += ctlH + gap;
+        ui->checkboxGnss->setGeometry(panelX, y, panelW, ctlH);
+        y += ctlH + gap;
+        ui->comboBox_mapTypes->setGeometry(panelX, y, panelW, ctlH);
+
+        ui->btnMapCoordinates->raise();
+        ui->checkboxGnss->raise();
+        ui->comboBox_mapTypes->raise();
+    }
+
+    // Слева, под подсказкой координат: телеметрия ГНСС (см. updateMapGnssInfo()).
+    // Не зависит от состояния «гамбургера» — это индикатор, а не орган
+    // управления, оператору полезно видеть фикс/спутники всегда.
+    if (ui->lblMapGnssInfo) {
+        ui->lblMapGnssInfo->adjustSize();
+        const int coordH = ui->lblMapCoordDisplay ? ui->lblMapCoordDisplay->height() : ctlH;
+        ui->lblMapGnssInfo->move(margin, margin + coordH + gap);
+    }
+
     if (ui->lblMapCoordDisplay)
         ui->lblMapCoordDisplay->raise();
     if (ui->lblMapGnssInfo)
         ui->lblMapGnssInfo->raise();
-    ui->btnMapCoordinates->raise();
-    ui->checkboxGnss->raise();
-    ui->comboBox_mapTypes->raise();
+}
+
+void MainWindow::setMapControlsExpanded(bool expanded)
+{
+    m_mapControlsExpanded = expanded;
+    if (ui->btnMapControlsToggle &&
+        ui->btnMapControlsToggle->isChecked() != expanded) {
+        QSignalBlocker blocker(ui->btnMapControlsToggle);
+        ui->btnMapControlsToggle->setChecked(expanded);
+    }
+    repositionMapFloatingControls();
 }
 
 // Обновляет текст плавающей подсказки над картой (lblMapCoordDisplay) в
