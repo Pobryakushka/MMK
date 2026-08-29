@@ -1935,6 +1935,45 @@ QCheckBox:checked {
 QComboBox::drop-down { border: none; width: 20px; }</string>
            </property>
           </widget>
+          <widget class="QLabel" name="lblMapGnssInfo">
+           <property name="geometry">
+            <rect>
+             <x>16</x>
+             <y>62</y>
+             <width>420</width>
+             <height>36</height>
+            </rect>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>36</height>
+            </size>
+           </property>
+           <property name="visible">
+            <bool>false</bool>
+           </property>
+           <property name="toolTip">
+            <string>Состояние ГНСС-приёмника: тип решения, число спутников, точность</string>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QLabel {
+    background-color: rgba(255,255,255,235);
+    padding: 4px 14px;
+    border: none;
+    border-radius: 12px;
+    font-size: 9pt;
+    font-weight: 600;
+    color: #1C1F22;
+}</string>
+           </property>
+           <property name="text">
+            <string>ГНСС: ожидание данных…</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+           </property>
+          </widget>
          </widget>
         </item>
        </layout>

@@ -196,6 +196,11 @@ private:
     // false, "Подключить всё" всегда скрыта — иначе она на секунду
     // "мигает" видимой между стартом окна и стартовым автопоиском.
     bool m_startupSensorCheckDone = false;
+    // Однократная отсрочка onAutoConnectorFinished(): AutoConnector уже опознал
+    // АМС/ГНСС, но их обработчики ещё подтверждают связь (см. подробный
+    // комментарий в onAutoConnectorFinished()). Флаг не даёт зациклить отсрочку
+    // и сбрасывается в начале каждого нового автопоиска.
+    bool m_autoConnectorFinishRetried = false;
     QTimer *timer;
     QTimer *pollTimer;
     QSerialPort *serialPort;
@@ -546,6 +551,12 @@ private:
     // координаты (последний тап по карте или GNSS-фиксация), чтобы было видно,
     // какую точку выбираешь маркером, не переключаясь на страницу "Положение".
     void updateMapCoordDisplay(const QString &sourceLabel);
+
+    // Плавающая панель телеметрии ГНСС над картой (lblMapGnssInfo): тип
+    // решения, число спутников, HDOP, точность, высота. Видна только пока
+    // источник координат — ГНСС.
+    void updateMapGnssInfo(const GNSSData &data);
+    void clearMapGnssInfo();
 
     // АМС методы
     void setupAmsHandler();
