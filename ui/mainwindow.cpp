@@ -962,6 +962,7 @@ void MainWindow::disconnectFromGnss()
     updateCoordinateSource("Нет");
     updateFieldsEditability();
     updateGnssMarkerOnMap(0, 0);
+    clearMapGnssInfo();
 
     statusBar()->showMessage("GNSS приемник отключен", 3000);
     emit gnssDataSourceChanged(m_gnssEnabled);
@@ -989,6 +990,11 @@ void MainWindow::onGnssDataReceived(const GNSSData &data)
     if (!m_gnssEnabled) {
         return; // Игнорируем данные, если GNSS выключен
     }
+
+    // Телеметрия ГНСС над картой — обновляем на каждом пакете, ещё до
+    // проверки валидности фикса (при поиске спутников тоже полезно видеть
+    // их число).
+    updateMapGnssInfo(data);
 
     if (data.latitude == 0.0 && data.longitude == 0.0) {
         statusBar()->showMessage("GNSS: Поиск спутников...", 2000);
@@ -1061,6 +1067,7 @@ void MainWindow::onGnssDisconnected()
 
     updateFieldsEditability();
     updateGnssStatusLabel(false);
+    clearMapGnssInfo();
 }
 
 void MainWindow::onGnssError(const QString &error)
@@ -1996,14 +2003,26 @@ void MainWindow::repositionMapFloatingControls()
     ui->checkboxGnss->move(gnssX, margin);
     ui->btnMapCoordinates->move(markerX, margin);
 
-    // Строка 2: выбор типа карты — под строкой 1, прижат к правому краю
-    const int comboWidth = ui->comboBox_mapTypes->width();
+    // Строка 2 справа: выбор типа карты — во всю ширину строки 1 (от левого
+    // края «Указать точку» до правого края «GNSS»), чтобы блок управления
+    // выглядел симметрично, а не «уже» кнопок над ним.
     const int y2 = margin + row1Height + gap;
-    ui->comboBox_mapTypes->move(canvasWidth - comboWidth - margin, y2);
+    const int comboSpan = (gnssX + gnssWidth) - markerX;
+    ui->comboBox_mapTypes->resize(comboSpan, row1Height);
+    ui->comboBox_mapTypes->move(markerX, y2);
+
+    // Строка 2 слева: телеметрия ГНСС — под подсказкой с координатами,
+    // выровнена по её левому краю (см. updateMapGnssInfo()).
+    if (ui->lblMapGnssInfo) {
+        ui->lblMapGnssInfo->adjustSize();
+        ui->lblMapGnssInfo->move(margin, y2);
+    }
 
     // Поднимаем плавающие элементы над картой в порядке отрисовки
     if (ui->lblMapCoordDisplay)
         ui->lblMapCoordDisplay->raise();
+    if (ui->lblMapGnssInfo)
+        ui->lblMapGnssInfo->raise();
     ui->btnMapCoordinates->raise();
     ui->checkboxGnss->raise();
     ui->comboBox_mapTypes->raise();
@@ -2033,6 +2052,48 @@ void MainWindow::updateMapCoordDisplay(const QString &sourceLabel)
     }
 
     repositionMapFloatingControls();
+}
+
+// Плавающая панель телеметрии ГНСС над картой (lblMapGnssInfo): тип
+// решения (GPS Fix / DGPS / RTK…), число спутников, HDOP, оценка точности
+// и высота. Видна только пока источник координат — ГНСС; при отключении
+// приёмника прячется (см. clearMapGnssInfo()).
+void MainWindow::updateMapGnssInfo(const GNSSData &data)
+{
+    if (!ui->lblMapGnssInfo) return;
+
+    if (!m_gnssEnabled) {
+        clearMapGnssInfo();
+        return;
+    }
+
+    const bool hasFix = data.fixQuality != 0 &&
+                        !(data.latitude == 0.0 && data.longitude == 0.0);
+
+    QStringList parts;
+    if (hasFix) {
+        parts << QString("ГНСС: %1").arg(data.fixType.isEmpty() ? QStringLiteral("Fix")
+                                                                : data.fixType);
+        parts << QString("Спутники: %1").arg(data.satellites);
+        if (data.hdop > 0.0)
+            parts << QString("HDOP: %1").arg(data.hdop, 0, 'f', 1);
+        if (data.accuracyH > 0.0)
+            parts << QString("±%1 м").arg(data.accuracyH, 0, 'f', 1);
+        parts << QString("Выс: %1 м").arg(data.altitude, 0, 'f', 0);
+    } else {
+        parts << QStringLiteral("ГНСС: поиск спутников…");
+        parts << QString("Спутники: %1").arg(data.satellites);
+    }
+
+    ui->lblMapGnssInfo->setText(parts.join(QStringLiteral("   ·   ")));
+    ui->lblMapGnssInfo->show();
+    repositionMapFloatingControls();
+}
+
+void MainWindow::clearMapGnssInfo()
+{
+    if (ui->lblMapGnssInfo)
+        ui->lblMapGnssInfo->hide();
 }
 
 void MainWindow::onConnectSensorsClicked()

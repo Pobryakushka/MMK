@@ -552,6 +552,12 @@ private:
     // какую точку выбираешь маркером, не переключаясь на страницу "Положение".
     void updateMapCoordDisplay(const QString &sourceLabel);
 
+    // Плавающая панель телеметрии ГНСС над картой (lblMapGnssInfo): тип
+    // решения, число спутников, HDOP, точность, высота. Видна только пока
+    // источник координат — ГНСС.
+    void updateMapGnssInfo(const GNSSData &data);
+    void clearMapGnssInfo();
+
     // АМС методы
     void setupAmsHandler();
     void configureAmsDatabase();
