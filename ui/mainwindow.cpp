@@ -3101,14 +3101,25 @@ void MainWindow::onAutoConnectorFinished()
     // Без этой отсрочки toast мог написать "не найден" за мгновение до
     // того, как соединение реально подтвердится — короткая пауза убирает
     // эту гонку.
+    //
+    // У ГНСС ровно та же гонка: AutoConnector опознаёт приёмник по своему
+    // временному порту, но ZedF9PReceiver::isConnected() становится true
+    // только после первого валидного UBX/NMEA-пакета (см. confirmConnection()),
+    // а он приходит уже после detectionFinished. Без отсрочки toast/шторка
+    // пишут «ГНСС не найден», хотя приёмник тут же подтверждается и пилюля
+    // статуса сверху загорается зелёным.
     const auto detected = m_autoConnector->getDetectedDevices();
     const bool amsPendingConfirm = detected.contains(AutoConnector::DEVICE_AMS) &&
                                    m_amsHandler && !m_amsHandler->isConnected();
+    const bool gnssPendingConfirm = detected.contains(AutoConnector::DEVICE_GNSS) &&
+                                    m_gnssHandler && !m_gnssHandler->isConnected();
 
-    if (amsPendingConfirm) {
-        QTimer::singleShot(1500, this, &MainWindow::finalizeAutoConnectorFinished);
+    if ((amsPendingConfirm || gnssPendingConfirm) && !m_autoConnectorFinishRetried) {
+        m_autoConnectorFinishRetried = true;
+        QTimer::singleShot(3000, this, &MainWindow::finalizeAutoConnectorFinished);
         return;
     }
+    m_autoConnectorFinishRetried = false;
 
     finalizeAutoConnectorFinished();
 }
@@ -4935,6 +4946,7 @@ void MainWindow::onSilenceWatchdogTimer()
 void MainWindow::onAutoConnectorStarted()
 {
     ui->btnConnectSensors->setEnabled(false);
+    m_autoConnectorFinishRetried = false;
 
     const AutoConnector::DeviceType singleTarget = m_autoConnector->singleSearchTarget();
     const QString title = (singleTarget == AutoConnector::DEVICE_UNKNOWN)
