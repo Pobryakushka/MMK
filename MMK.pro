@@ -202,6 +202,16 @@ HEADERS += \
     src/core/grib/MushroomRunner.h \
     src/core/grib/ProcessRunner.h
 
+# ─── Логика: бюллетень Метео-11 (кодирование по протоколу) ─────────────────
+# Чистые вычисления без QtWidgets; раньше жили приватными статическими
+# методами внутри виджета архива измерений.
+SOURCES += \
+    src/core/meteo11/Meteo11Codec.cpp
+
+HEADERS += \
+    src/core/meteo11/Meteo11Codec.h \
+    src/core/meteo11/Meteo11Data.h
+
 # ─── Логика: выгрузка результатов измерения (TXT/CSV/JSON/PDF/XLSX) ────────
 SOURCES += \
     src/core/export/MeasurementExporter.cpp

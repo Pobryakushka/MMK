@@ -20,6 +20,7 @@
 #include <qwt_symbol.h>
 #include <qwt_plot_canvas.h>
 #include "core/windprofile/WindShearCalculator.h"
+#include "core/meteo11/Meteo11Data.h"
 #include <QTableWidget>
 #include "core/grib/GribMeteo11Pipeline.h"
 #include "ui/widgets/notificationtoast.h"
@@ -179,51 +180,12 @@ private:
 
     // ============ МЕТЕО-11 ============
 
-    // Структура, хранящая все закодированные поля бюллетеня
-    struct Meteo11Data {
-        // --- Заголовок ---
-        QString stationNumber;      // NNNNN  (условный номер, 5 цифр)
-        int     day;                // ДД     — день месяца окончания зондирования
-        int     hour;               // ЧЧ     — часы
-        int     tenMinutes;         // М      — десятки минут (0-5)
-        int     stationAltitude;    // BBBB   — высота станции над уровнем моря, м (+60)
-        int     pressureDeviation;  // БББ    — отклонение давления, мм рт.ст. (-6 закодировано +5)
-        int     tempVirtualDev;     // T0T0   — отклонение виртуальной темп., °С (-31 закод.)
-
-        // --- Слои ---
-        // Каждый слой: TTHHНСС — откл. темп.(ТТ), дирекц.угол направления(НН),
-        //                        скорость ветра(СС)
-        // Ниже 10 км — группы 4-значные (ППТТНН) + 6-значные (ССНН)  (реально хранится как пары)
-        // Высоты стандартные: 02(200м), 04, 08, 12, 16, 24, 30, 40, 50, 60, 80,
-        //                     10(1000м), 12, 14, 18, 22, 26, 30 (км)
-        struct LayerData {
-            int     heightCode;     // стандартная высота в коде бюллетеня
-            int     windDir;        // ДД направление в больших делениях угломера (0-60, шаг 6°)
-            int     windSpeed;      // СС скорость м/с
-            int     tempDev;        // ТТ — отклонение температуры, закодированное (0 = нет данных)
-            bool    isAbove10km;    // для высот ≥10 км высота в км (двузначная)
-            bool    isUnavailable;  // true → нет данных, в строку пишем 00////
-            QString pp;             // ПП — поправка за плотность ("//" если не измерялась)
-            LayerData() : heightCode(0), windDir(0), windSpeed(0), tempDev(0),
-                          isAbove10km(false), isUnavailable(false), pp("//") {}
-        };
-        QVector<LayerData> layers;
-
-        // --- Достигнутые высоты ---
-        int reachedTempHeightKm;    // BтBт — достигнутая высота темп. зондирования, км
-        int reachedWindHeightKm;    // BвBв — достигнутая высота ветрового зондирования, км
-
-        // --- Метаданные для отображения (не входят в строку) ---
-        QDateTime bulletinTime;     // время составления
-        bool      isValid;          // бюллетень годен
-        bool      isApproximate;    // true → приближённый формат
-        QString   rawString;        // сырая строка от МС (для FromMeteoStat)
-
-        Meteo11Data() : day(0), hour(0), tenMinutes(0), stationAltitude(0),
-            pressureDeviation(0), tempVirtualDev(0),
-            reachedTempHeightKm(0), reachedWindHeightKm(0),
-            isValid(false), isApproximate(false) {}
-    };
+    // Структура, хранящая все закодированные поля бюллетеня, переехала
+    // в core/meteo11/Meteo11Data.h: это предметная модель протокола, а не
+    // часть виджета. Псевдоним оставлен, чтобы весь остальной код (включая
+    // MeasurementResults::Meteo11Data в сигнатурах методов) читался как
+    // раньше.
+    using Meteo11Data = ::Meteo11Data;
 
     // Хранимые данные трёх типов бюллетеня
     Meteo11Data m_meteo11Updated;     // Уточнённый (после измерения АМС)
@@ -262,16 +224,9 @@ private:
 
     MeasurementSnapshot buildSnapshot() const;
 
-    // Кодирование по протоколу
-    static int  encodeWindDir(int degrees);             // градусы → делители угломера (0-60)
-    static int  encodePressureDev(double deltaMmHg);    // отклонение давления → БББ
-    static int  encodeTempDev(double deltaCelsius);     // отклонение темп. → ТТ
-    static QString formatMeteo11Group(int heightCode, const QString &pp, int dir, int speed, int tempDev, bool above10km, bool includePP = true, bool unavailable = false);
-    static QString buildMeteo11String(const Meteo11Data &d);
-
-    // Параметры атмосферы для кодирования
-    static double standardPressureAtAlt(double altM);   // стандартное давление на высоте
-    static double standardTempAtAlt(double altM);       // стандартная темп. на высоте
+    // Кодирование по протоколу и параметры атмосферы переехали
+    // в core/meteo11/Meteo11Codec.h — это чистые вычисления, виджет для них
+    // не нужен. Вызовы стали Meteo11Codec::encodeWindDir(...) и т. п.
 
     // Исходные данные для текущей записи (сохраняются при loadMeasurementData)
     double m_currentStationAltitude;

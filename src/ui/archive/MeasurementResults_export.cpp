@@ -8,6 +8,8 @@
 
 #include "ui/archive/MeasurementResults_internal.h"
 
+#include "core/meteo11/Meteo11Codec.h"
+
 void MeasurementResults::onExportBackRequested()
 {
     ui->rootStack->setCurrentWidget(ui->archivePage);
@@ -104,7 +106,7 @@ MeasurementSnapshot MeasurementResults::buildSnapshot() const
                       MeasurementSnapshot::Meteo11Export            &dst) {
         dst.valid           = src.isValid;
         dst.bulletinString  = src.isValid
-                                 ? MeasurementResults::buildMeteo11String(src)
+                                 ? Meteo11Codec::buildMeteo11String(src)
                                  : QString();
         dst.stationNumber   = src.stationNumber;
         dst.day             = src.day;

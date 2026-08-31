@@ -8,6 +8,8 @@
 
 #include "ui/archive/MeasurementResults_internal.h"
 
+#include "core/meteo11/Meteo11Codec.h"
+
 // -------------------------------------------------------
 // Стандартные высоты Метео-11 и их коды (объявлены до первого использования)
 // -------------------------------------------------------
@@ -372,167 +374,6 @@ void MeasurementResults::onTableFormatClicked()
     currentOutputFormat = Table;
     switchMeteo11Display();
 }
-double MeasurementResults::standardPressureAtAlt(double altM)
-{
-    // МСА: P = 760 * (1 - 0.0000226 * h)^5.256
-    double ratio = 1.0 - 0.0000226 * altM;
-    if (ratio <= 0.0) return 0.0;
-    return 760.0 * std::pow(ratio, 5.256);
-}
-
-/**
- * Стандартная температура МСА на высоте altM (м), °C
- */
-double MeasurementResults::standardTempAtAlt(double altM)
-{
-    // Тропосфера: T = 15 - 6.5 * h/1000
-    if (altM <= 11000.0)
-        return 15.0 - 6.5 * altM / 1000.0;
-    return -56.5; // Стратосфера
-}
-
-/**
- * Кодировать направление ветра в делениях угломера (большие деления, шаг 0-60).
- * degrees — метеорологическое направление 0..360 (откуда дует).
- * Возвращает 00..60 (60 означает «штиль» или отдельно обрабатывается).
- */
-int MeasurementResults::encodeWindDir(int degrees)
-{
-    // Большие деления угломера: 1 д.у. = 6°, диапазон 0-60
-    // Округление до ближайшего целого
-    int du = qRound(degrees / 6.0);
-    if (du >= 60) du = 0; // 360° = 00
-    return du;
-}
-
-/**
- * Кодировать отклонение давления (мм рт.ст.) в поле БББ.
- * Правило: если отклонение отрицательное — прибавляем 500 к первой цифре
- * (или по упрощённому: добавляем 500 ко всему значению при отклонении < 0).
- */
-int MeasurementResults::encodePressureDev(double deltaMmHg)
-{
-    int val = qRound(deltaMmHg); // округление до целого мм рт.ст.
-    if (val < 0) {
-        val = 500 + val; // отрицательное: +500 к первой цифре (кодирование "минус")
-    }
-    // Ограничиваем диапазоном 000..999
-    val = qBound(0, val, 999);
-    return val;
-}
-
-/**
- * Кодировать отклонение температуры (°C) в поле ТТ (двузначное).
- * Правило: отрицательные — прибавить 50 к первой цифре => первая цифра 5-9.
- */
-int MeasurementResults::encodeTempDev(double deltaCelsius)
-{
-    int val = qRound(qAbs(deltaCelsius));
-    val = qMin(val, 49); // максимум 49°
-    if (deltaCelsius < 0.0) {
-        val += 50; // кодирование "минус"
-    }
-    return val;
-}
-
-/**
- * Сформировать текстовую группу одного слоя для строкового бюллетеня.
- * Ниже 10 км: ППТТННСС (4+6 цифр со знаком «-» между ними).
- * Выше 10 км: ВВ-ТТННСС (2+6 цифр).
- * В данной реализации группа = "HННСС" (с указанием высоты и параметров).
- *
- * Реальный формат строки Метео-11:
- *  ≤10 км: ХХХХ-ТТННСС  (4-значный код высоты + 6-значный ТТННСС)
- *  >10 км: ХХ-ТТННСС   (2-значный код + 6-значный)
- */
-QString MeasurementResults::formatMeteo11Group(int heightCode, const QString &pp, int dir, int speed, int tempDev, bool above10km, bool includePP, bool unavailable)
-{
-    // Формат уточнённого (includePP=true):
-    //  ≤8000 м:  ВВПП-ТТННСС  где ВВ = высота в сотнях метров (02..80), ПП — из данных
-    //  ≥10 км:   ВВПП-ТТННСС  где ВВ = высота в км (10..30)
-    // Формат приближённого (includePP=false):
-    //  ВВ-ТТННСС  (без ПП)
-    QString hPart;
-
-    if (!above10km) {
-        int hHundreds = heightCode / 100;
-        if (includePP)
-            hPart = QString("%1%2").arg(hHundreds, 2, 10, QChar('0')).arg(pp);
-        else
-            hPart = QString("%1").arg(hHundreds, 2, 10, QChar('0'));
-    } else {
-        if (includePP)
-            hPart = QString("%1%2").arg(heightCode, 2, 10, QChar('0')).arg(pp);
-        else
-            hPart = QString("%1").arg(heightCode, 2, 10, QChar('0'));
-    }
-
-    // Нет данных → ТТ=00, НН=//, СС=//
-    if (unavailable)
-        return hPart + "-" + "00////";
-
-    QString ssStr = (speed >= 99)
-                        ? "//"
-                        : QString("%1").arg(speed, 2, 10, QChar('0'));
-
-    QString dataPart = QString("%1%2%3")
-                           .arg(tempDev, 2, 10, QChar('0'))  // ТТ
-                           .arg(dir,     2, 10, QChar('0'))  // НН
-                           .arg(ssStr);                      // СС
-
-    return hPart + "-" + dataPart;
-}
-
-/**
- * Построить полную строку бюллетеня Метео-11 из структуры данных.
- * Формат: «Метео 11NNNNN–ДДЧЧМ–BBBB–БББT0T0–02ПП–ТТННСС–...–BтBтBвBв»
- */
-QString MeasurementResults::buildMeteo11String(const Meteo11Data &d)
-{
-    if (!d.isValid)
-        return "Метео 11 — нет данных";
-
-    QStringList parts;
-
-    // Заголовок
-    if (d.isApproximate) {
-        parts << "Метео 11 приближенный";
-    } else {
-        parts << QString("Метео 11%1").arg(d.stationNumber);
-    }
-
-    // ДДЧЧМ
-    parts << QString("%1%2%3")
-                 .arg(d.day,        2, 10, QChar('0'))
-                 .arg(d.hour,       2, 10, QChar('0'))
-                 .arg(d.tenMinutes, 1, 10, QChar('0'));
-
-    // BBBB — высота станции
-    parts << QString("%1").arg(d.stationAltitude, 4, 10, QChar('0'));
-
-    // БББТ0Т0 — отклонение давления + отклонение виртуальной температуры
-    parts << QString("%1%2")
-                 .arg(d.pressureDeviation, 3, 10, QChar('0'))
-                 .arg(d.tempVirtualDev,    2, 10, QChar('0'));
-
-    // Слои: приближённый — без ПП (ВВ-ТТННСС), уточнённый — с ПП (ВВПП-ТТННСС)
-    const bool includePP = !d.isApproximate;
-    for (const Meteo11Data::LayerData &layer : d.layers) {
-        parts << formatMeteo11Group(layer.heightCode, layer.pp,
-                                    layer.windDir, layer.windSpeed, layer.tempDev,
-                                    layer.isAbove10km, includePP,
-                                    layer.isUnavailable);
-    }
-
-    // Достигнутые высоты BтBтBвBв (только для уточнённого)
-    if (!d.isApproximate) {
-        parts << QString("%1%2")
-                     .arg(d.reachedTempHeightKm, 2, 10, QChar('0'))
-                     .arg(d.reachedWindHeightKm, 2, 10, QChar('0'));
-    }
-
-    return parts.join("–");
-}
 
 
 /**
@@ -571,7 +412,7 @@ MeasurementResults::Meteo11Data MeasurementResults::buildMeteo11(
     // ΔH₀ = H₀ - 750  (мм рт.ст., табличное значение = 750)
     // Если > 750 → знак «+», если < 750 → знак «-»
     double deltaH0      = pressureHpa - 750.0; // pressureHpa теперь уже в мм рт.ст.
-    d.pressureDeviation = encodePressureDev(deltaH0);
+    d.pressureDeviation = Meteo11Codec::encodePressureDev(deltaH0);
 
     // Δτ₀: отклонение наземной виртуальной температуры по протоколу Метео-11
     // Шаг 1: виртуальная поправка ΔTᵥ из Таблицы 4 (r = 50%, H = 750 мм рт.ст.)
@@ -582,7 +423,7 @@ MeasurementResults::Meteo11Data MeasurementResults::buildMeteo11(
 
     // Шаг 3: Δτ₀ = τ₀ - 15.9  (табличное значение τ = +15.9°C)
     double deltaTau0 = tau0 - 15.9;
-    d.tempVirtualDev = encodeTempDev(deltaTau0);
+    d.tempVirtualDev = Meteo11Codec::encodeTempDev(deltaTau0);
 
     // --- Слои ---
     // Для каждой стандартной высоты Метео-11 ищем ближайшую точку профиля
@@ -620,7 +461,7 @@ MeasurementResults::Meteo11Data MeasurementResults::buildMeteo11(
 
         Meteo11Data::LayerData layer;
         layer.heightCode  = lvl.codeValue;
-        layer.windDir     = encodeWindDir(pt.windDirection);
+        layer.windDir     = Meteo11Codec::encodeWindDir(pt.windDirection);
         layer.windSpeed   = qRound(pt.windSpeed);
         layer.isAbove10km = lvl.above10km;
         // Для приближённого — ΔτY из Таблицы 3 (без Метеосредний)
@@ -699,19 +540,19 @@ MeasurementResults::Meteo11Data MeasurementResults::buildMeteo11Approximate(
 
     // ΔH₀ = H₀ - 750 (мм рт. ст.; pressureHpa уже в мм рт.ст. из БД)
     double deltaH0 = pressureHpa - 750.0;
-    d.pressureDeviation = encodePressureDev(deltaH0);
+    d.pressureDeviation = Meteo11Codec::encodePressureDev(deltaH0);
 
     // Виртуальная поправка ΔTv по Таблице 4 (r = 50%, H = 750 мм рт.ст.)
     // τ₀ = t₀ + ΔTv  (наземная виртуальная температура)
     // Δτ₀МП = τ₀ − 15.9  (наземное отклонение виртуальной температуры, таблица: +15.9°C)
     double deltaTV   = virtualTempCorrection(tempC);
     double deltaTau0 = (tempC + deltaTV) - 15.9;
-    d.tempVirtualDev = encodeTempDev(deltaTau0);
+    d.tempVirtualDev = Meteo11Codec::encodeTempDev(deltaTau0);
 
     // НН и СС: экстраполяция по Приложению 4 (Wy = K'y × V₀, αWy = αV₀ + Δα'Wy)
     // При V₀ < 3 м/с скорость принимается равной нулю на всех высотах
     bool windTooLow  = surfaceWindSpeedMs < 3.0;
-    int  groundDirDU = encodeWindDir(qRound(surfaceWindDirDeg));
+    int  groundDirDU = Meteo11Codec::encodeWindDir(qRound(surfaceWindDirDeg));
 
     // Слои: 02 04 08 12 16 24 30 40 (без 2000 м)
     for (int i = 0; i < kApproxHeightCount; ++i) {
@@ -1071,7 +912,7 @@ void MeasurementResults::fillMeteo11StringView(const Meteo11Data &d)
     // Для бюллетеня «От метеостанции» — показываем сырую строку из БД как есть
     QString text = (!d.rawString.isEmpty() && currentButtelinType == FromMeteoStat)
                    ? d.rawString
-                   : buildMeteo11String(d);
+                   : Meteo11Codec::buildMeteo11String(d);
 
     // Форматирование: переносим длинную строку на несколько строк блоками
     // (каждая строка ≈ 5 групп)
