@@ -4,9 +4,6 @@
 #include <QObject>
 #include <QSerialPort>
 #include <QTimer>
-#include <QSqlDatabase>
-#include <QSqlQuery>
-#include <QSqlError>
 #include <QJsonObject>
 #include <QJsonDocument>
 #include "devices/ams/amsprotocol.h"
