@@ -86,11 +86,22 @@ SOURCES += \
     src/app/main.cpp
 
 # ─── UI: главное окно ──────────────────────────────────────────────────────
+# Один класс MainWindow, реализация которого разложена по нескольким единицам
+# трансляции по темам (было 4990 строк в одном файле). Публичный интерфейс
+# по-прежнему один — mainwindow.h; общие для всех частей include и константы
+# лежат в приватном mainwindow_internal.h.
 SOURCES += \
-    src/ui/mainwindow/mainwindow.cpp
+    src/ui/mainwindow/mainwindow.cpp \
+    src/ui/mainwindow/mainwindow_coords.cpp \
+    src/ui/mainwindow/mainwindow_map.cpp \
+    src/ui/mainwindow/mainwindow_measurement.cpp \
+    src/ui/mainwindow/mainwindow_overlays.cpp \
+    src/ui/mainwindow/mainwindow_sensors.cpp \
+    src/ui/mainwindow/mainwindow_status.cpp
 
 HEADERS += \
-    src/ui/mainwindow/mainwindow.h
+    src/ui/mainwindow/mainwindow.h \
+    src/ui/mainwindow/mainwindow_internal.h
 
 # ─── UI: архив измерений ───────────────────────────────────────────────────
 SOURCES += \
