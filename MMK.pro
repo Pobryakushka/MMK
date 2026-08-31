@@ -265,7 +265,7 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 include(qwt.pri)
-include(QXlsx/QXlsx.pri)
+include(3rdparty/QXlsx/QXlsx.pri)
 
 
 # ─── Копирование климатической базы рядом с исполняемым файлом ───
