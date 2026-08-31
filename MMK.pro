@@ -104,14 +104,21 @@ HEADERS += \
     src/ui/mainwindow/mainwindow_internal.h
 
 # ─── UI: архив измерений ───────────────────────────────────────────────────
+# MeasurementResults — тоже один класс, разложенный по темам (было 3741 строка).
 SOURCES += \
     src/ui/archive/MeasurementResults.cpp \
+    src/ui/archive/MeasurementResults_db.cpp \
+    src/ui/archive/MeasurementResults_export.cpp \
+    src/ui/archive/MeasurementResults_meteo11.cpp \
+    src/ui/archive/MeasurementResults_plots.cpp \
+    src/ui/archive/MeasurementResults_style.cpp \
     src/ui/archive/ArchiveDatePopup.cpp \
     src/ui/archive/ArchiveExportView.cpp \
     src/ui/archive/ExportDialog.cpp
 
 HEADERS += \
     src/ui/archive/MeasurementResults.h \
+    src/ui/archive/MeasurementResults_internal.h \
     src/ui/archive/ArchiveDatePopup.h \
     src/ui/archive/ArchiveExportView.h \
     src/ui/archive/ExportDialog.h
