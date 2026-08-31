@@ -302,17 +302,23 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
     secGrid->setContentsMargins(0, 0, 0, 0);
     bodyLayout->addWidget(secGridHolder);
     bodyLayout->setAlignment(secGridHolder, Qt::AlignHCenter);
-    bodyLayout->addStretch(1);
-
-    bodyScroll->setWidget(body);
-    root->addWidget(bodyScroll, 1);
+    bodyLayout->addSpacing(10);
 
     // ── Футер ────────────────────────────────────────────────────────────
-    auto *foot = new QWidget(this);
+    // "Отмена"/"Сохранить" были отдельным виджетом-панелью, закреплённой
+    // ВНЕ прокручиваемой области (в root, а не в bodyLayout) — по идее это
+    // должно было гарантированно держать их на месте, но по факту кнопки
+    // всё равно продолжали обрезаться снизу окна на реальном экране, и
+    // разобраться в точной причине без сборки и запуска не вышло. Более
+    // надёжный вариант — сделать кнопки частью самого прокручиваемого
+    // содержимого (в конце, после списка разделов): тогда они физически не
+    // могут "потеряться" за пределами окна — до них всегда можно долистать
+    // прокруткой этой же страницы, как до любого другого элемента формы.
+    auto *foot = new QWidget(body);
     foot->setObjectName("expFoot");
     foot->setAttribute(Qt::WA_StyledBackground, true);
     auto *footLayout = new QHBoxLayout(foot);
-    footLayout->setContentsMargins(16, 10, 16, 10);
+    footLayout->setContentsMargins(0, 14, 0, 4);
     footLayout->setSpacing(8);
     footLayout->addStretch(1);
     auto *cancelBtn = new QPushButton("Отмена", foot);
@@ -325,10 +331,11 @@ ArchiveExportView::ArchiveExportView(QWidget *parent)
     });
     footLayout->addWidget(cancelBtn);
     footLayout->addWidget(saveBtn);
-    // Та же страховка, что и у шапки — футер с кнопками не должен расти,
-    // ему нужна только высота собственного содержимого.
-    foot->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
-    root->addWidget(foot);
+    bodyLayout->addWidget(foot);
+    bodyLayout->setAlignment(foot, Qt::AlignHCenter);
+
+    bodyScroll->setWidget(body);
+    root->addWidget(bodyScroll, 1);
 
     selectFormat(ExportOptions::TXT);
     selectCsvSep(0);

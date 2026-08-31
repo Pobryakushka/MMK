@@ -28,6 +28,12 @@ ArchiveDatePopup::ArchiveDatePopup(QWidget *parent)
     , m_calendarShown(false)
 {
     setWindowFlags(Qt::Popup);
+    // Без этого атрибута QSS-правило "ArchiveDatePopup { border: ...;
+    // border-radius: ...; }" ниже не рисуется — обычный QWidget (в отличие
+    // от, например, QFrame) по умолчанию не учитывает свои background/border
+    // из таблицы стилей при отрисовке. Та же причина, по которой рамки не
+    // прорисовывались в ArchiveExportView.
+    setAttribute(Qt::WA_StyledBackground, true);
     setAttribute(Qt::WA_DeleteOnClose, false);
     setFixedWidth(330);   // расширили чуть по горизонтали — 296 было впритык,
                            // текст "‹ Скрыть календарь" в кнопке-переключателе
@@ -111,7 +117,13 @@ ArchiveDatePopup::ArchiveDatePopup(QWidget *parent)
     quick->addWidget(todayBtn);
     quick->addWidget(latestBtn);
     quick->addWidget(m_calToggleBtn);
-    quick->addStretch(1);
+    // Раньше между этой группой кнопок и "Готово" был addStretch(1),
+    // разносивший их в противоположные края попапа — особенно когда
+    // календарь свёрнут и попап короткий, "Готово" выглядела как отдельная,
+    // ничем не связанная с остальным кнопка где-то на отшибе. Небольшой
+    // фиксированный отступ вместо резинового — держит "Готово" в той же
+    // визуальной группе, но чуть отделяет её как завершающее действие.
+    quick->addSpacing(10);
     // "Готово" перенесена сюда же, в конец строки быстрых кнопок, вместо
     // отдельной футер-строки внизу — одна строка вместо двух ощутимо снижает
     // общую высоту попапа, а раскрыть/закрыть календарь и сразу нажать
@@ -444,7 +456,7 @@ void ArchiveDatePopup::toggleCalendar()
 {
     m_calendarShown = !m_calendarShown;
     m_calendarBox->setVisible(m_calendarShown);
-    m_calToggleBtn->setText(m_calendarShown ? "‹ Скрыть календарь" : "Календарь");
+    m_calToggleBtn->setText(m_calendarShown ? "‹ Скрыть" : "Календарь");
     m_calToggleBtn->setProperty("on", m_calendarShown);
     m_calToggleBtn->style()->unpolish(m_calToggleBtn);
     m_calToggleBtn->style()->polish(m_calToggleBtn);

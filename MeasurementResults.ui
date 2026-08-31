@@ -256,6 +256,12 @@
                <property name="widgetResizable">
                 <bool>true</bool>
                </property>
+               <property name="verticalScrollBarPolicy">
+                <enum>Qt::ScrollBarAlwaysOff</enum>
+               </property>
+               <property name="horizontalScrollBarPolicy">
+                <enum>Qt::ScrollBarAlwaysOff</enum>
+               </property>
                <widget class="QWidget" name="scrollAreaWidgetContents_sectionParams">
                 <property name="geometry">
                  <rect>
@@ -875,7 +881,7 @@
                     </property>
                     <property name="minimumSize">
                      <size>
-                      <width>800</width>
+                      <width>0</width>
                       <height>0</height>
                      </size>
                     </property>
@@ -925,6 +931,12 @@ li.checked::marker { content: &quot;\2612&quot;; }
                     </property>
                     <property name="widgetResizable">
                      <bool>true</bool>
+                    </property>
+                    <property name="verticalScrollBarPolicy">
+                     <enum>Qt::ScrollBarAlwaysOff</enum>
+                    </property>
+                    <property name="horizontalScrollBarPolicy">
+                     <enum>Qt::ScrollBarAlwaysOff</enum>
                     </property>
                     <widget class="QWidget" name="scrollAreaWidgetContents_meteo11_table">
                      <property name="geometry">
@@ -1180,7 +1192,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                     </property>
                     <property name="minimumSize">
                      <size>
-                      <width>800</width>
+                      <width>0</width>
                       <height>0</height>
                      </size>
                     </property>
