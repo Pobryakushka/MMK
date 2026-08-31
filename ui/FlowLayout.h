@@ -36,6 +36,14 @@ public:
     QSize minimumSize() const override;
     void setGeometry(const QRect &rect) override;
 
+    // Центрировать каждую строку по горизонтали относительно доступной
+    // ширины (вместо прижатия к левому краю). Нужно для чипов времени в
+    // попапе выбора даты — при малом числе кнопок они должны идти по центру,
+    // а не жаться влево, но при переполнении строки перенос вниз работает
+    // как обычно. По умолчанию выключено — не меняет поведение существующих
+    // мест использования (вкладки архива, кнопки Метео-11).
+    void setCentered(bool centered) { m_centered = centered; }
+
 private:
     // Раскладывает элементы по строкам; при testOnly ничего не двигает,
     // а только возвращает нужную высоту — этим пользуется heightForWidth().
@@ -44,6 +52,7 @@ private:
     QList<QLayoutItem *> m_items;
     int m_hSpacing;
     int m_vSpacing;
+    bool m_centered = false;
 };
 
 #endif // FLOWLAYOUT_H

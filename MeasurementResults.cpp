@@ -254,6 +254,20 @@ void MeasurementResults::setupMeteo11TableLayout()
         g->setColumnStretch(0, 1);
         g->setColumnStretch(1, 0);
         g->setRowStretch(g->rowCount(), 1);   // прижать поля к верху
+
+        // Подписи вроде "Отклонение наземной виртуальной температуры, °С
+        // (Т0Т0):" — однострочные QLabel без переноса, их естественная
+        // ширина легко превышает всю доступную ширину вкладки на планшете и
+        // раздвигала весь grid (а вместе с ним и соседнюю таблицу ПП/ТТДДСС)
+        // далеко вправо за видимую область. Включаем перенос по словам и
+        // даём подписям потолок ширины, чтобы они переносились на 2-3 строки
+        // вместо того, чтобы тянуть колонку в одну линию.
+        for (int i = 0; i < g->count(); ++i) {
+            if (QLabel *lbl = qobject_cast<QLabel *>(g->itemAt(i)->widget())) {
+                lbl->setWordWrap(true);
+                lbl->setMaximumWidth(190);
+            }
+        }
     }
     if (QGridLayout *g = ui->gridLayout_4)
         g->setContentsMargins(0, 0, 0, 0);
@@ -411,9 +425,47 @@ void MeasurementResults::applyResponsiveLayout(int width)
     };
     for (QFrame *card : cards)
         if (card)
-            card->setMaximumHeight(narrow ? 320 : 360);
+            // Ещё раз чуть ниже (было 240/270) — по отзыву "почти всё
+            // хорошо, но ещё чуть-чуть".
+            card->setMaximumHeight(narrow ? 210 : 235);
 
-    setMeteo11TableStacked(narrow);
+    // Таблица под графиками (и таблица Метео-11) теперь внутри своей
+    // QScrollArea и раньше ничем не ограничивалась по высоте — росла вместе
+    // со всеми строками, поэтому при прокрутке страницы не было видно, где
+    // заканчивается сама таблица (просто обрез по краю внешней прокрутки).
+    // Даём таблице собственный потолок высоты — тогда виден её нижний край
+    // (рамка), а лишние строки листаются её родной прокруткой.
+    const QList<QTableWidget *> chartTables = {
+        ui->tableWidget_AverageWind, ui->tableWidget_realWind,
+        ui->tableWidget_izmWind_2, ui->table_windShear
+    };
+    for (QTableWidget *table : chartTables)
+        if (table)
+            table->setMaximumHeight(narrow ? 200 : 230);
+
+    // У таблицы Метео-11 над ней ещё и панель расшифрованных параметров
+    // (gridLayout_Meteo11Params, теперь всегда над таблицей — см. ниже), так
+    // что ей самой достаётся меньше вертикального запаса на экране, чем
+    // одиночным таблицам под графиками — держим потолок ниже, чтобы граница
+    // таблицы гарантированно попадала в видимую область.
+    if (QTableWidget *table = ui->tableWidget_meteo11Formalize)
+        // Уменьшал этот потолок уже несколько раз — если и сейчас граница
+        // не попадёт в кадр, значит дело не в высоте, а в чём-то другом
+        // (например, старая сборка), но пока опускаю ещё ниже как самую
+        // прямую меру.
+        table->setMaximumHeight(narrow ? 140 : 160);
+
+    // Метео-11: раньше переключалось между "рядом" (широкий экран) и "друг
+    // над другом" (узкий) по общему порогу kNarrowWidthThreshold — но этот
+    // порог считается по ширине всей страницы архива (с учётом левой
+    // панели), а не по фактической ширине, доступной именно этой вкладке,
+    // и таблица бюллетеня всё равно норовила уехать вправо за экран в
+    // варианте "рядом". Раз в полный рост это не помогло даже после переноса
+    // подписей параметров — переводим таблицу Метео-11 в режим "друг над
+    // другом" всегда, независимо от ширины: так параметры и таблица по
+    // очереди получают всю ширину вкладки целиком, и делить её пополам
+    // никогда не нужно.
+    setMeteo11TableStacked(true);
 
     // «Наземные условия»: подпись параметра живёт в вертикальном заголовке, и
     // его ширину QHeaderView берёт по самой длинной подписи. На планшете это
@@ -616,7 +668,13 @@ void MeasurementResults::applyArchiveStyle()
         // перекрывают общий и гарантируют, что «Архив измерений»
         // выглядит ровно так же, даже если общий стиль позже поправят.
         "QTableWidget, QTableView {"
-        "  border: 1px solid #DDE1E3; border-radius: 8px; gridline-color: #EEF0EF;"
+        // border-radius убран (был 8px): Qt не обрезает содержимое
+        // QAbstractScrollArea по скруглённой рамке — только красит саму
+        // рамку скруглённой, а прямоугольные ячейки (особенно чередующиеся
+        // серые строки) всё равно рисуются поверх без обрезки и торчат
+        // острыми углами за пределы скругления, особенно заметно в нижних
+        // углах и при прокрутке. Проще и надёжнее просто не скруглять.
+        "  border: 1px solid #DDE1E3; gridline-color: #EEF0EF;"
         "  background: #FFFFFF; alternate-background-color: #F7F8F8; font-size: 12px;"
         "  selection-background-color: #E4F1EC; selection-color: #0B5A41;"
         "}"
@@ -774,6 +832,11 @@ void MeasurementResults::setupArchiveTables()
         t->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
         t->horizontalHeader()->setHighlightSections(false);
         t->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+        // Явный маленький минимум секции — без этого Stretch всё равно не
+        // даёт колонке сжаться меньше рассчитанного по шрифту заголовка
+        // минимума, и на узкой странице (особенно у таблицы Метео-11 внутри
+        // своей QScrollArea) таблица могла вылезать вправо за видимую область.
+        t->horizontalHeader()->setMinimumSectionSize(28);
         t->verticalHeader()->setDefaultSectionSize(32);
         t->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     }
@@ -1736,15 +1799,14 @@ void MeasurementResults::setMapCoordinatesMode(bool enabled)
     // Поля координат всегда только для чтения — независимо от режима карты
     // (данные берутся из архива БД, не от пользователя)
 
-    if (enabled) {
-        ui->btnPrevDate->setEnabled(false);
-        ui->btnNextDate->setEnabled(false);
-        ui->btnSelectDate->setEnabled(false);
-    } else {
-        ui->btnPrevDate->setEnabled(true);
-        ui->btnNextDate->setEnabled(true);
-        ui->btnSelectDate->setEnabled(true);
-    }
+    // Раньше здесь ещё и отключалась вся навигация по датам (стрелки и кнопка
+    // выбора даты/времени), пока активен режим координат с карты/GNSS. Из-за
+    // этого при входе в архив, когда карта/GNSS уже включены (обычная
+    // ситуация на станции), кнопка выбора даты оказывалась неактивной с
+    // первого раза — а сам архив как раз и нужен для просмотра ИСТОРИИ
+    // записей, так что блокировать переход по датам тут не должно было.
+    // Режим координат с карты влияет только на поля координат, не на
+    // просмотр архива.
 }
 
 void MeasurementResults::switchMeteo11Display()

@@ -11,6 +11,7 @@
 #include <QVariant>
 #include <QScreen>
 #include <QGuiApplication>
+#include "ui/FlowLayout.h"
 #include <algorithm>
 
 namespace {
@@ -27,8 +28,16 @@ ArchiveDatePopup::ArchiveDatePopup(QWidget *parent)
     , m_calendarShown(false)
 {
     setWindowFlags(Qt::Popup);
+    // Без этого атрибута QSS-правило "ArchiveDatePopup { border: ...;
+    // border-radius: ...; }" ниже не рисуется — обычный QWidget (в отличие
+    // от, например, QFrame) по умолчанию не учитывает свои background/border
+    // из таблицы стилей при отрисовке. Та же причина, по которой рамки не
+    // прорисовывались в ArchiveExportView.
+    setAttribute(Qt::WA_StyledBackground, true);
     setAttribute(Qt::WA_DeleteOnClose, false);
-    setFixedWidth(296);   // ещё немного уже (было 340)
+    setFixedWidth(330);   // расширили чуть по горизонтали — 296 было впритык,
+                           // текст "‹ Скрыть календарь" в кнопке-переключателе
+                           // календаря не помещался целиком
     // Popup — отдельное top-level окно, стиль родителя на него не наследуется,
     // а QSS ниже рассчитан на Fusion (см. MeasurementResults::applyArchiveStyle).
     setStyle(QStyleFactory::create("Fusion"));
@@ -46,7 +55,7 @@ ArchiveDatePopup::ArchiveDatePopup(QWidget *parent)
         "QPushButton[class=\"quick\"] { font-size: 9px; padding: 4px 7px; border-radius: 999px; border: 1px solid #DDE1E3; background: #F7F8F8; color: #6E7876; }"
         "QPushButton[class=\"quick\"]:hover { border-color: #0F6B4F; color: #0B5A41; }"
         "QPushButton#dpCalToggle[on=\"true\"] { background: #E4F1EC; border-color: #0F6B4F; color: #0B5A41; font-weight: 600; }"
-        "QPushButton[class=\"calday\"] { border-radius: 7px; border: 1px solid transparent; background: #F1F3F2; color: #C1C8C5; font-weight: 600; min-height: 25px; font-size: 10px; }"
+        "QPushButton[class=\"calday\"] { border-radius: 7px; border: 1px solid transparent; background: #F1F3F2; color: #C1C8C5; font-weight: 600; min-height: 28px; font-size: 11px; padding: 0px; }"
         "QPushButton[class=\"calday\"][avail=\"true\"] { background: #FFFFFF; border-color: #DDE1E3; color: #1B211F; }"
         "QPushButton[class=\"calday\"][complete=\"full\"][avail=\"true\"] { background: #E4F1EC; border-color: #A9D3C3; }"
         "QPushButton[class=\"calday\"][complete=\"partial\"][avail=\"true\"] { background: #FFF8E8; border-color: #F0D28C; }"
@@ -98,7 +107,7 @@ ArchiveDatePopup::ArchiveDatePopup(QWidget *parent)
     auto *todayBtn = new QPushButton("Сегодня", this);
     todayBtn->setProperty("class", "quick");
     connect(todayBtn, &QPushButton::clicked, this, [this] { jumpToday(); });
-    auto *latestBtn = new QPushButton("Последняя запись", this);
+    auto *latestBtn = new QPushButton("Последняя", this);
     latestBtn->setProperty("class", "quick");
     connect(latestBtn, &QPushButton::clicked, this, [this] { jumpLatest(); });
     m_calToggleBtn = new QPushButton("Календарь", this);
@@ -108,6 +117,21 @@ ArchiveDatePopup::ArchiveDatePopup(QWidget *parent)
     quick->addWidget(todayBtn);
     quick->addWidget(latestBtn);
     quick->addWidget(m_calToggleBtn);
+    // Раньше между этой группой кнопок и "Готово" был addStretch(1),
+    // разносивший их в противоположные края попапа — особенно когда
+    // календарь свёрнут и попап короткий, "Готово" выглядела как отдельная,
+    // ничем не связанная с остальным кнопка где-то на отшибе. Небольшой
+    // фиксированный отступ вместо резинового — держит "Готово" в той же
+    // визуальной группе, но чуть отделяет её как завершающее действие.
+    quick->addSpacing(10);
+    // "Готово" перенесена сюда же, в конец строки быстрых кнопок, вместо
+    // отдельной футер-строки внизу — одна строка вместо двух ощутимо снижает
+    // общую высоту попапа, а раскрыть/закрыть календарь и сразу нажать
+    // "Готово" физически рядом даже удобнее.
+    auto *doneBtn = new QPushButton("Готово", this);
+    doneBtn->setObjectName("dpDoneBtn");
+    connect(doneBtn, &QPushButton::clicked, this, &ArchiveDatePopup::close);
+    quick->addWidget(doneBtn);
     root->addLayout(quick);
 
     m_calendarBox = new QWidget(this);
@@ -152,31 +176,31 @@ ArchiveDatePopup::ArchiveDatePopup(QWidget *parent)
     m_calendarBox->setVisible(false);
     root->addWidget(m_calendarBox);
 
-    m_timesLabel = new QLabel("Доступные записи на эту дату:", this);
+    m_timesLabel = new QLabel("Записи на эту дату:", this);
     m_timesLabel->setObjectName("dpTimesLabel");
-    root->addWidget(m_timesLabel);
 
     m_legend = new QLabel(
-        "<span style=\"color:#0F6B4F;\">&#9679;</span> полные данные&nbsp;&nbsp;"
-        "<span style=\"color:#F9A825;\">&#9679;</span> частичные&nbsp;&nbsp;"
-        "<span style=\"color:#C1C8C5;\">&#9679;</span> нет данных ветра",
+        "<span style=\"color:#0F6B4F;\">&#9679;</span>&nbsp;полные&nbsp;&nbsp;"
+        "<span style=\"color:#F9A825;\">&#9679;</span>&nbsp;частично&nbsp;&nbsp;"
+        "<span style=\"color:#C1C8C5;\">&#9679;</span>&nbsp;нет",
         this);
     m_legend->setObjectName("dpLegend");
-    root->addWidget(m_legend);
+
+    // Подпись и легенда цветов раньше шли двумя отдельными строками одна под
+    // другой — объединили в одну строку (подпись слева, легенда справа), это
+    // тоже экономит высоту попапа.
+    auto *timesHead = new QHBoxLayout();
+    timesHead->addWidget(m_timesLabel);
+    timesHead->addStretch(1);
+    timesHead->addWidget(m_legend);
+    root->addLayout(timesHead);
 
     m_timesBox = new QWidget(this);
-    m_timesGrid = new QGridLayout(m_timesBox);
-    m_timesGrid->setContentsMargins(0, 0, 0, 0);
-    m_timesGrid->setSpacing(6);
+    m_timesGrid = new FlowLayout(m_timesBox, 0, 6, 6);
+    // Кнопки времени по центру, а не по левому краю — при переполнении
+    // строки лишние сами переносятся на следующую (см. FlowLayout::setCentered).
+    m_timesGrid->setCentered(true);
     root->addWidget(m_timesBox);
-
-    auto *foot = new QHBoxLayout();
-    foot->addStretch(1);
-    auto *doneBtn = new QPushButton("Готово", this);
-    doneBtn->setObjectName("dpDoneBtn");
-    connect(doneBtn, &QPushButton::clicked, this, &ArchiveDatePopup::close);
-    foot->addWidget(doneBtn);
-    root->addLayout(foot);
 }
 
 QList<QDate> ArchiveDatePopup::sortedDates() const
@@ -275,9 +299,7 @@ void ArchiveDatePopup::rebuildTimeChips()
     }
 
     const QVector<ArchiveRecordInfo> records = m_available.value(m_currentDate);
-    const int columns = 4;
-    for (int i = 0; i < records.size(); ++i) {
-        const ArchiveRecordInfo &rec = records[i];
+    for (const ArchiveRecordInfo &rec : records) {
         const QDateTime dt = rec.time;
         auto *chip = new QPushButton(dt.time().toString("HH:mm"), m_timesBox);
         chip->setProperty("class", "timechip");
@@ -291,8 +313,16 @@ void ArchiveDatePopup::rebuildTimeChips()
                       .arg(rec.hasAvgWind      ? "средний " : "")
                       .arg(rec.hasActualWind   ? "действительный " : "")
                       .arg(rec.hasMeasuredWind ? "измеренный" : ""));
+        // Фиксированный размер — раньше чипы жили в QGridLayout на 4 колонки
+        // и, если на дату была всего одна запись, единственная кнопка
+        // растягивалась на всю ширину попапа (пустые колонки схлопывались).
+        // Теперь это FlowLayout: кнопка всегда одного и того же размера
+        // (масштаб как при трёх в ряд — он и был всех устраивающим), а если
+        // записей много — лишние просто переносятся на следующую строку,
+        // а не ужимают/растягивают существующие.
+        chip->setFixedSize(78, 28);
         connect(chip, &QPushButton::clicked, this, [this, dt] { chooseDateTime(dt); });
-        m_timesGrid->addWidget(chip, i / columns, i % columns);
+        m_timesGrid->addWidget(chip);
         chip->style()->unpolish(chip);
         chip->style()->polish(chip);
     }
@@ -301,8 +331,8 @@ void ArchiveDatePopup::rebuildTimeChips()
     m_legend->setVisible(!records.isEmpty());
     if (records.isEmpty()) {
         auto *empty = new QLabel("Нет записей на эту дату", m_timesBox);
-        empty->setStyleSheet("color: #6E7876; font-style: italic; font-size: 12px;");
-        m_timesGrid->addWidget(empty, 0, 0, 1, columns);
+        empty->setStyleSheet("color: #6E7876; font-style: italic; font-size: 11px;");
+        m_timesGrid->addWidget(empty);
     }
 }
 
@@ -426,7 +456,7 @@ void ArchiveDatePopup::toggleCalendar()
 {
     m_calendarShown = !m_calendarShown;
     m_calendarBox->setVisible(m_calendarShown);
-    m_calToggleBtn->setText(m_calendarShown ? "‹ Скрыть календарь" : "Календарь");
+    m_calToggleBtn->setText(m_calendarShown ? "‹ Скрыть" : "Календарь");
     m_calToggleBtn->setProperty("on", m_calendarShown);
     m_calToggleBtn->style()->unpolish(m_calToggleBtn);
     m_calToggleBtn->style()->polish(m_calToggleBtn);

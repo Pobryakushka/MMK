@@ -97,30 +97,77 @@ int FlowLayout::doLayout(const QRect &rect, bool testOnly) const
     const QMargins m = contentsMargins();
     const QRect content = rect.adjusted(m.left(), m.top(), -m.right(), -m.bottom());
 
-    int x = content.x();
-    int y = content.y();
-    int lineHeight = 0;
+    if (!m_centered) {
+        // Прежнее однопроходное поведение (прижато к левому краю) — не
+        // трогаем его, им пользуются вкладки архива и кнопки Метео-11.
+        int x = content.x();
+        int y = content.y();
+        int lineHeight = 0;
+
+        for (QLayoutItem *item : m_items) {
+            const QSize hint = item->sizeHint();
+
+            int next = x + hint.width();
+            if (next - 1 > content.right() && lineHeight > 0) {
+                x = content.x();
+                y = y + lineHeight + m_vSpacing;
+                next = x + hint.width();
+                lineHeight = 0;
+            }
+
+            if (!testOnly)
+                item->setGeometry(QRect(QPoint(x, y), hint));
+
+            x = next + m_hSpacing;
+            lineHeight = qMax(lineHeight, hint.height());
+        }
+
+        return y + lineHeight - rect.y() + m.bottom();
+    }
+
+    // Центрированный режим (чипы времени в попапе даты): сначала группируем
+    // элементы по строкам — не зная итоговую ширину строки заранее, её
+    // нельзя отцентровать, поэтому раскладка в два прохода: сначала считаем,
+    // что попадает в каждую строку, потом расставляем с отступом слева,
+    // который центрирует именно эту строку.
+    QList<QList<QLayoutItem *>> rows;
+    QList<int> rowWidths;
+    QList<QLayoutItem *> currentRow;
+    int rowWidth = 0;
+    int x = 0;
 
     for (QLayoutItem *item : m_items) {
         const QSize hint = item->sizeHint();
-
-        // Переносим на новую строку, когда элемент не помещается в остаток
-        // текущей (но не переносим самый первый элемент строки — иначе при
-        // очень узком окне получилась бы пустая строка).
         int next = x + hint.width();
-        if (next - 1 > content.right() && lineHeight > 0) {
-            x = content.x();
-            y = y + lineHeight + m_vSpacing;
-            next = x + hint.width();
-            lineHeight = 0;
+        if (next - 1 > content.width() && !currentRow.isEmpty()) {
+            rows.append(currentRow);
+            rowWidths.append(x - m_hSpacing);
+            currentRow.clear();
+            x = 0;
+            next = hint.width();
         }
-
-        if (!testOnly)
-            item->setGeometry(QRect(QPoint(x, y), hint));
-
+        currentRow.append(item);
         x = next + m_hSpacing;
-        lineHeight = qMax(lineHeight, hint.height());
+    }
+    if (!currentRow.isEmpty()) {
+        rows.append(currentRow);
+        rowWidths.append(x - m_hSpacing);
     }
 
-    return y + lineHeight - rect.y() + m.bottom();
+    int y = content.y();
+    for (int r = 0; r < rows.size(); ++r) {
+        const int startX = content.x() + qMax(0, (content.width() - rowWidths[r]) / 2);
+        int curX = startX;
+        int lineHeight = 0;
+        for (QLayoutItem *item : rows[r]) {
+            const QSize hint = item->sizeHint();
+            if (!testOnly)
+                item->setGeometry(QRect(QPoint(curX, y), hint));
+            curX += hint.width() + m_hSpacing;
+            lineHeight = qMax(lineHeight, hint.height());
+        }
+        y += lineHeight + m_vSpacing;
+    }
+
+    return (rows.isEmpty() ? y : y - m_vSpacing) - rect.y() + m.bottom();
 }
