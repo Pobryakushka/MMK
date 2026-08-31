@@ -60,6 +60,20 @@ QHeaderView::section:last {
     border-right: none;
 }
 
+/* Скруглённые верхние углы шапки под ту же кривизну, что у рамки таблицы
+ * (border-radius: 8px выше). Иначе прямоугольная заливка крайних секций
+ * (#E4F1EC) торчит за скруглённую рамку в левом и правом верхних углах. */
+QHeaderView::section:first {
+    border-top-left-radius: 7px;
+}
+QHeaderView::section:last {
+    border-top-right-radius: 7px;
+}
+QHeaderView::section:only-one {
+    border-top-left-radius: 7px;
+    border-top-right-radius: 7px;
+}
+
 QTableCornerButton::section {
     background: #E4F1EC;
     border: none;

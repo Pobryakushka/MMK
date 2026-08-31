@@ -291,18 +291,18 @@ void MeasurementResults::setMeteo11TableStacked(bool stacked)
 
     if (stacked) {
         outer->addLayout(params, 0, 0);
-        outer->addWidget(table,  1, 0, Qt::AlignTop);
+        outer->addWidget(table,  1, 0);
         outer->setColumnStretch(0, 1);
         outer->setColumnStretch(2, 0);
+        // Панель параметров сверху по своей высоте, таблица тянется на всю
+        // оставшуюся высоту вкладки: её нижний край с рамкой стоит у низа, а
+        // не висит с большим пустым полем под собой; строки, которые не
+        // помещаются, листаются собственной прокруткой таблицы. Ограничивает
+        // высоту таблицы сама вкладочная QScrollArea (её viewport), поэтому
+        // за нижнюю границу экрана таблица уже не уходит.
         outer->setRowStretch(0, 0);
-        // У таблицы ограниченная высота (setMaximumHeight в
-        // applyResponsiveLayout, лишние строки — её собственной прокруткой),
-        // поэтому весь вертикальный запас забирает пустая строка под ней:
-        // строку с самой таблицей не растягиваем и прижимаем к верху
-        // (Qt::AlignTop выше), иначе таблица «плавала» бы по центру пустого
-        // места, а её нижний край уезжал за границу видимой области.
-        outer->setRowStretch(1, 0);
-        outer->setRowStretch(2, 1);
+        outer->setRowStretch(1, 1);
+        outer->setRowStretch(2, 0);
     } else {
         outer->addLayout(params, 0, 0);
         outer->addWidget(table,  0, 2);
@@ -451,17 +451,18 @@ void MeasurementResults::applyResponsiveLayout(int width)
         if (table)
             table->setMaximumHeight(narrow ? 200 : 230);
 
-    // Таблица бюллетеня Метео-11 ведёт себя так же, как таблицы под графиками:
-    // тот же потолок высоты, чтобы её нижний (скруглённый) край всегда попадал
-    // в видимую область, а лишние строки листались её собственной прокруткой.
-    // Раньше здесь стоял всё уменьшавшийся setMaximumHeight (140/160) — но
-    // таблица в раскладке "друг над другом" сидела в растянутой строке грида
-    // без выравнивания и центрировалась по вертикали, из-за чего её нижний
-    // край всё равно уезжал вниз. Теперь строка с таблицей прижата к верху
-    // (Qt::AlignTop в setMeteo11TableStacked), а запас высоты забирает пустая
-    // строка под ней, поэтому потолок можно вернуть к общему значению.
+    // Таблице бюллетеня Метео-11 потолок высоты не ставим (в отличие от таблиц
+    // под графиками): над ней только невысокая панель расшифрованных
+    // параметров, поэтому таблица растягивается на всю оставшуюся высоту
+    // вкладки (stretch на её строке грида в setMeteo11TableStacked). Её
+    // высоту ограничивает viewport вкладочной QScrollArea, за нижнюю границу
+    // экрана она не уходит, а лишние строки листаются её собственной
+    // прокруткой. Раньше здесь стоял всё уменьшавшийся setMaximumHeight
+    // (сначала 140/160, потом фикс. высота по всем строкам) — и таблица либо
+    // висела с огромным пустым полем под собой, либо, наоборот, уезжала за
+    // нижний край экрана.
     if (QTableWidget *table = ui->tableWidget_meteo11Formalize)
-        table->setMaximumHeight(narrow ? 200 : 230);
+        table->setMaximumHeight(QWIDGETSIZE_MAX);
 
     // Метео-11: раньше переключалось между "рядом" (широкий экран) и "друг
     // над другом" (узкий) по общему порогу kNarrowWidthThreshold — но этот
@@ -695,6 +696,14 @@ void MeasurementResults::applyArchiveStyle()
         "  padding: 7px 8px;"
         "}"
         "QHeaderView::section:last { border-right: none; }"
+        // Скруглённые верхние углы шапки. Заливка секций (#E4F1EC)
+        // прямоугольная, а рамка таблицы скруглена (border-radius приходит из
+        // общего ui/table-theme.qss), из-за чего зелёный фон шапки торчал за
+        // рамку в левом и правом верхних углах. Скругляем углы крайних секций
+        // под ту же кривизну.
+        "QHeaderView::section:first { border-top-left-radius: 7px; }"
+        "QHeaderView::section:last { border-top-right-radius: 7px; }"
+        "QHeaderView::section:only-one { border-top-left-radius: 7px; border-top-right-radius: 7px; }"
         "QTableCornerButton::section { background: #E4F1EC; border: none; border-bottom: 1px solid #DDE1E3; }"
         // В «Наземных условиях» подпись параметра живёт в вертикальном
         // заголовке, но по макету это обычная ячейка, а не шапка таблицы.
