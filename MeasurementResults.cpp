@@ -291,11 +291,15 @@ void MeasurementResults::setMeteo11TableStacked(bool stacked)
 
     if (stacked) {
         outer->addLayout(params, 0, 0);
-        outer->addWidget(table,  1, 0);
+        outer->addWidget(table,  1, 0, Qt::AlignTop);
         outer->setColumnStretch(0, 1);
         outer->setColumnStretch(2, 0);
         outer->setRowStretch(0, 0);
-        outer->setRowStretch(1, 1);
+        // Таблица идёт с фиксированной высотой (все строки видны сразу),
+        // поэтому весь вертикальный запас забирает пустая строка под ней —
+        // иначе таблица «плавала» бы по центру растянутой строки.
+        outer->setRowStretch(1, 0);
+        outer->setRowStretch(2, 1);
     } else {
         outer->addLayout(params, 0, 0);
         outer->addWidget(table,  0, 2);
@@ -303,6 +307,7 @@ void MeasurementResults::setMeteo11TableStacked(bool stacked)
         outer->setColumnStretch(2, 2);
         outer->setRowStretch(0, 1);
         outer->setRowStretch(1, 0);
+        outer->setRowStretch(2, 0);
     }
     outer->invalidate();
 }
@@ -443,17 +448,27 @@ void MeasurementResults::applyResponsiveLayout(int width)
         if (table)
             table->setMaximumHeight(narrow ? 200 : 230);
 
-    // У таблицы Метео-11 над ней ещё и панель расшифрованных параметров
-    // (gridLayout_Meteo11Params, теперь всегда над таблицей — см. ниже), так
-    // что ей самой достаётся меньше вертикального запаса на экране, чем
-    // одиночным таблицам под графиками — держим потолок ниже, чтобы граница
-    // таблицы гарантированно попадала в видимую область.
-    if (QTableWidget *table = ui->tableWidget_meteo11Formalize)
-        // Уменьшал этот потолок уже несколько раз — если и сейчас граница
-        // не попадёт в кадр, значит дело не в высоте, а в чём-то другом
-        // (например, старая сборка), но пока опускаю ещё ниже как самую
-        // прямую меру.
-        table->setMaximumHeight(narrow ? 140 : 160);
+    // Таблица бюллетеня Метео-11 стоит под панелью расшифрованных параметров
+    // (gridLayout_Meteo11Params, теперь всегда над таблицей — см. ниже) внутри
+    // общей вкладочной QScrollArea (scrollArea_meteo11_table). Раньше у этой
+    // QScrollArea вертикальная прокрутка была принудительно выключена, а
+    // таблице раз за разом занижали setMaximumHeight, пытаясь уместить её
+    // нижнюю границу в экран — но при высокой панели параметров нижняя
+    // таблица всё равно оказывалась ниже видимой области и доскроллить до
+    // неё было нельзя. Теперь прокрутка вкладки включена (ScrollBarAsNeeded в
+    // .ui), поэтому таблица показывает все строки на своей естественной
+    // высоте, а вертикаль листает внешняя QScrollArea — без вложенной
+    // прокрутки внутри прокрутки.
+    if (QTableWidget *table = ui->tableWidget_meteo11Formalize) {
+        const int rowH   = table->verticalHeader()->defaultSectionSize();
+        const int headerH = table->horizontalHeader()->isVisible()
+                                ? qMax(table->horizontalHeader()->sizeHint().height(), rowH)
+                                : 0;
+        table->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        table->setMaximumHeight(QWIDGETSIZE_MAX);
+        table->setFixedHeight(table->rowCount() * rowH + headerH
+                              + 2 * table->frameWidth() + 2);
+    }
 
     // Метео-11: раньше переключалось между "рядом" (широкий экран) и "друг
     // над другом" (узкий) по общему порогу kNarrowWidthThreshold — но этот
