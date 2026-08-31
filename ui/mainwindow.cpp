@@ -44,6 +44,8 @@
 #include <QHBoxLayout>
 #include <QMouseEvent>
 #include <QEasingCurve>
+#include <QParallelAnimationGroup>
+#include <QPainter>
 #include <cmath>
 
 
@@ -564,14 +566,19 @@ void MainWindow::onOpenMapPage()
 {
     ui->stackedWidget->setCurrentWidget(ui->page_map);
 
+    // Инструменты карты всегда открываются свёрнутыми — чтобы карта была
+    // видна максимально.
+    setMapControlsExpanded(false);
+
     // Разовая подсказка про выбор точки — только пока точку ни разу не
     // выбирали (m_hasGnssPosition отражает это для обоих источников,
     // см. updateMapCoordDisplay()) и только один раз за сеанс работы, чтобы
     // не надоедать при каждом заходе на страницу.
     if (!m_mapCoordHintShown && !m_hasGnssPosition) {
         m_mapCoordHintShown = true;
-        showNotice("Чтобы выбрать точку на карте: нажмите \"Указать точку\", "
-                   "затем тапните нужное место на карте.",
+        showNotice("Инструменты карты — под кнопкой ☰ справа сверху. "
+                   "Чтобы выбрать точку: ☰ → \"Указать точку\", затем "
+                   "нажмите нужное место на карте.",
                    NotificationToast::Info);
     }
 }
@@ -684,18 +691,46 @@ void MainWindow::onCoordTextEdited(QLineEdit *edit)
     isProcessing = false;
 }
 
+// Иконка маркера для «Указать точку». Штатный QPushButton прижимает
+// пиктограмму вплотную к тексту, и маркер «слипался» с надписью. Рисуем
+// его на холст пошире с прозрачным полем справа — получается аккуратный
+// зазор, не зависящий от метрик стиля.
+QIcon MainWindow::mapMarkerButtonIcon() const
+{
+    const int iconPx = 20;   // видимый размер маркера
+    const int gapPx  = 9;    // прозрачный отступ до текста
+    const qreal dpr  = ui->btnMapCoordinates
+                           ? ui->btnMapCoordinates->devicePixelRatioF()
+                           : qApp->devicePixelRatio();
+
+    QPixmap src(":/dat/images/marker.png");
+    QPixmap canvas(qRound((iconPx + gapPx) * dpr), qRound(iconPx * dpr));
+    canvas.setDevicePixelRatio(dpr);
+    canvas.fill(Qt::transparent);
+
+    if (!src.isNull()) {
+        QPainter p(&canvas);
+        p.setRenderHint(QPainter::SmoothPixmapTransform, true);
+        p.drawPixmap(QRectF(0, 0, iconPx, iconPx), src, QRectF(src.rect()));
+    }
+    return QIcon(canvas);
+}
+
 void MainWindow::setupMapCoordinatesButton()
 {
     // Кнопка теперь в UI файле, просто настраиваем иконку и подключаем сигнал
-    QIcon markerIcon(":/dat/images/marker.png");
-    ui->btnMapCoordinates->setIcon(markerIcon);
-    ui->btnMapCoordinates->setIconSize(QSize(20, 20));
+    ui->btnMapCoordinates->setIcon(mapMarkerButtonIcon());
+    ui->btnMapCoordinates->setIconSize(QSize(29, 20)); // 20 маркер + 9 зазор
 
     connect(ui->btnMapCoordinates, &QPushButton::clicked, this, &MainWindow::onMapCoordinatesToggled);
     // Дубликат-чип на странице "Положение" — тот же обработчик (он не
     // принимает параметров, просто флипает m_mapCoordinatesEnabled и красит
     // оба виджета через updateMapCoordinatesButtonStyle()).
     connect(ui->btnMapCoordinatesPos, &QPushButton::clicked, this, &MainWindow::onMapCoordinatesToggled);
+
+    // «Гамбургер» над картой разворачивает/сворачивает столбец инструментов.
+    connect(ui->btnMapControlsToggle, &QPushButton::toggled,
+            this, &MainWindow::setMapControlsExpanded);
 }
 
 void MainWindow::setupGnssCheckbox()
@@ -824,14 +859,12 @@ void MainWindow::updateGnssMarkerOnMap(double latitude, double longitude)
 
 void MainWindow::updateMapCoordinatesButtonStyle()
 {
-    QIcon markerIcon(":/dat/images/marker.png");
-
     // Есть ДВА виджета этой кнопки — оригинал на карте (плавающий маркер,
     // по которому и правда тапают) и чип-дубликат на странице "Положение"
     // (см. .ui). Одно состояние m_mapCoordinatesEnabled — оба отражают его
     // одинаково, каждый в своём стиле.
-    ui->btnMapCoordinates->setIcon(markerIcon);
-    ui->btnMapCoordinates->setIconSize(QSize(20, 20));
+    ui->btnMapCoordinates->setIcon(mapMarkerButtonIcon());
+    ui->btnMapCoordinates->setIconSize(QSize(29, 20)); // 20 маркер + 9 зазор
     ui->btnMapCoordinates->setChecked(m_mapCoordinatesEnabled);
     // Чипу на странице "Положение" достаточно setChecked: его вид (белый /
     // залитый зелёным) целиком описан ролью [toggle] в ui/screen-theme.qss,
@@ -847,18 +880,18 @@ void MainWindow::updateMapCoordinatesButtonStyle()
     qcp.setPickingEnabled(m_mapCoordinatesEnabled);
 
     if (m_mapCoordinatesEnabled) {
-        ui->btnMapCoordinates->setText("Тапните карту");
+        ui->btnMapCoordinates->setText("Нажмите на карту");
         ui->btnMapCoordinates->setStyleSheet(
             "QPushButton {"
             "   background-color: #0F6B4F;"
             "   border: 2px solid #0B5A41;"
             "   border-radius: 12px;"
-            "   padding: 4px 14px 4px 10px;"
+            "   padding: 4px 14px;"
             "   font-size: 9pt; font-weight: 600; color: #FFFFFF;"
             "}"
             "QPushButton:hover { background-color: #0B5A41; }"
             );
-        ui->btnMapCoordinates->setToolTip("Режим координат с карты активен — тапните точку на карте");
+        ui->btnMapCoordinates->setToolTip("Режим выбора точки включён — нажмите нужное место на карте");
     } else {
         ui->btnMapCoordinates->setText("Указать точку");
         ui->btnMapCoordinates->setStyleSheet(
@@ -866,12 +899,12 @@ void MainWindow::updateMapCoordinatesButtonStyle()
             "   background-color: rgba(255,255,255,235);"
             "   border: none;"
             "   border-radius: 12px;"
-            "   padding: 4px 14px 4px 10px;"
+            "   padding: 4px 14px;"
             "   font-size: 9pt; font-weight: 600; color: #1C1F22;"
             "}"
             "QPushButton:hover { background-color: #f0f0f0; }"
             );
-        ui->btnMapCoordinates->setToolTip("Использовать координаты с карты (нажмите, затем тапните точку на карте)");
+        ui->btnMapCoordinates->setToolTip("Использовать координаты с карты (нажмите, затем укажите место на карте)");
     }
 }
 
@@ -1978,54 +2011,197 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
     return QMainWindow::eventFilter(watched, event);
 }
 
+// Константы раскладки блока инструментов над картой — используются и при
+// мгновенном позиционировании, и при анимации, чтобы состояние покоя
+// совпадало с концом перехода.
+namespace {
+constexpr int kMapCtlMargin = 16;
+constexpr int kMapCtlGap    = 8;
+constexpr int kMapCtlHeight = 36;   // компактная высота — на планшете экономим карту
+constexpr int kMapToggleSize = 36;
+constexpr int kMapPanelWidth = 208; // ширина развёрнутого столбца инструментов
+}
+
+void MainWindow::mapControlsPanelLayout(QRect &coordRect, QRect &gnssRect, QRect &comboRect) const
+{
+    const int panelX = ui->mapCanvas->width() - kMapPanelWidth - kMapCtlMargin;
+    int y = kMapCtlMargin + kMapToggleSize + kMapCtlGap;
+    coordRect = QRect(panelX, y, kMapPanelWidth, kMapCtlHeight);
+    y += kMapCtlHeight + kMapCtlGap;
+    gnssRect  = QRect(panelX, y, kMapPanelWidth, kMapCtlHeight);
+    y += kMapCtlHeight + kMapCtlGap;
+    comboRect = QRect(panelX, y, kMapPanelWidth, kMapCtlHeight);
+}
+
 void MainWindow::repositionMapFloatingControls()
 {
     if (!ui->mapCanvas) return;
 
-    const int margin = 16;
-    const int gap = 8;
+    const int margin = kMapCtlMargin;
+    const int gap = kMapCtlGap;
     const int canvasWidth = ui->mapCanvas->width();
+    const bool expanded = m_mapControlsExpanded;
 
-    // Строка 1 слева: текущие выбранные координаты — подсказка при выборе
+    // Слева сверху: текущие выбранные координаты — подсказка при выборе
     // точки маркером (см. updateMapCoordDisplay()).
     if (ui->lblMapCoordDisplay) {
         ui->lblMapCoordDisplay->adjustSize();
         ui->lblMapCoordDisplay->move(margin, margin);
     }
 
-    // Строка 1 справа: маркер (выбор координат с карты) + GNSS справа от него
-    const int markerSize = ui->btnMapCoordinates->width();
-    const int gnssWidth = ui->checkboxGnss->width();
-    const int row1Height = ui->btnMapCoordinates->height();
-
-    const int gnssX = canvasWidth - gnssWidth - margin;
-    const int markerX = gnssX - gap - markerSize;
-    ui->checkboxGnss->move(gnssX, margin);
-    ui->btnMapCoordinates->move(markerX, margin);
-
-    // Строка 2 справа: выбор типа карты — во всю ширину строки 1 (от левого
-    // края «Указать точку» до правого края «GNSS»), чтобы блок управления
-    // выглядел симметрично, а не «уже» кнопок над ним.
-    const int y2 = margin + row1Height + gap;
-    const int comboSpan = (gnssX + gnssWidth) - markerX;
-    ui->comboBox_mapTypes->resize(comboSpan, row1Height);
-    ui->comboBox_mapTypes->move(markerX, y2);
-
-    // Строка 2 слева: телеметрия ГНСС — под подсказкой с координатами,
-    // выровнена по её левому краю (см. updateMapGnssInfo()).
-    if (ui->lblMapGnssInfo) {
-        ui->lblMapGnssInfo->adjustSize();
-        ui->lblMapGnssInfo->move(margin, y2);
+    // Справа сверху: одна кнопка-«гамбургер». Постоянные крупные кнопки на
+    // планшете забирали слишком много видимой карты, поэтому инструменты
+    // (выбор точки, ГНСС, тип карты) скрыты за ней и раскрываются столбцом
+    // только по нажатию — см. setMapControlsExpanded().
+    const int toggleX = canvasWidth - kMapToggleSize - margin;
+    if (ui->btnMapControlsToggle) {
+        ui->btnMapControlsToggle->setGeometry(toggleX, margin, kMapToggleSize, kMapToggleSize);
+        ui->btnMapControlsToggle->raise();
     }
 
-    // Поднимаем плавающие элементы над картой в порядке отрисовки
+    // Пока идёт переход — геометрией и видимостью столбца распоряжается
+    // animateMapControlsExpansion(), сюда не вмешиваемся.
+    if (!m_mapControlsAnimating) {
+        ui->btnMapCoordinates->setVisible(expanded);
+        ui->checkboxGnss->setVisible(expanded);
+        ui->comboBox_mapTypes->setVisible(expanded);
+
+        if (expanded) {
+            QRect r0, r1, r2;
+            mapControlsPanelLayout(r0, r1, r2);
+            ui->btnMapCoordinates->setGeometry(r0);
+            ui->checkboxGnss->setGeometry(r1);
+            ui->comboBox_mapTypes->setGeometry(r2);
+
+            ui->btnMapCoordinates->raise();
+            ui->checkboxGnss->raise();
+            ui->comboBox_mapTypes->raise();
+        }
+    }
+
+    // Слева, под подсказкой координат: телеметрия ГНСС (см. updateMapGnssInfo()).
+    // Не зависит от состояния «гамбургера» — это индикатор, а не орган
+    // управления, оператору полезно видеть фикс/спутники всегда.
+    if (ui->lblMapGnssInfo) {
+        ui->lblMapGnssInfo->adjustSize();
+        const int coordH = ui->lblMapCoordDisplay ? ui->lblMapCoordDisplay->height()
+                                                  : kMapCtlHeight;
+        ui->lblMapGnssInfo->move(margin, margin + coordH + gap);
+    }
+
     if (ui->lblMapCoordDisplay)
         ui->lblMapCoordDisplay->raise();
     if (ui->lblMapGnssInfo)
         ui->lblMapGnssInfo->raise();
-    ui->btnMapCoordinates->raise();
-    ui->checkboxGnss->raise();
-    ui->comboBox_mapTypes->raise();
+}
+
+void MainWindow::setMapControlsExpanded(bool expanded)
+{
+    const bool changed = (m_mapControlsExpanded != expanded);
+    m_mapControlsExpanded = expanded;
+
+    if (ui->btnMapControlsToggle &&
+        ui->btnMapControlsToggle->isChecked() != expanded) {
+        QSignalBlocker blocker(ui->btnMapControlsToggle);
+        ui->btnMapControlsToggle->setChecked(expanded);
+    }
+
+    // Анимируем только реальную смену состояния и только когда карта на
+    // экране и уже получила размеры (иначе — мгновенно, без спецэффектов).
+    if (changed && ui->mapCanvas && ui->mapCanvas->isVisible() &&
+        ui->mapCanvas->width() > 0) {
+        animateMapControlsExpansion(expanded);
+    } else {
+        discardMapControlsAnim();
+    }
+
+    repositionMapFloatingControls();
+}
+
+// Аккуратно гасит текущую анимацию блока инструментов: сначала рвём связь
+// с обработчиком finished (иначе stop() может дёрнуть его на полпути и
+// оставить состояние рассогласованным), затем останавливаем и удаляем.
+void MainWindow::discardMapControlsAnim()
+{
+    if (!m_mapControlsAnim) return;
+    QParallelAnimationGroup *old = m_mapControlsAnim;
+    m_mapControlsAnim = nullptr;
+    old->disconnect(this);
+    old->stop();
+    old->deleteLater();
+
+    m_mapControlsAnimating = false;
+    for (QWidget *w : { static_cast<QWidget*>(ui->btnMapCoordinates),
+                        static_cast<QWidget*>(ui->checkboxGnss),
+                        static_cast<QWidget*>(ui->comboBox_mapTypes) })
+        w->setGraphicsEffect(nullptr);
+}
+
+// Небольшой переход блока инструментов карты: слайд по вертикали + плавное
+// затухание. Виджеты остаются на своих местах (не в контейнере), поэтому
+// анимируем каждый независимо, объединяя в одну параллельную группу.
+void MainWindow::animateMapControlsExpansion(bool expanding)
+{
+    const QList<QWidget*> items {
+        ui->btnMapCoordinates, ui->checkboxGnss, ui->comboBox_mapTypes
+    };
+
+    discardMapControlsAnim();
+
+    QRect r0, r1, r2;
+    mapControlsPanelLayout(r0, r1, r2);
+    const QList<QRect> shownRects { r0, r1, r2 };
+
+    m_mapControlsAnimating = true;
+    m_mapControlsAnim = new QParallelAnimationGroup(this);
+
+    const int slide = 12;   // на сколько столбец «выезжает» из-под кнопки
+    const int dur   = 180;
+
+    for (int i = 0; i < items.size(); ++i) {
+        QWidget *w = items[i];
+        const QRect shown  = shownRects[i];
+        const QRect hidden = shown.translated(0, -slide);
+
+        w->setVisible(true);
+        w->raise();
+
+        auto *fx = new QGraphicsOpacityEffect(w);
+        w->setGraphicsEffect(fx);
+
+        auto *op = new QPropertyAnimation(fx, "opacity", m_mapControlsAnim);
+        op->setDuration(dur);
+        op->setStartValue(expanding ? 0.0 : 1.0);
+        op->setEndValue(expanding ? 1.0 : 0.0);
+        op->setEasingCurve(QEasingCurve::InOutQuad);
+
+        auto *ge = new QPropertyAnimation(w, "geometry", m_mapControlsAnim);
+        ge->setDuration(dur);
+        ge->setStartValue(expanding ? hidden : shown);
+        ge->setEndValue(expanding ? shown : hidden);
+        ge->setEasingCurve(expanding ? QEasingCurve::OutCubic : QEasingCurve::InCubic);
+
+        w->setGeometry(expanding ? hidden : shown); // без мигания на первом кадре
+    }
+
+    if (ui->btnMapControlsToggle)
+        ui->btnMapControlsToggle->raise();
+
+    connect(m_mapControlsAnim, &QAbstractAnimation::finished, this,
+            [this, expanding, items]() {
+        m_mapControlsAnimating = false;
+        for (QWidget *w : items) {
+            w->setGraphicsEffect(nullptr);
+            w->setVisible(expanding);
+        }
+        if (m_mapControlsAnim) {
+            m_mapControlsAnim->deleteLater();
+            m_mapControlsAnim = nullptr;
+        }
+        repositionMapFloatingControls();
+    });
+
+    m_mapControlsAnim->start();
 }
 
 // Обновляет текст плавающей подсказки над картой (lblMapCoordDisplay) в

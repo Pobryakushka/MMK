@@ -37,6 +37,7 @@
 
 
 // Forward declaration
+class QParallelAnimationGroup;
 class SourceData;
 class AlgorithmsCalculation;
 class LandingCalculation;
@@ -201,6 +202,15 @@ private:
     // комментарий в onAutoConnectorFinished()). Флаг не даёт зациклить отсрочку
     // и сбрасывается в начале каждого нового автопоиска.
     bool m_autoConnectorFinishRetried = false;
+    // Плавающий блок инструментов над картой (выбор точки, ГНСС, тип карты)
+    // по умолчанию свёрнут в одну кнопку-«гамбургер» — на планшете крупные
+    // кнопки забирали слишком много видимой карты. См.
+    // setMapControlsExpanded()/repositionMapFloatingControls().
+    bool m_mapControlsExpanded = false;
+    // Пока идёт анимация разворота/сворачивания, repositionMapFloatingControls()
+    // не трогает эти виджеты — их геометрией и видимостью распоряжается анимация.
+    bool m_mapControlsAnimating = false;
+    QParallelAnimationGroup *m_mapControlsAnim = nullptr;
     QTimer *timer;
     QTimer *pollTimer;
     QSerialPort *serialPort;
@@ -585,6 +595,17 @@ private:
     void resizeEvent(QResizeEvent *event);
     bool eventFilter(QObject *watched, QEvent *event) override;
     void repositionMapFloatingControls();
+    // Разворачивает/сворачивает блок инструментов над картой.
+    void setMapControlsExpanded(bool expanded);
+    // Плавный переход (слайд + затухание) блока инструментов карты.
+    void animateMapControlsExpansion(bool expanding);
+    // Останавливает и убирает текущую анимацию блока инструментов карты.
+    void discardMapControlsAnim();
+    // Целевые прямоугольники трёх органов управления в развёрнутом столбце.
+    void mapControlsPanelLayout(QRect &coordRect, QRect &gnssRect, QRect &comboRect) const;
+    // Иконка маркера для кнопки «Указать точку» с прозрачным зазором
+    // справа — чтобы маркер не «прилипал» к тексту.
+    QIcon mapMarkerButtonIcon() const;
     QList<quint16> getRequestParameters();
 
     // Методы обновления статуса датчиков на панели
