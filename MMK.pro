@@ -7,9 +7,22 @@ CONFIG += c++17
 
 THIRDPARTY = $$PWD/3rdparty
 
+# ─── Пути поиска заголовков собственного кода ───────────────────────────────
+# Весь наш код лежит в src/ и подключается ЕДИНООБРАЗНО — путём от корня src,
+# в котором первым элементом идёт слой: "ui/...", "core/...", "data/...",
+# "devices/...", "map/...", "utils/...". Благодаря этому слой видно прямо в
+# строке #include, а прежний разнобой ("ScreenTheme.h" / "ui/ScreenTheme.h" /
+# "../ui/ScreenTheme.h" для одного и того же файла) стал невозможен.
+#
+# 3rdparty в путях поиска — ради вендорных библиотек, которые подключаются
+# как "qwtzoom/..." (QwtChartZoom).
+INCLUDEPATH += \
+    $$PWD/src \
+    $$THIRDPARTY
+
 # ─── Plow (PlowAlgoritm) — расчёт фактического и среднего ветра ───
 PLOW_DIR = $$THIRDPARTY/plow
-rr
+
 # Пути к заголовкам оставляем прежними, чтобы основной проект видел инклюды
 INCLUDEPATH += \
     $$PLOW_DIR \
@@ -28,12 +41,7 @@ QMAKE_LFLAGS += -Wl,-rpath,$$PLOW_DIR
 # Исходники (.cpp) отсюда убраны, так как они уже скомпилированы в .so.
 # Оставляем только заголовочные файлы для корректного отображения структуры в дереве Qt Creator.
 PLOW_HEADERS = $$files($$PLOW_DIR/*.h,   true)
-HEADERS *= $$PLOW_HEADERS \
-    ui/ClickableFrame.h \
-    ui/anglecheckpage.h \
-    ui/inspectionpage.h \
-    ui/workregulationhubpage.h \
-    ui/notificationtoast.h \
+HEADERS *= $$PLOW_HEADERS
 
 # ─── ClimatData — климатические данные по широте/долготе/месяцу ───
 CLIMAT_DIR = $$THIRDPARTY/climatData
@@ -41,141 +49,220 @@ INCLUDEPATH += $$CLIMAT_DIR
 
 SOURCES *= \
     $$CLIMAT_DIR/climatdata.cpp \
-    $$CLIMAT_DIR/climatdataprivate.cpp \
-    ui/ClickableFrame.cpp \
-    ui/anglecheckpage.cpp \
-    ui/inspectionpage.cpp \
-    ui/workregulationhubpage.cpp \
-    ui/notificationtoast.cpp \
+    $$CLIMAT_DIR/climatdataprivate.cpp
 
 HEADERS *= \
     $$CLIMAT_DIR/climatdata.h \
     $$CLIMAT_DIR/climatdata_global.h \
     $$CLIMAT_DIR/climatdataprivate.h
 
+# ─── QwtChartZoom — сторонний компонент масштабирования графиков Qwt ───
+# (В. 1.5.2, Мельников С. А., 2012. Свободное использование, упоминание
+# автора обязательно — см. шапки файлов.)
+QWTZOOM_DIR = $$THIRDPARTY/qwtzoom
+
+SOURCES *= \
+    $$QWTZOOM_DIR/qaxiszoomsvc.cpp \
+    $$QWTZOOM_DIR/qwheelzoomsvc.cpp \
+    $$QWTZOOM_DIR/qwtchartzoom.cpp \
+    $$QWTZOOM_DIR/zoomscontainer.cpp
+
+HEADERS *= \
+    $$QWTZOOM_DIR/qaxiszoomsvc.h \
+    $$QWTZOOM_DIR/qwheelzoomsvc.h \
+    $$QWTZOOM_DIR/qwtchartzoom.h \
+    $$QWTZOOM_DIR/zoomscontainer.h
+
 # Warn on deprecated Qt API usage (does not break the build, just emits warnings)
 DEFINES += QT_DEPRECATED_WARNINGS
 
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  Собственный код — по слоям (см. INCLUDEPATH выше)
+# ═══════════════════════════════════════════════════════════════════════════
+
+# ─── Точка входа ───────────────────────────────────────────────────────────
 SOURCES += \
-    LocalTileServer.cpp \
-    calculationAlgorithms/AlgorithmsCalc.cpp \
-    ui/ExportDialog.cpp \
-    ui/ArchiveDatePopup.cpp \
-    ui/ArchiveExportView.cpp \
-    ui/FlowLayout.cpp \
-    sensors/GroundMeteoParams.cpp \
-    calculationAlgorithms/LandingCalculation.cpp \
-    Map/FormMapView.cpp \
-    ui/MeasurementExporter.cpp \
-    MeasurementResults.cpp \
-    Meteo11.cpp \
-    SourceData.cpp \
-    sensors/binshandler.cpp \
-    databasemanager.cpp \
-    ui/functionalcontroldialog.cpp \
-    sensors/gnsshandler.cpp \
-    main.cpp \
-    ui/mainwindow.cpp \
-    ui/sensorsettings.cpp \
-    sensors/zedf9preceiver.cpp \
-    customprotocol.cpp \
-    sensors/amshandler.cpp \
-    sensors/amsprotocol.cpp \
-    zoom/qaxiszoomsvc.cpp \
-    zoom/qwheelzoomsvc.cpp \
-    zoom/qwtchartzoom.cpp \
-    zoom/zoomscontainer.cpp \
-    autoconnector.cpp \
-    calculationAlgorithms/WindShearCalculator.cpp \
-    surfacemeteosaver.cpp \
-    ui/RpvIndicator.cpp \
-    calculationAlgorithms/windprofilecalculator.cpp \
-    VirtualKeyboard.cpp \
-    Meteo11Grib/ProcessRunner.cpp \
-    Meteo11Grib/GfsDownloadRunner.cpp \
-    Meteo11Grib/MushroomRunner.cpp \
-    Meteo11Grib/MushroomResultParser.cpp \
-    Meteo11Grib/Meteo11Calculator.cpp \
-    Meteo11Grib/Meteo11ProfileBuilder.cpp \
-    Meteo11Grib/GribWindProfileAdapter.cpp \
-    Meteo11Grib/GribMeteo11Pipeline.cpp \
-    ui/ClickableLabel.cpp \
+    src/app/main.cpp
+
+# ─── UI: главное окно ──────────────────────────────────────────────────────
+SOURCES += \
+    src/ui/mainwindow/mainwindow.cpp
 
 HEADERS += \
-    LocalTileServer.h \
-    calculationAlgorithms/AlgorithmsCalc.h \
-    CoordHelper.h \
-    ui/ExportDialog.h \
-    ui/ArchiveDatePopup.h \
-    ui/ArchiveExportView.h \
-    ui/FlowLayout.h \
-    sensors/GroundMeteoParams.h \
-    calculationAlgorithms/LandingCalculation.h \
-    LandingCalculationState.h \
-    Map/FormMapView.h \
-    Map/InitialParameters.h \
-    ui/MeasurementExporter.h \
-    MeasurementResults.h \
-    Meteo11.h \
-    SourceData.h \
-    sensors/binshandler.h \
-    databasemanager.h \
-    ui/functionalcontroldialog.h \
-    sensors/gnsshandler.h \
-    ui/mainwindow.h \
-    qmlcoordinateproxy.h \
-    ui/sensorsettings.h \
-    sensors/zedf9preceiver.h \
-    customprotocol.h \
-    sensors/amshandler.h \
-    sensors/amsprotocol.h \
-    zoom/qaxiszoomsvc.h \
-    zoom/qwheelzoomsvc.h \
-    zoom/qwtchartzoom.h \
-    zoom/zoomscontainer.h \
-    autoconnector.h \
-    calculationAlgorithms/WindShearCalculator.h \
-    surfacemeteosaver.h \
-    ui/RpvIndicator.h \
-    calculationAlgorithms/windprofilecalculator.h \
-    VirtualKeyboard.h \
-    Meteo11Grib/ProcessRunner.h \
-    Meteo11Grib/GfsDownloadRunner.h \
-    Meteo11Grib/MushroomRunner.h \
-    Meteo11Grib/MushroomMessage.h \
-    Meteo11Grib/MushroomResultParser.h \
-    Meteo11Grib/Meteo11Types.h \
-    Meteo11Grib/Meteo11Calculator.h \
-    Meteo11Grib/Meteo11ProfileBuilder.h \
-    Meteo11Grib/GribWindProfileAdapter.h \
-    Meteo11Grib/GribMeteo11Pipeline.h \
-    Meteo11Grib/GribConfig.h \
-    ui/ClickableLabel.h
+    src/ui/mainwindow/mainwindow.h
+
+# ─── UI: архив измерений ───────────────────────────────────────────────────
+SOURCES += \
+    src/ui/archive/MeasurementResults.cpp \
+    src/ui/archive/ArchiveDatePopup.cpp \
+    src/ui/archive/ArchiveExportView.cpp \
+    src/ui/archive/ExportDialog.cpp
+
+HEADERS += \
+    src/ui/archive/MeasurementResults.h \
+    src/ui/archive/ArchiveDatePopup.h \
+    src/ui/archive/ArchiveExportView.h \
+    src/ui/archive/ExportDialog.h
+
+# ─── UI: экраны и диалоги ──────────────────────────────────────────────────
+SOURCES += \
+    src/ui/pages/AlgorithmsCalc.cpp \
+    src/ui/pages/GroundMeteoParams.cpp \
+    src/ui/pages/LandingCalculation.cpp \
+    src/ui/pages/Meteo11.cpp \
+    src/ui/pages/SourceData.cpp \
+    src/ui/pages/anglecheckpage.cpp \
+    src/ui/pages/functionalcontroldialog.cpp \
+    src/ui/pages/inspectionpage.cpp \
+    src/ui/pages/sensorsettings.cpp \
+    src/ui/pages/workregulationhubpage.cpp
+
+HEADERS += \
+    src/ui/pages/AlgorithmsCalc.h \
+    src/ui/pages/GroundMeteoParams.h \
+    src/ui/pages/LandingCalculation.h \
+    src/ui/pages/Meteo11.h \
+    src/ui/pages/SourceData.h \
+    src/ui/pages/anglecheckpage.h \
+    src/ui/pages/functionalcontroldialog.h \
+    src/ui/pages/inspectionpage.h \
+    src/ui/pages/sensorsettings.h \
+    src/ui/pages/workregulationhubpage.h
+
+# ─── UI: переиспользуемые виджеты ──────────────────────────────────────────
+SOURCES += \
+    src/ui/widgets/ClickableFrame.cpp \
+    src/ui/widgets/ClickableLabel.cpp \
+    src/ui/widgets/FlowLayout.cpp \
+    src/ui/widgets/RpvIndicator.cpp \
+    src/ui/widgets/VirtualKeyboard.cpp \
+    src/ui/widgets/notificationtoast.cpp
+
+HEADERS += \
+    src/ui/widgets/ClickableFrame.h \
+    src/ui/widgets/ClickableLabel.h \
+    src/ui/widgets/FlowLayout.h \
+    src/ui/widgets/RpvIndicator.h \
+    src/ui/widgets/VirtualKeyboard.h \
+    src/ui/widgets/notificationtoast.h
+
+# ─── UI: оформление (общий вид экранов, кнопка «Назад») ────────────────────
+HEADERS += \
+    src/ui/theme/ScreenTheme.h
+
+# ─── Логика: расчёт профиля ветра ──────────────────────────────────────────
+SOURCES += \
+    src/core/windprofile/WindShearCalculator.cpp \
+    src/core/windprofile/windprofilecalculator.cpp
+
+HEADERS += \
+    src/core/windprofile/WindShearCalculator.h \
+    src/core/windprofile/windprofilecalculator.h
+
+# ─── Логика: GRIB-конвейер Метео-11 ────────────────────────────────────────
+SOURCES += \
+    src/core/grib/GfsDownloadRunner.cpp \
+    src/core/grib/GribMeteo11Pipeline.cpp \
+    src/core/grib/GribWindProfileAdapter.cpp \
+    src/core/grib/Meteo11Calculator.cpp \
+    src/core/grib/Meteo11ProfileBuilder.cpp \
+    src/core/grib/MushroomResultParser.cpp \
+    src/core/grib/MushroomRunner.cpp \
+    src/core/grib/ProcessRunner.cpp
+
+HEADERS += \
+    src/core/grib/GfsDownloadRunner.h \
+    src/core/grib/GribConfig.h \
+    src/core/grib/GribMeteo11Pipeline.h \
+    src/core/grib/GribWindProfileAdapter.h \
+    src/core/grib/Meteo11Calculator.h \
+    src/core/grib/Meteo11ProfileBuilder.h \
+    src/core/grib/Meteo11Types.h \
+    src/core/grib/MushroomMessage.h \
+    src/core/grib/MushroomResultParser.h \
+    src/core/grib/MushroomRunner.h \
+    src/core/grib/ProcessRunner.h
+
+# ─── Логика: выгрузка результатов измерения (TXT/CSV/JSON/PDF/XLSX) ────────
+SOURCES += \
+    src/core/export/MeasurementExporter.cpp
+
+HEADERS += \
+    src/core/export/MeasurementExporter.h
+
+# ─── Логика: модели данных ─────────────────────────────────────────────────
+HEADERS += \
+    src/core/model/InitialParameters.h \
+    src/core/model/LandingCalculationState.h
+
+# ─── Хранение (БД) ─────────────────────────────────────────────────────────
+SOURCES += \
+    src/data/databasemanager.cpp \
+    src/data/surfacemeteosaver.cpp
+
+HEADERS += \
+    src/data/databasemanager.h \
+    src/data/surfacemeteosaver.h
+
+# ─── Датчики: АМС / ГНСС / БИНС / ИВС + автопоиск ──────────────────────────
+SOURCES += \
+    src/devices/autoconnector.cpp \
+    src/devices/ams/amshandler.cpp \
+    src/devices/ams/amsprotocol.cpp \
+    src/devices/bins/binshandler.cpp \
+    src/devices/gnss/gnsshandler.cpp \
+    src/devices/gnss/zedf9preceiver.cpp \
+    src/devices/iws/customprotocol.cpp
+
+HEADERS += \
+    src/devices/autoconnector.h \
+    src/devices/ams/amshandler.h \
+    src/devices/ams/amsprotocol.h \
+    src/devices/bins/binshandler.h \
+    src/devices/gnss/gnsshandler.h \
+    src/devices/gnss/zedf9preceiver.h \
+    src/devices/iws/customprotocol.h
+
+# ─── Карта ─────────────────────────────────────────────────────────────────
+SOURCES += \
+    src/map/FormMapView.cpp \
+    src/map/LocalTileServer.cpp
+
+HEADERS += \
+    src/map/FormMapView.h \
+    src/map/LocalTileServer.h \
+    src/map/qmlcoordinateproxy.h
+
+# ─── Утилиты ───────────────────────────────────────────────────────────────
+HEADERS += \
+    src/utils/CoordHelper.h
+
+# ─── Формы Qt Designer (лежат рядом со своими классами) ────────────────────
+FORMS += \
+    src/ui/mainwindow/mainwindow.ui \
+    src/ui/archive/MeasurementResults.ui \
+    src/ui/archive/ExportDialog.ui \
+    src/ui/pages/AlgorithmsCalc.ui \
+    src/ui/pages/GroundMeteoParams.ui \
+    src/ui/pages/LandingCalculation.ui \
+    src/ui/pages/Meteo11.ui \
+    src/ui/pages/SourceData.ui \
+    src/ui/pages/anglecheckpage.ui \
+    src/ui/pages/functionalcontroldialog.ui \
+    src/ui/pages/inspectionpage.ui \
+    src/ui/pages/sensorsettings.ui \
+    src/ui/pages/workregulationhubpage.ui \
+    src/map/FormMapView.ui
+
+RESOURCES += \
+    Resources.qrc
 
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
-
-FORMS += \
-    AlgorithmsCalc.ui \
-    GroundMeteoParams.ui \
-    LandingCalculation.ui \
-    Map/FormMapView.ui \
-    MeasurementResults.ui \
-    Meteo11.ui \
-    SourceData.ui \
-    anglecheckpage.ui \
-    functionalcontroldialog.ui \
-    inspectionpage.ui \
-    mainwindow.ui \
-    sensorsettings.ui \
-    ExportDialog.ui \
-    workregulationhubpage.ui \
-
-RESOURCES += \
-    Resources.qrc
 
 include(qwt.pri)
 include(QXlsx/QXlsx.pri)
