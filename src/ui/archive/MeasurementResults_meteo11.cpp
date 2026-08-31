@@ -9,6 +9,7 @@
 #include "ui/archive/MeasurementResults_internal.h"
 
 #include "core/meteo11/Meteo11Codec.h"
+#include "data/MeasurementRepository.h"
 
 // -------------------------------------------------------
 // Стандартные высоты Метео-11 и их коды (объявлены до первого использования)
@@ -179,23 +180,10 @@ void MeasurementResults::loadMeteo11FromStation(int recordId)
     m_meteo11FromStation         = Meteo11Data();
     m_meteo11FromStation.isValid = false;
 
-    if (recordId <= 0 || !connectDatabase()) return;
-
-    QSqlDatabase db = DatabaseManager::instance()->database();
-    QSqlQuery query(db);
-    query.prepare(
-        "SELECT bulletin_data, bulletin_time "
-        "FROM meteo_11_bulletin WHERE record_id = :rid"
-        );
-    query.bindValue(":rid", recordId);
-
-    if (!query.exec() || !query.next()) {
-        qDebug() << "MeasurementResults: бюллетень МС не найден для record_id=" << recordId;
+    QString   jsonStr;
+    QDateTime dt;
+    if (!MeasurementRepository::loadMeteo11Bulletin(recordId, jsonStr, dt))
         return; // нормально — бюллетень мог не вводиться
-    }
-
-    const QString   jsonStr = query.value(0).toString();
-    const QDateTime dt      = query.value(1).toDateTime();
 
     QJsonObject obj = QJsonDocument::fromJson(jsonStr.toUtf8()).object();
 

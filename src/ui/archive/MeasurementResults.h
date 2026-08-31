@@ -6,9 +6,6 @@
 #include <QMap>
 #include <QSet>
 #include <QListWidget>
-#include <QSqlDatabase>
-#include <QSqlQuery>
-#include <QSqlError>
 #include "devices/ams/amsprotocol.h"
 #include "qwtzoom/zoomscontainer.h"
 #include "core/export/MeasurementExporter.h"
@@ -21,6 +18,7 @@
 #include <qwt_plot_canvas.h>
 #include "core/windprofile/WindShearCalculator.h"
 #include "core/meteo11/Meteo11Data.h"
+#include "data/MeasurementRepository.h"
 #include <QTableWidget>
 #include "core/grib/GribMeteo11Pipeline.h"
 #include "ui/widgets/notificationtoast.h"
@@ -36,17 +34,9 @@ class QLayout;
 class QResizeEvent;
 class QShowEvent;
 
-struct MeasurementRecord {
-    int recordId;
-    QDateTime measurementTime;
-    bool hasAvgWind;
-    bool hasActualWind;
-    bool hasMeasuredWind;
-    QString notes;
-
-    MeasurementRecord() : recordId(-1), hasAvgWind(false),
-        hasActualWind(false), hasMeasuredWind(false) {}
-};
+// MeasurementRecord (одна запись архива) переехала в
+// data/MeasurementRepository.h — это форма строки таблицы main_archive,
+// а не часть виджета.
 
 // Встроенная страница общего стека MainWindow (как SourceData/GroundMeteoParams/
 // регламентные работы) — раньше была отдельным QDialog, открывавшимся поверх

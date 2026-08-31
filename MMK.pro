@@ -226,10 +226,12 @@ HEADERS += \
 
 # ─── Хранение (БД) ─────────────────────────────────────────────────────────
 SOURCES += \
+    src/data/MeasurementRepository.cpp \
     src/data/databasemanager.cpp \
     src/data/surfacemeteosaver.cpp
 
 HEADERS += \
+    src/data/MeasurementRepository.h \
     src/data/databasemanager.h \
     src/data/surfacemeteosaver.h
 
