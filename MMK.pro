@@ -243,6 +243,7 @@ SOURCES += \
     src/devices/bins/binshandler.cpp \
     src/devices/gnss/gnsshandler.cpp \
     src/devices/gnss/zedf9preceiver.cpp \
+    src/devices/iws/IwsProtocolCodec.cpp \
     src/devices/iws/customprotocol.cpp
 
 HEADERS += \
@@ -252,6 +253,7 @@ HEADERS += \
     src/devices/bins/binshandler.h \
     src/devices/gnss/gnsshandler.h \
     src/devices/gnss/zedf9preceiver.h \
+    src/devices/iws/IwsProtocolCodec.h \
     src/devices/iws/customprotocol.h
 
 # ─── Карта ─────────────────────────────────────────────────────────────────

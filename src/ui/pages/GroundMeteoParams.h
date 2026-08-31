@@ -170,26 +170,24 @@ private:
     void showRowHint(int row, const QString &text);
     void shakeWidget(QWidget *w);
 
-    // Парсинг ответов (приватные методы)
-    bool parseModbusResponse(const QByteArray& response, QMap<QString, double>& values);
+    // ── Протокол ИВС ────────────────────────────────────────────────────────
+    // Сам протокол (сборка запросов, CRC, разбор ответов Modbus и UMB, карта
+    // регистров) переехал в devices/iws/IwsProtocolCodec.h. Здесь остались
+    // только обёртки, которым нужно состояние виджета: адрес устройства,
+    // список последних запрошенных регистров и сигнал errorOccurred().
+    //
+    // Прежние parseModbusResponse, convertModbusRegisterToValue,
+    // calculateCRC16, calculateModbusCRC16 и parameterCodeToName как методы
+    // класса больше не нужны: их вызывал только перенесённый код, а сами они
+    // целиком сохранены в кодеке.
     bool parseUmbResponse(const QByteArray& response, QMap<QString, double>& values);
-
-    // НОВЫЕ методы для Modbus RTU с маппингом регистров
     bool parseModbusResponseWithMapping(
         const QByteArray& response,
         const QList<quint16>& requestedRegisters,
         QMap<QString, double>& values);
 
-    bool convertModbusRegisterToValue(
-        quint16 regAddr,
-        quint16 rawValue,
-        QString& paramName,
-        double& scaledValue);
-
-    // Вспомогательные функции
-    quint16 calculateCRC16(const QByteArray& data);
-    quint16 calculateModbusCRC16(const QByteArray& data);
-    QString parameterCodeToName(quint16 code);
+    // Сопоставление имени параметра строке таблицы — это уже интерфейс,
+    // поэтому осталось здесь.
     QString mapParameterToTableRow(const QString& paramName);
 
     // Пересчёт m_surfaceState из 5 флагов + эмит сигнала при изменении.
