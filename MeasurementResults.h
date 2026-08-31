@@ -315,6 +315,10 @@ private:
     bool m_responsiveApplied = false;
     void applyResponsiveLayout(int width);
     void setMeteo11TableStacked(bool stacked);
+    // Нижний предел высоты таблицы ПП/ТТДДСС по метрикам самой таблицы (шапка
+    // + две строки + рамка), чтобы он следовал за системным шрифтом и при этом
+    // помещался в самое низкое окно, которое допускает приложение.
+    void updateMeteo11TableHeight();
     static void replaceWithFlowLayout(QLayout *source, int spacing);
 
 protected:
