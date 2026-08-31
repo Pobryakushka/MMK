@@ -16,6 +16,7 @@
              ресурсов намеренно оставлен прежним (":/ui/...") через alias:
              так ни одна строка C++ с QFile(":/ui/table-theme.qss") не
              требует правки, и перенос остаётся чисто структурным. -->
+        <file alias="ui/archive-style.qss">src/ui/theme/archive-style.qss</file>
         <file alias="ui/table-theme.qss">src/ui/theme/table-theme.qss</file>
         <file alias="ui/screen-theme.qss">src/ui/theme/screen-theme.qss</file>
         <file alias="ui/back-button.qss">src/ui/theme/back-button.qss</file>

@@ -1,0 +1,268 @@
+/* Оформление страницы «Архив измерений».
+ *
+ * Раньше эти правила лежали одной строковой константой на 250+ строк прямо
+ * в MeasurementResults::applyArchiveStyle(). В проекте уже был механизм
+ * отдельных файлов оформления (ui/theme/*.qss + ScreenTheme.h) — здесь он
+ * просто распространён на архив.
+ *
+ * Правила перенесены дословно. Переключаемые состояния по-прежнему выражены
+ * динамическими свойствами и селекторами вида [state="..."]: так состояние
+ * не требует setStyleSheet() на конкретном виджете, который стирал бы
+ * остальные правила для него.
+ */
+
+/* ── палитра макета ──────────────────────────────────────────────── */
+/* green #0F6B4F · green-dark #0B5A41 · green-soft #E4F1EC */
+/* bg #EFF1F1 · card #FFFFFF · border #DDE1E3 */
+/* text #1B211F · mute #6E7876 · amber #F9A825 */
+QWidget#MeasurementResults, QWidget#archivePage, QStackedWidget#rootStack {
+  background-color: #EFF1F1;
+}
+QWidget { font-family: 'Inter','Segoe UI','DejaVu Sans',sans-serif; color: #1B211F; }
+
+/* ── левая панель ───────────────────────────────────────────────── */
+QFrame#titleWidget { background: #FFFFFF; border: none; border-right: 1px solid #DDE1E3; }
+QFrame#railHead, QFrame#sectionDateTime, QFrame#sectionParams, QFrame#railFoot {
+  background: transparent; border: none;
+}
+QFrame#sectionDateTime, QFrame#sectionParams, QFrame#railFoot {
+  border-top: 1px solid #DDE1E3;
+}
+QLabel#lblTitle { color: #1B211F; font-size: 15px; font-weight: 700; }
+QLabel#lblSubtitle { color: #6E7876; font-size: 11px; }
+QLabel#capDateTime, QLabel#capParams {
+  color: #6E7876; font-size: 11px; font-weight: 600; padding-bottom: 2px;
+}
+QPushButton#btnPrevDate, QPushButton#btnNextDate {
+  background: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 6px;
+  color: #0B5A41; font-size: 13px; padding: 0px;
+}
+QPushButton#btnPrevDate:hover, QPushButton#btnNextDate:hover { background: #E4F1EC; }
+QPushButton#btnPrevDate:disabled, QPushButton#btnNextDate:disabled {
+  color: #B7BEBB; background: #F7F8F8;
+}
+QPushButton#btnSelectDate {
+  background: #E4F1EC; border: 2px solid #0F6B4F; border-radius: 6px;
+  color: #0B5A41; font-weight: 700; font-size: 13px;
+  font-family: 'JetBrains Mono','DejaVu Sans Mono','Consolas',monospace;
+}
+QPushButton#btnSelectDate:hover { background: #D8ECE3; }
+] { font-size: 12px; padding: 0px 1px; }
+QLabel#lblAvailableRecords { color: #6E7876; font-size: 11px; font-style: italic; }
+] { color: #B03A2E; }
+
+/* Строки параметров станции: подпись слева, значение справа моноширинным, */
+/* разделитель пунктиром — как param-row в макете. У последней строки */
+/* разделителя нет. */
+QFrame#rowLatitude, QFrame#rowLongitude, QFrame#rowAltitude {
+  background: transparent; border: none; border-bottom: 1px dashed #DDE1E3;
+}
+QFrame#rowDirectionAngle { background: transparent; border: none; }
+QLabel#lblLatitude, QLabel#lblLongitude, QLabel#lblAltitude, QLabel#lblDirectionAngle {
+  color: #6E7876; font-size: 12px;
+}
+QLabel#valLatitude, QLabel#valLongitude, QLabel#valAltitude, QLabel#valDirectionAngle {
+  color: #1B211F; font-size: 12px; font-weight: 600;
+  font-family: 'JetBrains Mono','DejaVu Sans Mono','Consolas',monospace;
+}
+
+QPushButton#btnExport, QPushButton#btnClose {
+  border: 1px solid #DDE1E3; border-radius: 6px; background: #FFFFFF;
+  font-weight: 600; font-size: 13px; color: #1B211F;
+}
+QPushButton#btnExport:hover { background: #F3F5F4; }
+QPushButton#btnClose { background: #0F6B4F; border-color: #0F6B4F; color: #FFFFFF; }
+QPushButton#btnClose:hover { background: #0B5A41; border-color: #0B5A41; }
+
+/* ── статусная строка над вкладками ──────────────────────────────── */
+QLabel#lblDataStatus {
+  background: #FFFFFF; border-bottom: 1px solid #DDE1E3; color: #6E7876;
+  font-weight: 600; font-size: 10px; padding: 6px 14px;
+}
+] { color: #B03A2E; }
+
+/* ── самодельная строка вкладок (нативная QTabBar скрыта) ────────── */
+QWidget#customTabBar { background: #EFF1F1; }
+QPushButton#archiveTabButton {
+  background: #E4E7E6; color: #6E7876; font-weight: 600; font-size: 10px;
+  padding: 5px 9px; border: none;
+  border-top-left-radius: 8px; border-top-right-radius: 8px;
+  border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;
+}
+QPushButton#archiveTabButton:hover { color: #0B5A41; }
+] {
+  background: #FFFFFF; color: #0B5A41; border-bottom: 2px solid #0F6B4F;
+}
+QFrame#dataGroup { background: #EFF1F1; border: none; }
+QTabWidget::pane { border: none; background: #FFFFFF; }
+QTabWidget > QWidget { background: #FFFFFF; }
+
+/* ── карточки графиков (chart-card из макета) ────────────────────── */
+QFrame#cardFrame_avgWindSpeed, QFrame#cardFrame_avgWindDir,
+QFrame#cardFrame_realWindSpeed, QFrame#cardFrame_realWindDir,
+QFrame#cardFrame_measWindSpeed, QFrame#cardFrame_measWindDir,
+QFrame#cardFrame_shearSpeed, QFrame#cardFrame_shearDir {
+  border: 1px solid #DDE1E3; border-radius: 10px; background: #FFFFFF;
+}
+QwtPlot { border: none; background: transparent; }
+QLabel#label_avgWindSpeed, QLabel#label_avgWindDirection,
+QLabel#label_realWindSpeed, QLabel#label_realWindDirection,
+QLabel#label_measuredWindSpeed, QLabel#label_measuredWindDirection,
+QLabel#label_shearSpeed, QLabel#label_shearDirection {
+  background: #E4F1EC; color: #0B5A41; font-weight: 600; font-size: 12px;
+  border-top-left-radius: 9px; border-top-right-radius: 9px;
+  border-bottom: 1px solid #DDE1E3; padding: 9px 12px;
+}
+
+/* ── таблицы ────────────────────────────────────────────────────── */
+/* Эти же правила вынесены в общий стиль приложения */
+/* ui/table-theme.qss и действуют на все таблицы программы. Здесь */
+/* они продублированы намеренно: как стиль конкретного виджета они */
+/* перекрывают общий и гарантируют, что «Архив измерений» */
+/* выглядит ровно так же, даже если общий стиль позже поправят. */
+QTableWidget, QTableView {
+/* border-radius убран (был 8px): Qt не обрезает содержимое */
+/* QAbstractScrollArea по скруглённой рамке — только красит саму */
+/* рамку скруглённой, а прямоугольные ячейки (особенно чередующиеся */
+/* серые строки) всё равно рисуются поверх без обрезки и торчат */
+/* острыми углами за пределы скругления, особенно заметно в нижних */
+/* углах и при прокрутке. Проще и надёжнее просто не скруглять. */
+  border: 1px solid #DDE1E3; gridline-color: #EEF0EF;
+  background: #FFFFFF; alternate-background-color: #F7F8F8; font-size: 12px;
+  selection-background-color: #E4F1EC; selection-color: #0B5A41;
+}
+QTableWidget::item, QTableView::item { padding: 5px 8px; border: none; }
+QTableWidget::item:selected, QTableView::item:selected { background: #E4F1EC; color: #0B5A41; }
+QHeaderView { background: transparent; border: none; }
+QHeaderView::section {
+  background: #E4F1EC; color: #0B5A41; font-weight: 600; font-size: 12px;
+  border: none; border-bottom: 1px solid #DDE1E3; border-right: 1px solid #EEF0EF;
+  padding: 7px 8px;
+}
+QHeaderView::section:last { border-right: none; }
+/* Скруглённые верхние углы шапки. Заливка секций (#E4F1EC) */
+/* прямоугольная, а рамка таблицы скруглена (border-radius приходит из */
+/* общего ui/table-theme.qss), из-за чего зелёный фон шапки торчал за */
+/* рамку в левом и правом верхних углах. Скругляем углы крайних секций */
+/* под ту же кривизну. */
+QHeaderView::section:first { border-top-left-radius: 7px; }
+QHeaderView::section:last { border-top-right-radius: 7px; }
+QHeaderView::section:only-one { border-top-left-radius: 7px; border-top-right-radius: 7px; }
+QTableCornerButton::section { background: #E4F1EC; border: none; border-bottom: 1px solid #DDE1E3; }
+/* В «Наземных условиях» подпись параметра живёт в вертикальном */
+/* заголовке, но по макету это обычная ячейка, а не шапка таблицы. */
+QTableWidget#tableWidget_parm1b65 QHeaderView::section {
+  background: transparent; color: #1B211F; font-weight: 400;
+  border: none; border-bottom: 1px solid #EEF0EF; padding: 7px 10px;
+}
+] QHeaderView::section {
+  font-size: 11px; padding: 7px 6px;
+}
+
+/* ── поля ввода и выпадающие списки ─────────────────────────────── */
+QLineEdit, QTextEdit, QPlainTextEdit {
+  border: 1px solid #DDE1E3; border-radius: 6px; padding: 4px 6px; background: #FFFFFF;
+  selection-background-color: #E4F1EC; selection-color: #0B5A41;
+}
+QLineEdit:read-only { background: #F7F8F8; }
+QComboBox {
+  border: 1px solid #DDE1E3; border-radius: 6px; padding: 4px 8px; background: #FFFFFF;
+}
+QComboBox:disabled { background: #F7F8F8; color: #9AA3A0; }
+QComboBox::drop-down { border: none; width: 18px; }
+QComboBox QAbstractItemView {
+  border: 1px solid #DDE1E3; border-radius: 6px; background: #FFFFFF;
+  selection-background-color: #E4F1EC; selection-color: #0B5A41; outline: none;
+}
+
+/* ── кнопки по умолчанию ────────────────────────────────────────── */
+QPushButton {
+  background: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 6px;
+  padding: 7px 13px; color: #1B211F; font-size: 12px;
+}
+QPushButton:hover { background: #F3F5F4; border-color: #0F6B4F; }
+QPushButton:disabled { color: #B7BEBB; background: #F1F3F2; border-color: #E6E9E8; }
+
+/* Тулбар Метео-11 — плоские контейнеры без рамки и заголовка, */
+/* сами кнопки-пилюли переключаются через свойство [pressed]. */
+QGroupBox#groupBox_bulletenType, QGroupBox#groupBox_bulletenFormat {
+  border: none; background: transparent; margin: 0; padding: 0;
+}
+QGroupBox { border: 1px solid #DDE1E3; border-radius: 10px; background: #FFFFFF;
+  margin-top: 10px; padding-top: 8px; }
+QGroupBox::title {
+  subcontrol-origin: margin; subcontrol-position: top left; left: 10px; padding: 0 6px;
+  color: #6E7876; font-size: 11px; font-weight: 600; background: transparent;
+}
+] {
+  background: #FFFFFF; border: 1px solid #DDE1E3; border-radius: 8px;
+  color: #6E7876; font-weight: 600; font-size: 12px; padding: 8px 13px;
+}
+]:hover { border-color: #0F6B4F; color: #0B5A41; }
+] {
+  background: #0F6B4F; border-color: #0F6B4F; color: #FFFFFF;
+}
+]:disabled { background: #F1F3F2; border-color: #E6E9E8; color: #B7BEBB; }
+/* Бюллетень старше 12 ч — янтарная пилюля-предупреждение */
+] {
+  background: #FFF4DC; border-color: #F9A825; color: #8A6100;
+}
+] {
+  background: #E65100; border-color: #E65100; color: #FFFFFF;
+}
+
+/* Бейдж годности бюллетеня и время составления */
+QLineEdit#lineEdit_bulleten {
+  border: none; border-radius: 10px; padding: 5px 12px; font-weight: 700;
+  font-size: 11px; background: #E4F1EC; color: #0B5A41;
+}
+] { background: #FFF4DC; color: #8A6100; }
+] { background: #F1F3F2; color: #9AA3A0; }
+]  { background: #FBE4E4; color: #B3261E; }
+QLineEdit#lineEdit_bulletenTime {
+  border: none; background: transparent; color: #6E7876; font-size: 11px;
+  font-family: 'JetBrains Mono','DejaVu Sans Mono','Consolas',monospace;
+}
+] {
+  background: #FFF4DC; color: #8A6100; border-radius: 6px; padding: 2px 8px; font-weight: 700;
+}
+/* Табличный вид Метео-11: компактные подписи и узкие поля значений — */
+/* без этого подписи наследуют крупный шрифт из .ui и строки расползаются. */
+QWidget#page_meteo11_table QLabel { font-size: 10px; color: #6E7876; font-weight: 400; }
+QWidget#page_meteo11_table QLineEdit {
+  font-family: 'JetBrains Mono','DejaVu Sans Mono','Consolas',monospace;
+  font-size: 11px; font-weight: 600; color: #1B211F; max-width: 130px; padding: 1px 4px;
+}
+QWidget#page_meteo11_approximate QLabel { font-size: 10px; color: #6E7876; }
+QWidget#page_meteo11_approximate QLineEdit {
+  font-family: 'JetBrains Mono','DejaVu Sans Mono','Consolas',monospace;
+  font-size: 11px; color: #1B211F; padding: 1px 4px;
+}
+QTextEdit#textEdit_meteo11, QTextEdit#textEdit_meteo11_updated {
+  background: #F7F8F8; border: 1px solid #DDE1E3; border-radius: 8px; padding: 12px 14px;
+  font-family: 'JetBrains Mono','DejaVu Sans Mono','Consolas',monospace; font-size: 13px;
+}
+
+/* ── чекбоксы ───────────────────────────────────────────────────── */
+QCheckBox { spacing: 8px; font-size: 12px; }
+QCheckBox::indicator { width: 18px; height: 18px; border-radius: 4px;
+  border: 1px solid #C7CDCB; background: #FFFFFF; }
+QCheckBox::indicator:hover { border-color: #0F6B4F; }
+/* Галочку QSS сам не рисует, если фон индикатора задан стилшитом, */
+/* поэтому подкладываем её изображением из ресурсов. */
+QCheckBox::indicator:checked { background: #0F6B4F; border-color: #0F6B4F;
+  image: url(:/icons/checkmark_white.svg); }
+QCheckBox::indicator:disabled { background: #F1F3F2; border-color: #E6E9E8; }
+
+/* ── полосы прокрутки (иначе через них проступает Fusion) ───────── */
+QScrollBar:vertical { background: transparent; width: 11px; margin: 0px; }
+QScrollBar::handle:vertical { background: #C7CDCB; border-radius: 5px; min-height: 30px; }
+QScrollBar::handle:vertical:hover { background: #A9B2AF; }
+QScrollBar:horizontal { background: transparent; height: 11px; margin: 0px; }
+QScrollBar::handle:horizontal { background: #C7CDCB; border-radius: 5px; min-width: 30px; }
+QScrollBar::handle:horizontal:hover { background: #A9B2AF; }
+QScrollBar::add-line, QScrollBar::sub-line { width: 0px; height: 0px; border: none; background: none; }
+QScrollBar::add-page, QScrollBar::sub-page { background: none; }
+QAbstractScrollArea::corner { background: transparent; border: none; }
+
+QToolTip { background: #1B211F; color: #FFFFFF; border: none; padding: 5px 8px; }
